@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  
+  <g transform="translate(60,60)">
+    <circle r="54" fill="#FEF2F0" stroke="#B42318" stroke-width="1.5"></circle>
+    <g>
+      <circle r="48" fill="none" stroke="#B42318" stroke-width="0.8" stroke-dasharray="2,2"></circle>
+    </g>
+    <text text-anchor="middle" y="-10" font-family="Lora, serif" font-weight="700" font-size="9" fill="#B42318" letter-spacing="1">KURIKULUM MERDEKA</text>
+    <text text-anchor="middle" y="6" font-family="Lora, serif" font-weight="700" font-size="18" fill="#B42318" letter-spacing="1">TKA</text>
+    <text text-anchor="middle" y="22" font-family="Lora, serif" font-weight="400" font-size="8" fill="#B42318" letter-spacing="1">FASE C · 2025/2026</text>
+    
+    <path d="M 0,30 l 2.2,4.5 5,0.7 -3.6,3.5 0.9,4.9 -4.5,-2.4 -4.5,2.4 0.9,-4.9 -3.6,-3.5 5,-0.7 z" fill="#B42318"></path>
+  </g>
+</svg>

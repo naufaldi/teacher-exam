@@ -1,0 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@theme {
+  /* ─────────── Colors — Brand ─────────── */
+  --color-primary-50:  #FEF2F0;
+  --color-primary-100: #FDE0DC;
+  --color-primary-200: #F9B8AF;
+  --color-primary-300: #F08A7C;
+  --color-primary-400: #E05547;
+  --color-primary-500: #C92E1E;
+  --color-primary-600: #B42318;
+  --color-primary-700: #901C13;
+  --color-primary-800: #6E170F;
+  --color-primary-900: #4A100B;
+
+  --color-secondary-50:  #E9F2EE;
+  --color-secondary-100: #CEE3D7;
+  --color-secondary-300: #6BA588;
+  --color-secondary-500: #1C7A4A;
+  --color-secondary-600: #155E39;
+  --color-secondary-700: #0F5132;
+  --color-secondary-900: #073020;
+
+  --color-accent-50:  #FEF7E4;
+  --color-accent-100: #FCEAB3;
+  --color-accent-300: #F5D164;
+  --color-accent-500: #F4B43A;
+  --color-accent-600: #C67D0E;
+  --color-accent-700: #8A560A;
+
+  /* ─────────── Colors — Neutrals (warm paper) ─────────── */
+  --color-kertas-50:  #FBF7F1;
+  --color-kertas-100: #F4EEE3;
+  --color-kertas-200: #E6DECE;
+  --color-kertas-300: #D3C8B1;
+  --color-kertas-400: #A99B7F;
+  --color-kertas-500: #7A6E57;
+  --color-kertas-600: #5A5141;
+  --color-kertas-700: #3D372C;
+  --color-kertas-800: #2A2620;
+  --color-kertas-900: #1A1410;
+
+  /* ─────────── Colors — Semantic (WCAG 2.2 AA verified) ─────────── */
+  --color-success-solid:  #0B6B3A;
+  --color-success-fg:     #0B5A30;
+  --color-success-bg:     #E8F3EC;
+  --color-success-border: #5A9C77;
+
+  --color-danger-solid:   #C1292E;
+  --color-danger-fg:      #9B1C1C;
+  --color-danger-bg:      #FDECEA;
+  --color-danger-border:  #D98078;
+
+  --color-warning-solid:  #B05A00;
+  --color-warning-fg:     #7A4100;
+  --color-warning-bg:     #FEF3DD;
+  --color-warning-border: #C98A2E;
+
+  --color-info-solid:     #1E5A8D;
+  --color-info-fg:        #164970;
+  --color-info-bg:        #E6EEF6;
+  --color-info-border:    #5E8FB8;
+
+  /* ─────────── Colors — Subject accents ─────────── */
+  --color-subject-bi:       #3A4A8C;
+  --color-subject-bi-bg:    #E8EBF4;
+  --color-subject-ppkn:     #8B2F2F;
+  --color-subject-ppkn-bg:  #F5E6E6;
+
+  /* ─────────── Colors — UI roles ─────────── */
+  --color-bg-app:       #FBF7F1;
+  --color-bg-surface:   #FFFFFF;
+  --color-bg-muted:     #F4EEE3;
+  --color-bg-scrim:     rgba(26, 20, 16, 0.40);
+
+  --color-border-default: #E6DECE;
+  --color-border-ui:      #D3C8B1;
+  --color-border-strong:  #A99B7F;
+  --color-border-focus:   #B42318;
+
+  --color-text-primary:    #1A1410;
+  --color-text-secondary:  #3D372C;
+  --color-text-tertiary:   #7A6E57;
+  --color-text-disabled:   #A99B7F;
+  --color-text-on-primary: #FFFFFF;
+
+  /* ─────────── Typography — families ─────────── */
+  --font-sans:  'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Lora', 'Times New Roman', Times, serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ─────────── Typography — scale ─────────── */
+  --text-display: 44px;
+  --text-display--line-height: 52px;
+  --text-display--letter-spacing: -0.015em;
+  --text-display--font-weight: 700;
+
+  --text-h1: 32px;
+  --text-h1--line-height: 40px;
+  --text-h1--letter-spacing: -0.01em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 24px;
+  --text-h2--line-height: 32px;
+  --text-h2--letter-spacing: -0.005em;
+  --text-h2--font-weight: 700;
+
+  --text-h3: 19px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+
+  --text-body-lg: 17px;
+  --text-body-lg--line-height: 26px;
+
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 20px;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0.02em;
+
+  --text-exam-body: 13px;
+  --text-exam-body--line-height: 19px;
+
+  --text-exam-heading: 16px;
+  --text-exam-heading--line-height: 22px;
+
+  --text-exam-kop: 18px;
+  --text-exam-kop--line-height: 24px;
+  --text-exam-kop--letter-spacing: 0.03em;
+  --text-exam-kop--font-weight: 700;
+
+  /* ─────────── Font weights ─────────── */
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-heavy:    800;
+
+  /* ─────────── Spacing (4px base) ─────────── */
+  --spacing: 4px;
+  --spacing-s-0:  0;
+  --spacing-s-1:  4px;
+  --spacing-s-2:  8px;
+  --spacing-s-3:  12px;
+  --spacing-s-4:  16px;
+  --spacing-s-5:  20px;
+  --spacing-s-6:  24px;
+  --spacing-s-7:  32px;
+  --spacing-s-8:  40px;
+  --spacing-s-9:  48px;
+  --spacing-s-10: 64px;
+  --spacing-s-11: 80px;
+  --spacing-s-12: 96px;
+
+  /* ─────────── Radii ─────────── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-pill: 999px;
+
+  /* ─────────── Shadows (warm-tinted) ─────────── */
+  --shadow-xs: 0 1px 2px rgba(26, 20, 16, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 20, 16, 0.08), 0 1px 3px rgba(26, 20, 16, 0.06);
+  --shadow-lg: 0 16px 40px rgba(26, 20, 16, 0.14), 0 4px 12px rgba(26, 20, 16, 0.08);
+
+  /* ─────────── Motion ─────────── */
+  --ease-std: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --duration-fast:  120ms;
+  --duration-base:  180ms;
+  --duration-modal: 240ms;
+  --duration-page:  320ms;
+
+  /* ─────────── Layout ─────────── */
+  --container-app: 1120px;
+}
+
+/* ─────────── Theming presets ─────────── */
+html[data-bg="white"] {
+  --color-bg-app: #FFFFFF;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-muted: #F5F5F4;
+  --color-border-default: #E7E5E4;
+  --color-border-ui: #D6D3D1;
+}
+html[data-bg="cream"] {
+  --color-bg-app: #FAF6EE;
+  --color-bg-surface: #FFFDF9;
+  --color-bg-muted: #F2ECDE;
+}
+html[data-bg="hi-contrast"] {
+  --color-bg-app: #FFFFFF;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-muted: #F4F4F4;
+  --color-border-default: #A8A29E;
+  --color-border-ui: #78716C;
+  --color-border-strong: #44403C;
+  --color-text-primary: #000000;
+  --color-text-secondary: #1C1917;
+  --color-text-tertiary: #44403C;
+  --color-text-disabled: #78716C;
+  --shadow-xs: 0 0 0 1px #000;
+  --shadow-md: 0 0 0 1px #000, 0 4px 10px rgba(0,0,0,0.18);
+  --shadow-lg: 0 0 0 1px #000, 0 16px 40px rgba(0,0,0,0.24);
+}
+html[data-font="system"] {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+html[data-font="serif"] {
+  --font-sans: 'Lora', Georgia, 'Times New Roman', serif;
+}
+html[data-font="dyslexic"] {
+  --font-sans: 'OpenDyslexic', 'Atkinson Hyperlegible', 'Plus Jakarta Sans', sans-serif;
+}
+html[data-density="comfortable"] {
+  --text-body: 17px;
+  --text-body--line-height: 26px;
+  --text-body-sm: 15px;
+  --text-body-sm--line-height: 22px;
+  --text-body-lg: 19px;
+  --text-body-lg--line-height: 28px;
+}
+@media (prefers-reduced-motion: reduce) {
+  @theme {
+    --duration-fast:  0ms;
+    --duration-base:  0ms;
+    --duration-modal: 0ms;
+    --duration-page:  0ms;
+  }
+}
