@@ -1,0 +1,20 @@
+{
+  "name": "teacher-exam",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "db:generate": "turbo run db:generate --filter=@teacher-exam/db",
+    "db:migrate": "turbo run db:migrate --filter=@teacher-exam/db",
+    "type-check": "turbo run type-check"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  }
+}
