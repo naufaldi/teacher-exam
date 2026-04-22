@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
+import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
+import { Route as AuthReviewRouteImport } from './routes/_auth.review'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -27,27 +29,43 @@ const AuthDashboardRoute = AuthDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthGenerateRoute = AuthGenerateRouteImport.update({
+  id: '/generate',
+  path: '/generate',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthReviewRoute = AuthReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => AuthRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/generate': typeof AuthGenerateRoute
+  '/review': typeof AuthReviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/generate': typeof AuthGenerateRoute
+  '/review': typeof AuthReviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_auth/dashboard': typeof AuthDashboardRoute
+  '/_auth/generate': typeof AuthGenerateRoute
+  '/_auth/review': typeof AuthReviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard'
+  fullPaths: '/' | '/dashboard' | '/generate' | '/review'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard'
-  id: '__root__' | '/' | '/_auth' | '/_auth/dashboard'
+  to: '/' | '/dashboard' | '/generate' | '/review'
+  id: '__root__' | '/' | '/_auth' | '/_auth/dashboard' | '/_auth/generate' | '/_auth/review'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,15 +96,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/generate': {
+      id: '/_auth/generate'
+      path: '/generate'
+      fullPath: '/generate'
+      preLoaderRoute: typeof AuthGenerateRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/review': {
+      id: '/_auth/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof AuthReviewRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
   AuthDashboardRoute: typeof AuthDashboardRoute
+  AuthGenerateRoute: typeof AuthGenerateRoute
+  AuthReviewRoute: typeof AuthReviewRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardRoute: AuthDashboardRoute,
+  AuthGenerateRoute: AuthGenerateRoute,
+  AuthReviewRoute: AuthReviewRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
