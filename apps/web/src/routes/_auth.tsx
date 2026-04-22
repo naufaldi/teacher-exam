@@ -8,8 +8,20 @@ const NAV_LINKS = [
   { to: '/review' as const, label: 'Koreksi Cepat' },
 ] as const
 
+const DEV_USER = {
+  id: 'dev-user-001',
+  name: 'Sari Wulandari',
+  image: undefined as string | undefined,
+}
+
 export const Route = createFileRoute('/_auth')({
   beforeLoad: async () => {
+    // In development, skip the real auth check so the UI can be worked on
+    // without needing a live API or Google OAuth credentials.
+    if (import.meta.env.DEV) {
+      return { user: DEV_USER }
+    }
+
     try {
       const res = await fetch('/api/auth/get-session', { credentials: 'include' })
       if (!res.ok) throw new Error('unauthenticated')
