@@ -17,12 +17,8 @@ export const Route = createFileRoute('/_auth')({
 
 function AuthLayout() {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-app)' }}>
-      <main style={{
-        maxWidth: 'var(--container-app)',
-        margin: '0 auto',
-        padding: '32px 24px',
-      }}>
+    <div className="min-h-screen bg-bg-app">
+      <main className="max-w-[var(--container-app)] mx-auto py-8 px-6">
         <Outlet />
       </main>
     </div>

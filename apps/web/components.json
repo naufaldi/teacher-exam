@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@teacher-exam/ui/components",
+    "utils": "@teacher-exam/ui/lib/utils",
+    "hooks": "@teacher-exam/ui/hooks",
+    "lib": "@teacher-exam/ui/lib",
+    "ui": "@teacher-exam/ui/components"
+  }
+}

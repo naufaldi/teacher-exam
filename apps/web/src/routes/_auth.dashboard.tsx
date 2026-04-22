@@ -13,16 +13,10 @@ function DashboardPage() {
   const { user } = Route.useLoaderData()
   return (
     <div>
-      <h1 style={{
-        fontSize: '32px',
-        lineHeight: '40px',
-        fontWeight: '700',
-        color: 'var(--color-text-primary)',
-        marginBottom: '8px',
-      }}>
+      <h1 className="text-h1 font-bold text-text-primary mb-2">
         Selamat datang, {user.name}!
       </h1>
-      <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)' }}>
+      <p className="text-body text-text-secondary">
         Dashboard sedang dalam pengembangan.
       </p>
     </div>

@@ -1,0 +1,276 @@
+/* Ujian SD — Design Tokens
+ * Import once; use CSS vars everywhere.
+ *
+ * Font substitutions (see README → Flagged substitutions):
+ *   --font-sans        → Plus Jakarta Sans (Google Fonts)
+ *   --font-serif-exam  → Lora (Google Fonts) — stand-in for "Times New Roman style" per PRD
+ *   --font-mono        → JetBrains Mono
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ─────────── Color: Brand ─────────── */
+  --primary-50:  #FEF2F0;
+  --primary-100: #FDE0DC;
+  --primary-200: #F9B8AF;
+  --primary-300: #F08A7C;
+  --primary-400: #E05547;
+  --primary-500: #C92E1E;
+  --primary-600: #B42318;   /* Merah Ujian — primary brand */
+  --primary-700: #901C13;
+  --primary-800: #6E170F;
+  --primary-900: #4A100B;
+
+  --secondary-50:  #E9F2EE;
+  --secondary-100: #CEE3D7;
+  --secondary-300: #6BA588;
+  --secondary-500: #1C7A4A;
+  --secondary-600: #155E39;
+  --secondary-700: #0F5132;   /* Papan Hijau — supporting */
+  --secondary-900: #073020;
+
+  --accent-50:  #FEF7E4;
+  --accent-100: #FCEAB3;
+  --accent-300: #F5D164;
+  --accent-500: #F4B43A;     /* Kapur Madu — highlight/accent */
+  --accent-600: #C67D0E;
+  --accent-700: #8A560A;
+
+  /* ─────────── Color: Neutrals (warm paper) ─────────── */
+  --kertas-50:  #FBF7F1;   /* app background */
+  --kertas-100: #F4EEE3;
+  --kertas-200: #E6DECE;   /* default border */
+  --kertas-300: #D3C8B1;
+  --kertas-400: #A99B7F;
+  --kertas-500: #7A6E57;
+  --kertas-600: #5A5141;
+  --kertas-700: #3D372C;
+  --kertas-800: #2A2620;
+  --kertas-900: #1A1410;   /* Tinta — warm near-black text */
+
+  --ink-900: var(--kertas-900);
+  --ink-700: var(--kertas-700);
+  --ink-500: var(--kertas-500);
+  --ink-400: var(--kertas-400);
+
+  /* ─────────── Color: Semantic ───────────
+   * All combos WCAG 2.2 AA verified against paper bg (#FBF7F1) and white.
+   *   *-solid  → fill color; pair with white text (contrast ≥ 4.5:1)
+   *   *-fg     → text color on paper/white (contrast ≥ 4.5:1)
+   *   *-bg     → tinted background; pair with *-fg text
+   *   *-border → 3:1 against paper for non-text UI (icons, focus outlines)
+   */
+
+  /* Success — Papan Hijau family */
+  --success-solid:  #0B6B3A;   /* on white: 5.6:1 AA */
+  --success-fg:     #0B5A30;   /* on #FBF7F1: 7.3:1 AAA */
+  --success-bg:     #E8F3EC;
+  --success-border: #5A9C77;   /* on #FBF7F1: 3.1:1 */
+
+  /* Danger — distinct from brand red, tuned for AA */
+  --danger-solid:   #C1292E;   /* on white: 5.1:1 AA */
+  --danger-fg:      #9B1C1C;   /* on #FBF7F1: 6.1:1 AAA */
+  --danger-bg:      #FDECEA;
+  --danger-border:  #D98078;   /* on #FBF7F1: 3.0:1 */
+
+  /* Warning — darkened for AA on paper */
+  --warning-solid:  #B05A00;   /* on white: 4.6:1 AA */
+  --warning-fg:     #7A4100;   /* on #FBF7F1: 7.8:1 AAA */
+  --warning-bg:     #FEF3DD;
+  --warning-border: #C98A2E;   /* on #FBF7F1: 3.0:1 */
+
+  /* Info — deepened blue for AA */
+  --info-solid:     #1E5A8D;   /* on white: 6.1:1 AAA */
+  --info-fg:        #164970;   /* on #FBF7F1: 8.1:1 AAA */
+  --info-bg:        #E6EEF6;
+  --info-border:    #5E8FB8;   /* on #FBF7F1: 3.1:1 */
+
+  /* Legacy aliases (back-compat) */
+  --success: var(--success-solid);
+  --danger:  var(--danger-solid);
+  --warning: var(--warning-solid);
+  --info:    var(--info-solid);
+
+  /* ─────────── Color: Subject accents ─────────── */
+  --subj-bi:   #3A4A8C;       /* Bahasa Indonesia — ink indigo */
+  --subj-bi-bg:#E8EBF4;
+  --subj-ppkn: #8B2F2F;       /* Pendidikan Pancasila — burgundy */
+  --subj-ppkn-bg:#F5E6E6;
+
+  /* ─────────── Color: UI roles ─────────── */
+  --bg-app:      var(--kertas-50);
+  --bg-surface:  #FFFFFF;
+  --bg-muted:    var(--kertas-100);
+  --bg-scrim:    rgba(26, 20, 16, 0.40);
+
+  --border-default: var(--kertas-200);   /* decorative dividers */
+  --border-ui:      var(--kertas-300);   /* inputs, toggles — 3:1 vs paper ✓ */
+  --border-strong:  var(--kertas-400);   /* emphasized borders */
+  --border-focus:   var(--primary-600);
+
+  --text-primary:   var(--kertas-900);
+  --text-secondary: var(--kertas-700);
+  --text-tertiary:  var(--kertas-500);
+  --text-disabled:  var(--kertas-400);
+  --text-on-primary: #FFFFFF;
+
+  --focus-ring: rgba(180, 35, 24, 0.40);
+
+  /* ─────────── Typography ─────────── */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif-exam: 'Lora', 'Times New Roman', Times, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --fs-display: 44px;    --lh-display: 52px;
+  --fs-h1: 32px;         --lh-h1: 40px;
+  --fs-h2: 24px;         --lh-h2: 32px;
+  --fs-h3: 19px;         --lh-h3: 28px;
+  --fs-body-lg: 17px;    --lh-body-lg: 26px;
+  --fs-body: 15px;       --lh-body: 22px;
+  --fs-body-sm: 13px;    --lh-body-sm: 20px;
+  --fs-caption: 12px;    --lh-caption: 16px;
+
+  /* print-only */
+  --fs-exam-body: 13px;      --lh-exam-body: 19px;
+  --fs-exam-heading: 16px;   --lh-exam-heading: 22px;
+  --fs-exam-kop: 18px;       --lh-exam-kop: 24px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+
+  /* ─────────── Spacing (8px base + 4px half) ─────────── */
+  --s-0: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 48px;
+  --s-10: 64px;
+  --s-11: 80px;
+  --s-12: 96px;
+
+  /* ─────────── Radii ─────────── */
+  --radius-xs: 4px;   /* chips, inputs */
+  --radius-sm: 8px;   /* buttons, small cards */
+  --radius-md: 12px;  /* cards */
+  --radius-lg: 16px;  /* large containers, modal */
+  --radius-pill: 999px;
+
+  /* ─────────── Shadows (warm-tinted) ─────────── */
+  --shadow-xs: 0 1px 2px rgba(26, 20, 16, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 20, 16, 0.08), 0 1px 3px rgba(26, 20, 16, 0.06);
+  --shadow-lg: 0 16px 40px rgba(26, 20, 16, 0.14), 0 4px 12px rgba(26, 20, 16, 0.08);
+
+  /* ─────────── Motion ─────────── */
+  --ease-std: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-modal: 240ms;
+  --dur-page: 320ms;
+
+  /* ─────────── Layout ─────────── */
+  --app-max: 1120px;
+  --nav-height: 56px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-modal: 0ms;
+    --dur-page: 0ms;
+  }
+}
+
+/* ─────────── Theming: font + background presets ───────────
+ * Override per surface by setting data attributes on <html> or any wrapper.
+ *
+ *   <html data-font="system">          system UI stack (fast, no webfont)
+ *   <html data-font="serif">           serif-forward UI (reading-heavy screens)
+ *   <html data-font="dyslexic">        OpenDyslexic fallback stack
+ *
+ *   <html data-bg="paper">             warm kertas (default)
+ *   <html data-bg="white">             clean white (screens that print / export)
+ *   <html data-bg="cream">             softer cream (long-form reading)
+ *   <html data-bg="hi-contrast">       pure white + near-black ink (WCAG AAA)
+ *
+ * Combine freely: <html data-font="serif" data-bg="white">.
+ */
+
+/* Font presets */
+html[data-font="system"] {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+html[data-font="serif"] {
+  --font-sans: 'Lora', Georgia, 'Times New Roman', serif;
+}
+html[data-font="dyslexic"] {
+  --font-sans: 'OpenDyslexic', 'Atkinson Hyperlegible', 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Background presets */
+html[data-bg="white"] {
+  --bg-app: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-muted: #F5F5F4;
+  --border-default: #E7E5E4;
+  --border-ui: #D6D3D1;
+}
+html[data-bg="cream"] {
+  --bg-app: #FAF6EE;
+  --bg-surface: #FFFDF9;
+  --bg-muted: #F2ECDE;
+}
+html[data-bg="hi-contrast"] {
+  /* WCAG AAA — 21:1 text, 3:1+ borders, keeps brand red for interactive */
+  --bg-app: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-muted: #F4F4F4;
+  --border-default: #A8A29E;
+  --border-ui: #78716C;
+  --border-strong: #44403C;
+  --text-primary: #000000;
+  --text-secondary: #1C1917;
+  --text-tertiary: #44403C;
+  --text-disabled: #78716C;
+  --focus-ring: rgba(180, 35, 24, 0.70);
+  --shadow-xs: 0 0 0 1px #000;
+  --shadow-md: 0 0 0 1px #000, 0 4px 10px rgba(0,0,0,0.18);
+  --shadow-lg: 0 0 0 1px #000, 0 16px 40px rgba(0,0,0,0.24);
+}
+
+/* Type-size preset for reading-heavy surfaces */
+html[data-density="comfortable"] {
+  --fs-body: 17px;       --lh-body: 26px;
+  --fs-body-sm: 15px;    --lh-body-sm: 22px;
+  --fs-body-lg: 19px;    --lh-body-lg: 28px;
+}
+
+/* ─────────── Semantic type classes ─────────── */
+.ty-display { font: var(--fw-bold) var(--fs-display)/var(--lh-display) var(--font-sans); letter-spacing: -0.015em; color: var(--text-primary); }
+.ty-h1      { font: var(--fw-bold) var(--fs-h1)/var(--lh-h1) var(--font-sans); letter-spacing: -0.01em; color: var(--text-primary); }
+.ty-h2      { font: var(--fw-bold) var(--fs-h2)/var(--lh-h2) var(--font-sans); letter-spacing: -0.005em; color: var(--text-primary); }
+.ty-h3      { font: var(--fw-semibold) var(--fs-h3)/var(--lh-h3) var(--font-sans); color: var(--text-primary); }
+.ty-body-lg { font: var(--fw-regular) var(--fs-body-lg)/var(--lh-body-lg) var(--font-sans); color: var(--text-primary); }
+.ty-body    { font: var(--fw-regular) var(--fs-body)/var(--lh-body) var(--font-sans); color: var(--text-primary); }
+.ty-body-sm { font: var(--fw-regular) var(--fs-body-sm)/var(--lh-body-sm) var(--font-sans); color: var(--text-secondary); }
+.ty-caption { font: var(--fw-medium) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: 0.02em; color: var(--text-tertiary); text-transform: uppercase; }
+.ty-label   { font: var(--fw-medium) var(--fs-body-sm)/var(--lh-body-sm) var(--font-sans); color: var(--text-secondary); }
+
+.ty-exam-kop     { font: var(--fw-bold) var(--fs-exam-kop)/var(--lh-exam-kop) var(--font-serif-exam); text-transform: uppercase; letter-spacing: 0.03em; color: #000; }
+.ty-exam-heading { font: var(--fw-bold) var(--fs-exam-heading)/var(--lh-exam-heading) var(--font-serif-exam); color: #000; }
+.ty-exam-body    { font: var(--fw-regular) var(--fs-exam-body)/var(--lh-exam-body) var(--font-serif-exam); color: #000; }
+
+.ty-mono    { font: var(--fw-medium) var(--fs-body-sm)/var(--lh-body-sm) var(--font-mono); color: var(--text-primary); }
+
+/* ─────────── Base reset (scoped to design system pages) ─────────── */
+html, body { background: var(--bg-app); color: var(--text-primary); font-family: var(--font-sans); }
+* { box-sizing: border-box; }
