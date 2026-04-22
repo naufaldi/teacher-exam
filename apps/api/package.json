@@ -1,0 +1,24 @@
+{
+  "name": "@teacher-exam/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --import tsx/esm src/index.ts",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.33.1",
+    "@teacher-exam/db": "workspace:*",
+    "@teacher-exam/shared": "workspace:*",
+    "better-auth": "^1.1.3",
+    "effect": "^3.11.0",
+    "hono": "^4.6.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}
