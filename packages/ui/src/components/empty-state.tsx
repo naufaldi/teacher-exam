@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { FileText } from 'lucide-react'
-import { cn } from '../lib/utils.js'
+import { cn } from '../lib/utils'
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string

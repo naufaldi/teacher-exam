@@ -77,7 +77,7 @@ const ACTION_CARDS = [
   },
   {
     id: 'history',
-    to: '/dashboard' as const, // /history route doesn't exist yet
+    to: '/history' as const,
     variant: 'secondary' as const,
     iconBg: 'bg-secondary-50',
     iconColor: 'text-secondary-700',
@@ -252,12 +252,12 @@ function DashboardPage() {
             <h3 className="text-caption font-semibold tracking-wider uppercase text-text-tertiary m-0">
               Lembar Terakhir Dibuat
             </h3>
-            <a
-              href="#"
+            <Link
+              to="/history"
               className="text-body-sm font-medium text-primary-700 hover:underline"
             >
               Semua lembar →
-            </a>
+            </Link>
           </div>
 
           {lastExam ? (
@@ -379,12 +379,12 @@ function DashboardPage() {
             <span className="text-body-sm text-text-tertiary">
               Tampilkan {exams.length} dari {MOCK_DASHBOARD_STATS.totalSheets} lembar
             </span>
-            <a
-              href="#"
+            <Link
+              to="/history"
               className="text-body-sm font-semibold text-primary-700 hover:underline"
             >
               Lihat semua riwayat →
-            </a>
+            </Link>
           </div>
         </div>
       </section>

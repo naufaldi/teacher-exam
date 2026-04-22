@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Upload, FileText, X } from 'lucide-react'
-import { cn } from '../lib/utils.js'
+import { cn } from '../lib/utils'
 
 function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024) {

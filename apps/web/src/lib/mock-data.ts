@@ -446,6 +446,137 @@ export const MOCK_EXAM_FINAL = _MOCK_EXAM_FINAL as unknown as Exam
 export const MOCK_EXAM_DRAFT = _MOCK_EXAM_DRAFT as unknown as Exam
 export const MOCK_EXAM_HISTORY = _MOCK_EXAM_HISTORY as unknown as Exam
 
+const _MOCK_EXAM_HISTORY_EXTRA = [
+  {
+    id: 'exam-004',
+    userId: 'user-001',
+    title: 'PTS Pendidikan Pancasila Kelas 6',
+    subject: 'pendidikan_pancasila' as const,
+    grade: 6,
+    difficulty: 'campuran' as const,
+    topic: 'Hak dan Kewajiban Warga Negara',
+    reviewMode: 'fast' as const,
+    status: 'final' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'PTS',
+    examDate: '2026-04-08',
+    durationMinutes: 60,
+    instructions: "Bacalah do'a sebelum mengerjakan soal.\nKerjakan soal dengan teliti.",
+    classContext: null,
+    discussionMd: null,
+    createdAt: '2026-04-08T07:30:00.000Z',
+    updatedAt: '2026-04-08T08:30:00.000Z',
+  },
+  {
+    id: 'exam-005',
+    userId: 'user-001',
+    title: 'Ulangan Harian Tema 7 — Kelas 5',
+    subject: 'bahasa_indonesia' as const,
+    grade: 5,
+    difficulty: 'mudah' as const,
+    topic: 'Teks Narasi',
+    reviewMode: 'fast' as const,
+    status: 'final' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'Ulangan Harian',
+    examDate: '2026-04-02',
+    durationMinutes: 45,
+    instructions: 'Kerjakan soal dengan teliti. Jangan mencontek.',
+    classContext: null,
+    discussionMd: null,
+    createdAt: '2026-04-02T09:00:00.000Z',
+    updatedAt: '2026-04-02T09:50:00.000Z',
+  },
+  {
+    id: 'exam-006',
+    userId: 'user-001',
+    title: 'Asesmen Sumatif PPKN Kelas 6',
+    subject: 'pendidikan_pancasila' as const,
+    grade: 6,
+    difficulty: 'sedang' as const,
+    topic: 'Bhinneka Tunggal Ika',
+    reviewMode: 'slow' as const,
+    status: 'draft' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'Asesmen Sumatif',
+    examDate: '2026-05-12',
+    durationMinutes: 60,
+    instructions: 'Bacalah perintah pada setiap soal dengan teliti.',
+    classContext: 'Penilaian akhir tema untuk Kelas 6A.',
+    discussionMd: null,
+    createdAt: '2026-03-28T10:15:00.000Z',
+    updatedAt: '2026-03-28T11:00:00.000Z',
+  },
+  {
+    id: 'exam-007',
+    userId: 'user-001',
+    title: 'Latihan Soal Bahasa Indonesia Kelas 5',
+    subject: 'bahasa_indonesia' as const,
+    grade: 5,
+    difficulty: 'sedang' as const,
+    topic: 'Kosakata Baru dan Sinonim',
+    reviewMode: 'fast' as const,
+    status: 'final' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'Latihan',
+    examDate: '2026-03-22',
+    durationMinutes: 30,
+    instructions: 'Latihan mandiri sebelum ulangan tema berikutnya.',
+    classContext: null,
+    discussionMd: null,
+    createdAt: '2026-03-22T08:45:00.000Z',
+    updatedAt: '2026-03-22T09:25:00.000Z',
+  },
+  {
+    id: 'exam-008',
+    userId: 'user-001',
+    title: 'PTS Bahasa Indonesia Kelas 6',
+    subject: 'bahasa_indonesia' as const,
+    grade: 6,
+    difficulty: 'sulit' as const,
+    topic: 'Teks Eksplanasi dan Majas',
+    reviewMode: 'slow' as const,
+    status: 'final' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'PTS',
+    examDate: '2026-03-15',
+    durationMinutes: 90,
+    instructions: 'Penilaian Tengah Semester. Kerjakan secara mandiri.',
+    classContext: null,
+    discussionMd: null,
+    createdAt: '2026-03-15T07:00:00.000Z',
+    updatedAt: '2026-03-15T08:30:00.000Z',
+  },
+  {
+    id: 'exam-009',
+    userId: 'user-001',
+    title: 'Ulangan Harian PPKN Kelas 5',
+    subject: 'pendidikan_pancasila' as const,
+    grade: 5,
+    difficulty: 'mudah' as const,
+    topic: 'Norma di Lingkungan Sekitar',
+    reviewMode: 'fast' as const,
+    status: 'draft' as const,
+    schoolName: 'SD Negeri 1 Jakarta',
+    academicYear: '2025/2026',
+    examType: 'Ulangan Harian',
+    examDate: '2026-05-02',
+    durationMinutes: 45,
+    instructions: 'Bacalah dengan teliti sebelum menjawab.',
+    classContext: null,
+    discussionMd: null,
+    createdAt: '2026-03-10T09:30:00.000Z',
+    updatedAt: '2026-03-10T10:10:00.000Z',
+  },
+] as const
+
+export const MOCK_EXAM_HISTORY_EXTRA = _MOCK_EXAM_HISTORY_EXTRA as unknown as Exam[]
+
 export const MOCK_DASHBOARD_STATS = {
   totalSheets: 8,
   finalCount: 5,
@@ -488,6 +619,22 @@ export const MOCK_STUDENTS: string[] = [
 
 export function getMockExams(): Exam[] {
   return [MOCK_EXAM_FINAL, MOCK_EXAM_DRAFT, MOCK_EXAM_HISTORY]
+}
+
+/**
+ * Returns the full Riwayat Ujian dataset, sorted newest first by createdAt.
+ * Used by the /history route as the source of mock exam rows.
+ */
+export function getMockExamHistory(): Exam[] {
+  const all: Exam[] = [
+    MOCK_EXAM_FINAL,
+    MOCK_EXAM_DRAFT,
+    MOCK_EXAM_HISTORY,
+    ...MOCK_EXAM_HISTORY_EXTRA,
+  ]
+  return [...all].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
 }
 
 export function getMockExamWithQuestions(id: string): ExamWithQuestions | undefined {

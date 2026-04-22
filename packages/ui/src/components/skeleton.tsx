@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '../lib/utils.js'
+import { cn } from '../lib/utils'
 
 const skeletonVariants = cva(
   'bg-kertas-200 animate-pulse',

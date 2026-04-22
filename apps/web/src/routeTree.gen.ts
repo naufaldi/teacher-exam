@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthReviewRouteImport } from './routes/_auth.review'
+import { Route as AuthPreviewRouteImport } from './routes/_auth.preview'
+import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
 import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
 
@@ -29,6 +31,16 @@ const AuthReviewRoute = AuthReviewRouteImport.update({
   path: '/review',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthPreviewRoute = AuthPreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthHistoryRoute = AuthHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthGenerateRoute = AuthGenerateRouteImport.update({
   id: '/generate',
   path: '/generate',
@@ -44,12 +56,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
+  '/history': typeof AuthHistoryRoute
+  '/preview': typeof AuthPreviewRoute
   '/review': typeof AuthReviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
+  '/history': typeof AuthHistoryRoute
+  '/preview': typeof AuthPreviewRoute
   '/review': typeof AuthReviewRoute
 }
 export interface FileRoutesById {
@@ -58,19 +74,29 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/generate': typeof AuthGenerateRoute
+  '/_auth/history': typeof AuthHistoryRoute
+  '/_auth/preview': typeof AuthPreviewRoute
   '/_auth/review': typeof AuthReviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/generate' | '/review'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/generate'
+    | '/history'
+    | '/preview'
+    | '/review'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/generate' | '/review'
+  to: '/' | '/dashboard' | '/generate' | '/history' | '/preview' | '/review'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_auth/dashboard'
     | '/_auth/generate'
+    | '/_auth/history'
+    | '/_auth/preview'
     | '/_auth/review'
   fileRoutesById: FileRoutesById
 }
@@ -102,6 +128,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthReviewRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/preview': {
+      id: '/_auth/preview'
+      path: '/preview'
+      fullPath: '/preview'
+      preLoaderRoute: typeof AuthPreviewRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/history': {
+      id: '/_auth/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthHistoryRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/generate': {
       id: '/_auth/generate'
       path: '/generate'
@@ -122,12 +162,16 @@ declare module '@tanstack/react-router' {
 interface AuthRouteChildren {
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthGenerateRoute: typeof AuthGenerateRoute
+  AuthHistoryRoute: typeof AuthHistoryRoute
+  AuthPreviewRoute: typeof AuthPreviewRoute
   AuthReviewRoute: typeof AuthReviewRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardRoute: AuthDashboardRoute,
   AuthGenerateRoute: AuthGenerateRoute,
+  AuthHistoryRoute: AuthHistoryRoute,
+  AuthPreviewRoute: AuthPreviewRoute,
   AuthReviewRoute: AuthReviewRoute,
 }
 

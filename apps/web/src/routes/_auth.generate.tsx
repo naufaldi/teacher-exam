@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Sparkles, Lock, ArrowLeft, AlertTriangle, FileText, X } from 'lucide-react'
 import {
@@ -20,9 +20,16 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@teacher-exam/ui'
+import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
+import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
+import { examDraftStore } from '../lib/exam-draft-store.js'
 
 export const Route = createFileRoute('/_auth/generate')({
   component: GeneratePage,
+  validateSearch: (search): { simulate?: 'error' } => {
+    if (search['simulate'] === 'error') return { simulate: 'error' }
+    return {}
+  },
 })
 
 // ── Topic lists from PRD section 8.3 ─────────────────────────────────────────
@@ -67,21 +74,7 @@ const TOPIK_PPKN = [
   'Musyawarah dan Pengambilan Keputusan',
 ] as const
 
-// ── Loading step labels ───────────────────────────────────────────────────────
-
-const GENERATE_STEPS = [
-  'Menganalisis materi dan topik...',
-  'Membuat 20 soal pilihan ganda...',
-  'Menyusun kunci jawaban...',
-  'Melakukan validasi akhir...',
-] as const
-
 // ── Display label maps ────────────────────────────────────────────────────────
-
-const SUBJECT_LABELS: Record<string, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-}
 
 const KESULITAN_LABELS: Record<string, string> = {
   mudah: 'Mudah',
@@ -94,6 +87,8 @@ const REVIEW_MODE_LABELS: Record<string, string> = {
   fast: 'Cepat',
   slow: 'Detail',
 }
+
+const GENERATE_DURATION_MS = 7000
 
 // ── Section header helper ─────────────────────────────────────────────────────
 
@@ -112,6 +107,7 @@ function SectionHeader({ label }: { label: string }) {
 
 function GeneratePage() {
   const navigate = useNavigate()
+  const { simulate } = Route.useSearch()
 
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -126,48 +122,27 @@ function GeneratePage() {
   // Loading / error state
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [progressStep, setProgressStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
 
-  // Progress interval ref for cleanup
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current !== null) {
-        clearInterval(progressIntervalRef.current)
-      }
+  const clearTimers = useCallback(() => {
+    if (progressIntervalRef.current !== null) {
+      clearInterval(progressIntervalRef.current)
+      progressIntervalRef.current = null
+    }
+    if (completionTimerRef.current !== null) {
+      clearTimeout(completionTimerRef.current)
+      completionTimerRef.current = null
     }
   }, [])
 
-  // Drive progress bar and step labels while generating
+  // Cleanup on unmount
   useEffect(() => {
-    if (!isGenerating) return
-
-    setProgress(0)
-    setProgressStep(0)
-
-    progressIntervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + Math.floor(Math.random() * 4) + 2
-        const capped = Math.min(next, 90)
-        // Update step based on progress thresholds
-        if (capped >= 75) setProgressStep(3)
-        else if (capped >= 50) setProgressStep(2)
-        else if (capped >= 20) setProgressStep(1)
-        else setProgressStep(0)
-        return capped
-      })
-    }, 300)
-
-    return () => {
-      if (progressIntervalRef.current !== null) {
-        clearInterval(progressIntervalRef.current)
-        progressIntervalRef.current = null
-      }
-    }
-  }, [isGenerating])
+    return clearTimers
+  }, [clearTimers])
 
   const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI : TOPIK_PPKN
 
@@ -177,21 +152,69 @@ function GeneratePage() {
   // Sidebar completion count
   const filledCount = [kelas, mapel, effectiveTopik, kesulitan].filter(Boolean).length
 
-  const handleGenerate = () => {
+  const runGenerate = useCallback(() => {
     setError(null)
+    setShowErrorDialog(false)
     setIsGenerating(true)
-    // Stub: simulate 2s AI call then navigate
-    setTimeout(() => {
-      if (progressIntervalRef.current !== null) {
-        clearInterval(progressIntervalRef.current)
-        progressIntervalRef.current = null
-      }
-      setProgress(100)
-      setTimeout(() => {
-        setIsGenerating(false)
-        void navigate({ to: '/review', search: { mode: reviewMode } })
-      }, 400)
-    }, 2000)
+    setProgress(0)
+
+    const startedAt = Date.now()
+    const willFail = simulate === 'error'
+
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startedAt
+      const ratio = Math.min(1, elapsed / GENERATE_DURATION_MS)
+      // Ease-out so the early steps tick fast and the final 10% lingers a touch
+      const eased = 1 - Math.pow(1 - ratio, 1.6)
+      const next = willFail ? Math.min(eased * 100, 55) : Math.min(eased * 100, 99)
+      setProgress(next)
+    }, 120)
+
+    completionTimerRef.current = setTimeout(
+      () => {
+        clearTimers()
+
+        if (willFail) {
+          setIsGenerating(false)
+          setProgress(0)
+          setShowErrorDialog(true)
+          return
+        }
+
+        setProgress(100)
+        // Sync the form config into the shared draft so /review and /preview use it
+        examDraftStore.setReviewMode(reviewMode)
+        examDraftStore.setConfig({
+          subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
+          grade: Number(kelas) || 6,
+          topic: effectiveTopik,
+        })
+
+        completionTimerRef.current = setTimeout(() => {
+          setIsGenerating(false)
+          void navigate({
+            to: '/review',
+            search: { mode: reviewMode, from: 'generate' },
+          })
+        }, 450)
+      },
+      willFail ? 2200 : GENERATE_DURATION_MS,
+    )
+  }, [clearTimers, effectiveTopik, kelas, mapel, navigate, reviewMode, simulate])
+
+  const handleGenerate = () => {
+    runGenerate()
+  }
+
+  const handleCancel = () => {
+    clearTimers()
+    setIsGenerating(false)
+    setProgress(0)
+  }
+
+  const handleRetry = () => {
+    setShowErrorDialog(false)
+    runGenerate()
   }
 
   const isFormValid = Boolean(kelas && mapel && effectiveTopik && kesulitan && !isGenerating)
@@ -467,6 +490,13 @@ function GeneratePage() {
               </div>
             ) : null}
 
+            {simulate === 'error' ? (
+              <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-sm bg-warning-bg border border-warning-border text-caption text-warning-fg">
+                <AlertTriangle size={13} />
+                Mode simulasi error aktif (?simulate=error)
+              </div>
+            ) : null}
+
             <div className="pt-4 border-t border-border-default">
               <Button
                 size="lg"
@@ -482,24 +512,6 @@ function GeneratePage() {
               </p>
             </div>
           </section>
-
-          {/* ── Loading overlay ── */}
-          {isGenerating ? (
-            <div className="absolute inset-0 bg-bg-app/90 backdrop-blur-[2px] rounded-md flex items-center justify-center z-10">
-              <div className="text-center space-y-4 max-w-xs w-full px-6">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary-50 border border-primary-200 flex items-center justify-center">
-                  <Sparkles size={22} className="text-primary-600 animate-pulse" />
-                </div>
-                <Progress value={progress} className="h-2" />
-                <div className="space-y-1">
-                  <p className="text-body font-medium text-text-primary">
-                    {GENERATE_STEPS[progressStep]}
-                  </p>
-                  <p className="text-caption text-text-tertiary">Estimasi 10–30 detik</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -594,6 +606,18 @@ function GeneratePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Loading + error dialogs ─────────────────────────────────────── */}
+      <GenerateProgressDialog
+        open={isGenerating}
+        progress={progress}
+        onCancel={handleCancel}
+      />
+      <GenerateErrorDialog
+        open={showErrorDialog}
+        onRetry={handleRetry}
+        onClose={() => setShowErrorDialog(false)}
+      />
     </div>
   )
 }
