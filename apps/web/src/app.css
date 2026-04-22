@@ -20,6 +20,34 @@ body {
   outline-offset: 2px;
 }
 
+/* Staggered entry animation — used with style="--index: N" */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up var(--duration-page, 320ms) var(--ease-std, cubic-bezier(0.4, 0, 0.2, 1)) both;
+}
+
+.animate-fade-up-stagger {
+  animation: fade-up var(--duration-page, 320ms) var(--ease-std, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  animation-delay: calc(var(--index, 0) * 80ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-stagger {
+    animation: none;
+  }
+}
+
 @media print {
   nav, button, [data-no-print] {
     display: none !important;
@@ -27,5 +55,25 @@ body {
   body {
     background: white;
     font-family: var(--font-serif);
+    font-size: 13px;
+    line-height: 1.5;
+    color: #000;
+  }
+  /* A4 page setup */
+  @page {
+    size: A4 portrait;
+    margin: 2cm;
+  }
+  /* Ensure print content fills page */
+  [data-print-content] {
+    width: 100%;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* Page breaks */
+  .print-page-break {
+    page-break-after: always;
+    break-after: page;
   }
 }
