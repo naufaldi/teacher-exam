@@ -3,6 +3,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '@teacher-exam/db'
 
 export const auth = betterAuth({
+  secret: process.env['SESSION_SECRET'] ?? '',
+  baseURL: process.env['APP_URL'] ?? 'http://localhost:3000',
   database: drizzleAdapter(db, { provider: 'pg' }),
   socialProviders: {
     google: {

@@ -10,9 +10,7 @@ app.use('*', logger())
 app.use(
   '/api/*',
   cors({
-    origin: process.env['BETTER_AUTH_URL'] === 'http://localhost:3001'
-      ? 'http://localhost:5173'
-      : process.env['WEB_URL'] ?? '',
+    origin: process.env['APP_URL'] ?? 'http://localhost:3000',
     credentials: true,
   }),
 )
@@ -24,7 +22,7 @@ app.route('/api/health', healthRouter)
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
-const port = Number(process.env['PORT'] ?? 3001)
+const port = Number(process.env['API_PORT'] ?? 3001)
 console.log(`API server running on http://localhost:${port}`)
 
 export default {
