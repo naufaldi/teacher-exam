@@ -16,11 +16,11 @@
     "@radix-ui/react-slot": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.469.0",
-    "tailwind-merge": "^2.6.0"
+    "lucide-react": "^1.8.0",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
-    "typescript": "^5.5.4"
+    "typescript": "^6.0.3"
   }
 }
