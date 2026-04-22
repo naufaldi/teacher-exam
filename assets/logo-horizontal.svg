@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" fill="none">
+  
+  <g transform="translate(4,4) scale(0.9)">
+    <rect x="10" y="18" width="38" height="44" rx="3" fill="#FBF7F1" stroke="#1A1410" stroke-width="2"></rect>
+    <rect x="14" y="14" width="38" height="44" rx="3" fill="#FFFFFF" stroke="#1A1410" stroke-width="2"></rect>
+    <line x1="20" y1="28" x2="46" y2="28" stroke="#E6DECE" stroke-width="1.5"></line>
+    <line x1="20" y1="34" x2="46" y2="34" stroke="#E6DECE" stroke-width="1.5"></line>
+    <line x1="20" y1="40" x2="46" y2="40" stroke="#E6DECE" stroke-width="1.5"></line>
+    <path d="M38 38 l4 4 l8 -10" stroke="#B42318" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+    <circle cx="33" cy="10" r="3" fill="#F4B43A"></circle>
+    <path d="M16 10 L48 6 L56 10 L33 16 L16 10 Z" fill="#1A1410"></path>
+    <path d="M48 6 L56 10 L56 14 L52 12 Z" fill="#B42318"></path>
+  </g>
+  
+  <text x="72" y="34" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="22" fill="#1A1410" letter-spacing="-0.5">Ujian</text>
+  <text x="72" y="54" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="14" fill="#B42318" letter-spacing="0.08">SD · FASE C</text>
+</svg>
