@@ -27,7 +27,7 @@ export function RejectConfirmDialog({
   onClose,
 }: RejectConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+    <AlertDialog open={open} onOpenChange={(o: boolean) => { if (!o) onClose() }}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-3">

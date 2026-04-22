@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectValue,
   PageHeader,
-  toast,
+  useToast,
 } from '@teacher-exam/ui'
 import type { Question } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
@@ -101,6 +101,7 @@ function ReviewPage() {
   const { mode, from } = Route.useSearch()
   const navigate = useNavigate()
   const draft = useExamDraft()
+  const { toast } = useToast()
 
   // Sync URL `mode` into the shared draft once on mount / mode change
   useEffect(() => {
@@ -129,7 +130,9 @@ function ReviewPage() {
   // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
     if (from === 'generate') {
-      toast.success('Lembar berhasil dibuat', {
+      toast({
+        variant: 'success',
+        title: 'Lembar berhasil dibuat',
         description: '20 soal berhasil dibuat — siap di-review.',
       })
       void navigate({
