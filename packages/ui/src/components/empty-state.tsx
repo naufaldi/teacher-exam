@@ -23,7 +23,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       {description && (
         <p className="text-body text-text-tertiary max-w-[320px] mb-6">{description}</p>
       )}
-      {action && action}
+      {action}
     </div>
   ),
 )

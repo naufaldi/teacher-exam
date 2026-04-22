@@ -5,12 +5,12 @@ import { cn } from '../lib/utils.js'
 export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string
   subtitle?: string
-  backHref?: string
+  onBack?: () => void
   backLabel?: string
 }
 
 export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
-  ({ className, title, subtitle, backHref, backLabel = 'Kembali', children, ...props }, ref) => (
+  ({ className, title, subtitle, onBack, backLabel = 'Kembali', children, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
@@ -20,14 +20,15 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
       {...props}
     >
       <div className="flex flex-col">
-        {backHref && (
-          <a
-            href={backHref}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
             className="flex items-center gap-1.5 mb-2 text-body-sm text-text-tertiary hover:text-text-primary transition-colors duration-[120ms]"
           >
             <ArrowLeft size={16} />
             {backLabel}
-          </a>
+          </button>
         )}
         <h1 className="text-h1 font-bold text-text-primary">{title}</h1>
         {subtitle && (

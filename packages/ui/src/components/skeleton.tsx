@@ -27,6 +27,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     <div
       ref={ref}
       className={cn(skeletonVariants({ variant, className }))}
+      aria-hidden="true"
       {...props}
     />
   ),

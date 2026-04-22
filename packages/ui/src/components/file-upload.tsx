@@ -47,7 +47,9 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
     function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
       e.preventDefault()
       e.stopPropagation()
-      setDragging(false)
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        setDragging(false)
+      }
     }
 
     function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -111,7 +113,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         : error
           ? 'border-danger-border bg-danger-bg'
           : 'border-border-ui',
-      disabled && 'opacity-50 cursor-not-allowed',
+      disabled && 'opacity-45 cursor-not-allowed',
       className,
     )
 
@@ -122,6 +124,8 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        role="region"
+        aria-label="Area upload file — seret PDF ke sini atau klik tombol Pilih file"
         {...props}
       >
         <input
@@ -131,6 +135,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
           className="hidden"
           disabled={disabled}
           onChange={handleInputChange}
+          aria-label="Pilih file PDF"
         />
         {error ? (
           <>
@@ -158,7 +163,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
           <>
             <Upload size={24} className="text-text-tertiary mb-3" />
             <p className="text-body font-medium text-text-secondary">
-              Drag &amp; drop PDF di sini
+              Drag & drop PDF di sini
             </p>
             <p className="text-body-sm text-text-tertiary mt-1">atau</p>
             <button
