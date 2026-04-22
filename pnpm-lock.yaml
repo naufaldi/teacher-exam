@@ -20,6 +20,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.90.0
         version: 0.90.0(zod@4.3.6)
+      '@hono/node-server':
+        specifier: ^2.0.0
+        version: 2.0.0(hono@4.12.14)
       '@teacher-exam/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -792,6 +795,12 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@hono/node-server@2.0.0':
+    resolution: {integrity: sha512-n3GfHwwCvHCkGmOwKfxUPOlbfzuO64Sbc5XC4NGPIXxkuOnJrdgExdRKmHfF924r914WRJPT397GdqLvdYTeyQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2236,6 +2245,10 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.7':
     optional: true
+
+  '@hono/node-server@2.0.0(hono@4.12.14)':
+    dependencies:
+      hono: 4.12.14
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

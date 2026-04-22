@@ -1,3 +1,4 @@
+import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
@@ -23,9 +24,7 @@ app.route('/api/health', healthRouter)
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
 const port = Number(process.env['API_PORT'] ?? 3001)
-console.log(`API server running on http://localhost:${port}`)
 
-export default {
-  port,
-  fetch: app.fetch,
-}
+serve({ fetch: app.fetch, port }, () => {
+  console.log(`API server running on http://localhost:${port}`)
+})
