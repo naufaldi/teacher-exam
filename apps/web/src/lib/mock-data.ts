@@ -420,8 +420,47 @@ const _MOCK_EXAM_DRAFT = {
   updatedAt: '2026-04-18T11:30:00.000Z',
 }
 
+const _MOCK_EXAM_HISTORY = {
+  id: 'exam-003',
+  userId: 'user-001',
+  title: 'Ulangan Harian — Kelas 5',
+  subject: 'bahasa_indonesia' as const,
+  grade: 5,
+  difficulty: 'mudah' as const,
+  topic: 'Teks Deskripsi, Kosakata',
+  reviewMode: 'fast' as const,
+  status: 'final' as const,
+  schoolName: 'SD Negeri 1 Jakarta',
+  academicYear: '2025/2026',
+  examType: 'Ulangan Harian',
+  examDate: '2026-04-15',
+  durationMinutes: 45,
+  instructions: "Kerjakan soal dengan teliti.",
+  classContext: null,
+  discussionMd: null,
+  createdAt: '2026-04-15T08:00:00.000Z',
+  updatedAt: '2026-04-15T09:00:00.000Z',
+}
+
 export const MOCK_EXAM_FINAL = _MOCK_EXAM_FINAL as unknown as Exam
 export const MOCK_EXAM_DRAFT = _MOCK_EXAM_DRAFT as unknown as Exam
+export const MOCK_EXAM_HISTORY = _MOCK_EXAM_HISTORY as unknown as Exam
+
+export const MOCK_DASHBOARD_STATS = {
+  totalSheets: 8,
+  finalCount: 5,
+  draftCount: 3,
+} as const
+
+export const MOCK_WEEKLY_ACTIVITY = [
+  { day: 'Rab', count: 2, variant: 'default' as const },
+  { day: 'Kam', count: 4, variant: 'default' as const },
+  { day: 'Jum', count: 3, variant: 'secondary' as const },
+  { day: 'Sab', count: 6, variant: 'default' as const },
+  { day: 'Min', count: 1, variant: 'default' as const },
+  { day: 'Sen', count: 5, variant: 'secondary' as const },
+  { day: 'Sel', count: 7, variant: 'default' as const },
+] as const
 
 // ── Exam with questions ──────────────────────────────────────────────────────
 
@@ -448,7 +487,7 @@ export const MOCK_STUDENTS: string[] = [
 // ── Helper functions ─────────────────────────────────────────────────────────
 
 export function getMockExams(): Exam[] {
-  return [MOCK_EXAM_FINAL, MOCK_EXAM_DRAFT]
+  return [MOCK_EXAM_FINAL, MOCK_EXAM_DRAFT, MOCK_EXAM_HISTORY]
 }
 
 export function getMockExamWithQuestions(id: string): ExamWithQuestions | undefined {
