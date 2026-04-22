@@ -48,31 +48,36 @@ function LoginPage() {
           </span>
         </div>
 
-        {/* Heading */}
-        <h1 className='animate-fade-up text-display font-bold text-text-primary tracking-tight leading-tight'>
-          Buat Soal Ujian SD<br />dengan Mudah
-        </h1>
+        {/* Main content */}
+        <main className='flex flex-col'>
+          {/* Heading */}
+          <h1 className='animate-fade-up text-display font-bold text-text-primary tracking-tight leading-tight'>
+            Buat Soal Ujian SD<br />dengan Mudah
+          </h1>
 
-        {/* Subtitle */}
-        <p className='animate-fade-up mt-4 text-body-lg text-text-secondary max-w-[480px]'>
-          Sesuai Kurikulum Merdeka — Bahasa Indonesia &amp; Pendidikan Pancasila
-        </p>
+          {/* Subtitle */}
+          <p className='animate-fade-up mt-4 text-body-lg text-text-secondary max-w-[480px]'>
+            Sesuai Kurikulum Merdeka — Bahasa Indonesia &amp; Pendidikan Pancasila
+          </p>
 
-        {/* Google login button */}
-        <div className='mt-10'>
-          <a
-            href='/api/auth/sign-in/google'
-            className='inline-flex items-center gap-3 px-6 py-3 bg-bg-surface border border-border-ui rounded-sm shadow-xs text-body font-medium text-text-primary hover:bg-kertas-50 transition-colors duration-[120ms]'
-          >
-            <GoogleIcon />
-            Masuk dengan Google
-          </a>
-        </div>
+          {/* Google login button */}
+          <div className='mt-10'>
+            <a
+              href='/api/auth/sign-in/google'
+              className='inline-flex items-center gap-3 px-6 py-3 bg-bg-surface border border-border-ui rounded-sm shadow-xs text-body font-medium text-text-primary hover:bg-kertas-50 transition-colors duration-[120ms]'
+            >
+              <GoogleIcon />
+              Masuk dengan Google
+            </a>
+          </div>
 
-        {/* Footer label */}
-        <p className='mt-auto pt-16 text-caption text-text-tertiary'>
-          SD Kelas 5 &amp; 6 · Kurikulum Merdeka
-        </p>
+          {/* Footer label */}
+          <footer className='mt-auto pt-16'>
+            <p className='text-caption text-text-tertiary'>
+              SD Kelas 5 &amp; 6 · Kurikulum Merdeka
+            </p>
+          </footer>
+        </main>
       </div>
 
       {/* Right column — decorative */}
@@ -88,7 +93,7 @@ function LoginPage() {
         />
 
         {/* Large decorative wordmark */}
-        <span className='-rotate-6 text-[96px] font-[800] text-kertas-200 leading-none select-none tracking-tighter'>
+        <span aria-hidden='true' className='-rotate-6 text-[96px] font-[800] text-kertas-200 leading-none select-none tracking-tighter'>
           UJIAN SD
         </span>
 
