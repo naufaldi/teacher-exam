@@ -397,7 +397,7 @@ function CorrectionPage() {
 
   const suggestedPlaceholder = MOCK_STUDENTS[state.studentNumber - 1] ?? `Murid ${state.studentNumber}`
 
-  if (!isMockExam && examId !== 'exam-001') {
+  if (!isMockExam) {
     // For non-mock exams: show loading state
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -430,7 +430,7 @@ function CorrectionPage() {
 
       {/* Warning banner */}
       <div className="rounded-sm border border-warning-200 bg-warning-50 px-4 py-3 text-body-sm text-warning-700">
-        Data koreksi hanya tersimpan di sesi ini. Tutup tab akan menghapus semua data rekap.
+        ⚠ Data koreksi tersimpan di browser saja. Data akan hilang jika halaman ditutup. Cetak terlebih dahulu jika perlu.
       </div>
 
       {/* Two-panel layout */}
@@ -504,7 +504,7 @@ function CorrectionPage() {
               className="gap-1.5"
             >
               <Printer size={14} />
-              Cetak Hasil
+              Cetak Hasil Murid
             </Button>
           </div>
 
