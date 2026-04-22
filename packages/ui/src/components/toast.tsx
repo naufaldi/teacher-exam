@@ -68,13 +68,14 @@ export const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
       return () => clearTimeout(timer)
     }, [id, duration, onDismiss])
 
-    const IconComp = toastIcons[variant ?? 'info']
+    const resolvedVariant: 'success' | 'error' | 'warning' | 'info' = variant ?? 'info'
+    const IconComp = toastIcons[resolvedVariant]
 
     return (
       <div
         ref={ref}
-        role="alert"
-        aria-live="assertive"
+        role={resolvedVariant === 'error' || resolvedVariant === 'warning' ? 'alert' : 'status'}
+        aria-live={resolvedVariant === 'error' || resolvedVariant === 'warning' ? 'assertive' : 'polite'}
         aria-atomic="true"
         className={cn(
           toastVariants({ variant }),

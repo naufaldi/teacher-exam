@@ -33,9 +33,10 @@ function NotFoundPage() {
 
 interface ErrorPageProps {
   error: Error
+  reset: () => void
 }
 
-function ErrorPage({ error }: ErrorPageProps) {
+function ErrorPage({ error, reset }: ErrorPageProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[--color-bg-app]">
       <div className="flex flex-col items-center text-center py-16 px-8 max-w-md">
@@ -71,9 +72,9 @@ function ErrorPage({ error }: ErrorPageProps) {
         <Button
           variant="primary"
           size="md"
-          onClick={() => window.location.reload()}
+          onClick={reset}
         >
-          Muat Ulang
+          Coba Lagi
         </Button>
       </div>
     </div>

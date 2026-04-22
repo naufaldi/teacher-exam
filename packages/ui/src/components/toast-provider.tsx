@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { Toast } from './toast.js'
+import { Toast } from './toast'
 
 export interface ToastOptions {
   title: string
@@ -32,6 +32,14 @@ const EXIT_DURATION = 300
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastItem[]>([])
+  const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  React.useEffect(() => {
+    return () => {
+      timers.current.forEach(clearTimeout)
+      timers.current.clear()
+    }
+  }, [])
 
   const dismiss = React.useCallback((id: string) => {
     // Phase 1: mark as dismissing for exit animation
@@ -39,9 +47,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
     )
     // Phase 2: remove after animation completes
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id))
+    const t = setTimeout(() => {
+      timers.current.delete(t)
+      setToasts((prev) => prev.filter((item) => item.id !== id))
     }, EXIT_DURATION)
+    timers.current.add(t)
   }, [])
 
   const toast = React.useCallback(
@@ -61,15 +71,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         // If over max, mark oldest non-dismissing ones for removal
         if (next.length > MAX_TOASTS) {
           const excess = next.length - MAX_TOASTS
-          return next.map((t, i) =>
-            i < excess && !t.dismissing ? { ...t, dismissing: true } : t,
+          return next.map((item, i) =>
+            i < excess && !item.dismissing ? { ...item, dismissing: true } : item,
           )
         }
         return next
       })
 
       // Clean up excess toasts after animation
-      setTimeout(() => {
+      const t = setTimeout(() => {
+        timers.current.delete(t)
         setToasts((prev) => {
           if (prev.length > MAX_TOASTS) {
             return prev.slice(prev.length - MAX_TOASTS)
@@ -77,6 +88,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           return prev
         })
       }, EXIT_DURATION)
+      timers.current.add(t)
     },
     [],
   )
@@ -89,6 +101,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {typeof document !== 'undefined' &&
         createPortal(
           <div
+            role="region"
             aria-label="Notifikasi"
             className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end"
           >
