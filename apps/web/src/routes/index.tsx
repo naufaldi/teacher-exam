@@ -1,7 +1,23 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { BookOpen } from 'lucide-react'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { PaperCard } from '@teacher-exam/ui'
+import { BookOpen, Check, Printer } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
+  beforeLoad: async () => {
+    try {
+      const res = await fetch('/api/auth/get-session', { credentials: 'include' })
+      if (res.ok) {
+        const session = await res.json() as { user?: { id: string } } | null
+        if (session?.user) {
+          throw redirect({ to: '/dashboard' })
+        }
+      }
+    } catch (e) {
+      // If the thrown value is a redirect, re-throw it
+      if (e instanceof Error === false) throw e
+      // Otherwise swallow fetch errors — just show the login page
+    }
+  },
   component: LoginPage,
 })
 
@@ -35,71 +51,184 @@ function GoogleIcon() {
   )
 }
 
+const TRUST_POINTS = [
+  'Print A4 siap pakai',
+  'Bahasa Indonesia & Pendidikan Pancasila',
+  'Gratis untuk guru SD',
+] as const
+
 function LoginPage() {
   return (
-    <div className='min-h-[100dvh] flex'>
-      {/* Left column — main content */}
-      <div className='relative flex-[3] bg-bg-app flex flex-col justify-center px-12 py-16 lg:px-20'>
-        {/* Logo */}
-        <div className='absolute top-8 left-12 lg:left-20 flex items-center gap-2'>
-          <BookOpen size={24} className='text-primary-600' />
+    <div className='min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app'>
+      {/* Left column — brand and auth */}
+      <section className='relative flex flex-col px-6 sm:px-10 lg:px-16 xl:px-20 py-10 lg:py-12'>
+        <header
+          className='animate-fade-up-stagger flex items-center gap-2'
+          style={{ ['--index' as string]: 0 }}
+        >
+          <BookOpen size={22} className='text-primary-600' strokeWidth={2} />
           <span className='font-semibold text-text-primary text-body-lg'>
             Ujian SD
           </span>
-        </div>
+        </header>
 
-        {/* Main content */}
-        <main className='flex flex-col'>
-          {/* Heading */}
-          <h1 className='animate-fade-up text-display font-bold text-text-primary tracking-tight leading-tight'>
-            Buat Soal Ujian SD<br />dengan Mudah
+        <div className='my-auto flex flex-col gap-6 max-w-[460px] py-12'>
+          <span
+            className='animate-fade-up-stagger inline-flex items-center self-start gap-2 rounded-pill bg-primary-50 px-3 py-1 text-caption font-semibold tracking-[0.08em] uppercase text-primary-700'
+            style={{ ['--index' as string]: 1 }}
+          >
+            Kurikulum Merdeka · Kelas 5 &amp; 6
+          </span>
+
+          <h1
+            className='animate-fade-up-stagger text-display font-bold text-text-primary tracking-tight leading-[1.05]'
+            style={{ ['--index' as string]: 2 }}
+          >
+            Buat Soal Ujian SD
+            <br />
+            <span className='text-primary-600'>dengan Mudah</span>
           </h1>
 
-          {/* Subtitle */}
-          <p className='animate-fade-up mt-4 text-body-lg text-text-secondary max-w-[480px]'>
-            Sesuai Kurikulum Merdeka — Bahasa Indonesia &amp; Pendidikan Pancasila
+          <p
+            className='animate-fade-up-stagger text-body-lg text-text-secondary'
+            style={{ ['--index' as string]: 3 }}
+          >
+            Susun, ekspor, dan cetak lembar ujian rapi dalam hitungan menit —
+            tanpa pusing format.
           </p>
 
-          {/* Google login button */}
-          <div className='mt-10'>
+          <div
+            className='animate-fade-up-stagger flex flex-col gap-4 pt-2'
+            style={{ ['--index' as string]: 4 }}
+          >
             <a
-              href='/api/auth/sign-in/google'
-              className='inline-flex items-center gap-3 px-6 py-3 bg-bg-surface border border-border-ui rounded-sm shadow-xs text-body font-medium text-text-primary hover:bg-kertas-50 transition-colors duration-[120ms]'
+              href='/api/auth/sign-in/google?callbackURL=/dashboard'
+              aria-label='Masuk dengan akun Google'
+              className='inline-flex items-center justify-center gap-3 self-start rounded-sm border border-border-ui bg-bg-surface px-6 py-3 text-body font-medium text-text-primary shadow-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-std)] hover:bg-kertas-50 active:scale-[0.97]'
             >
               <GoogleIcon />
               Masuk dengan Google
             </a>
+
+            <ul className='flex flex-col gap-2 pt-2'>
+              {TRUST_POINTS.map((point) => (
+                <li
+                  key={point}
+                  className='flex items-center gap-2 text-body-sm text-text-tertiary'
+                >
+                  <Check
+                    size={14}
+                    strokeWidth={2.5}
+                    className='text-secondary-500 shrink-0'
+                    aria-hidden='true'
+                  />
+                  {point}
+                </li>
+              ))}
+            </ul>
           </div>
+        </div>
 
-          {/* Footer label */}
-          <footer className='mt-auto pt-16'>
-            <p className='text-caption text-text-tertiary'>
-              SD Kelas 5 &amp; 6 · Kurikulum Merdeka
-            </p>
-          </footer>
-        </main>
-      </div>
+        <footer
+          className='animate-fade-up-stagger mt-auto pt-8 text-caption text-text-tertiary'
+          style={{ ['--index' as string]: 5 }}
+        >
+          SD Kelas 5 &amp; 6 · Sesuai Kurikulum Merdeka · Dibuat untuk guru
+          Indonesia.
+        </footer>
+      </section>
 
-      {/* Right column — decorative */}
-      <div className='hidden lg:flex flex-[2] bg-kertas-100 items-center justify-center relative overflow-hidden'>
-        {/* Dots pattern */}
+      {/* Right column — paper preview */}
+      <aside className='relative hidden lg:flex items-center justify-center overflow-hidden bg-kertas-100 p-12'>
         <div
-          className='absolute inset-0 opacity-5'
+          className='absolute inset-0 opacity-[0.06] pointer-events-none'
           style={{
             backgroundImage:
               'radial-gradient(circle, #7A6E57 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
+            backgroundSize: '28px 28px',
           }}
+          aria-hidden='true'
         />
 
-        {/* Large decorative wordmark */}
-        <span aria-hidden='true' className='-rotate-6 text-[96px] font-[800] text-kertas-200 leading-none select-none tracking-tighter'>
-          UJIAN SD
-        </span>
+        <div className='relative w-full max-w-[420px]'>
+          <PaperCard
+            as='article'
+            tilt={-1.5}
+            className='animate-fade-up-stagger flex flex-col gap-6 px-10 py-12'
+            style={{ ['--index' as string]: 2 }}
+            aria-label='Contoh lembar ujian'
+          >
+            <div className='border-b border-kertas-300 pb-5 text-center'>
+              <p className='font-serif font-bold text-exam-kop tracking-[0.03em] text-text-primary'>
+                ULANGAN HARIAN
+              </p>
+              <p className='mt-1 font-serif text-exam-body text-text-secondary'>
+                Bahasa Indonesia · Kelas 6 · Semester Ganjil
+              </p>
+            </div>
 
-        {/* Left edge gradient fade */}
-        <div className='absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-kertas-100 to-transparent' />
-      </div>
+            <dl className='grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-caption text-text-tertiary'>
+              <div className='flex gap-1'>
+                <dt>Nama</dt>
+                <dd className='flex-1 border-b border-dotted border-kertas-300'>:</dd>
+              </div>
+              <div className='flex gap-1'>
+                <dt>Kelas</dt>
+                <dd className='flex-1 border-b border-dotted border-kertas-300'>:</dd>
+              </div>
+              <div className='flex gap-1 col-span-2'>
+                <dt>Hari/Tanggal</dt>
+                <dd className='flex-1 border-b border-dotted border-kertas-300'>:</dd>
+              </div>
+            </dl>
+
+            <div className='flex flex-col gap-3 font-serif text-exam-body text-text-primary leading-snug'>
+              <p>
+                <span className='font-bold'>1.</span> Ide pokok dalam sebuah
+                paragraf disebut juga&hellip;
+              </p>
+              <ol className='flex flex-col gap-1.5 pl-5' type='a'>
+                <li className='flex gap-2'>
+                  <span className='font-mono text-text-tertiary'>a.</span>
+                  <span>kalimat penjelas</span>
+                </li>
+                <li className='flex gap-2 -mx-2 px-2 py-0.5 rounded-xs bg-accent-50'>
+                  <span className='font-mono text-text-tertiary'>b.</span>
+                  <span>gagasan utama</span>
+                </li>
+                <li className='flex gap-2'>
+                  <span className='font-mono text-text-tertiary'>c.</span>
+                  <span>kalimat tanya</span>
+                </li>
+                <li className='flex gap-2'>
+                  <span className='font-mono text-text-tertiary'>d.</span>
+                  <span>kalimat seru</span>
+                </li>
+              </ol>
+            </div>
+
+            <div className='mt-2 flex items-center justify-between border-t border-kertas-200 pt-4 font-mono text-caption text-text-tertiary'>
+              <span className='inline-flex items-center gap-1'>
+                <Printer size={12} strokeWidth={2} aria-hidden='true' />
+                A4 · 1 dari 4
+              </span>
+              <span>Kop Sekolah</span>
+            </div>
+          </PaperCard>
+
+          <span
+            aria-hidden='true'
+            className='absolute -top-3 -right-3 rotate-12 rounded-pill border-2 border-primary-600/70 bg-bg-surface/70 px-3 py-1 text-caption font-bold tracking-[0.12em] text-primary-600/80 shadow-xs backdrop-blur-sm'
+          >
+            LULUS KURIKULUM
+          </span>
+        </div>
+
+        <div
+          className='absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-kertas-100 to-transparent pointer-events-none'
+          aria-hidden='true'
+        />
+      </aside>
     </div>
   )
 }
