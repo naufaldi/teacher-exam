@@ -4,8 +4,8 @@ import { Button } from '@teacher-exam/ui'
 
 const NAV_LINKS = [
   { to: '/dashboard' as const, label: 'Dashboard' },
+  { to: '/history' as const, label: 'Riwayat' },
   { to: '/generate' as const, label: 'Generate' },
-  { to: '/review' as const, label: 'Koreksi Cepat' },
 ] as const
 
 const DEV_USER = {
