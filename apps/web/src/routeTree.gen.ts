@@ -16,6 +16,13 @@ import { Route as AuthPreviewRouteImport } from './routes/_auth.preview'
 import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
 import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
+import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
+
+const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
+  id: '/correction/$examId',
+  path: '/correction/$examId',
+  getParentRoute: () => AuthRoute,
+} as any)
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -59,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthHistoryRoute
   '/preview': typeof AuthPreviewRoute
   '/review': typeof AuthReviewRoute
+  '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +75,7 @@ export interface FileRoutesByTo {
   '/history': typeof AuthHistoryRoute
   '/preview': typeof AuthPreviewRoute
   '/review': typeof AuthReviewRoute
+  '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +86,7 @@ export interface FileRoutesById {
   '/_auth/history': typeof AuthHistoryRoute
   '/_auth/preview': typeof AuthPreviewRoute
   '/_auth/review': typeof AuthReviewRoute
+  '/_auth/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,8 +97,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/preview'
     | '/review'
+    | '/correction/$examId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/generate' | '/history' | '/preview' | '/review'
+  to: '/' | '/dashboard' | '/generate' | '/history' | '/preview' | '/review' | '/correction/$examId'
   id:
     | '__root__'
     | '/'
@@ -98,6 +109,7 @@ export interface FileRouteTypes {
     | '/_auth/history'
     | '/_auth/preview'
     | '/_auth/review'
+    | '/_auth/correction/$examId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,6 +168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/correction/$examId': {
+      id: '/_auth/correction/$examId'
+      path: '/correction/$examId'
+      fullPath: '/correction/$examId'
+      preLoaderRoute: typeof AuthCorrectionExamIdRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
@@ -165,6 +184,7 @@ interface AuthRouteChildren {
   AuthHistoryRoute: typeof AuthHistoryRoute
   AuthPreviewRoute: typeof AuthPreviewRoute
   AuthReviewRoute: typeof AuthReviewRoute
+  AuthCorrectionExamIdRoute: typeof AuthCorrectionExamIdRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -173,6 +193,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthHistoryRoute: AuthHistoryRoute,
   AuthPreviewRoute: AuthPreviewRoute,
   AuthReviewRoute: AuthReviewRoute,
+  AuthCorrectionExamIdRoute: AuthCorrectionExamIdRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
