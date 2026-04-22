@@ -1,11 +1,11 @@
 import { pgTable, uuid, text, integer, timestamp } from 'drizzle-orm/pg-core'
-import { users } from './users.js'
+import { users } from './users'
 import {
   examSubjectEnum,
   examDifficultyEnum,
   reviewModeEnum,
   examStatusEnum,
-} from './enums.js'
+} from './enums'
 
 export const exams = pgTable('exams', {
   id:              uuid('id').primaryKey().defaultRandom(),

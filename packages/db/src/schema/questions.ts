@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, integer, timestamp } from 'drizzle-orm/pg-core'
-import { exams } from './exams.js'
-import { answerEnum, questionStatusEnum } from './enums.js'
+import { exams } from './exams'
+import { answerEnum, questionStatusEnum } from './enums'
 
 export const questions = pgTable('questions', {
   id:               uuid('id').primaryKey().defaultRandom(),
