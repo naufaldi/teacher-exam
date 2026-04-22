@@ -1,31 +1,23 @@
 @import "tailwindcss";
 @import "@teacher-exam/ui/tailwind.css";
 
-html, body, #root {
-  min-height: 100%;
-}
-
-body {
-  background-color: var(--color-bg-app);
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-border-focus) 40%, transparent);
-  outline-offset: 2px;
-}
-
-@media print {
-  nav, button, [data-no-print] {
-    display: none !important;
+@layer base {
+  html, body, #root {
+    min-height: 100%;
   }
-  body {
-    background: white;
-    font-family: var(--font-serif);
+
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-border-focus) 40%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media print {
+    nav, button, [data-no-print] {
+      display: none !important;
+    }
+    body {
+      background: white;
+      font-family: var(--font-serif);
+    }
   }
 }
