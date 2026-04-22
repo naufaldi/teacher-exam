@@ -12,18 +12,10 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        success: [
-          'bg-[--color-success-bg] text-[--color-success-fg] border-[--color-success-border]',
-        ],
-        error: [
-          'bg-[--color-danger-bg] text-[--color-danger-fg] border-[--color-danger-border]',
-        ],
-        warning: [
-          'bg-[--color-warning-bg] text-[--color-warning-fg] border-[--color-warning-border]',
-        ],
-        info: [
-          'bg-[--color-info-bg] text-[--color-info-fg] border-[--color-info-border]',
-        ],
+        success: 'bg-success-bg text-success-fg border-success-border',
+        error: 'bg-danger-bg text-danger-fg border-danger-border',
+        warning: 'bg-warning-bg text-warning-fg border-warning-border',
+        info: 'bg-info-bg text-info-fg border-info-border',
       },
     },
     defaultVariants: {
@@ -94,7 +86,7 @@ export const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
         <button
           type="button"
           onClick={() => onDismiss(id)}
-          className="shrink-0 rounded opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-border-focus] transition-opacity"
+          className="shrink-0 rounded opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus transition-opacity"
           aria-label="Tutup notifikasi"
         >
           <X size={16} />

@@ -18,12 +18,6 @@ import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
-const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
-  id: '/correction/$examId',
-  path: '/correction/$examId',
-  getParentRoute: () => AuthRoute,
-} as any)
-
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -56,6 +50,11 @@ const AuthGenerateRoute = AuthGenerateRouteImport.update({
 const AuthDashboardRoute = AuthDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
+  id: '/correction/$examId',
+  path: '/correction/$examId',
   getParentRoute: () => AuthRoute,
 } as any)
 
@@ -99,7 +98,14 @@ export interface FileRouteTypes {
     | '/review'
     | '/correction/$examId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/generate' | '/history' | '/preview' | '/review' | '/correction/$examId'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/generate'
+    | '/history'
+    | '/preview'
+    | '/review'
+    | '/correction/$examId'
   id:
     | '__root__'
     | '/'
