@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Printer, Users } from 'lucide-react'
 import type { Answer } from '@teacher-exam/shared'
@@ -56,7 +56,9 @@ function calcScore(answers: (Answer | null)[], answerKey: Answer[]): { correct: 
   for (let i = 0; i < answers.length; i++) {
     const ans = answers[i]
     if (ans == null) continue
-    if (ans === answerKey[i]) {
+    const key = answerKey[i]
+    if (key == null) continue
+    if (ans === key) {
       correct++
     } else {
       wrong++
@@ -119,6 +121,21 @@ function correctionReducer(state: CorrectionState, action: CorrectionAction): Co
   }
 }
 
+// ── Shared dispatch helper ────────────────────────────────────────────────────
+
+function dispatchSelectAnswer(
+  dispatch: React.Dispatch<CorrectionAction>,
+  questionIndex: number,
+  answer: Answer,
+  activeIndex: number,
+  totalQuestions: number,
+) {
+  dispatch({ type: 'SET_ANSWER', questionIndex, answer })
+  if (activeIndex < totalQuestions - 1) {
+    dispatch({ type: 'SET_ACTIVE_INDEX', index: activeIndex + 1 })
+  }
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 type AnswerRowProps = {
@@ -132,22 +149,29 @@ type AnswerRowProps = {
 
 const ANSWER_OPTIONS: Answer[] = ['a', 'b', 'c', 'd']
 
-function AnswerRow({ questionIndex, isActive, selectedAnswer, correctAnswer, onSelect, onActivate }: AnswerRowProps) {
+const AnswerRow = memo(function AnswerRow({
+  questionIndex,
+  isActive,
+  selectedAnswer,
+  correctAnswer,
+  onSelect,
+  onActivate,
+}: AnswerRowProps) {
   const isAnswered = selectedAnswer !== null
   const isCorrect = isAnswered && selectedAnswer === correctAnswer
 
   return (
-    <tr
+    <TableRow
       className={[
-        'border-b border-border-default transition-colors cursor-pointer',
-        isActive ? 'bg-kertas-100' : 'hover:bg-kertas-50',
+        'cursor-pointer',
+        isActive ? 'bg-kertas-100 hover:bg-kertas-100' : '',
       ].join(' ')}
       onClick={() => onActivate(questionIndex)}
     >
-      <td className="py-2 px-3 text-body-sm text-text-tertiary font-medium w-8 tabular-nums">
+      <TableCell className="py-2 px-3 text-body-sm text-text-tertiary font-medium w-8 tabular-nums">
         {questionIndex + 1}.
-      </td>
-      <td className="py-2 px-3">
+      </TableCell>
+      <TableCell className="py-2 px-3">
         <div className="flex gap-1">
           {ANSWER_OPTIONS.map((opt) => (
             <button
@@ -170,8 +194,8 @@ function AnswerRow({ questionIndex, isActive, selectedAnswer, correctAnswer, onS
             </button>
           ))}
         </div>
-      </td>
-      <td className="py-2 px-3 w-28">
+      </TableCell>
+      <TableCell className="py-2 px-3 w-28">
         {isAnswered && correctAnswer != null ? (
           isCorrect ? (
             <span className="inline-flex items-center gap-1 text-success-700 text-body-sm font-medium">
@@ -186,10 +210,10 @@ function AnswerRow({ questionIndex, isActive, selectedAnswer, correctAnswer, onS
         ) : (
           <span className="text-text-disabled text-body-sm">—</span>
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
-}
+})
 
 type ScoreDisplayProps = {
   correct: number
@@ -307,15 +331,23 @@ function CorrectionPage() {
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   const totalQuestions = state.answerKey.length
-  const { correct, wrong, score } = calcScore(state.currentAnswers, state.answerKey)
+
+  // Fix 5: memoize calcScore call
+  const { correct, wrong, score } = useMemo(
+    () => calcScore(state.currentAnswers, state.answerKey),
+    [state.currentAnswers, state.answerKey],
+  )
+
+  // Fix 7: memoize name input onChange
+  const handleNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      dispatch({ type: 'SET_STUDENT_NAME', name: e.target.value }),
+    [dispatch],
+  )
 
   const handleSelectAnswer = useCallback(
     (questionIndex: number, answer: Answer) => {
-      dispatch({ type: 'SET_ANSWER', questionIndex, answer })
-      // Advance to next question after selection if not last
-      if (questionIndex < totalQuestions - 1) {
-        dispatch({ type: 'SET_ACTIVE_INDEX', index: questionIndex + 1 })
-      }
+      dispatchSelectAnswer(dispatch, questionIndex, answer, questionIndex, totalQuestions)
     },
     [totalQuestions],
   )
@@ -336,26 +368,20 @@ function CorrectionPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept letter keys when typing in a text input/textarea
-      const target = e.target as Element
+      // Fix 1: bail out entirely when focus is in any text input
+      const target = e.target as HTMLElement
       const isTextInput =
-        target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable
 
-      if (isTextInput && !['Tab', 'Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
-        return
-      }
+      if (isTextInput) return
 
       const key = e.key.toLowerCase()
 
       if (key === 'a' || key === 'b' || key === 'c' || key === 'd') {
-        if (!isTextInput) {
-          e.preventDefault()
-          const answer = key as Answer
-          dispatch({ type: 'SET_ANSWER', questionIndex: state.activeIndex, answer })
-          if (state.activeIndex < totalQuestions - 1) {
-            dispatch({ type: 'SET_ACTIVE_INDEX', index: state.activeIndex + 1 })
-          }
-        }
+        e.preventDefault()
+        dispatchSelectAnswer(dispatch, state.activeIndex, key as Answer, state.activeIndex, totalQuestions)
       } else if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
         if (state.activeIndex < totalQuestions - 1) {
           e.preventDefault()
@@ -446,7 +472,7 @@ function CorrectionPage() {
               id="student-name"
               ref={nameInputRef}
               value={state.studentName}
-              onChange={(e) => dispatch({ type: 'SET_STUDENT_NAME', name: e.target.value })}
+              onChange={handleNameChange}
               placeholder={suggestedPlaceholder}
               className="max-w-xs"
             />
@@ -455,17 +481,17 @@ function CorrectionPage() {
           {/* Score display */}
           <ScoreDisplay correct={correct} total={totalQuestions} />
 
-          {/* Answer grid */}
+          {/* Answer grid — Fix 6: use UI Table components */}
           <div className="rounded-sm border border-border-ui overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border-default bg-bg-surface">
-                  <th className="py-2 px-3 text-left text-xs font-medium text-text-tertiary w-8">No</th>
-                  <th className="py-2 px-3 text-left text-xs font-medium text-text-tertiary">Pilihan</th>
-                  <th className="py-2 px-3 text-left text-xs font-medium text-text-tertiary w-28">Hasil</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="py-2 px-3 text-xs w-8">No</TableHead>
+                  <TableHead className="py-2 px-3 text-xs">Pilihan</TableHead>
+                  <TableHead className="py-2 px-3 text-xs w-28">Hasil</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {state.currentAnswers.map((ans, idx) => (
                   <AnswerRow
                     key={idx}
@@ -477,8 +503,8 @@ function CorrectionPage() {
                     onActivate={handleActivate}
                   />
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Action buttons */}
