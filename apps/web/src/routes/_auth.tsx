@@ -22,7 +22,7 @@ function AuthLayout() {
 
   return (
     <div className="min-h-screen bg-bg-app">
-      <nav className="sticky top-0 z-10 bg-bg-surface border-b border-border-default shadow-xs h-14">
+      <nav className="sticky top-0 z-10 bg-bg-surface border-b border-border-default shadow-xs h-[56px]">
         <div className="max-w-[var(--container-app)] mx-auto px-6 h-full flex items-center justify-between">
           {/* Left: brand */}
           <div className="flex items-center gap-2">
