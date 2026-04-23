@@ -228,6 +228,14 @@ examsRouter.post('/:id/finalize', async (c) => {
     .from(questions)
     .where(eq(questions.examId, id))
 
+  if (questionRows.length === 0) {
+    return c.json({
+      error: 'Exam has no questions to finalize',
+      code: 'FINALIZE_NOT_ALLOWED',
+      details: { pendingCount: 0, rejectedCount: 0 },
+    }, 422)
+  }
+
   const pendingCount  = questionRows.filter((q) => q.status === 'pending').length
   const rejectedCount = questionRows.filter((q) => q.status === 'rejected').length
 

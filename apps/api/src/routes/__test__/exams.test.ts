@@ -296,11 +296,28 @@ describe('POST /api/exams/:id/finalize', () => {
     vi.clearAllMocks()
   })
 
-  it('returns 404 when exam not found', async () => {
+  it('returns 404 for non-existent or unowned exam', async () => {
     ;(db.select as Mock).mockReturnValue(makeChain([]))
     const app = buildTestApp()
     const res = await app.request('/api/exams/no-exam/finalize', { method: 'POST' })
     expect(res.status).toBe(404)
+  })
+
+  it('returns 422 when exam has no questions', async () => {
+    const examRow = makeExamRow()
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])  // ownership check
+      return makeChain([])                                // no questions
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(422)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['code']).toBe('FINALIZE_NOT_ALLOWED')
   })
 
   it('returns 422 when any question is pending or rejected', async () => {

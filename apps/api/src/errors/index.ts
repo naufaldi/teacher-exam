@@ -22,8 +22,3 @@ export class PdfParseError extends Data.TaggedError('PdfParseError')<{
 export class ValidationError extends Data.TaggedError('ValidationError')<{
   message: string
 }> {}
-
-export class FinalizeNotAllowedError extends Data.TaggedError('FinalizeNotAllowedError')<{
-  readonly pendingCount: number
-  readonly rejectedCount: number
-}> {}
