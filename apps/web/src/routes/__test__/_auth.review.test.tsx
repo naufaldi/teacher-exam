@@ -272,6 +272,81 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
   })
 })
 
+describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => {
+  it('calls api.questions.patch with status=accepted when Terima is clicked', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_terima' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_terima'))
+    await getLoader()({ deps: { examId: 'exam_terima' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      id: 'q-1',
+      examId: 'exam_terima',
+      number: 1,
+      text: 'Question 1',
+      optionA: 'A',
+      optionB: 'B',
+      optionC: 'C',
+      optionD: 'D',
+      correctAnswer: 'a' as const,
+      topic: null,
+      difficulty: null,
+      status: 'accepted' as const,
+      validationStatus: null,
+      validationReason: null,
+      createdAt: new Date().toISOString(),
+    })
+
+    renderReviewPage()
+
+    const terimaButtons = screen.getAllByText('Terima')
+    await user.click(terimaButtons[0]!)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith('q-1', { status: 'accepted' })
+    })
+
+    patchSpy.mockRestore()
+  })
+
+  it('calls api.questions.patch for each question when Terima Semua is clicked', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_terima_semua' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_terima_semua'))
+    await getLoader()({ deps: { examId: 'exam_terima_semua' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      id: 'q-1',
+      examId: 'exam_terima_semua',
+      number: 1,
+      text: 'Question 1',
+      optionA: 'A',
+      optionB: 'B',
+      optionC: 'C',
+      optionD: 'D',
+      correctAnswer: 'a' as const,
+      topic: null,
+      difficulty: null,
+      status: 'accepted' as const,
+      validationStatus: null,
+      validationReason: null,
+      createdAt: new Date().toISOString(),
+    })
+
+    renderReviewPage()
+
+    const terimaSemua = screen.getByText('Terima Semua')
+    await user.click(terimaSemua)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledTimes(20)
+      expect(patchSpy.mock.calls.every((c) => c[1] !== undefined && (c[1] as { status: string }).status === 'accepted')).toBe(true)
+    })
+
+    patchSpy.mockRestore()
+  })
+})
+
 describe('ReviewPage — from=generate URL strip', () => {
   it('preserves examId in URL when stripping ?from=generate', async () => {
     // Seed store so the component renders without crashing

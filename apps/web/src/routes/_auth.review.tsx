@@ -203,19 +203,40 @@ function ReviewPage() {
     }
   }
 
+  const setStatus = async (id: string, status: 'accepted' | 'rejected') => {
+    const prev = questionStatuses[id] ?? 'pending'
+    setQuestionStatuses((p) => ({ ...p, [id]: status }))
+    try {
+      await api.questions.patch(id, { status })
+    } catch (err) {
+      setQuestionStatuses((p) => ({ ...p, [id]: prev }))
+      toast({
+        variant: 'error',
+        title: status === 'accepted' ? 'Gagal menerima soal' : 'Gagal menolak soal',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
+  }
+
   const handleRejectConfirm = async () => {
     if (rejectingId === null) return
     const targetId = rejectingId
     setRejectingId(null)
-    setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'rejected' }))
-    try {
-      await api.questions.patch(targetId, { status: 'rejected' })
-    } catch (err) {
-      setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'pending' }))
+    await setStatus(targetId, 'rejected')
+  }
+
+  const handleTerimaSemuaClick = async () => {
+    const pending = questions.filter((q) => (questionStatuses[q.id] ?? 'pending') !== 'accepted')
+    setQuestionStatuses(Object.fromEntries(questions.map((q) => [q.id, 'accepted' as const])))
+    const results = await Promise.allSettled(
+      pending.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+    )
+    const failed = results.filter((r) => r.status === 'rejected').length
+    if (failed > 0) {
       toast({
         variant: 'error',
-        title: 'Gagal menolak soal',
-        description: err instanceof Error ? err.message : 'Coba lagi.',
+        title: `Gagal menerima ${failed} soal`,
+        description: 'Sebagian soal perlu dicoba ulang.',
       })
     }
   }
@@ -306,13 +327,7 @@ function ReviewPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => {
-                setQuestionStatuses(
-                  Object.fromEntries(
-                    questions.map((q) => [q.id, 'accepted' as QuestionStatus]),
-                  ),
-                )
-              }}
+              onClick={() => { void handleTerimaSemuaClick() }}
             >
               Terima Semua
             </Button>
@@ -411,9 +426,7 @@ function ReviewPage() {
                         size="sm"
                         variant="secondary"
                         className="text-success-fg border-success-border"
-                        onClick={() =>
-                          setQuestionStatuses((prev) => ({ ...prev, [q.id]: 'accepted' }))
-                        }
+                        onClick={() => { void setStatus(q.id, 'accepted') }}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
                       </Button>
