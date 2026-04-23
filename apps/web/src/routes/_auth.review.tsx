@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import {
   CheckCircle2,
@@ -67,6 +67,12 @@ export const Route = createFileRoute('/_auth/review')({
 
 type QuestionStatus = 'pending' | 'accepted' | 'rejected'
 
+const STATUS_BORDER: Record<QuestionStatus, string> = {
+  accepted: 'border-l-success-solid opacity-75',
+  rejected: 'border-l-danger-solid',
+  pending:  'border-l-border-default',
+}
+
 function ReviewPage() {
   const { mode, from, examId } = Route.useSearch()
   const navigate = useNavigate()
@@ -88,7 +94,6 @@ function ReviewPage() {
   // Track which questions have been edited (for dirty-state on switch)
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set())
 
-  // Modal state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
@@ -120,7 +125,6 @@ function ReviewPage() {
           next[q.id] = mode === 'fast' ? 'accepted' : 'pending'
         }
       }
-      // remove dangling ids
       for (const id of Object.keys(next)) {
         if (!draft.questions.find((q) => q.id === id)) delete next[id]
       }
@@ -128,17 +132,16 @@ function ReviewPage() {
     })
   }, [draft.questions, mode])
 
-  const sekolah = draft.metadata.schoolName
-  const tahunPelajaran = draft.metadata.academicYear
-  const jenisUjian = draft.metadata.examType
-  const tanggal = draft.metadata.examDate
-  const durasi = String(draft.metadata.durationMinutes)
-  const petunjuk = draft.metadata.instructions
+  const {
+    schoolName = '',
+    academicYear = '',
+    examType,
+    examDate = '',
+    durationMinutes,
+    instructions = '',
+  } = draft.metadata
 
-  const setMeta = (patch: Parameters<typeof examDraftStore.setMetadata>[0]) =>
-    examDraftStore.setMetadata(patch)
-
-  const persistMetaField = async (patch: Partial<UpdateExamInput>) => {
+  const persistMetaField = useCallback(async (patch: Partial<UpdateExamInput>) => {
     if (!examId) return
     try {
       await api.exams.patch(examId, patch)
@@ -149,14 +152,14 @@ function ReviewPage() {
         description: err instanceof Error ? err.message : 'Coba lagi.',
       })
     }
-  }
+  }, [examId, toast])
 
   const questions = draft.questions
   const acceptedCount = useMemo(
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
   )
-  const isMetadataComplete = Boolean(sekolah && tahunPelajaran && jenisUjian && tanggal && durasi)
+  const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
   const canPreview = acceptedCount === questions.length && isMetadataComplete
 
   const editingQuestion = editingId !== null
@@ -245,13 +248,27 @@ function ReviewPage() {
     await setStatus(targetId, 'rejected')
   }
 
+  const handleResetRejected = () => {
+    setQuestionStatuses((prev) =>
+      Object.fromEntries(
+        questions.map((q) => [
+          q.id,
+          prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
+        ]),
+      ),
+    )
+  }
+
   const handleTerimaSemuaClick = async () => {
     const pending = questions.filter((q) => (questionStatuses[q.id] ?? 'pending') !== 'accepted')
     if (pending.length === 0) return
     const prevStatuses = Object.fromEntries(
       pending.map((q) => [q.id, questionStatuses[q.id] ?? 'pending'] as const),
     )
-    setQuestionStatuses(Object.fromEntries(questions.map((q) => [q.id, 'accepted' as const])))
+    setQuestionStatuses((p) => ({
+      ...p,
+      ...Object.fromEntries(pending.map((q) => [q.id, 'accepted' as const])),
+    }))
     const results = await Promise.allSettled(
       pending.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
     )
@@ -283,12 +300,9 @@ function ReviewPage() {
       const code = err != null && typeof err === 'object' && 'code' in err
         ? (err as { code?: string }).code
         : undefined
-      const description =
-        code === 'FINALIZE_NOT_ALLOWED'
-          ? 'Semua soal harus diterima sebelum finalisasi.'
-          : err instanceof Error
-            ? err.message
-            : 'Coba lagi.'
+      let description = 'Coba lagi.'
+      if (err instanceof Error) description = err.message
+      if (code === 'FINALIZE_NOT_ALLOWED') description = 'Semua soal harus diterima sebelum finalisasi.'
       toast({ variant: 'error', title: 'Gagal finalisasi', description })
     } finally {
       setFinalizing(false)
@@ -303,7 +317,6 @@ function ReviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* PageHeader */}
       {mode === 'fast' ? (
         <PageHeader
           title="Konfirmasi Paket"
@@ -321,10 +334,8 @@ function ReviewPage() {
         </PageHeader>
       )}
 
-      {/* Fast Track Mode */}
       {mode === 'fast' && (
         <div>
-          {/* Bulk action bar */}
           <div className="flex items-center justify-between mb-4">
             <span className="text-body-sm text-text-secondary">
               {questions.length} soal auto-diterima
@@ -338,7 +349,6 @@ function ReviewPage() {
             </Button>
           </div>
 
-          {/* Question list */}
           <div className="max-h-[480px] overflow-y-auto rounded-sm border border-border-default divide-y divide-border-default">
             {questions.map((q) => (
               <div
@@ -373,10 +383,8 @@ function ReviewPage() {
         </div>
       )}
 
-      {/* Slow Track Mode */}
       {mode === 'slow' && (
         <div>
-          {/* Bulk action bar */}
           <div className="flex items-center gap-3 mb-6">
             <Button
               variant="secondary"
@@ -388,16 +396,7 @@ function ReviewPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setQuestionStatuses((prev) =>
-                  Object.fromEntries(
-                    questions.map((q) => [
-                      q.id,
-                      prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
-                    ]),
-                  ),
-                )
-              }}
+              onClick={handleResetRejected}
             >
               Ganti ditolak
             </Button>
@@ -411,23 +410,15 @@ function ReviewPage() {
             </Button>
           </div>
 
-          {/* Question cards */}
           <div className="space-y-4">
             {questions.map((q) => {
               const status = questionStatuses[q.id] ?? 'pending'
               return (
                 <Card
                   key={q.id}
-                  className={`relative border-l-4 transition-colors ${
-                    status === 'accepted'
-                      ? 'border-l-success-solid opacity-75'
-                      : status === 'rejected'
-                        ? 'border-l-danger-solid'
-                        : 'border-l-border-default'
-                  }`}
+                  className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
                 >
                   <CardContent className="p-4">
-                    {/* Header: number + difficulty badge + topic chip */}
                     <div className="flex items-center gap-2 mb-3">
                       <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
                       {q.difficulty && (
@@ -452,9 +443,7 @@ function ReviewPage() {
                         </span>
                       )}
                     </div>
-                    {/* Question text */}
                     <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
-                    {/* Options */}
                     <div className="grid grid-cols-2 gap-1 mb-4">
                       {(['a', 'b', 'c', 'd'] as const).map((letter) => (
                         <div
@@ -474,7 +463,6 @@ function ReviewPage() {
                         </div>
                       ))}
                     </div>
-                    {/* Action buttons */}
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -508,40 +496,37 @@ function ReviewPage() {
         </div>
       )}
 
-      {/* Metadata form */}
       <div className="mt-8 space-y-5">
         <h3 className="text-h3 font-semibold text-text-primary">Detail Lembar Ujian</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Sekolah */}
           <div className="space-y-1.5">
             <Label htmlFor="sekolah">Nama Sekolah</Label>
             <Input
               id="sekolah"
-              value={sekolah}
-              onChange={(e) => setMeta({ schoolName: e.target.value })}
+              value={schoolName}
+              onChange={(e) => examDraftStore.setMetadata({ schoolName: e.target.value })}
               onBlur={(e) => { void persistMetaField({ schoolName: e.target.value }) }}
               placeholder="SD Negeri ..."
             />
           </div>
-          {/* Tahun Pelajaran */}
           <div className="space-y-1.5">
             <Label htmlFor="tahun">Tahun Pelajaran</Label>
             <Input
               id="tahun"
-              value={tahunPelajaran}
-              onChange={(e) => setMeta({ academicYear: e.target.value })}
+              value={academicYear}
+              onChange={(e) => examDraftStore.setMetadata({ academicYear: e.target.value })}
               onBlur={(e) => { void persistMetaField({ academicYear: e.target.value }) }}
               placeholder="2025/2026"
             />
           </div>
-          {/* Jenis Ujian (PRD §8.6) */}
+          {/* PRD §8.6 */}
           <div className="space-y-1.5">
             <Label htmlFor="jenis">Jenis Ujian</Label>
             <Select
-              value={jenisUjian}
+              value={examType}
               onValueChange={(v) => {
                 const next = v as ExamType
-                setMeta({ examType: next })
+                examDraftStore.setMetadata({ examType: next })
                 void persistMetaField({ examType: next })
               }}
             >
@@ -557,28 +542,26 @@ function ReviewPage() {
               </SelectContent>
             </Select>
           </div>
-          {/* Tanggal */}
           <div className="space-y-1.5">
             <Label htmlFor="tanggal">Tanggal Ujian</Label>
             <Input
               id="tanggal"
               type="date"
-              value={tanggal}
-              onChange={(e) => setMeta({ examDate: e.target.value })}
+              value={examDate}
+              onChange={(e) => examDraftStore.setMetadata({ examDate: e.target.value })}
               onBlur={(e) => { void persistMetaField({ examDate: e.target.value }) }}
             />
           </div>
-          {/* Durasi */}
           <div className="space-y-1.5">
             <Label htmlFor="durasi">Durasi (menit)</Label>
             <Input
               id="durasi"
-              value={durasi}
+              value={String(durationMinutes)}
               onChange={(e) => {
                 const raw = e.target.value
-                if (raw === '') { setMeta({ durationMinutes: 0 }); return }
+                if (raw === '') { examDraftStore.setMetadata({ durationMinutes: 0 }); return }
                 const n = parseInt(raw, 10)
-                if (!Number.isNaN(n)) setMeta({ durationMinutes: n })
+                if (!Number.isNaN(n)) examDraftStore.setMetadata({ durationMinutes: n })
               }}
               onBlur={(e) => {
                 const val = parseInt(e.target.value, 10)
@@ -588,20 +571,18 @@ function ReviewPage() {
             />
           </div>
         </div>
-        {/* Petunjuk — full width */}
         <div className="space-y-1.5">
           <Label htmlFor="petunjuk">Petunjuk Pengerjaan</Label>
           <Textarea
             id="petunjuk"
-            value={petunjuk}
-            onChange={(e) => setMeta({ instructions: e.target.value })}
+            value={instructions}
+            onChange={(e) => examDraftStore.setMetadata({ instructions: e.target.value })}
             onBlur={(e) => { void persistMetaField({ instructions: e.target.value }) }}
             rows={4}
           />
         </div>
       </div>
 
-      {/* Action bar */}
       <div className="flex items-center justify-between mt-8 pt-6 border-t border-border-default">
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => setShowRegenConfirm(true)}>
@@ -616,7 +597,6 @@ function ReviewPage() {
         </Button>
       </div>
 
-      {/* Modals */}
       <QuestionEditDialog
         open={editingId !== null}
         question={editingQuestion}
