@@ -280,7 +280,9 @@ function ReviewPage() {
       await api.exams.finalize(examId)
       void navigate({ to: '/preview', search: { examId } })
     } catch (err) {
-      const code = (err as { code?: string }).code
+      const code = err != null && typeof err === 'object' && 'code' in err
+        ? (err as { code?: string }).code
+        : undefined
       const description =
         code === 'FINALIZE_NOT_ALLOWED'
           ? 'Semua soal harus diterima sebelum finalisasi.'
