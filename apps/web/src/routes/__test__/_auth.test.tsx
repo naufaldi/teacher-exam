@@ -71,12 +71,19 @@ const beforeLoad = (Route as unknown as { options: { beforeLoad: BeforeLoadFn } 
 const AuthLayout = (Route as unknown as { options: { component: AuthComponent } })
   .options.component
 
+const locationReplaceSpy = vi.fn<(url: string) => void>()
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockSignOut.mockResolvedValue(undefined)
   mockNavigate.mockResolvedValue(undefined)
   mockUser.profileCompleted = true
   mockUser.image = null
+  locationReplaceSpy.mockReset()
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { replace: locationReplaceSpy },
+  })
 })
 
 describe('_auth.beforeLoad', () => {
@@ -157,7 +164,7 @@ describe('AuthLayout', () => {
 
     await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1))
     await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/' }),
+      expect(locationReplaceSpy).toHaveBeenCalledWith('/'),
     )
   })
 
@@ -178,8 +185,7 @@ describe('AuthLayout', () => {
     expect(logoutBtn).toBeDisabled()
 
     resolveSignOut()
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalled())
-    await waitFor(() => expect(logoutBtn).not.toBeDisabled())
+    await waitFor(() => expect(locationReplaceSpy).toHaveBeenCalled())
   })
 
   it('throttles rapid double-clicks on logout', async () => {

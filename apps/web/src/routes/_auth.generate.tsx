@@ -27,9 +27,11 @@ import { examDraftStore } from '../lib/exam-draft-store.js'
 
 export const Route = createFileRoute('/_auth/generate')({
   component: GeneratePage,
-  validateSearch: (search): { simulate?: 'error' } => {
-    if (search['simulate'] === 'error') return { simulate: 'error' }
-    return {}
+  validateSearch: (search): { simulate?: 'error'; examId?: string } => {
+    const result: { simulate?: 'error'; examId?: string } = {}
+    if (search['simulate'] === 'error') result.simulate = 'error'
+    if (typeof search['examId'] === 'string') result.examId = search['examId']
+    return result
   },
 })
 
