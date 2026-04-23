@@ -12,7 +12,6 @@ import type { Exam, ExamWithQuestions, Question, PdfUpload, UserProfile } from '
 // ── Exam API ───────────────────────────────────────────────
 
 export const GenerateExamInputSchema = Schema.Struct({
-  examId:           Schema.String,
   subject:          ExamSubjectSchema,
   grade:            Schema.Int.pipe(Schema.between(5, 6)),
   difficulty:       ExamDifficultySchema,

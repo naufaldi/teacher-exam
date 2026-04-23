@@ -1,24 +1,25 @@
 import { Hono } from 'hono'
 import { Schema } from 'effect'
+import { db, exams, questions } from '@teacher-exam/db'
 import {
   GenerateExamInputSchema,
+  normalizeExamType,
   type ExamSubject,
-  type ExamType,
 } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
 import { buildExamPrompt } from '../lib/prompt'
+import { fetchExamWithQuestions } from '../lib/exams-query'
 import {
   AiGenerationError,
   createDefaultAiService,
   type AiService,
+  type GeneratedQuestion,
 } from '../services/AiService'
 
 const SUBJECT_LABEL: Record<ExamSubject, string> = {
   bahasa_indonesia: 'Bahasa Indonesia',
   pendidikan_pancasila: 'Pendidikan Pancasila',
 }
-
-const DEFAULT_EXAM_TYPE: ExamType = 'formatif'
 
 /**
  * Build the `/api/ai` router. Accepts an injected `AiService` for tests; in
@@ -30,6 +31,9 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
   let aiService = opts.aiService
 
   router.post('/generate', async (c) => {
+    const userId = c.get('userId') as string | undefined
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
     const body = await c.req.json().catch(() => null)
     if (body === null) return c.json({ error: 'Invalid JSON body' }, 400)
 
@@ -43,7 +47,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     }
     const input = parsed.right
 
-    const examType = input.examType ?? DEFAULT_EXAM_TYPE
+    const examType = normalizeExamType(input.examType ?? 'formatif')
     const curriculumText = await getCurriculumText(input.subject, input.grade)
     const { system, user } = buildExamPrompt({
       examType,
@@ -58,15 +62,63 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     aiService ??= createDefaultAiService()
 
+    let generatedQuestions: ReadonlyArray<GeneratedQuestion>
     try {
-      const questions = await aiService.generate({ system, user })
-      return c.json({ questions })
+      generatedQuestions = await aiService.generate({ system, user })
     } catch (err) {
       if (err instanceof AiGenerationError) {
         return c.json({ error: 'AI generation failed', message: err.message }, 502)
       }
       throw err
     }
+
+    const rawTitle = `${SUBJECT_LABEL[input.subject]} · Kelas ${input.grade} · ${input.topic}`
+    const title = rawTitle.slice(0, 80)
+    const examId = crypto.randomUUID()
+    const now = new Date()
+
+    await db.transaction(async (tx) => {
+      await tx.insert(exams).values({
+        id:          examId,
+        userId,
+        title,
+        subject:     input.subject,
+        grade:       input.grade,
+        difficulty:  input.difficulty,
+        topic:       input.topic,
+        reviewMode:  input.reviewMode,
+        status:      'draft',
+        examType,
+        classContext: input.classContext ?? null,
+        createdAt:   now,
+        updatedAt:   now,
+      })
+
+      await tx.insert(questions).values(
+        generatedQuestions.map((q, i) => ({
+          id:            crypto.randomUUID(),
+          examId,
+          number:        i + 1,
+          text:          q.text,
+          optionA:       q.option_a,
+          optionB:       q.option_b,
+          optionC:       q.option_c,
+          optionD:       q.option_d,
+          correctAnswer: q.correct_answer,
+          topic:         q.topic ?? null,
+          difficulty:    q.difficulty ?? null,
+          status:        'pending' as const,
+          createdAt:     now,
+        })),
+      )
+    })
+
+    const result = await fetchExamWithQuestions(examId)
+    if (!result) {
+      return c.json({ error: 'Failed to retrieve generated exam', code: 'DATABASE_ERROR' }, 500)
+    }
+
+    return c.json(result, 201)
   })
 
   return router

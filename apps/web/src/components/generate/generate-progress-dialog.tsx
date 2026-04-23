@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Sparkles, Check, Loader2, X } from 'lucide-react'
+import { Sparkles, Check, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
-  Button,
   Progress,
 } from '@teacher-exam/ui'
 
@@ -25,7 +24,6 @@ const TIPS = [
 export interface GenerateProgressDialogProps {
   open: boolean
   progress: number
-  onCancel: () => void
 }
 
 /**
@@ -35,7 +33,6 @@ export interface GenerateProgressDialogProps {
 export function GenerateProgressDialog({
   open,
   progress,
-  onCancel,
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
 
@@ -157,19 +154,6 @@ export function GenerateProgressDialog({
             </p>
           </div>
 
-          {/* Cancel */}
-          <div className="pt-1 flex justify-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onCancel}
-              className="text-text-tertiary"
-            >
-              <X size={14} className="mr-1.5" />
-              Batalkan
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

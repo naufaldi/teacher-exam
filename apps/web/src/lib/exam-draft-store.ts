@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from 'react'
 import type { ExamType, Question } from '@teacher-exam/shared'
-import { normalizeExamType } from '@teacher-exam/shared'
-import { MOCK_EXAM_FINAL, MOCK_EXAM_WITH_QUESTIONS } from './mock-data.js'
 
 /**
  * In-memory draft of the exam currently being created/reviewed.
@@ -31,20 +29,20 @@ export interface ExamDraft {
 
 function makeInitialDraft(): ExamDraft {
   return {
-    questions: [...MOCK_EXAM_WITH_QUESTIONS.questions],
+    questions: [],
     metadata: {
-      schoolName: MOCK_EXAM_FINAL.schoolName ?? '',
-      academicYear: MOCK_EXAM_FINAL.academicYear ?? '',
-      examType: normalizeExamType(MOCK_EXAM_FINAL.examType),
-      examDate: MOCK_EXAM_FINAL.examDate ?? '',
-      durationMinutes: MOCK_EXAM_FINAL.durationMinutes ?? 60,
-      instructions: MOCK_EXAM_FINAL.instructions ?? '',
+      schoolName: '',
+      academicYear: '',
+      examType: 'formatif',
+      examDate: '',
+      durationMinutes: 60,
+      instructions: '',
     },
     reviewMode: 'fast',
     subject: 'bahasa_indonesia',
     grade: 6,
-    topic: MOCK_EXAM_FINAL.topic,
-    classContext: MOCK_EXAM_FINAL.classContext ?? '',
+    topic: '',
+    classContext: '',
   }
 }
 

@@ -1,3 +1,4 @@
+import { Schema } from 'effect'
 import type {
   Exam,
   HealthResponse,
@@ -5,7 +6,10 @@ import type {
   ExamDetailResponse,
   UserProfile,
   UpdateProfileInput,
+  ExamWithQuestions,
+  GenerateExamInput,
 } from '@teacher-exam/shared'
+import { ExamWithQuestionsSchema } from '@teacher-exam/shared'
 
 const API_BASE = '/api'
 
@@ -115,6 +119,23 @@ export const api = {
       }),
     remove: (id: string) => apiFetch<void>(`/exams/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => apiFetch<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
+  },
+  ai: {
+    generate: async (input: GenerateExamInput): Promise<ExamWithQuestions> => {
+      const raw = await apiFetch<unknown>('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+      const decoded = Schema.decodeUnknownEither(ExamWithQuestionsSchema)(raw)
+      if (decoded._tag === 'Left') {
+        throw new ApiError({
+          message: 'Invalid response from server',
+          code: 'DECODE_ERROR',
+          status: 0,
+        })
+      }
+      return decoded.right
+    },
   },
   me: {
     get: () => apiFetch<UserProfile>('/me'),
