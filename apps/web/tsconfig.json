@@ -8,7 +8,8 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src"]
+  "include": ["src", "vitest.setup.ts", "vitest.config.ts"]
 }

@@ -1,22 +1,16 @@
-import { createFileRoute, Outlet, redirect, Link, useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { createFileRoute, Outlet, redirect, Link } from '@tanstack/react-router'
 import { LogOut, HelpCircle } from 'lucide-react'
 import { Button } from '@teacher-exam/ui'
 import { authClient, signOut } from '../lib/auth-client'
+import { setUnauthorizedHandler } from '../lib/api'
+import { useThrottle } from '../lib/use-throttle'
 
 const NAV_LINKS = [
   { to: '/dashboard' as const, label: 'Dashboard' },
   { to: '/history' as const, label: 'Riwayat' },
   { to: '/generate' as const, label: 'Generate' },
 ] as const
-
-const DEV_USER = {
-  id: 'dev-user-001',
-  name: 'Sari Wulandari',
-  username: 'sari.wulandari',
-  email: 'sari.wulandari@dev.local',
-  image: null as string | null,
-  profileCompleted: true,
-} as const
 
 type RouteUser = {
   id: string
@@ -29,11 +23,9 @@ type RouteUser = {
 
 export const Route = createFileRoute('/_auth')({
   beforeLoad: async ({ location }) => {
-    if (import.meta.env['VITE_AUTH_BYPASS'] === '1') {
-      return { user: DEV_USER as RouteUser }
-    }
-
-    const session = await authClient.getSession()
+    const session = await authClient.getSession({
+      query: { disableCookieCache: true },
+    })
     const user = session?.data?.user as RouteUser | undefined
     if (!user) {
       throw redirect({ to: '/', search: { reason: 'session_expired' } })
@@ -50,7 +42,7 @@ export const Route = createFileRoute('/_auth')({
 
 function AuthLayout() {
   const { user } = Route.useRouteContext()
-  const navigate = useNavigate()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const initials = user.name
     .split(' ')
@@ -58,10 +50,30 @@ function AuthLayout() {
     .map((n) => n.charAt(0).toUpperCase())
     .join('')
 
-  const handleLogout = async () => {
-    await signOut()
-    await navigate({ to: '/' })
-  }
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void (async () => {
+        try {
+          await signOut()
+        } finally {
+          window.location.replace('/?reason=session_expired')
+        }
+      })()
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [])
+
+  const handleLogout = useThrottle(async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut()
+    } finally {
+      // Hard redirect bypasses the TanStack Router + better-auth in-memory
+      // session cache so the cleared cookie is observed on the next load.
+      window.location.replace('/')
+    }
+  })
 
   return (
     <div className="min-h-screen bg-bg-app">
@@ -125,7 +137,8 @@ function AuthLayout() {
             <button
               type="button"
               onClick={handleLogout}
-              className="text-body-sm text-text-tertiary hover:text-text-primary flex items-center gap-1.5 transition-colors duration-[120ms] ml-1"
+              disabled={isLoggingOut}
+              className="text-body-sm text-text-tertiary hover:text-text-primary flex items-center gap-1.5 transition-colors duration-[120ms] ml-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut size={16} />
               <span className="hidden sm:inline">Keluar</span>

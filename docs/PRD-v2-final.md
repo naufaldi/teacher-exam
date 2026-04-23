@@ -32,7 +32,7 @@ Guru SD Kelas 5 dan 6 di Indonesia menghadapi tantangan dalam pembuatan soal uji
 
 **Unit utama produk pada MVP adalah lembar soal (format TKA):** satu dokumen cetak yang memuat **20 soal** pilihan ganda (a, b, c, d) dalam **tata letak dua kolom**, dengan kop sekolah, identitas siswa, dan petunjuk pengerjaan. Satu **mata pelajaran** per lembar: **Bahasa Indonesia** atau **Pendidikan Pancasila (PPKN)** (ditentukan saat generate).
 
-**Konteks kurikulum otomatis:** Sistem menggunakan **Kurikulum Merdeka Fase C (Kelas 5–6)** secara bawaan. Capaian Pembelajaran (CP) untuk kedua mapel di-hardcode ke dalam system prompt AI, sehingga guru **tidak perlu menginput data kurikulum** — cukup pilih kelas, mapel, dan topik. Field kurikulum ditampilkan di form sebagai **dropdown disabled** bertuliskan "Kurikulum Merdeka" dengan label "Fase C (Kelas 5–6)" agar guru tahu sistem mengacu kurikulum yang benar. Guru tetap dapat mengupload **PDF materi/buku** sebagai konteks tambahan opsional.
+**Konteks kurikulum otomatis:** Sistem menggunakan **Kurikulum Merdeka Fase C (Kelas 5–6)** secara bawaan. Setiap permintaan AI selalu menerima **korpus Buku Siswa Kurikulum Merdeka** (markdown terstruktur hasil ekstraksi satu kali dari PDF resmi Kemendikdasmen) untuk mata pelajaran + kelas yang dipilih. Korpus mencakup CP Fase C, daftar bab, sub-konsep, sample teks bacaan, dan kosakata kunci — sehingga guru **tidak perlu menginput data kurikulum** dan soal yang dihasilkan benar-benar berakar pada materi buku resmi. Cukup pilih kelas, mapel, dan topik. Field kurikulum ditampilkan di form sebagai **dropdown disabled** bertuliskan "Kurikulum Merdeka" dengan label "Fase C (Kelas 5–6)" agar guru tahu sistem mengacu kurikulum yang benar. Guru tetap dapat mengupload **PDF materi/buku** sebagai konteks tambahan opsional di atas korpus baseline. Korpus tersebut dikirim sebagai Claude **system message** (baseline grounding); PDF guru opsional dikirim sebagai **user document block** yang bersifat menambah (additive), bukan menggantikan — urutan otoritas ini ditegaskan eksplisit di prompt.
 
 **Alur lengkap MVP — dari login hingga evaluasi:**
 
@@ -65,11 +65,12 @@ Implikasi desain:
 
 | Aspek                | Keputusan                                                                                                             |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| CP dalam AI prompt   | **Hardcoded** per mapel — sama untuk Kelas 5 dan 6                                                                    |
+| CP dalam AI prompt   | **Korpus Buku Siswa terekstrak** per (mapel × kelas) di `apps/api/src/curriculum/md/` — CP identik untuk K5/K6, isi bab berbeda. Fallback: hardcoded CP jika korpus belum diekstrak |
 | Kurikulum di form    | **Disabled dropdown** menampilkan "Kurikulum Merdeka" + label "Fase C (Kelas 5–6)" — guru melihat tapi tidak mengedit |
 | Kelas di form        | **Aktif dropdown** (5 / 6) — mempengaruhi konteks soal dan kesulitan di AI prompt                                     |
 | Upload kurikulum     | **Tidak diperlukan** — CP sudah di-hardcode. Satu slot upload untuk PDF materi/buku saja                              |
 | Perluasan masa depan | Jika K13 atau fase lain ditambahkan, cukup enable dropdown kurikulum. Tidak perlu redesign UI                         |
+| Penempatan di prompt | **System message** (full corpus per `(mapel, kelas)`, ~3–4k token per file). User message berisi parameter lembar + topik directive. PDF guru opsional sebagai document block di user message. Filtering per Bab adalah Phase 2 enhancement |
 
 
 ### 1.5 MVP Scope
@@ -713,12 +714,15 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 
 ### 5.4 Curriculum Accuracy
 
-- AI selalu menerima konteks **Capaian Pembelajaran (CP) Fase C** yang di-hardcode per mapel — identik untuk Kelas 5 dan 6 (§8)
+- AI selalu menerima **korpus Buku Siswa Fase C** (markdown terstruktur per mapel × kelas, hasil ekstraksi satu kali dari PDF resmi). Korpus disimpan di `apps/api/src/curriculum/md/` (4 file: BI K5/K6, PPKN K5/K6). CP Fase C identik untuk Kelas 5 dan 6 (§8); konten bab berbeda. Jika file korpus belum ada (mis. dev environment), sistem fallback ke string CP yang di-hardcode dari §8.1/§8.2
+- **Strategi injeksi MVP**: full file dikirim per request (tanpa filter per Bab). Korpus ditempatkan di Claude **system message** — clean separation, eligible untuk prompt caching. Topik dari form berfungsi sebagai *directive* di user message, bukan filter terhadap korpus
+- **Authority order eksplisit di prompt**: korpus Buku Siswa = baseline otoritatif (CP, daftar bab, sub-konsep, kosakata); PDF guru opsional = konteks tambahan untuk warna lokal. AI diinstruksikan tidak menggantikan korpus dengan PDF
 - **Guru tidak perlu input data kurikulum** — form menampilkan kurikulum sebagai disabled dropdown untuk transparansi
 - Upload materi **menambah** konteks soal, bukan menggantikan CP bawaan
 - Soal hasil AI harus melalui review guru sebelum difinalkan ke lembar
 - Topik dan tingkat kognitif harus sesuai Fase C: analisis dan penerapan, bukan hanya hafalan
 - Untuk PPKN: soal harus kontekstual dan aplikatif, bukan sekadar definisi
+- **Phase 2 enhancement**: filtering per-Bab berdasarkan topik (split markdown by `## Bab N`) untuk mempersempit konteks bila soal sering melenceng dari topik yang dipilih
 
 ### 5.5 Accessibility
 
