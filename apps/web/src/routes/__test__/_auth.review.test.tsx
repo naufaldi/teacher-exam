@@ -347,6 +347,58 @@ describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => 
   })
 })
 
+describe('ReviewPage — Terima Semua partial failure reverts failed statuses', () => {
+  it('reverts only the failed question status while keeping successful ones as accepted', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_partial_fail' }
+
+    const exam = makeExamWithQuestions('exam_partial_fail')
+    // Use only 3 questions for simplicity
+    const threeQuestions = exam.questions.slice(0, 3)
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: threeQuestions })
+    await getLoader()({ deps: { examId: 'exam_partial_fail' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockImplementation((id) => {
+      if (id === 'q-2') return Promise.reject(new Error('Network error'))
+      return Promise.resolve({
+        id,
+        examId: 'exam_partial_fail',
+        number: 1,
+        text: 'Question',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+        correctAnswer: 'a' as const,
+        topic: null,
+        difficulty: null,
+        status: 'accepted' as const,
+        validationStatus: null,
+        validationReason: null,
+        createdAt: new Date().toISOString(),
+      })
+    })
+
+    renderReviewPage()
+
+    const terimaSemua = screen.getByText('Terima Semua')
+    await user.click(terimaSemua)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledTimes(3)
+    })
+
+    // q-1 and q-3 succeeded — their statuses should appear accepted in the UI
+    await waitFor(() => {
+      // q-2 failed — its card should NOT show "Diterima" (it reverted to pending)
+      const acceptedLabels = screen.getAllByText('Diterima')
+      expect(acceptedLabels).toHaveLength(2)
+    })
+
+    patchSpy.mockRestore()
+  })
+})
+
 describe('ReviewPage — from=generate URL strip', () => {
   it('preserves examId in URL when stripping ?from=generate', async () => {
     // Seed store so the component renders without crashing

@@ -227,15 +227,25 @@ function ReviewPage() {
 
   const handleTerimaSemuaClick = async () => {
     const pending = questions.filter((q) => (questionStatuses[q.id] ?? 'pending') !== 'accepted')
+    if (pending.length === 0) return
+    const prevStatuses = Object.fromEntries(
+      pending.map((q) => [q.id, questionStatuses[q.id] ?? 'pending'] as const),
+    )
     setQuestionStatuses(Object.fromEntries(questions.map((q) => [q.id, 'accepted' as const])))
     const results = await Promise.allSettled(
       pending.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
     )
-    const failed = results.filter((r) => r.status === 'rejected').length
-    if (failed > 0) {
+    const failedIds = pending
+      .filter((_, i) => results[i]?.status === 'rejected')
+      .map((q) => q.id)
+    if (failedIds.length > 0) {
+      setQuestionStatuses((p) => ({
+        ...p,
+        ...Object.fromEntries(failedIds.map((id) => [id, prevStatuses[id] ?? 'pending'] as const)),
+      }))
       toast({
         variant: 'error',
-        title: `Gagal menerima ${failed} soal`,
+        title: `Gagal menerima ${failedIds.length} soal`,
         description: 'Sebagian soal perlu dicoba ulang.',
       })
     }
