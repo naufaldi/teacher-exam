@@ -9,6 +9,7 @@ import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
 import { healthRouter } from './routes/health'
 import { meRouter } from './routes/me'
 import { examsRouter } from './routes/exams'
+import { questionsRouter } from './routes/questions'
 import { createAiRouter } from './routes/ai'
 
 const app = new Hono()
@@ -32,6 +33,7 @@ app.use('/api/ai/generate', aiGenerateLimiter)
 
 app.route('/api/me', meRouter)
 app.route('/api/exams', examsRouter)
+app.route('/api/questions', questionsRouter)
 app.route('/api/ai', createAiRouter())
 
 app.onError(errorHandler)
