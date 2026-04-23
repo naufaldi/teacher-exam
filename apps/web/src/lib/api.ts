@@ -115,7 +115,7 @@ export const api = {
   exams: {
     list: () => apiFetch<ExamListResponse>('/exams'),
     get: (id: string) => apiFetch<ExamDetailResponse>(`/exams/${id}`),
-    patch: (id: string, body: UpdateExamInput) =>
+    patch: (id: string, body: Partial<UpdateExamInput>) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),

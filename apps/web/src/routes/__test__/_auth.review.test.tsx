@@ -437,3 +437,35 @@ test('Nama Sekolah onBlur PATCHes exam with schoolName only', async () => {
   })
   examsPatchSpy.mockRestore()
 })
+
+test('persistMetaField skips PATCH when examId is undefined', async () => {
+  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  mockSearchParams = { mode: 'fast' }
+  examDraftStore.reset()
+  renderReviewPage()
+
+  const input = screen.getByLabelText(/nama sekolah/i)
+  await userEvent.clear(input)
+  await userEvent.type(input, 'SD Negeri 2')
+  fireEvent.blur(input)
+
+  await new Promise((r) => setTimeout(r, 50))
+  expect(examsPatchSpy).not.toHaveBeenCalled()
+  examsPatchSpy.mockRestore()
+})
+
+test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
+  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  mockSearchParams = { mode: 'fast', examId: 'E2' }
+  mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('E2'))
+  await getLoader()({ deps: { examId: 'E2' } })
+  renderReviewPage()
+
+  const input = screen.getByLabelText(/durasi/i) as HTMLInputElement
+  Object.defineProperty(input, 'value', { configurable: true, writable: true, value: 'abc' })
+  fireEvent.blur(input)
+
+  await new Promise((r) => setTimeout(r, 50))
+  expect(examsPatchSpy).not.toHaveBeenCalled()
+  examsPatchSpy.mockRestore()
+})

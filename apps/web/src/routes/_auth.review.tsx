@@ -134,7 +134,7 @@ function ReviewPage() {
   const persistMetaField = async (patch: Partial<UpdateExamInput>) => {
     if (!examId) return
     try {
-      await api.exams.patch(examId, patch as UpdateExamInput)
+      await api.exams.patch(examId, patch)
     } catch (err) {
       toast({
         variant: 'error',
@@ -543,7 +543,12 @@ function ReviewPage() {
             <Input
               id="durasi"
               value={durasi}
-              onChange={(e) => setMeta({ durationMinutes: Number(e.target.value) || 0 })}
+              onChange={(e) => {
+                const raw = e.target.value
+                if (raw === '') { setMeta({ durationMinutes: 0 }); return }
+                const n = parseInt(raw, 10)
+                if (!Number.isNaN(n)) setMeta({ durationMinutes: n })
+              }}
               onBlur={(e) => {
                 const val = parseInt(e.target.value, 10)
                 if (!isNaN(val)) { void persistMetaField({ durationMinutes: val }) }
