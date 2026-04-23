@@ -21,9 +21,7 @@ questionsRouter.patch('/:id', async (c) => {
   }
   const input = parsed.right
 
-  // Build update object early so we can fail fast before hitting the DB
-  // Mutable partial so we can assign fields individually; type is still derived from the schema.
-  const updateData = {} as { -readonly [K in keyof UpdateQuestionInput]?: UpdateQuestionInput[K] }
+  const updateData: { -readonly [K in keyof UpdateQuestionInput]?: UpdateQuestionInput[K] } = {}
   if (input.text          !== undefined) updateData.text          = input.text
   if (input.optionA       !== undefined) updateData.optionA       = input.optionA
   if (input.optionB       !== undefined) updateData.optionB       = input.optionB
@@ -36,7 +34,6 @@ questionsRouter.patch('/:id', async (c) => {
     return c.json({ error: 'No fields to update', code: 'VALIDATION_ERROR' }, 422)
   }
 
-  // Ownership check via parent exam JOIN
   const rows = await db
     .select({ questionId: questions.id, examUserId: exams.userId })
     .from(questions)
@@ -46,9 +43,11 @@ questionsRouter.patch('/:id', async (c) => {
 
   if (!rows[0]) return c.json({ error: 'Question not found', code: 'NOT_FOUND' }, 404)
 
-  await db.update(questions).set(updateData as Record<string, unknown>).where(eq(questions.id, id))
-
-  const after = await db.select().from(questions).where(eq(questions.id, id)).limit(1)
-  if (!after[0]) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)
-  return c.json(toQuestion(after[0]))
+  const [updated] = await db
+    .update(questions)
+    .set(updateData as Record<string, unknown>)
+    .where(eq(questions.id, id))
+    .returning()
+  if (!updated) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)
+  return c.json(toQuestion(updated))
 })

@@ -215,18 +215,12 @@ examsRouter.post('/:id/finalize', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
-  const examRows = await db
-    .select()
-    .from(exams)
-    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
-    .limit(1)
+  const [examRows, questionRows] = await Promise.all([
+    db.select().from(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))).limit(1),
+    db.select().from(questions).where(eq(questions.examId, id)),
+  ])
 
   if (!examRows[0]) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
-
-  const questionRows = await db
-    .select()
-    .from(questions)
-    .where(eq(questions.examId, id))
 
   if (questionRows.length === 0) {
     return c.json({
