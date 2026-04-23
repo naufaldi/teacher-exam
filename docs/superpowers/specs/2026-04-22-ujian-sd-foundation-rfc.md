@@ -567,25 +567,64 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
 
 **Override manual:** jika user pilih `difficulty` eksplisit (`'mudah'|'sedang'|'sulit'`), `difficultyDist` profil di-bypass; kalau pilih `'campuran'` (default), pakai distribusi profil.
 
-#### System prompt (assembled at runtime)
+#### Prompt assembly — system vs user (assembled at runtime)
+
+Prompt sengaja dipecah menjadi dua field terpisah agar (a) korpus kurikulum yang besar dan stabil dapat dibedakan dari parameter per-request, (b) sistem block eligible untuk Anthropic prompt caching, dan (c) PDF guru opsional ditempatkan di posisi yang jelas additive — bukan menggantikan korpus.
+
+Builder: `apps/api/src/lib/prompt.ts` `buildExamPrompt(input): { system, user }`. Korpus dimuat lewat `apps/api/src/lib/curriculum.ts` `getCurriculumText(subject, grade)` yang membaca `apps/api/src/curriculum/md/{subject}-kelas-{n}.md` (full file, tanpa filtering per Bab di MVP). Bila file tidak ditemukan (mis. dev environment), loader fallback ke stub CP-only dari PRD §8.1/§8.2 dengan `console.warn`.
+
+**`system` field** (Anthropic top-level `system`):
 
 ```
 {profile.promptPreamble}
-Mata Pelajaran: {subjectLabel}. Kelas: {grade} SD. Topik: {topic}.
-Kurikulum: Merdeka Fase C.
+Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka Fase C (Kelas 5–6).
 
-Distribusi kesulitan target (dari 20 soal): mudah {dist.mudah}, sedang {dist.sedang}, sulit {dist.sulit}.
-Level kognitif yang diizinkan (Bloom): {profile.cognitiveLevels.join(', ')}.
-Gaya soal: {profile.stemHint}
+Authority order:
+  1. Korpus Buku Siswa di bawah = baseline kurikulum (otoritatif untuk CP, daftar bab,
+     sub-konsep, sample teks bacaan, dan kosakata).
+  2. PDF guru (jika ada di user message sebagai document block) = konteks tambahan untuk
+     memperkaya soal — bukan pengganti korpus.
 
-[Hardcoded CP/TP text for the subject from PRD §8.1 / §8.2]
-{classContext ? `Konteks/Fokus guru: ${classContext}` : ''}
-{exampleQuestions ? `Contoh gaya soal yang diinginkan: ${exampleQuestions}` : ''}
-{extractedPdfText if present}
+--- KORPUS BUKU SISWA (Kurikulum Merdeka, Fase C) ---
+{getCurriculumText(subject, grade)}    ← full markdown dari apps/api/src/curriculum/md/
+--- AKHIR KORPUS ---
 
-Jawab dalam format JSON array berisi 20 soal. Setiap soal punya field:
-text, option_a..d, correct_answer, topic, difficulty, cognitive_level (C1..C4).
+Output rules:
+- Jawab HANYA dengan JSON array berisi tepat 20 soal — tanpa prosa, tanpa pembungkus markdown.
+- Setiap soal punya field: text, option_a..d, correct_answer (a|b|c|d), topic,
+  difficulty (mudah|sedang|sulit), cognitive_level (C1|C2|C3|C4).
+- Hormati distribusi kesulitan target dan level kognitif yang diizinkan untuk jenis lembar ini.
+- Gaya soal: {profile.stemHint}
 ```
+
+**`messages[0]` user content** (urutan dipertahankan):
+
+```
+[ optional Claude `document` content block: PDF materi guru (base64, application/pdf) ]
+[ text block: ]
+Buatkan satu lembar berisi 20 soal pilihan ganda berdasarkan parameter berikut.
+Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab
+manapun di korpus selama relevan dengan topik.
+Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk
+konteks lokal/terkini.
+
+{
+  "kelas": {grade},
+  "mata_pelajaran": "{subjectLabel}",
+  "topik": "{topic}",                  // free-form; jadi directive, bukan filter terhadap korpus
+  "jenis_lembar": "{examType}",
+  "distribusi_kesulitan": {dist},
+  "level_kognitif": {profile.cognitiveLevels},
+  "konteks_guru": "{classContext?}",   // hanya muncul jika diisi
+  "contoh_soal": "{exampleQuestions?}" // hanya muncul jika diisi
+}
+```
+
+**Catatan implementasi:**
+
+- Field `extractedPdfText` di-drop dari skema prompt — Claude membaca PDF natively via `document` block, tidak perlu pre-extraction text.
+- System block (~3–4k token korpus + preamble) di atas threshold 1024 token Anthropic → eligible untuk prompt caching. MVP belum mengaktifkan flag `cache_control`; aktivasi defer ke fase polish (zero-redesign — cuma tambah `{ type: 'ephemeral' }` di params).
+- Filtering per-Bab berdasarkan topik adalah Phase 2 enhancement; di MVP korpus dikirim utuh agar Claude dapat cross-reference antar bab.
 
 **Response schema:**
 ```typescript
