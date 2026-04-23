@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Printer, ArrowLeft, FileText, ClipboardList, Key, Layers } from 'lucide-react'
+import { Printer, FileText, ClipboardList, Key, Layers } from 'lucide-react'
 import {
   Button,
   Badge,
@@ -59,16 +59,25 @@ function kopLabelFor(examType: string): string {
 }
 
 type PrintScope = 'all' | 'soal' | 'lj' | 'kunci'
+const PRINT_CLEANUP_FALLBACK_MS = 10_000
 
 function triggerPrint(scope: PrintScope) {
   const body = document.body
+  let fallbackId: number | undefined
+
+  const cleanup = () => {
+    if (fallbackId !== undefined) window.clearTimeout(fallbackId)
+    window.removeEventListener('afterprint', cleanup)
+    delete body.dataset['printScope']
+  }
+
   body.dataset['printScope'] = scope
+  window.addEventListener('afterprint', cleanup, { once: true })
+
   // Defer to next tick so the data attribute is applied before print dialog opens
   window.setTimeout(() => {
     window.print()
-    window.setTimeout(() => {
-      delete body.dataset['printScope']
-    }, 200)
+    fallbackId = window.setTimeout(cleanup, PRINT_CLEANUP_FALLBACK_MS)
   }, 50)
 }
 
@@ -83,6 +92,7 @@ function PreviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        data-screen-only
         data-no-print
         title="Preview Lembar"
         subtitle={`${kopLabelFor(metadata.examType)} · ${subjectLabel} — Kelas ${grade} SD`}
@@ -96,6 +106,7 @@ function PreviewPage() {
 
       {/* Action bar — hidden in print */}
       <div
+        data-screen-only
         data-no-print
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >

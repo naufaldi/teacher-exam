@@ -76,7 +76,7 @@ function AuthLayout() {
   })
 
   return (
-    <div className="min-h-screen bg-bg-app">
+    <div data-print-app-shell className="min-h-screen bg-bg-app">
       <nav className="sticky top-0 z-10 bg-bg-surface border-b border-border-default shadow-xs h-[56px]">
         <div className="max-w-[var(--container-app)] mx-auto px-6 h-full flex items-center">
           {/* Brand */}
@@ -147,8 +147,8 @@ function AuthLayout() {
         </div>
       </nav>
 
-      <div className="bg-bg-app min-h-[calc(100vh-56px)]">
-        <main className="max-w-[var(--container-app)] mx-auto py-8 px-6">
+      <div data-print-app-content className="bg-bg-app min-h-[calc(100vh-56px)]">
+        <main data-print-app-main className="max-w-[var(--container-app)] mx-auto py-8 px-6">
           <Outlet />
         </main>
       </div>
