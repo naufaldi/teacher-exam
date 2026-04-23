@@ -12,7 +12,7 @@ export const Route = createFileRoute('/')({
   },
   beforeLoad: async () => {
     try {
-      const session = await getSession()
+      const session = await getSession({ query: { disableCookieCache: true } })
       if (session?.data?.user) {
         throw redirect({ to: '/dashboard' })
       }

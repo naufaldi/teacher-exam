@@ -4,8 +4,10 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { auth } from './lib/auth'
 import { requireAuth } from './middleware/auth'
+import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
 import { healthRouter } from './routes/health'
 import { meRouter } from './routes/me'
+import { createAiRouter } from './routes/ai'
 
 const app = new Hono()
 
@@ -23,8 +25,11 @@ app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 app.route('/api/health', healthRouter)
 
 app.use('/api/*', requireAuth)
+app.use('/api/*', globalLimiter)
+app.use('/api/ai/generate', aiGenerateLimiter)
 
 app.route('/api/me', meRouter)
+app.route('/api/ai', createAiRouter())
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
