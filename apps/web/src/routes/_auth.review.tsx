@@ -23,7 +23,7 @@ import {
   PageHeader,
   useToast,
 } from '@teacher-exam/ui'
-import type { ExamType, Question } from '@teacher-exam/shared'
+import type { ExamType, Question, UpdateQuestionInput } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
@@ -167,10 +167,40 @@ function ReviewPage() {
     void navigate({ to: '/review', search: { mode: target } })
   }
 
-  const handleEditSave = (updated: Question) => {
+  const handleEditSave = async (updated: Question) => {
+    const original = questions.find((q) => q.id === updated.id)
+    if (!original) return
+    const diffMut: {
+      text?: string
+      optionA?: string
+      optionB?: string
+      optionC?: string
+      optionD?: string
+      correctAnswer?: 'a' | 'b' | 'c' | 'd'
+    } = {}
+    if (updated.text          !== original.text)          diffMut.text          = updated.text
+    if (updated.optionA       !== original.optionA)       diffMut.optionA       = updated.optionA
+    if (updated.optionB       !== original.optionB)       diffMut.optionB       = updated.optionB
+    if (updated.optionC       !== original.optionC)       diffMut.optionC       = updated.optionC
+    if (updated.optionD       !== original.optionD)       diffMut.optionD       = updated.optionD
+    if (updated.correctAnswer !== original.correctAnswer) diffMut.correctAnswer = updated.correctAnswer
+    const diff: UpdateQuestionInput = diffMut
+    setEditingId(null)
+    if (Object.keys(diff).length === 0) return
+
     examDraftStore.updateQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
-    setEditingId(null)
+    try {
+      const server = await api.questions.patch(updated.id, diff)
+      examDraftStore.updateQuestion(server.id, server)
+    } catch (err) {
+      examDraftStore.updateQuestion(updated.id, original)
+      toast({
+        variant: 'error',
+        title: 'Gagal menyimpan perubahan',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
   }
 
   const handleRejectConfirm = async () => {

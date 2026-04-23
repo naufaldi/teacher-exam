@@ -194,6 +194,51 @@ describe('ReviewPage — Slow Track reject wires to api.questions.patch', () => 
   })
 })
 
+describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
+  it('calls api.questions.patch with only changed fields when text is modified', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'fast', examId: 'exam_edit' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_edit'))
+    await getLoader()({ deps: { examId: 'exam_edit' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      id: 'q-1',
+      examId: 'exam_edit',
+      number: 1,
+      text: 'Teks baru',
+      optionA: 'A',
+      optionB: 'B',
+      optionC: 'C',
+      optionD: 'D',
+      correctAnswer: 'a' as const,
+      topic: null,
+      difficulty: null,
+      status: 'accepted' as const,
+      validationStatus: null,
+      validationReason: null,
+      createdAt: new Date().toISOString(),
+    })
+
+    renderReviewPage()
+
+    const editButton = screen.getByRole('button', { name: 'Edit cepat soal 1' })
+    await user.click(editButton)
+
+    const textArea = await screen.findByLabelText(/teks soal/i)
+    await user.clear(textArea)
+    await user.type(textArea, 'Teks baru')
+
+    const saveButton = screen.getByRole('button', { name: /simpan perubahan/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith('q-1', { text: 'Teks baru' })
+    })
+
+    patchSpy.mockRestore()
+  })
+})
+
 describe('ReviewPage — from=generate URL strip', () => {
   it('preserves examId in URL when stripping ?from=generate', async () => {
     // Seed store so the component renders without crashing
