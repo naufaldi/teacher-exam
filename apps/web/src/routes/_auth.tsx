@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, redirect, Link } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, Link, useNavigate } from '@tanstack/react-router'
 import { LogOut, HelpCircle } from 'lucide-react'
 import { Button } from '@teacher-exam/ui'
+import { authClient, signOut } from '../lib/auth-client'
 
 const NAV_LINKS = [
   { to: '/dashboard' as const, label: 'Dashboard' },
@@ -11,37 +12,56 @@ const NAV_LINKS = [
 const DEV_USER = {
   id: 'dev-user-001',
   name: 'Sari Wulandari',
-  image: undefined as string | undefined,
+  username: 'sari.wulandari',
+  email: 'sari.wulandari@dev.local',
+  image: null as string | null,
+  profileCompleted: true,
+} as const
+
+type RouteUser = {
+  id: string
+  name: string
+  username?: string
+  email: string
+  image?: string | null
+  profileCompleted?: boolean
 }
 
 export const Route = createFileRoute('/_auth')({
-  beforeLoad: async () => {
-    // In development, skip the real auth check so the UI can be worked on
-    // without needing a live API or Google OAuth credentials.
-    if (import.meta.env.DEV) {
-      return { user: DEV_USER }
+  beforeLoad: async ({ location }) => {
+    if (import.meta.env['VITE_AUTH_BYPASS'] === '1') {
+      return { user: DEV_USER as RouteUser }
     }
 
-    try {
-      const res = await fetch('/api/auth/get-session', { credentials: 'include' })
-      if (!res.ok) throw new Error('unauthenticated')
-      const session = await res.json() as { user?: { id: string; name: string; image?: string } } | null
-      if (!session?.user) throw new Error('unauthenticated')
-      return { user: session.user }
-    } catch {
-      throw redirect({ to: '/' })
+    const session = await authClient.getSession()
+    const user = session?.data?.user as RouteUser | undefined
+    if (!user) {
+      throw redirect({ to: '/', search: { reason: 'session_expired' } })
     }
+
+    if (user.profileCompleted === false && location.pathname !== '/onboarding') {
+      throw redirect({ to: '/onboarding' })
+    }
+
+    return { user }
   },
   component: AuthLayout,
 })
 
 function AuthLayout() {
   const { user } = Route.useRouteContext()
+  const navigate = useNavigate()
+
   const initials = user.name
     .split(' ')
     .slice(0, 2)
     .map((n) => n.charAt(0).toUpperCase())
     .join('')
+
+  const handleLogout = async () => {
+    await signOut()
+    await navigate({ to: '/' })
+  }
 
   return (
     <div className="min-h-screen bg-bg-app">
@@ -82,8 +102,11 @@ function AuthLayout() {
               <HelpCircle size={18} />
             </Button>
 
-            {/* Teacher pill */}
-            <div className="flex items-center gap-2.5 py-1 pl-3 pr-1.5 border border-border-default rounded-pill bg-bg-surface text-body-sm font-medium cursor-pointer hover:border-kertas-300 hover:bg-kertas-50 transition-colors duration-[120ms]">
+            {/* Teacher pill -> /profile */}
+            <Link
+              to="/profile"
+              className="flex items-center gap-2.5 py-1 pl-3 pr-1.5 border border-border-default rounded-pill bg-bg-surface text-body-sm font-medium hover:border-kertas-300 hover:bg-kertas-50 transition-colors duration-[120ms]"
+            >
               <span className="text-text-primary">{user.name}</span>
               {user.image ? (
                 <img
@@ -96,16 +119,17 @@ function AuthLayout() {
                   <span className="font-bold text-white text-[12px] tracking-wide">{initials}</span>
                 </div>
               )}
-            </div>
+            </Link>
 
             {/* Logout */}
-            <a
-              href="/api/auth/sign-out"
+            <button
+              type="button"
+              onClick={handleLogout}
               className="text-body-sm text-text-tertiary hover:text-text-primary flex items-center gap-1.5 transition-colors duration-[120ms] ml-1"
             >
               <LogOut size={16} />
               <span className="hidden sm:inline">Keluar</span>
-            </a>
+            </button>
           </div>
         </div>
       </nav>

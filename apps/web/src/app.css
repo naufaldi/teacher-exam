@@ -44,10 +44,24 @@
       padding: 0 !important;
       margin: 0 !important;
     }
-    /* Page breaks */
+    /* Page breaks: legacy explicit divs (kept for compatibility; only break when visible) */
     .print-page-break {
       page-break-after: always;
       break-after: page;
+    }
+    .print-page-break:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    /* Section break-before: only active when printing all sections together,
+       so single-section print (Soal/LJ/Kunci) never produces a leading empty page. */
+    body[data-print-scope="all"] .print-break-before {
+      page-break-before: always;
+      break-before: page;
+    }
+    body[data-print-scope="all"] .print-break-before:first-child {
+      page-break-before: auto;
+      break-before: auto;
     }
   }
 }

@@ -1,15 +1,20 @@
-import type { User, Exam, Question, ExamWithQuestions } from '@teacher-exam/shared'
+import type { UserProfile, Exam, Question, ExamWithQuestions } from '@teacher-exam/shared'
 
 // ── Mock Teacher (current user) ─────────────────────────────────────────────
 
-export const MOCK_TEACHER: User = {
+export const MOCK_TEACHER: UserProfile = {
   id: 'user-001',
-  googleId: '117834920183847392',
+  username: 'sari.wulandari',
   name: 'Sari Wulandari',
   email: 'sari.wulandari@sdnegeri1jakarta.sch.id',
-  avatarUrl:
+  image:
     'https://lh3.googleusercontent.com/a/ACg8ocI8FpzIwEmI4kJiKoKb5Y3XAvvNalQnfM3uQAX6XQ=s96-c',
-  createdAt: '2026-04-01T07:00:00.000Z',
+  school: 'SD Negeri 1 Jakarta',
+  gradesTaught: [5, 6],
+  subjectsTaught: ['bahasa_indonesia', 'pendidikan_pancasila'],
+  profileCompleted: true,
+  locale: 'id-ID',
+  timezone: 'Asia/Jakarta',
 }
 
 // ── 20 Bahasa Indonesia Questions for Kelas 6 ───────────────────────────────

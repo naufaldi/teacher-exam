@@ -24,7 +24,7 @@ import {
   PageHeader,
   useToast,
 } from '@teacher-exam/ui'
-import type { Question } from '@teacher-exam/shared'
+import type { ExamType, Question } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
 import { RejectConfirmDialog } from '../components/review/reject-confirm-dialog.js'
@@ -492,18 +492,22 @@ function ReviewPage() {
               placeholder="2025/2026"
             />
           </div>
-          {/* Jenis Ujian */}
+          {/* Jenis Ujian (PRD §8.6) */}
           <div className="space-y-1.5">
             <Label htmlFor="jenis">Jenis Ujian</Label>
-            <Select value={jenisUjian} onValueChange={(v) => setMeta({ examType: v })}>
+            <Select
+              value={jenisUjian}
+              onValueChange={(v) => setMeta({ examType: v as ExamType })}
+            >
               <SelectTrigger id="jenis">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TKA">TKA</SelectItem>
-                <SelectItem value="UTS">UTS</SelectItem>
-                <SelectItem value="UAS">UAS</SelectItem>
-                <SelectItem value="Ulangan Harian">Ulangan Harian</SelectItem>
+                <SelectItem value="latihan">Latihan Soal</SelectItem>
+                <SelectItem value="formatif">Ulangan Harian</SelectItem>
+                <SelectItem value="sts">UTS · Sumatif Tengah Semester</SelectItem>
+                <SelectItem value="sas">UAS · Sumatif Akhir Semester</SelectItem>
+                <SelectItem value="tka">TKA</SelectItem>
               </SelectContent>
             </Select>
           </div>

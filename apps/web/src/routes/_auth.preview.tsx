@@ -7,11 +7,10 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent,
   PageHeader,
 } from '@teacher-exam/ui'
 import { useExamDraft } from '../lib/exam-draft-store.js'
-import type { Question } from '@teacher-exam/shared'
+import type { ExamType, Question } from '@teacher-exam/shared'
 
 export const Route = createFileRoute('/_auth/preview')({
   component: PreviewPage,
@@ -20,6 +19,23 @@ export const Route = createFileRoute('/_auth/preview')({
 const SUBJECT_LABELS: Record<string, string> = {
   bahasa_indonesia: 'Bahasa Indonesia',
   pendidikan_pancasila: 'Pendidikan Pancasila',
+}
+
+/**
+ * Uppercase title printed in the kop of the printed sheet. See PRD §8.6.
+ * Mirror of `EXAM_TYPE_PROFILE[*].kopLabel` in apps/api — kept duplicated to
+ * avoid pulling backend code into the web bundle.
+ */
+const EXAM_TYPE_KOP_LABELS: Record<ExamType, string> = {
+  latihan: 'LATIHAN SOAL',
+  formatif: 'ULANGAN HARIAN',
+  sts: 'PENILAIAN TENGAH SEMESTER',
+  sas: 'PENILAIAN AKHIR SEMESTER',
+  tka: 'TKA',
+}
+
+function kopLabelFor(examType: string): string {
+  return EXAM_TYPE_KOP_LABELS[examType as ExamType] ?? examType.toUpperCase()
 }
 
 type PrintScope = 'all' | 'soal' | 'lj' | 'kunci'
@@ -47,8 +63,9 @@ function PreviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        data-no-print
         title="Preview Lembar"
-        subtitle={`${metadata.examType} ${subjectLabel} — Kelas ${grade} SD`}
+        subtitle={`${kopLabelFor(metadata.examType)} · ${subjectLabel} — Kelas ${grade} SD`}
         onBack={() => {
           void navigate({ to: '/review', search: { mode: draft.reviewMode } })
         }}
@@ -96,6 +113,16 @@ function PreviewPage() {
 
       {/* Print scope CSS */}
       <style>{`
+        @media screen {
+          [data-print-content][data-screen-tab="soal"] [data-print-section="lj"],
+          [data-print-content][data-screen-tab="soal"] [data-print-section="kunci"],
+          [data-print-content][data-screen-tab="lj"] [data-print-section="soal"],
+          [data-print-content][data-screen-tab="lj"] [data-print-section="kunci"],
+          [data-print-content][data-screen-tab="kunci"] [data-print-section="soal"],
+          [data-print-content][data-screen-tab="kunci"] [data-print-section="lj"] {
+            display: none !important;
+          }
+        }
         @media print {
           body[data-print-scope="soal"] [data-print-section="lj"],
           body[data-print-scope="soal"] [data-print-section="kunci"],
@@ -114,29 +141,11 @@ function PreviewPage() {
         }
       `}</style>
 
-      {/* Preview content — switches based on tab when on screen, prints all in print */}
-      <div data-print-content className="space-y-6">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="screen-tabs">
-          <TabsContent value="semua" className="space-y-6">
-            <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} />
-            <div className="print-page-break" />
-            <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} />
-            <div className="print-page-break" />
-            <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={metadata.examType} />
-          </TabsContent>
-
-          <TabsContent value="soal">
-            <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} />
-          </TabsContent>
-
-          <TabsContent value="lj">
-            <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} />
-          </TabsContent>
-
-          <TabsContent value="kunci">
-            <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={metadata.examType} />
-          </TabsContent>
-        </Tabs>
+      {/* Preview content — all sections always rendered; screen visibility controlled via data-screen-tab */}
+      <div data-print-content data-screen-tab={tab} className="space-y-6">
+        <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} />
+        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} />
+        <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} />
       </div>
     </div>
   )
@@ -177,7 +186,7 @@ function PaperHeader({
           {metadata.schoolName || 'SD Negeri ___________'}
         </p>
         <p className="text-base font-bold uppercase mt-1 underline">
-          {metadata.examType} Tahun Pelajaran {metadata.academicYear || '____/____'}
+          {kopLabelFor(metadata.examType)} Tahun Pelajaran {metadata.academicYear || '____/____'}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-4">
@@ -263,7 +272,7 @@ function LembarJawabanSection({
   const right = numbers.slice(Math.ceil(count / 2))
 
   return (
-    <div data-print-section="lj">
+    <div data-print-section="lj" className="print-break-before">
       <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-4">
           <p className="text-sm font-bold uppercase tracking-wide">
@@ -271,7 +280,7 @@ function LembarJawabanSection({
           </p>
           <p className="text-base font-bold uppercase mt-1">LEMBAR JAWABAN</p>
           <p className="text-sm">
-            {metadata.examType} {subjectLabel} — Kelas {grade} SD
+            {kopLabelFor(metadata.examType)} · {subjectLabel} — Kelas {grade} SD
           </p>
         </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-5">
@@ -336,7 +345,7 @@ function KunciSection({
   examType: string
 }) {
   return (
-    <div data-print-section="kunci">
+    <div data-print-section="kunci" className="print-break-before">
       <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">KUNCI JAWABAN</p>

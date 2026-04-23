@@ -30,8 +30,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       better-auth:
-        specifier: ^1.1.3
+        specifier: ^1.6.6
         version: 1.6.6(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.28.16)(postgres@3.4.9))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(kysely@0.28.16)(postgres@3.4.9)
       effect:
         specifier: ^3.11.0
         version: 3.21.1
@@ -61,7 +64,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       better-auth:
-        specifier: ^1.1.3
+        specifier: ^1.6.6
         version: 1.6.6(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.28.16)(postgres@3.4.9))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       effect:
         specifier: ^3.21.1

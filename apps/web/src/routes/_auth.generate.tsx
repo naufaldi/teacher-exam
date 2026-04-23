@@ -20,6 +20,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@teacher-exam/ui'
+import type { ExamType } from '@teacher-exam/shared'
 import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
@@ -88,7 +89,73 @@ const REVIEW_MODE_LABELS: Record<string, string> = {
   slow: 'Detail',
 }
 
+// ── Jenis Lembar (PRD §8.6) ──────────────────────────────────────────────────
+
+interface ExamTypeOption {
+  value: ExamType
+  label: string
+  sublabel: string
+}
+
+const EXAM_TYPE_OPTIONS: readonly ExamTypeOption[] = [
+  { value: 'latihan',  label: 'Latihan Soal',   sublabel: 'Asesmen mandiri / drill' },
+  { value: 'formatif', label: 'Ulangan Harian', sublabel: 'Asesmen Formatif' },
+  { value: 'sts',      label: 'UTS',            sublabel: 'Sumatif Tengah Semester' },
+  { value: 'sas',      label: 'UAS',            sublabel: 'Sumatif Akhir Semester' },
+  { value: 'tka',      label: 'TKA',            sublabel: 'Tes Kemampuan Akademik' },
+] as const
+
+const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
+  EXAM_TYPE_OPTIONS.map((o) => [o.value, o.label]),
+) as Record<ExamType, string>
+
+const FOKUS_GURU_MAX = 500
+
 const GENERATE_DURATION_MS = 7000
+
+// ── Fokus Guru chip suggestions (PRD §8.7) ───────────────────────────────────
+
+interface FokusGuruChipsProps {
+  topik: string
+  onAppend: (snippet: string) => void
+}
+
+function FokusGuruChips({ topik, onAppend }: FokusGuruChipsProps) {
+  const focusOnTopik = topik.trim() !== ''
+  const chips: ReadonlyArray<{ label: string; snippet: string; disabled: boolean }> = [
+    {
+      label: focusOnTopik ? `Fokus pada: ${topik}` : 'Fokus pada: (pilih topik)',
+      snippet: focusOnTopik ? `Fokus pada: ${topik}.` : '',
+      disabled: !focusOnTopik,
+    },
+    { label: 'Kesalahan umum: …', snippet: 'Kesalahan umum: ', disabled: false },
+    { label: 'Buat soal kontekstual tentang …', snippet: 'Buat soal kontekstual tentang ', disabled: false },
+    { label: 'Hubungkan dengan: …', snippet: 'Hubungkan dengan: ', disabled: false },
+  ]
+
+  return (
+    <div className="flex flex-wrap gap-1.5 pt-1">
+      {chips.map((chip) => (
+        <button
+          key={chip.label}
+          type="button"
+          disabled={chip.disabled}
+          onClick={() => onAppend(chip.snippet)}
+          className={[
+            'inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-caption',
+            'border transition-all duration-[120ms]',
+            chip.disabled
+              ? 'border-border-default bg-bg-muted text-text-tertiary cursor-not-allowed opacity-60'
+              : 'border-border-ui bg-bg-surface text-text-secondary hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 active:scale-[0.97]',
+          ].join(' ')}
+          aria-label={`Tambahkan template: ${chip.label}`}
+        >
+          + {chip.label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 // ── Section header helper ─────────────────────────────────────────────────────
 
@@ -116,8 +183,12 @@ function GeneratePage() {
   const [topik, setTopik] = useState<string>('')
   const [customTopik, setCustomTopik] = useState<string>('')
   const [kesulitan, setKesulitan] = useState<string>('campuran')
+  const [examType, setExamType] = useState<ExamType>('formatif')
   const [reviewMode, setReviewMode] = useState<'fast' | 'slow'>('fast')
+  const [fokusGuru, setFokusGuru] = useState<string>('')
   const [contohSoal, setContohSoal] = useState<string>('')
+
+  const fokusGuruRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Loading / error state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -149,8 +220,10 @@ function GeneratePage() {
   // Effective topic value for submission
   const effectiveTopik = topik === '__custom' ? customTopik : topik
 
-  // Sidebar completion count
-  const filledCount = [kelas, mapel, effectiveTopik, kesulitan].filter(Boolean).length
+  // Sidebar completion count (5 required fields with examType)
+  const filledCount = [kelas, mapel, effectiveTopik, kesulitan, examType].filter(
+    Boolean,
+  ).length
 
   const runGenerate = useCallback(() => {
     setError(null)
@@ -188,6 +261,8 @@ function GeneratePage() {
           subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
           grade: Number(kelas) || 6,
           topic: effectiveTopik,
+          examType,
+          classContext: fokusGuru.trim(),
         })
 
         completionTimerRef.current = setTimeout(() => {
@@ -200,7 +275,17 @@ function GeneratePage() {
       },
       willFail ? 2200 : GENERATE_DURATION_MS,
     )
-  }, [clearTimers, effectiveTopik, kelas, mapel, navigate, reviewMode, simulate])
+  }, [
+    clearTimers,
+    effectiveTopik,
+    examType,
+    fokusGuru,
+    kelas,
+    mapel,
+    navigate,
+    reviewMode,
+    simulate,
+  ])
 
   const handleGenerate = () => {
     runGenerate()
@@ -276,6 +361,7 @@ function GeneratePage() {
                 ) : (
                   <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
                 )}
+                <Badge variant="secondary">{EXAM_TYPE_LABEL_MAP[examType]}</Badge>
               </div>
             </div>
           </div>
@@ -385,6 +471,48 @@ function GeneratePage() {
           >
             <SectionHeader label="Pengaturan Soal" />
 
+            {/* Jenis Lembar (PRD §8.6) */}
+            <div className="space-y-1.5">
+              <Label>Jenis Lembar</Label>
+              <RadioGroup
+                value={examType}
+                onValueChange={(v) => setExamType(v as ExamType)}
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {EXAM_TYPE_OPTIONS.map((opt) => {
+                    const id = `jenis-${opt.value}`
+                    const selected = examType === opt.value
+                    return (
+                      <Label
+                        key={opt.value}
+                        htmlFor={id}
+                        title={opt.sublabel}
+                        className={[
+                          'flex flex-col gap-1 p-3 rounded-sm border cursor-pointer',
+                          'transition-all duration-[180ms]',
+                          selected
+                            ? 'border-primary-600 bg-primary-50'
+                            : 'border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md',
+                        ].join(' ')}
+                      >
+                        <RadioGroupItem
+                          value={opt.value}
+                          id={id}
+                          className="sr-only"
+                        />
+                        <span className="text-body font-medium text-text-primary">
+                          {opt.label}
+                        </span>
+                        <span className="text-caption text-text-tertiary">
+                          {opt.sublabel}
+                        </span>
+                      </Label>
+                    )
+                  })}
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Tingkat Kesulitan */}
             <div className="space-y-1.5">
               <Label htmlFor="kesulitan">Tingkat Kesulitan</Label>
@@ -399,6 +527,15 @@ function GeneratePage() {
                   <SelectItem value="campuran">Campuran</SelectItem>
                 </SelectContent>
               </Select>
+              {kesulitan === 'campuran' ? (
+                <p className="text-caption text-text-tertiary mt-1">
+                  Distribusi kesulitan mengikuti Jenis Lembar terpilih.
+                </p>
+              ) : (
+                <p className="text-caption text-text-tertiary mt-1">
+                  Pilihan eksplisit ini akan menggantikan distribusi default Jenis Lembar.
+                </p>
+              )}
             </div>
 
             {/* Jumlah Soal (fixed info — PRD US-8) */}
@@ -448,13 +585,65 @@ function GeneratePage() {
             </div>
           </section>
 
-          {/* Section C: Referensi (Opsional) */}
+          {/* Section C: Konteks & Referensi (PRD §8.7) */}
           <section
             className="animate-fade-up-stagger space-y-5"
             style={{ '--index': 3 } as React.CSSProperties}
           >
-            <SectionHeader label="Referensi (Opsional)" />
+            <SectionHeader label="Konteks & Referensi" />
 
+            {/* Fokus / Tujuan Guru */}
+            <div className="space-y-1.5">
+              <Label htmlFor="fokus-guru">
+                Fokus / Tujuan Guru{' '}
+                <span className="text-text-tertiary font-normal">(opsional)</span>
+              </Label>
+              <Textarea
+                ref={fokusGuruRef}
+                id="fokus-guru"
+                placeholder="Mis. Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan."
+                rows={3}
+                value={fokusGuru}
+                onChange={(e) =>
+                  setFokusGuru(e.target.value.slice(0, FOKUS_GURU_MAX))
+                }
+              />
+              <FokusGuruChips
+                topik={effectiveTopik}
+                onAppend={(snippet) => {
+                  setFokusGuru((prev) => {
+                    const sep = prev.length === 0 || prev.endsWith('\n') ? '' : '\n'
+                    const next = (prev + sep + snippet).slice(0, FOKUS_GURU_MAX)
+                    // Restore focus + caret to the end after state flush
+                    queueMicrotask(() => {
+                      const el = fokusGuruRef.current
+                      if (el) {
+                        el.focus()
+                        el.setSelectionRange(next.length, next.length)
+                      }
+                    })
+                    return next
+                  })
+                }}
+              />
+              <div className="flex justify-between items-center">
+                <p className="text-caption text-text-tertiary">
+                  Konteks ini diberikan ke AI sebagai panduan, tidak dicetak di lembar siswa.
+                </p>
+                <span
+                  className={[
+                    'text-caption tabular-nums',
+                    fokusGuru.length >= FOKUS_GURU_MAX
+                      ? 'text-warning-fg'
+                      : 'text-text-tertiary',
+                  ].join(' ')}
+                >
+                  {fokusGuru.length}/{FOKUS_GURU_MAX}
+                </span>
+              </div>
+            </div>
+
+            {/* Contoh Soal */}
             <div className="space-y-1.5">
               <Label htmlFor="contoh-soal">
                 Contoh Soal{' '}
@@ -529,9 +718,9 @@ function GeneratePage() {
                 Ringkasan Konfigurasi
               </h3>
               <div className="flex items-center gap-2">
-                <Progress value={filledCount * 25} className="h-1.5 flex-1" />
+                <Progress value={filledCount * 20} className="h-1.5 flex-1" />
                 <span className="text-caption text-text-tertiary tabular-nums">
-                  {filledCount}/4
+                  {filledCount}/5
                 </span>
               </div>
             </div>
@@ -564,6 +753,13 @@ function GeneratePage() {
                 </span>
               </div>
 
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-text-tertiary shrink-0">Jenis</span>
+                <Badge variant="secondary" className="text-caption">
+                  {EXAM_TYPE_LABEL_MAP[examType]}
+                </Badge>
+              </div>
+
               <div className="flex justify-between items-start gap-2">
                 <span className="text-text-tertiary shrink-0">Topik</span>
                 <span className="text-text-primary max-w-[160px] text-right">
@@ -586,6 +782,15 @@ function GeneratePage() {
                   {REVIEW_MODE_LABELS[reviewMode] ?? reviewMode}
                 </span>
               </div>
+
+              {fokusGuru.trim() !== '' ? (
+                <div className="flex flex-col gap-1 pt-1 border-t border-border-default">
+                  <span className="text-text-tertiary">Fokus Guru</span>
+                  <span className="text-text-primary text-caption line-clamp-3 italic">
+                    “{fokusGuru.trim()}”
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             <Separator />

@@ -2,6 +2,8 @@ import type {
   HealthResponse,
   ExamListResponse,
   ExamDetailResponse,
+  UserProfile,
+  UpdateProfileInput,
 } from '@teacher-exam/shared'
 
 const API_BASE = '/api'
@@ -33,5 +35,13 @@ export const api = {
       }),
     remove: (id: string)   =>
       apiFetch<void>(`/exams/${id}`, { method: 'DELETE' }),
+  },
+  me: {
+    get:    ()                          => apiFetch<UserProfile>('/me'),
+    update: (body: UpdateProfileInput)  =>
+      apiFetch<UserProfile>('/me', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
   },
 }

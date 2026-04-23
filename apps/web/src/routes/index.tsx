@@ -1,21 +1,24 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, isRedirect, redirect } from '@tanstack/react-router'
 import { PaperCard } from '@teacher-exam/ui'
-import { BookOpen, Check, Printer } from 'lucide-react'
+import { BookOpen, Check, Printer, AlertCircle } from 'lucide-react'
+import { signIn, getSession } from '../lib/auth-client'
+
+type LoginSearch = { reason?: 'session_expired' }
 
 export const Route = createFileRoute('/')({
+  validateSearch: (search): LoginSearch => {
+    const reason = (search as { reason?: unknown }).reason
+    return reason === 'session_expired' ? { reason } : {}
+  },
   beforeLoad: async () => {
     try {
-      const res = await fetch('/api/auth/get-session', { credentials: 'include' })
-      if (res.ok) {
-        const session = await res.json() as { user?: { id: string } } | null
-        if (session?.user) {
-          throw redirect({ to: '/dashboard' })
-        }
+      const session = await getSession()
+      if (session?.data?.user) {
+        throw redirect({ to: '/dashboard' })
       }
     } catch (e) {
-      // If the thrown value is a redirect, re-throw it
-      if (e instanceof Error === false) throw e
-      // Otherwise swallow fetch errors — just show the login page
+      if (isRedirect(e)) throw e
+      // Network/other error: just render the login page.
     }
   },
   component: LoginPage,
@@ -58,6 +61,12 @@ const TRUST_POINTS = [
 ] as const
 
 function LoginPage() {
+  const { reason } = Route.useSearch()
+
+  const handleGoogleSignIn = () => {
+    void signIn.social({ provider: 'google', callbackURL: '/dashboard' })
+  }
+
   return (
     <div className='min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app'>
       {/* Left column — brand and auth */}
@@ -101,14 +110,25 @@ function LoginPage() {
             className='animate-fade-up-stagger flex flex-col gap-4 pt-2'
             style={{ ['--index' as string]: 4 }}
           >
-            <a
-              href='/api/auth/sign-in/google?callbackURL=/dashboard'
+            <button
+              type='button'
+              onClick={handleGoogleSignIn}
               aria-label='Masuk dengan akun Google'
               className='inline-flex items-center justify-center gap-3 self-start rounded-sm border border-border-ui bg-bg-surface px-6 py-3 text-body font-medium text-text-primary shadow-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-std)] hover:bg-kertas-50 active:scale-[0.97]'
             >
               <GoogleIcon />
               Masuk dengan Google
-            </a>
+            </button>
+
+            {reason === 'session_expired' ? (
+              <div
+                role='alert'
+                className='inline-flex items-start gap-2 self-start rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-body-sm text-amber-800'
+              >
+                <AlertCircle size={16} className='mt-0.5 shrink-0' aria-hidden='true' />
+                <span>Sesi berakhir &mdash; silakan masuk lagi.</span>
+              </div>
+            ) : null}
 
             <ul className='flex flex-col gap-2 pt-2'>
               {TRUST_POINTS.map((point) => (

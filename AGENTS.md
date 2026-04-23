@@ -65,6 +65,77 @@ Optional with defaults: `API_PORT` (3001), `WEB_PORT` (3000)
 
   Verify with `rtk init --show` and inspect savings via `rtk gain`.
 
+## Testing & TDD (Mandatory)
+
+Every new feature, bugfix, or behavior change follows **Test-Driven Development**. Read `~/.agents/skills/test-driven-development/SKILL.md` before writing code.
+
+**Iron rule:** No production code without a failing test first. Cycle: **RED** (write failing test) → verify it fails for the right reason → **GREEN** (minimal code to pass) → verify it passes → **REFACTOR** (keep green).
+
+### Test Runner
+
+- **Vitest** for every package (web, api, shared, ui). ESM-native, single config style.
+- Invoke via `pnpm test` (RTK auto-rewrites to `rtk vitest` per the table above — failures-only output).
+- Test glob: `**/__test__/**/*.test.{ts,tsx}` (Vitest default).
+
+### File Location Convention
+
+Tests live in a `__test__/` folder next to the code they cover (mirrored per module, frontend and backend):
+
+| Package | Source | Test |
+|---------|--------|------|
+| `apps/web` | `src/routes/_auth.dashboard.tsx` | `src/routes/__test__/_auth.dashboard.test.tsx` |
+| `apps/web` | `src/lib/api.ts` | `src/lib/__test__/api.test.ts` |
+| `apps/api` | `src/routes/exams.ts` | `src/routes/__test__/exams.test.ts` |
+| `apps/api` | `src/layers/AppLayer.ts` | `src/layers/__test__/AppLayer.test.ts` |
+| `apps/api` | `src/middleware/auth.ts` | `src/middleware/__test__/auth.test.ts` |
+| `packages/*` | `src/<area>/<file>.ts` | `src/<area>/__test__/<file>.test.ts` |
+
+Exclude `**/__test__/**` from production `tsconfig` `include` (or add to `exclude`).
+
+### Coverage Expectation
+
+Every new function, route, hook, component, or `Layer` ships with at least one test that was observed failing first. Bug fixes ship with a regression test that reproduced the bug before the fix.
+
+### Effect-TS Testing Note
+
+Prefer real `Layer` composition over mocks. Provide test layers via `Layer.succeed(Tag, fakeImpl)` and run with `Effect.runPromise(program.pipe(Effect.provide(TestLayer)))`. Mock only at true I/O boundaries (network, filesystem, time, RNG).
+
+### Browser Verification (Mandatory after each frontend task)
+
+After finishing any task that touches the running app (route, component, form, API call), verify it end-to-end with **agent-browser** before declaring done. Read `~/.agents/skills/agent-browser/SKILL.md` first.
+
+Required loop per finished task:
+
+1. Make sure the dev servers are up (`pnpm dev`, web on `:3000`, api on `:3001`).
+2. Drive the affected flow:
+   ```bash
+   agent-browser open http://localhost:3000/<route> && agent-browser wait --load networkidle && agent-browser snapshot -i
+   ```
+3. Capture console errors and warnings — they fail the task:
+   ```bash
+   agent-browser eval --stdin <<'EVALEOF'
+   (() => {
+     const buf = (window.__agentLogs ||= []);
+     if (!window.__agentLogsHooked) {
+       window.__agentLogsHooked = true;
+       for (const k of ['error', 'warn', 'log']) {
+         const orig = console[k].bind(console);
+         console[k] = (...a) => { buf.push({ k, a: a.map(String) }); orig(...a); };
+       }
+     }
+     return buf;
+   })()
+   EVALEOF
+   ```
+   Re-run the flow, then re-eval `window.__agentLogs` to inspect.
+4. Take a screenshot of the final state for the change record:
+   ```bash
+   agent-browser screenshot .agent-browser/<task-slug>.png
+   ```
+5. **Fix every console error/warning surfaced** (including stray `console.log` left from debugging) and any failed network request in the snapshot. Re-run the loop until clean.
+
+A task is **not done** until: tests are green, the browser flow completes without console errors/warnings, and there are no leftover `console.log` calls in the diff.
+
 ## Effect-TS Code Style (Mandatory)
 
 These rules are enforceable across `apps/api`, `apps/web`, `packages/shared`, and any future Effect-using package. Reference: https://effect.website/docs/code-style/guidelines/

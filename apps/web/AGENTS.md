@@ -2,6 +2,21 @@
 
 # @teacher-exam/web — React Frontend
 
+## Required Skills
+
+Before implementing or refactoring frontend code, **read the matching skill file IMMEDIATELY** (do not just mention it). Skills live under `~/.agents/skills/<name>/SKILL.md`.
+
+| When you are about to... | Read first |
+|---|---|
+| Write/refactor any React component, hook, or data fetch | `vercel-react-best-practices` |
+| Design a flexible/reusable component API (props, slots, context) | `vercel-composition-patterns` |
+| Reach for `useEffect` — first check if it's necessary | `writing-react-effects` |
+| Touch any Effect-TS code (Schema, Either, Match, etc.) | `effect-ts-expert` |
+| Write or modify tests | `test-driven-development` + `frontend-testing` |
+| Verify a finished task in the running app (post-implementation gate) | `agent-browser` |
+
+**Effect-TS preference:** wherever a new code path crosses an I/O boundary (API calls, storage, URL params) or models a state machine (loading/success/error, wizard steps), prefer Effect primitives — `Schema` for validation, `Either` for fallible results, `Option` for absence, `Match` for discriminated unions, `Data.TaggedError` for errors — over ad-hoc `try/catch`, `null` sentinels, or `switch` statements. See the existing **Effect on the Client (Rules)** section below for the hard constraints.
+
 ## Project Structure
 
 ```
@@ -114,6 +129,50 @@ Components use CVA variants: `<Button variant="primary" size="md">`.
 
 ### Client Data Fetching
 - Deduplicate global event listeners — avoid adding the same listener multiple times
+
+## Testing
+
+Follow the root **Testing & TDD** rule: write the failing test first, watch it fail, then implement.
+
+- **Location**: `src/<area>/__test__/<file>.test.tsx` (e.g. `src/routes/__test__/_auth.dashboard.test.tsx`, `src/lib/__test__/api.test.ts`).
+- **Stack**: Vitest + `@testing-library/react` + `@testing-library/user-event` + `jsdom`.
+- **What to test**: route components (render + user interaction), hooks (behavior, not implementation), `apiFetch` calls (validate the response with `Schema.decodeUnknownEither`), and any `Match`-based UI state machine.
+- **Do not test**: generated files (`routeTree.gen.ts`), third-party UI internals.
+
+### TDD Checklist
+
+1. Write the test in `__test__/` describing the expected behavior.
+2. Run `pnpm test <file>` and confirm it fails for the right reason.
+3. Implement the minimal code to pass.
+4. Re-run; confirm green and no regressions.
+5. Refactor while staying green.
+6. **Browser verify** — run the affected route in `agent-browser`, confirm zero console errors/warnings and no stray `console.log`. See **Browser Verification** in the root AGENTS.md.
+
+### Pattern: Route Component Test
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { Route } from '../_auth.dashboard'
+
+test('shows empty state when no exams', async () => {
+  render(<Route.options.component />)
+  expect(await screen.findByText(/no exams yet/i)).toBeInTheDocument()
+})
+```
+
+### Pattern: API Client Test (Schema-validated)
+
+```ts
+import { Schema, Either } from 'effect'
+import { ExamSchema } from '@teacher-exam/shared'
+
+test('exams.list decodes server response', () => {
+  const raw = [{ id: 'exam_1', title: 'Math' }]
+  const decoded = Schema.decodeUnknownEither(Schema.Array(ExamSchema))(raw)
+  expect(Either.isRight(decoded)).toBe(true)
+})
+```
 
 ## Effect on the Client (Rules)
 

@@ -2,6 +2,16 @@
 
 # @teacher-exam/api — Hono API Server
 
+## Required Skills
+
+Before implementing or refactoring backend code, **read the matching skill file IMMEDIATELY** (do not just mention it). Skills live under `~/.agents/skills/<name>/SKILL.md`.
+
+| When you are about to... | Read first |
+|---|---|
+| Write/refactor any Effect-TS service, Layer, Schema, or tagged error | `effect-ts-expert` |
+| Write or modify tests | `test-driven-development` |
+| Debug a failing test, runtime error, or unexpected behavior | `systematic-debugging` |
+
 ## Project Structure
 
 ```
@@ -78,6 +88,54 @@ const userId = c.get('userId') // string
 
 - Extensionless relative imports (Bundler resolution; tsx handles runtime)
 - Workspace packages without extension: `import { db } from '@teacher-exam/db'`
+
+## Testing
+
+Follow the root **Testing & TDD** rule: failing test first, watch it fail, then implement.
+
+- **Location**: `src/<area>/__test__/<file>.test.ts` — mirrored per module.
+  - `src/routes/__test__/exams.test.ts`
+  - `src/layers/__test__/AppLayer.test.ts`
+  - `src/middleware/__test__/auth.test.ts`
+- **Stack**: Vitest. Route-level tests use Hono's in-process `app.request()` (no network). Service/layer tests run Effect programs with `Effect.runPromise(program.pipe(Effect.provide(TestLayer)))`.
+- **What to test**: every route handler (auth required + happy path + each `Data.TaggedError` branch), every service method, every middleware, every `Schema` round-trip.
+- **Fakes over mocks**: swap `DbLayer` for `Layer.succeed(DbClient, fakeDb)`; do not mock Drizzle calls individually.
+
+### TDD Checklist
+
+1. Write the test in `__test__/` describing the expected behavior (status code, body shape, error tag).
+2. Run `pnpm test <file>` and confirm it fails for the right reason.
+3. Implement the minimal route/service code to pass.
+4. Re-run; confirm green and no regressions.
+5. Refactor while staying green.
+
+### Pattern: Hono Route Test
+
+```ts
+import { Hono } from 'hono'
+import { examsRouter } from '../exams'
+
+test('GET /api/exams returns 401 without session', async () => {
+  const app = new Hono().route('/api/exams', examsRouter)
+  const res = await app.request('/api/exams')
+  expect(res.status).toBe(401)
+})
+```
+
+### Pattern: Effect Service Test (Layer swap)
+
+```ts
+import { Effect, Layer } from 'effect'
+import { DbClient } from '../../layers/DbLayer'
+import { listExams } from '../exams.service'
+
+test('listExams returns rows from DbClient', async () => {
+  const fakeDb = { query: { exams: { findMany: async () => [{ id: 'exam_1' }] } } }
+  const TestLayer = Layer.succeed(DbClient, fakeDb as never)
+  const result = await Effect.runPromise(listExams.pipe(Effect.provide(TestLayer)))
+  expect(result).toEqual([{ id: 'exam_1' }])
+})
+```
 
 ## Effect Rules (API)
 

@@ -508,7 +508,7 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 │                                     │
 │ Metadata Lembar:                     │
 │ Sekolah: [SD Negeri 1 Jakarta____]  │
-│ TP: [2025/2026__] Jenis: [TKA ▾]    │
+│ TP: [2025/2026__] Jenis: [Ulangan ▾]│  ← lihat §8.6 (5 opsi)
 │ Tgl: [22 Apr 2026] Waktu: [60 mnt]  │
 │                                     │
 │ [Preview nonaktif: 17/20 siap]      │
@@ -538,7 +538,7 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 │                                     │
 │ Metadata Lembar (wajib):             │
 │ Sekolah: [SD Negeri 1 Jakarta____]  │
-│ TP: [2025/2026__] Jenis: [TKA ▾]    │
+│ TP: [2025/2026__] Jenis: [Ulangan ▾]│  ← lihat §8.6 (5 opsi)
 │ Tgl: [22 Apr 2026] Waktu: [60 mnt]  │
 │                                     │
 │  [♻ Regenerate]       [Preview ▶]   │
@@ -904,6 +904,44 @@ Pendidikan Pancasila:
 | **Mudah**  | Identifikasi informasi eksplisit dalam teks, arti kata, mengenali jenis teks                 | Mengenali bunyi/makna sila, mengidentifikasi hak vs kewajiban, menyebutkan contoh norma             |
 | **Sedang** | Menentukan ide pokok, opini vs fakta, unsur intrinsik, penggunaan majas                      | Menerapkan nilai Pancasila pada situasi, menganalisis norma dalam skenario, musyawarah              |
 | **Sulit**  | Menyimpulkan pesan tersirat, analisis hubungan paragraf, evaluasi argumen, perbandingan teks | Mengevaluasi sikap berdasarkan beberapa sila, menganalisis konflik nilai, solusi berbasis Pancasila |
+
+
+### 8.6 Jenis Lembar & Profil Asesmen
+
+Setiap lembar yang di-generate diasosiasikan dengan **Jenis Lembar** yang menentukan *stakes*, *cakupan*, dan *level kognitif* soal. Nilai disimpan di kolom `exams.exam_type` (text) dan dipakai dua tempat: (1) dicetak di kop lembar siswa, (2) di-inject ke prompt AI sebagai *steering* lewat tabel `EXAM_TYPE_PROFILE` (lihat RFC §9).
+
+**Terminologi:** Kurikulum Merdeka resmi menggunakan istilah **"Asesmen"** (Formatif / Sumatif), bukan "Ulangan/Penilaian". Praktiknya guru SD masih familiar dengan istilah lama (UTS/UAS/Ulangan Harian), jadi UI memakai *dual-label*: label primer = istilah colloquial, sub-label/tooltip = istilah Kurmer resmi.
+
+| value (DB)  | Label UI            | Sublabel (Kurmer)              | Default distribusi (mudah/sedang/sulit dari 20) | Bloom diizinkan |
+| ----------- | ------------------- | ------------------------------ | ----------------------------------------------- | --------------- |
+| `latihan`   | Latihan Soal        | Asesmen mandiri / drill        | 8 / 8 / 4                                       | C1, C2, C3      |
+| `formatif`  | Ulangan Harian      | Asesmen Formatif (Kurmer)      | 6 / 10 / 4                                      | C1, C2, C3      |
+| `sts`       | UTS                 | Sumatif Tengah Semester        | 6 / 10 / 4                                      | C1, C2, C3      |
+| `sas`       | UAS                 | Sumatif Akhir Semester         | 4 / 10 / 6                                      | C2, C3, C4      |
+| `tka`       | TKA                 | Tes Kemampuan Akademik         | 3 / 9 / 8                                       | C2, C3, C4      |
+
+**Default UI:** `formatif` (kasus paling umum guru SD). Backward-compat: row eksisting dengan nilai `'TKA'` (uppercase) dianggap setara `'tka'`.
+
+**Override manual:** Field "Tingkat Kesulitan" eksisting (§8.5) tetap berlaku. Jika guru pilih kesulitan eksplisit (mudah/sedang/sulit), distribusi default dari Jenis Lembar di-skip; jika pilih `campuran` (default), distribusi mengikuti profil di atas.
+
+**Mengapa structured (bukan tone-only)?** Hasil AI lebih *konsisten* dan *terukur* — tiap lembar bisa di-audit ("UTS ini punya 6 soal C1, 10 soal C2, 4 soal C3 sesuai standar"), defensible ke kepala sekolah/pengawas, dan maintainable dari satu mapping table.
+
+### 8.7 Fokus / Tujuan Guru (Class Context)
+
+Field opsional pada form Generate untuk menangkap *intent pedagogis* guru — apa yang sedang ingin ditekankan minggu ini, miskonsepsi yang sering muncul di kelas, atau penyesuaian konteks lokal.
+
+- **UI:** Textarea (3 baris) + chip suggestion dinamis yang menempel template ke textarea saat diklik:
+  - `Fokus pada: {topik aktif}` (disabled jika topik kosong)
+  - `Kesalahan umum: ...`
+  - `Buat soal kontekstual tentang ...`
+  - `Hubungkan dengan: ...`
+- **Disimpan ke:** `exams.class_context` (kolom existing — lihat RFC §5).
+- **Dipakai AI:** di-inject ke prompt sebagai bagian "Konteks/Fokus guru" (lihat RFC §9 prompt template).
+- **Tidak dicetak** di lembar siswa — internal steering AI saja.
+- Soft limit 500 karakter (counter, bukan hard limit).
+
+**Contoh isi yang baik:**
+> "Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan. Hindari topik politik."
 
 
 ---

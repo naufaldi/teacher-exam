@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import type { Question } from '@teacher-exam/shared'
+import type { ExamType, Question } from '@teacher-exam/shared'
+import { normalizeExamType } from '@teacher-exam/shared'
 import { MOCK_EXAM_FINAL, MOCK_EXAM_WITH_QUESTIONS } from './mock-data.js'
 
 /**
@@ -10,7 +11,8 @@ import { MOCK_EXAM_FINAL, MOCK_EXAM_WITH_QUESTIONS } from './mock-data.js'
 export interface ExamDraftMetadata {
   schoolName: string
   academicYear: string
-  examType: string
+  /** Strict literal union — see PRD §8.6 */
+  examType: ExamType
   examDate: string
   durationMinutes: number
   instructions: string
@@ -23,6 +25,8 @@ export interface ExamDraft {
   subject: 'bahasa_indonesia' | 'pendidikan_pancasila'
   grade: number
   topic: string
+  /** Optional teacher-provided steering context (PRD §8.7). */
+  classContext: string
 }
 
 function makeInitialDraft(): ExamDraft {
@@ -31,7 +35,7 @@ function makeInitialDraft(): ExamDraft {
     metadata: {
       schoolName: MOCK_EXAM_FINAL.schoolName ?? '',
       academicYear: MOCK_EXAM_FINAL.academicYear ?? '',
-      examType: MOCK_EXAM_FINAL.examType ?? 'TKA',
+      examType: normalizeExamType(MOCK_EXAM_FINAL.examType),
       examDate: MOCK_EXAM_FINAL.examDate ?? '',
       durationMinutes: MOCK_EXAM_FINAL.durationMinutes ?? 60,
       instructions: MOCK_EXAM_FINAL.instructions ?? '',
@@ -40,6 +44,7 @@ function makeInitialDraft(): ExamDraft {
     subject: 'bahasa_indonesia',
     grade: 6,
     topic: MOCK_EXAM_FINAL.topic,
+    classContext: MOCK_EXAM_FINAL.classContext ?? '',
   }
 }
 
@@ -98,8 +103,21 @@ export const examDraftStore = {
     emit()
   },
 
-  setConfig(patch: Partial<Pick<ExamDraft, 'subject' | 'grade' | 'topic'>>) {
-    state = { ...state, ...patch }
+  setConfig(
+    patch: Partial<
+      Pick<ExamDraft, 'subject' | 'grade' | 'topic' | 'classContext'> & {
+        examType: ExamType
+      }
+    >,
+  ) {
+    const { examType, ...rest } = patch
+    state = {
+      ...state,
+      ...rest,
+      ...(examType !== undefined
+        ? { metadata: { ...state.metadata, examType } }
+        : {}),
+    }
     emit()
   },
 }
