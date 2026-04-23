@@ -39,11 +39,13 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
   }
 })
 
+const mockToast = vi.fn()
+
 vi.mock('@teacher-exam/ui', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@teacher-exam/ui')>()
   return {
     ...orig,
-    useToast: () => ({ toast: vi.fn() }),
+    useToast: () => ({ toast: mockToast }),
   }
 })
 
@@ -468,4 +470,67 @@ test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
   await new Promise((r) => setTimeout(r, 50))
   expect(examsPatchSpy).not.toHaveBeenCalled()
   examsPatchSpy.mockRestore()
+})
+
+function makeExamWithCompleteMetadata(id = 'E'): ExamWithQuestions {
+  return {
+    ...makeExamWithQuestions(id),
+    schoolName: 'SD Negeri 1',
+    academicYear: '2025/2026',
+    examType: 'formatif',
+    examDate: '2025-06-01',
+    durationMinutes: 60,
+  }
+}
+
+test('Preview Lembar click calls api.exams.finalize then navigates with examId', async () => {
+  const user = userEvent.setup()
+  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
+
+  mockSearchParams = { mode: 'fast', examId: 'E' }
+  mockExamsGet.mockResolvedValueOnce(makeExamWithCompleteMetadata('E'))
+  await getLoader()({ deps: { examId: 'E' } })
+
+  renderReviewPage()
+
+  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  await user.click(previewButton)
+
+  await waitFor(() => {
+    expect(finalizeSpy).toHaveBeenCalledWith('E')
+  })
+  await waitFor(() => {
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({ to: '/preview', search: { examId: 'E' } }),
+    )
+  })
+
+  finalizeSpy.mockRestore()
+})
+
+test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOWED', async () => {
+  const user = userEvent.setup()
+  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockRejectedValue(
+    Object.assign(new Error('Not allowed'), { code: 'FINALIZE_NOT_ALLOWED' }),
+  )
+
+  mockSearchParams = { mode: 'fast', examId: 'E' }
+  mockExamsGet.mockResolvedValueOnce(makeExamWithCompleteMetadata('E'))
+  await getLoader()({ deps: { examId: 'E' } })
+
+  renderReviewPage()
+
+  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  await user.click(previewButton)
+
+  await waitFor(() => {
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'error',
+        description: 'Semua soal harus diterima sebelum finalisasi.',
+      }),
+    )
+  })
+
+  finalizeSpy.mockRestore()
 })

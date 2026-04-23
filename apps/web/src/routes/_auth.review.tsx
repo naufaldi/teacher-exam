@@ -54,6 +54,13 @@ export const Route = createFileRoute('/_auth/review')({
       examType: exam.examType as ExamType,
       classContext: exam.classContext ?? '',
     })
+    examDraftStore.setMetadata({
+      schoolName: exam.schoolName ?? '',
+      academicYear: exam.academicYear ?? '',
+      examDate: exam.examDate ?? '',
+      durationMinutes: exam.durationMinutes ?? 60,
+      instructions: exam.instructions ?? '',
+    })
     return exam
   },
 })
@@ -261,6 +268,28 @@ function ReviewPage() {
         title: `Gagal menerima ${failedIds.length} soal`,
         description: 'Sebagian soal perlu dicoba ulang.',
       })
+    }
+  }
+
+  const [finalizing, setFinalizing] = useState(false)
+
+  const handlePreviewClick = async () => {
+    if (!examId) return
+    setFinalizing(true)
+    try {
+      await api.exams.finalize(examId)
+      void navigate({ to: '/preview', search: { examId } })
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      const description =
+        code === 'FINALIZE_NOT_ALLOWED'
+          ? 'Semua soal harus diterima sebelum finalisasi.'
+          : err instanceof Error
+            ? err.message
+            : 'Coba lagi.'
+      toast({ variant: 'error', title: 'Gagal finalisasi', description })
+    } finally {
+      setFinalizing(false)
     }
   }
 
@@ -578,10 +607,10 @@ function ReviewPage() {
           </Button>
         </div>
         <Button
-          disabled={!canPreview}
-          onClick={() => void navigate({ to: '/preview' })}
+          disabled={!canPreview || finalizing}
+          onClick={() => { void handlePreviewClick() }}
         >
-          Preview Lembar <ChevronRight className="h-4 w-4 ml-1.5" />
+          {finalizing ? 'Menyimpan...' : 'Preview Lembar'}<ChevronRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
 

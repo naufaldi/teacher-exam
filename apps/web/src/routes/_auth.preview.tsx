@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Printer, ArrowLeft, FileText, ClipboardList, Key, Layers } from 'lucide-react'
 import {
   Button,
@@ -9,14 +9,30 @@ import {
   TabsTrigger,
   PageHeader,
 } from '@teacher-exam/ui'
-import { useExamDraft } from '../lib/exam-draft-store.js'
+import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import type { ExamType, Question } from '@teacher-exam/shared'
+import { api } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/preview')({
   component: PreviewPage,
   validateSearch: (search): { examId?: string } => {
     const examId = search['examId']
     return typeof examId === 'string' ? { examId } : {}
+  },
+  loaderDeps: ({ search }) => ({ examId: search.examId }),
+  loader: async ({ deps }) => {
+    if (!deps.examId) throw redirect({ to: '/dashboard' })
+    const exam = await api.exams.get(deps.examId)
+    examDraftStore.setQuestions([...exam.questions])
+    examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
+    examDraftStore.setMetadata({
+      schoolName: exam.schoolName ?? '',
+      academicYear: exam.academicYear ?? '',
+      examDate: exam.examDate ?? '',
+      durationMinutes: exam.durationMinutes ?? 60,
+      instructions: exam.instructions ?? '',
+    })
+    return exam
   },
 })
 
