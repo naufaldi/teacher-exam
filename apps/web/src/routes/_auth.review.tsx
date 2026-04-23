@@ -537,7 +537,7 @@ function ReviewPage() {
         open={editingId !== null}
         question={editingQuestion}
         onClose={() => setEditingId(null)}
-        onSave={handleEditSave}
+        onSave={(updated) => { void handleEditSave(updated) }}
       />
       <RejectConfirmDialog
         open={rejectingId !== null}

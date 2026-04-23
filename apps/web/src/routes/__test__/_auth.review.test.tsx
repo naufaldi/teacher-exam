@@ -195,6 +195,39 @@ describe('ReviewPage — Slow Track reject wires to api.questions.patch', () => 
 })
 
 describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
+  it('reverts question text in store when api.questions.patch rejects', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'fast', examId: 'exam_edit_fail' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_edit_fail'))
+    await getLoader()({ deps: { examId: 'exam_edit_fail' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockRejectedValue(new Error('Network error'))
+
+    renderReviewPage()
+
+    const editButton = screen.getByRole('button', { name: 'Edit cepat soal 1' })
+    await user.click(editButton)
+
+    const textArea = await screen.findByLabelText(/teks soal/i)
+    await user.clear(textArea)
+    await user.type(textArea, 'Teks yang gagal')
+
+    const saveButton = screen.getByRole('button', { name: /simpan perubahan/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith('q-1', { text: 'Teks yang gagal' })
+    })
+
+    // After failure, the store should have been reverted to the original text
+    await waitFor(() => {
+      const { questions } = examDraftStore.getSnapshot()
+      expect(questions[0]?.text).toBe('Question 1')
+    })
+
+    patchSpy.mockRestore()
+  })
+
   it('calls api.questions.patch with only changed fields when text is modified', async () => {
     const user = userEvent.setup()
     mockSearchParams = { mode: 'fast', examId: 'exam_edit' }
