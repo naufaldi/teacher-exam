@@ -14,6 +14,10 @@ import type { ExamType, Question } from '@teacher-exam/shared'
 
 export const Route = createFileRoute('/_auth/preview')({
   component: PreviewPage,
+  validateSearch: (search): { examId?: string } => {
+    const examId = search['examId']
+    return typeof examId === 'string' ? { examId } : {}
+  },
 })
 
 const SUBJECT_LABELS: Record<string, string> = {

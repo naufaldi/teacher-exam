@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { Exam } from '@teacher-exam/shared'
-import { Button } from '@teacher-exam/ui'
+import { Button, LoadingSpinner, useToast } from '@teacher-exam/ui'
 import {
   HistoryEmpty,
   HistoryHeader,
@@ -13,7 +13,7 @@ import {
   type StatusFilter,
   type SubjectFilter,
 } from '../components/history/index.js'
-import { getMockExamHistory } from '../lib/mock-data.js'
+import { api, ApiError } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/history')({
   component: HistoryPage,
@@ -52,7 +52,11 @@ function sortExams(exams: ReadonlyArray<Exam>, order: SortOrder): Exam[] {
 
 function HistoryPage() {
   const navigate = useNavigate()
-  const allExams = useMemo(() => getMockExamHistory(), [])
+  const { toast } = useToast()
+
+  const [exams, setExams] = useState<Exam[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [status, setStatus] = useState<StatusFilter>('all')
   const [subject, setSubject] = useState<SubjectFilter>('all')
@@ -62,21 +66,63 @@ function HistoryPage() {
   const [sort, setSort] = useState<SortOrder>('terbaru')
   const [visibleCount, setVisibleCount] = useState(8)
 
+  function loadExams() {
+    setLoading(true)
+    setError(null)
+    api.exams
+      .list()
+      .then((data) => {
+        setExams(data)
+        setLoading(false)
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof ApiError ? err.message : 'Gagal memuat data'
+        setError(message)
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    loadExams()
+  }, [])
+
+  async function handleDelete(id: string) {
+    try {
+      await api.exams.remove(id)
+      setExams((prev) => prev.filter((e) => e.id !== id))
+      toast({ variant: 'success', title: 'Lembar berhasil dihapus' })
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : 'Gagal menghapus lembar'
+      toast({ variant: 'error', title: message })
+    }
+  }
+
+  async function handleDuplicate(id: string) {
+    try {
+      const newExam = await api.exams.duplicate(id)
+      setExams((prev) => [newExam, ...prev])
+      toast({ variant: 'success', title: 'Lembar berhasil diduplikat' })
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : 'Gagal menduplikat lembar'
+      toast({ variant: 'error', title: message })
+    }
+  }
+
   const stats = useMemo(() => {
-    const finalCount = allExams.filter((e) => e.status === 'final').length
-    const draftCount = allExams.filter((e) => e.status === 'draft').length
-    const thisMonthCount = allExams.filter((e) => isThisMonth(e.createdAt)).length
+    const finalCount = exams.filter((e) => e.status === 'final').length
+    const draftCount = exams.filter((e) => e.status === 'draft').length
+    const thisMonthCount = exams.filter((e) => isThisMonth(e.createdAt)).length
     return {
-      total: allExams.length,
+      total: exams.length,
       finalCount,
       draftCount,
       thisMonthCount,
     }
-  }, [allExams])
+  }, [exams])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const matched = allExams.filter((exam) => {
+    const matched = exams.filter((exam) => {
       if (status !== 'all' && exam.status !== status) return false
       if (subject !== 'all' && exam.subject !== subject) return false
       if (grade !== 'all' && String(exam.grade) !== grade) return false
@@ -88,7 +134,7 @@ function HistoryPage() {
       return true
     })
     return sortExams(matched, sort)
-  }, [allExams, status, subject, grade, period, query, sort])
+  }, [exams, status, subject, grade, period, query, sort])
 
   const isFiltered =
     status !== 'all' ||
@@ -108,6 +154,23 @@ function HistoryPage() {
 
   const visibleExams = filtered.slice(0, visibleCount)
   const hasMore = filtered.length > visibleExams.length
+
+  if (loading) {
+    return <LoadingSpinner message="Memuat riwayat lembar ujian..." />
+  }
+
+  if (error !== null) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="bg-bg-surface border border-border-default rounded-md p-8 text-center max-w-sm">
+          <p className="text-body text-danger-fg mb-4">{error}</p>
+          <Button variant="secondary" size="md" onClick={loadExams}>
+            Coba lagi
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -136,7 +199,7 @@ function HistoryPage() {
           query={query}
           isFiltered={isFiltered}
           matchCount={filtered.length}
-          totalCount={allExams.length}
+          totalCount={exams.length}
           onStatusChange={setStatus}
           onSubjectChange={setSubject}
           onGradeChange={setGrade}
@@ -148,13 +211,17 @@ function HistoryPage() {
 
         {filtered.length === 0 ? (
           <HistoryEmpty
-            variant={allExams.length === 0 ? 'truly-empty' : 'no-match'}
+            variant={exams.length === 0 ? 'truly-empty' : 'no-match'}
             onReset={handleReset}
             onGenerate={() => void navigate({ to: '/generate' })}
           />
         ) : (
           <>
-            <HistoryTable exams={visibleExams} />
+            <HistoryTable
+              exams={visibleExams}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+            />
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-body-sm text-text-tertiary">
