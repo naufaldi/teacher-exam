@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 import type { ExamWithQuestions } from '@teacher-exam/shared'
 
@@ -33,6 +34,7 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
     api: {
       ...orig.api,
       exams: { ...orig.api.exams, get: vi.fn() },
+      questions: { patch: vi.fn() },
     },
   }
 })
@@ -50,6 +52,7 @@ import { Route } from '../_auth.review.js'
 import { examDraftStore } from '../../lib/exam-draft-store.js'
 
 const mockExamsGet = (api as unknown as { exams: { get: ReturnType<typeof vi.fn> } }).exams.get
+const mockQuestionsPatch = (api as unknown as { questions: { patch: ReturnType<typeof vi.fn> } }).questions.patch
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
@@ -141,6 +144,53 @@ describe('ReviewPage — component', () => {
 
     renderReviewPage()
     expect(screen.getByText('Question 1')).toBeInTheDocument()
+  })
+})
+
+describe('ReviewPage — Slow Track reject wires to api.questions.patch', () => {
+  it('calls api.questions.patch with status=rejected when Tolak is confirmed', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_slow' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_slow'))
+    await getLoader()({ deps: { examId: 'exam_slow' } })
+
+    mockQuestionsPatch.mockResolvedValueOnce({ id: 'q-1', status: 'rejected' })
+
+    renderReviewPage()
+
+    // Click the first individual card Tolak button (not the bulk "Ganti ditolak")
+    // The button text is " Tolak" with an icon — find all matching and pick the first
+    const tolakButtons = screen.getAllByText('Tolak')
+    await user.click(tolakButtons[0]!)
+
+    // Confirm in the AlertDialog — button text is "Tolak & ganti"
+    const confirmButton = await screen.findByText('Tolak & ganti')
+    await user.click(confirmButton)
+
+    await waitFor(() => {
+      expect(mockQuestionsPatch).toHaveBeenCalledWith('q-1', { status: 'rejected' })
+    })
+  })
+
+  it('reverts question status to pending when api.questions.patch fails', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_slow2' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_slow2'))
+    await getLoader()({ deps: { examId: 'exam_slow2' } })
+
+    mockQuestionsPatch.mockRejectedValueOnce(new Error('Network error'))
+
+    renderReviewPage()
+
+    const tolakButtons = screen.getAllByText('Tolak')
+    await user.click(tolakButtons[0]!)
+
+    const confirmButton = await screen.findByText('Tolak & ganti')
+    await user.click(confirmButton)
+
+    await waitFor(() => {
+      expect(mockQuestionsPatch).toHaveBeenCalledWith('q-1', { status: 'rejected' })
+    })
   })
 })
 

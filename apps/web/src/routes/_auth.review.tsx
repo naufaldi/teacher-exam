@@ -6,7 +6,6 @@ import {
   Pencil,
   RefreshCw,
   ChevronRight,
-  Loader2,
 } from 'lucide-react'
 import {
   Button,
@@ -61,60 +60,6 @@ export const Route = createFileRoute('/_auth/review')({
 
 type QuestionStatus = 'pending' | 'accepted' | 'rejected'
 
-const REPLACEMENT_TEMPLATES: Array<Omit<Question, 'id' | 'examId' | 'number' | 'createdAt'>> = [
-  {
-    text: 'Bacalah teks berikut!\n\n"Sekolah kami mengadakan kegiatan kerja bakti setiap hari Jumat. Semua siswa membersihkan ruang kelas dan halaman sekolah. Kebiasaan ini membuat lingkungan sekolah selalu bersih dan nyaman."\n\nGagasan utama paragraf di atas adalah ...',
-    optionA: 'Kerja bakti membuat lingkungan sekolah selalu bersih dan nyaman',
-    optionB: 'Siswa malas membersihkan ruang kelas',
-    optionC: 'Kegiatan kerja bakti dilakukan setiap hari',
-    optionD: 'Hanya guru yang ikut kerja bakti',
-    correctAnswer: 'a',
-    topic: 'Ide Pokok dan Gagasan Pendukung',
-    difficulty: 'sedang',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-  {
-    text: 'Makna kata "tekun" pada kalimat "Andi belajar dengan tekun setiap malam" adalah ...',
-    optionA: 'Asal-asalan',
-    optionB: 'Bersungguh-sungguh',
-    optionC: 'Cepat bosan',
-    optionD: 'Sambil bermain',
-    correctAnswer: 'b',
-    topic: 'Kosakata',
-    difficulty: 'mudah',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-  {
-    text: 'Kalimat berikut yang menggunakan tanda baca dengan tepat adalah ...',
-    optionA: 'Saya membeli, buku pensil, dan penghapus.',
-    optionB: 'Ibu pergi ke pasar membeli sayur dan buah-buahan.',
-    optionC: 'Apakah kamu sudah makan!',
-    optionD: 'Wah indahnya pemandangan ini?',
-    correctAnswer: 'b',
-    topic: 'Tanda Baca dan Ejaan',
-    difficulty: 'sedang',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-]
-
-function buildReplacement(original: Question, seed: number): Question {
-  const tpl = REPLACEMENT_TEMPLATES[seed % REPLACEMENT_TEMPLATES.length] as
-    Omit<Question, 'id' | 'examId' | 'number' | 'createdAt'>
-  return {
-    ...tpl,
-    id: `${original.id}-r${seed}`,
-    examId: original.examId,
-    number: original.number,
-    createdAt: new Date().toISOString(),
-  }
-}
-
 function ReviewPage() {
   const { mode, from, examId } = Route.useSearch()
   const navigate = useNavigate()
@@ -132,9 +77,6 @@ function ReviewPage() {
       draft.questions.map((q) => [q.id, mode === 'fast' ? 'accepted' : 'pending']),
     ),
   )
-
-  // Track which question is being replaced (showing inline spinner)
-  const [replacingId, setReplacingId] = useState<string | null>(null)
 
   // Track which questions have been edited (for dirty-state on switch)
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set())
@@ -231,27 +173,21 @@ function ReviewPage() {
     setEditingId(null)
   }
 
-  const handleRejectConfirm = () => {
+  const handleRejectConfirm = async () => {
     if (rejectingId === null) return
     const targetId = rejectingId
     setRejectingId(null)
     setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'rejected' }))
-    setReplacingId(targetId)
-
-    window.setTimeout(() => {
-      const original = examDraftStore.getSnapshot().questions.find((q) => q.id === targetId)
-      if (original !== undefined) {
-        const replacement = buildReplacement(original, Date.now())
-        examDraftStore.replaceQuestion(targetId, replacement)
-        setQuestionStatuses((prev) => {
-          const next = { ...prev }
-          delete next[targetId]
-          next[replacement.id] = 'accepted'
-          return next
-        })
-      }
-      setReplacingId(null)
-    }, 1500)
+    try {
+      await api.questions.patch(targetId, { status: 'rejected' })
+    } catch (err) {
+      setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'pending' }))
+      toast({
+        variant: 'error',
+        title: 'Gagal menolak soal',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
   }
 
   const handleRegenerateConfirm = () => {
@@ -380,7 +316,6 @@ function ReviewPage() {
           <div className="space-y-4">
             {questions.map((q) => {
               const status = questionStatuses[q.id] ?? 'pending'
-              const isReplacing = replacingId === q.id
               return (
                 <Card
                   key={q.id}
@@ -392,16 +327,6 @@ function ReviewPage() {
                         : 'border-l-border-default'
                   }`}
                 >
-                  {/* Replacement spinner overlay */}
-                  {isReplacing ? (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-surface/80 rounded-md">
-                      <div className="flex items-center gap-2 text-body-sm text-text-secondary">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
-                        <span>Mengganti soal #{q.number}...</span>
-                      </div>
-                    </div>
-                  ) : null}
-
                   <CardContent className="p-4">
                     {/* Header: number + difficulty badge + topic chip */}
                     <div className="flex items-center gap-2 mb-3">
@@ -419,10 +344,10 @@ function ReviewPage() {
                           Diedit
                         </Badge>
                       )}
-                      {status === 'rejected' && !isReplacing && (
+                      {status === 'rejected' && (
                         <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
                       )}
-                      {status === 'accepted' && !isReplacing && (
+                      {status === 'accepted' && (
                         <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Diterima
                         </span>
