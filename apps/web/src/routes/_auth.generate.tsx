@@ -24,6 +24,7 @@ import type { ExamType } from '@teacher-exam/shared'
 import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
+import { api, RateLimitedError } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/generate')({
   component: GeneratePage,
@@ -113,7 +114,7 @@ const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
 
 const FOKUS_GURU_MAX = 500
 
-const GENERATE_DURATION_MS = 7000
+const GENERATE_DURATION_MS = 18000
 
 // ── Fokus Guru chip suggestions (PRD §8.7) ───────────────────────────────────
 
@@ -234,69 +235,62 @@ function GeneratePage() {
     setProgress(0)
 
     const startedAt = Date.now()
-    const willFail = simulate === 'error'
 
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startedAt
       const ratio = Math.min(1, elapsed / GENERATE_DURATION_MS)
       // Ease-out so the early steps tick fast and the final 10% lingers a touch
       const eased = 1 - Math.pow(1 - ratio, 1.6)
-      const next = willFail ? Math.min(eased * 100, 55) : Math.min(eased * 100, 99)
-      setProgress(next)
+      setProgress(Math.min(eased * 100, 99))
     }, 120)
 
-    completionTimerRef.current = setTimeout(
-      () => {
-        clearTimers()
+    void api.ai.generate({
+      subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      grade: Number(kelas) as 5 | 6,
+      difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
+      topic: effectiveTopik,
+      reviewMode,
+      examType,
+      classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
+      exampleQuestions: contohSoal.trim() !== '' ? contohSoal.trim() : undefined,
+    }).then((result) => {
+      clearTimers()
+      setProgress(100)
 
-        if (willFail) {
-          setIsGenerating(false)
-          setProgress(0)
-          setShowErrorDialog(true)
-          return
-        }
-
-        setProgress(100)
-        // Sync the form config into the shared draft so /review and /preview use it
-        examDraftStore.setReviewMode(reviewMode)
-        examDraftStore.setConfig({
-          subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
-          grade: Number(kelas) || 6,
-          topic: effectiveTopik,
-          examType,
-          classContext: fokusGuru.trim(),
+      completionTimerRef.current = setTimeout(() => {
+        setIsGenerating(false)
+        void navigate({
+          to: '/review',
+          search: { examId: result.id, mode: reviewMode, from: 'generate' },
         })
+      }, 450)
+    }).catch((err: unknown) => {
+      clearTimers()
+      setIsGenerating(false)
+      setProgress(0)
 
-        completionTimerRef.current = setTimeout(() => {
-          setIsGenerating(false)
-          void navigate({
-            to: '/review',
-            search: { mode: reviewMode, from: 'generate' },
-          })
-        }, 450)
-      },
-      willFail ? 2200 : GENERATE_DURATION_MS,
-    )
+      if (err instanceof RateLimitedError) {
+        setError(`Terlalu banyak permintaan. Coba lagi dalam ${err.retryAfterSec} detik.`)
+        setShowErrorDialog(true)
+      } else {
+        setShowErrorDialog(true)
+      }
+    })
   }, [
     clearTimers,
+    contohSoal,
     effectiveTopik,
     examType,
     fokusGuru,
     kelas,
+    kesulitan,
     mapel,
     navigate,
     reviewMode,
-    simulate,
   ])
 
   const handleGenerate = () => {
     runGenerate()
-  }
-
-  const handleCancel = () => {
-    clearTimers()
-    setIsGenerating(false)
-    setProgress(0)
   }
 
   const handleRetry = () => {
@@ -818,7 +812,6 @@ function GeneratePage() {
       <GenerateProgressDialog
         open={isGenerating}
         progress={progress}
-        onCancel={handleCancel}
       />
       <GenerateErrorDialog
         open={showErrorDialog}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import {
   CheckCircle2,
   XCircle,
@@ -26,18 +26,36 @@ import {
 } from '@teacher-exam/ui'
 import type { ExamType, Question } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
+import { api } from '../lib/api.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
 import { RejectConfirmDialog } from '../components/review/reject-confirm-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
 import { SwitchModeDialog } from '../components/review/switch-mode-dialog.js'
 export const Route = createFileRoute('/_auth/review')({
   component: ReviewPage,
-  validateSearch: (search): { mode: 'fast' | 'slow'; from?: 'generate' } => {
-    const result: { mode: 'fast' | 'slow'; from?: 'generate' } = {
+  validateSearch: (search): { mode: 'fast' | 'slow'; from?: 'generate'; examId?: string } => {
+    const result: { mode: 'fast' | 'slow'; from?: 'generate'; examId?: string } = {
       mode: (search['mode'] as 'fast' | 'slow') ?? 'fast',
     }
     if (search['from'] === 'generate') result.from = 'generate'
+    if (typeof search['examId'] === 'string') result.examId = search['examId']
     return result
+  },
+  loaderDeps: ({ search }) => ({ examId: search.examId }),
+  loader: async ({ deps }) => {
+    const { examId } = deps
+    if (!examId) throw redirect({ to: '/dashboard' })
+    const exam = await api.exams.get(examId)
+    examDraftStore.setQuestions([...exam.questions])
+    examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
+    examDraftStore.setConfig({
+      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      grade: exam.grade,
+      topic: exam.topic,
+      examType: exam.examType as ExamType,
+      classContext: exam.classContext ?? '',
+    })
+    return exam
   },
 })
 
@@ -98,7 +116,7 @@ function buildReplacement(original: Question, seed: number): Question {
 }
 
 function ReviewPage() {
-  const { mode, from } = Route.useSearch()
+  const { mode, from, examId } = Route.useSearch()
   const navigate = useNavigate()
   const draft = useExamDraft()
   const { toast } = useToast()
@@ -137,7 +155,7 @@ function ReviewPage() {
       })
       void navigate({
         to: '/review',
-        search: { mode },
+        search: examId !== undefined ? { mode, examId } : { mode },
         replace: true,
       })
     }
