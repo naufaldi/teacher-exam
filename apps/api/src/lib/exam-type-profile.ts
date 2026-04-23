@@ -1,8 +1,4 @@
-import type {
-  CognitiveLevel,
-  ExamDifficulty,
-  ExamType,
-} from '@teacher-exam/shared'
+import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/shared'
 
 /**
  * Per-exam-type steering profile injected into the AI prompt so generated
@@ -96,56 +92,3 @@ export function resolveDifficultyDist(
   }
 }
 
-export interface BuildPromptInput {
-  examType: ExamType
-  difficulty: ExamDifficulty
-  subjectLabel: string
-  grade: number
-  topic: string
-  curriculumText: string
-  classContext?: string | undefined
-  exampleQuestions?: string | undefined
-  extractedPdfText?: string | undefined
-}
-
-/**
- * Assemble the system prompt sent to Claude. Mirrors the template in RFC §9.
- * Pure function — no IO. Consumed by the (future) exam generation service.
- */
-export function buildExamPrompt(input: BuildPromptInput): string {
-  const profile = EXAM_TYPE_PROFILE[input.examType]
-  const dist = resolveDifficultyDist(input.examType, input.difficulty)
-
-  const sections: string[] = [
-    profile.promptPreamble,
-    `Mata Pelajaran: ${input.subjectLabel}. Kelas: ${input.grade} SD. Topik: ${input.topic}.`,
-    'Kurikulum: Merdeka Fase C.',
-    '',
-    `Distribusi kesulitan target (dari 20 soal): mudah ${dist.mudah}, sedang ${dist.sedang}, sulit ${dist.sulit}.`,
-    `Level kognitif yang diizinkan (Bloom): ${profile.cognitiveLevels.join(', ')}.`,
-    `Gaya soal: ${profile.stemHint}`,
-    '',
-    input.curriculumText,
-  ]
-
-  if (input.classContext && input.classContext.trim() !== '') {
-    sections.push('', `Konteks/Fokus guru: ${input.classContext.trim()}`)
-  }
-  if (input.exampleQuestions && input.exampleQuestions.trim() !== '') {
-    sections.push(
-      '',
-      `Contoh gaya soal yang diinginkan:\n${input.exampleQuestions.trim()}`,
-    )
-  }
-  if (input.extractedPdfText && input.extractedPdfText.trim() !== '') {
-    sections.push('', `Materi pendukung dari PDF:\n${input.extractedPdfText.trim()}`)
-  }
-
-  sections.push(
-    '',
-    'Jawab dalam format JSON array berisi tepat 20 soal. Setiap soal punya field:',
-    'text, option_a, option_b, option_c, option_d, correct_answer (a|b|c|d), topic, difficulty (mudah|sedang|sulit), cognitive_level (C1|C2|C3|C4).',
-  )
-
-  return sections.join('\n')
-}
