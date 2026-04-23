@@ -290,3 +290,64 @@ describe('POST /api/exams/:id/duplicate', () => {
     expect(Array.isArray(body['questions'])).toBe(true)
   })
 })
+
+describe('POST /api/exams/:id/finalize', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 404 when exam not found', async () => {
+    ;(db.select as Mock).mockReturnValue(makeChain([]))
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/no-exam/finalize', { method: 'POST' })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 422 when any question is pending or rejected', async () => {
+    const examRow = makeExamRow()
+    // 19 accepted + 1 pending
+    const acceptedQ = makeQuestionRow({ status: 'accepted' })
+    const pendingQ  = makeQuestionRow({ id: 'q-pending', status: 'pending' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])     // ownership check
+      return makeChain([acceptedQ, pendingQ])                // questions select
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(422)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['code']).toBe('FINALIZE_NOT_ALLOWED')
+    const details = body['details'] as Record<string, unknown>
+    expect(details['pendingCount']).toBe(1)
+    expect(details['rejectedCount']).toBe(0)
+  })
+
+  it('returns 200 with status=final when all questions accepted', async () => {
+    const examRow        = makeExamRow()
+    const finalExamRow   = makeExamRow({ status: 'final' })
+    const acceptedQ      = makeQuestionRow({ status: 'accepted' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])       // ownership check
+      if (selectCount === 2) return makeChain([acceptedQ])     // questions — all accepted
+      if (selectCount === 3) return makeChain([finalExamRow])  // fetchExamWithQuestions → exam
+      return makeChain([acceptedQ])                            // fetchExamWithQuestions → questions
+    })
+
+    const updateChain = makeChain([])
+    ;(db.update as Mock).mockReturnValue(updateChain)
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['status']).toBe('final')
+    expect(Array.isArray(body['questions'])).toBe(true)
+  })
+})
