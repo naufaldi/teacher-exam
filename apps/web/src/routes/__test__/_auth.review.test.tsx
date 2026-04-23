@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, test } from 'vitest'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import type { ExamWithQuestions } from '@teacher-exam/shared'
@@ -419,4 +419,21 @@ describe('ReviewPage — from=generate URL strip', () => {
       }),
     )
   })
+})
+
+test('Nama Sekolah onBlur PATCHes exam with schoolName only', async () => {
+  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  mockSearchParams = { mode: 'fast', examId: 'E' }
+  mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('E'))
+  await getLoader()({ deps: { examId: 'E' } })
+  renderReviewPage()
+
+  const input = screen.getByLabelText(/nama sekolah/i)
+  await userEvent.clear(input)
+  await userEvent.type(input, 'SD Negeri 1')
+  fireEvent.blur(input)
+  await waitFor(() => {
+    expect(examsPatchSpy).toHaveBeenCalledWith('E', { schoolName: 'SD Negeri 1' })
+  })
+  examsPatchSpy.mockRestore()
 })

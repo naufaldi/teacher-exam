@@ -23,7 +23,7 @@ import {
   PageHeader,
   useToast,
 } from '@teacher-exam/ui'
-import type { ExamType, Question, UpdateQuestionInput } from '@teacher-exam/shared'
+import type { ExamType, Question, UpdateExamInput, UpdateQuestionInput } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
@@ -130,6 +130,19 @@ function ReviewPage() {
 
   const setMeta = (patch: Parameters<typeof examDraftStore.setMetadata>[0]) =>
     examDraftStore.setMetadata(patch)
+
+  const persistMetaField = async (patch: Partial<UpdateExamInput>) => {
+    if (!examId) return
+    try {
+      await api.exams.patch(examId, patch as UpdateExamInput)
+    } catch (err) {
+      toast({
+        variant: 'error',
+        title: 'Gagal menyimpan metadata',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
+  }
 
   const questions = draft.questions
   const acceptedCount = useMemo(
@@ -475,6 +488,7 @@ function ReviewPage() {
               id="sekolah"
               value={sekolah}
               onChange={(e) => setMeta({ schoolName: e.target.value })}
+              onBlur={(e) => { void persistMetaField({ schoolName: e.target.value }) }}
               placeholder="SD Negeri ..."
             />
           </div>
@@ -485,6 +499,7 @@ function ReviewPage() {
               id="tahun"
               value={tahunPelajaran}
               onChange={(e) => setMeta({ academicYear: e.target.value })}
+              onBlur={(e) => { void persistMetaField({ academicYear: e.target.value }) }}
               placeholder="2025/2026"
             />
           </div>
@@ -493,7 +508,11 @@ function ReviewPage() {
             <Label htmlFor="jenis">Jenis Ujian</Label>
             <Select
               value={jenisUjian}
-              onValueChange={(v) => setMeta({ examType: v as ExamType })}
+              onValueChange={(v) => {
+                const next = v as ExamType
+                setMeta({ examType: next })
+                void persistMetaField({ examType: next })
+              }}
             >
               <SelectTrigger id="jenis">
                 <SelectValue />
@@ -515,6 +534,7 @@ function ReviewPage() {
               type="date"
               value={tanggal}
               onChange={(e) => setMeta({ examDate: e.target.value })}
+              onBlur={(e) => { void persistMetaField({ examDate: e.target.value }) }}
             />
           </div>
           {/* Durasi */}
@@ -524,6 +544,10 @@ function ReviewPage() {
               id="durasi"
               value={durasi}
               onChange={(e) => setMeta({ durationMinutes: Number(e.target.value) || 0 })}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value, 10)
+                if (!isNaN(val)) { void persistMetaField({ durationMinutes: val }) }
+              }}
               placeholder="60"
             />
           </div>
@@ -535,6 +559,7 @@ function ReviewPage() {
             id="petunjuk"
             value={petunjuk}
             onChange={(e) => setMeta({ instructions: e.target.value })}
+            onBlur={(e) => { void persistMetaField({ instructions: e.target.value }) }}
             rows={4}
           />
         </div>
