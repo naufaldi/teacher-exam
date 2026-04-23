@@ -8,6 +8,9 @@ import type {
   UpdateProfileInput,
   ExamWithQuestions,
   GenerateExamInput,
+  UpdateExamInput,
+  UpdateQuestionInput,
+  QuestionResponse,
 } from '@teacher-exam/shared'
 import { ExamWithQuestionsSchema } from '@teacher-exam/shared'
 
@@ -112,13 +115,15 @@ export const api = {
   exams: {
     list: () => apiFetch<ExamListResponse>('/exams'),
     get: (id: string) => apiFetch<ExamDetailResponse>(`/exams/${id}`),
-    patch: (id: string, body: object) =>
+    patch: (id: string, body: UpdateExamInput) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
     remove: (id: string) => apiFetch<void>(`/exams/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => apiFetch<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
+    finalize: (id: string) =>
+      apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
   },
   ai: {
     generate: async (input: GenerateExamInput): Promise<ExamWithQuestions> => {
@@ -136,6 +141,13 @@ export const api = {
       }
       return decoded.right
     },
+  },
+  questions: {
+    patch: (id: string, body: UpdateQuestionInput) =>
+      apiFetch<QuestionResponse>(`/questions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
   },
   me: {
     get: () => apiFetch<UserProfile>('/me'),

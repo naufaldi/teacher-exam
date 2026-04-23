@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiFetch, ApiError, RateLimitedError, api } from '../api.js'
 
 // Make apiFetch testable by exporting it — see implementation
@@ -169,5 +169,59 @@ describe('api.ai.generate', () => {
         reviewMode: 'fast' as const,
       }),
     ).rejects.toSatisfy((err: unknown) => err instanceof RateLimitedError && err.retryAfterSec === 30)
+  })
+})
+
+function makeResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('api.exams.finalize', () => {
+  test('POSTs to /api/exams/:id/finalize with credentials', async () => {
+    mockFetch.mockResolvedValue(makeResponse({ id: 'E', status: 'final', questions: [] }))
+    const result = await api.exams.finalize('E')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/exams/E/finalize',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    )
+    expect(result.status).toBe('final')
+  })
+
+  test('throws ApiError on non-2xx response', async () => {
+    mockFetch.mockResolvedValue(makeResponse({ error: 'Not all accepted', code: 'FINALIZE_NOT_ALLOWED' }, 422))
+    await expect(api.exams.finalize('E')).rejects.toMatchObject({ code: 'FINALIZE_NOT_ALLOWED', status: 422 })
+  })
+})
+
+describe('api.questions.patch', () => {
+  test('PATCHes /api/questions/:id with body and credentials', async () => {
+    mockFetch.mockResolvedValue(makeResponse({
+      id: 'Q', examId: 'E', number: 1, text: 't',
+      optionA: 'a', optionB: 'b', optionC: 'c', optionD: 'd',
+      correctAnswer: 'a', topic: null, difficulty: null, status: 'accepted',
+      validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
+    }))
+    const result = await api.questions.patch('Q', { status: 'accepted' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/questions/Q',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'accepted' }),
+        credentials: 'include',
+      }),
+    )
+    expect(result.status).toBe('accepted')
+  })
+
+  test('throws ApiError on 404', async () => {
+    mockFetch.mockResolvedValue(makeResponse({ error: 'Not found', code: 'NOT_FOUND' }, 404))
+    await expect(api.questions.patch('Q', { status: 'accepted' })).rejects.toMatchObject({ status: 404 })
   })
 })
