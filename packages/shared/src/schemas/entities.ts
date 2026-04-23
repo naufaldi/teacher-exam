@@ -5,20 +5,30 @@ import {
   ReviewModeSchema,
   ExamStatusSchema,
   AnswerSchema,
+  CognitiveLevelSchema,
   QuestionStatusSchema,
   ValidationStatusSchema,
+  type ExamType,
 } from './primitives.js'
 
-// ── User ───────────────────────────────────────────────────
-export const UserSchema = Schema.Struct({
-  id:        Schema.String,
-  googleId:  Schema.String,
-  name:      Schema.String,
-  email:     Schema.String,
-  avatarUrl: Schema.NullOr(Schema.String),
-  createdAt: Schema.String,
+// ── User profile ───────────────────────────────────────────
+export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
+export type Grade = typeof GradeSchema.Type
+
+export const UserProfileSchema = Schema.Struct({
+  id:               Schema.String,
+  email:            Schema.String,
+  name:             Schema.String,
+  username:         Schema.String,
+  image:            Schema.NullOr(Schema.String),
+  school:           Schema.NullOr(Schema.String),
+  gradesTaught:     Schema.NullOr(Schema.Array(GradeSchema)),
+  subjectsTaught:   Schema.NullOr(Schema.Array(ExamSubjectSchema)),
+  profileCompleted: Schema.Boolean,
+  locale:           Schema.String,
+  timezone:         Schema.String,
 })
-export type User = typeof UserSchema.Type
+export type UserProfile = typeof UserProfileSchema.Type
 
 // ── Question ───────────────────────────────────────────────
 export const QuestionSchema = Schema.Struct({
@@ -86,14 +96,35 @@ export type PdfUpload = typeof PdfUploadSchema.Type
 
 // ── AI-generated question (from Claude response) ───────────
 export const GeneratedQuestionSchema = Schema.Struct({
-  number:         Schema.Int,
-  text:           Schema.NonEmptyString,
-  option_a:       Schema.NonEmptyString,
-  option_b:       Schema.NonEmptyString,
-  option_c:       Schema.NonEmptyString,
-  option_d:       Schema.NonEmptyString,
-  correct_answer: AnswerSchema,
-  topic:          Schema.String,
-  difficulty:     Schema.String,
+  number:          Schema.Int,
+  text:            Schema.NonEmptyString,
+  option_a:        Schema.NonEmptyString,
+  option_b:        Schema.NonEmptyString,
+  option_c:        Schema.NonEmptyString,
+  option_d:        Schema.NonEmptyString,
+  correct_answer:  AnswerSchema,
+  topic:           Schema.String,
+  difficulty:      Schema.String,
+  cognitive_level: Schema.optional(CognitiveLevelSchema),
 })
 export type GeneratedQuestion = typeof GeneratedQuestionSchema.Type
+
+/**
+ * Normalize raw `exam_type` text from DB to a strict {@link ExamType}.
+ * Handles legacy uppercase 'TKA' (default value before §8.6) and unknown
+ * values (defaults to 'formatif' — current canonical default).
+ */
+export function normalizeExamType(raw: string | null | undefined): ExamType {
+  if (!raw) return 'formatif'
+  const v = raw.trim().toLowerCase()
+  switch (v) {
+    case 'latihan':
+    case 'formatif':
+    case 'sts':
+    case 'sas':
+    case 'tka':
+      return v
+    default:
+      return 'formatif'
+  }
+}

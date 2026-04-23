@@ -1,31 +1,95 @@
 @import "tailwindcss";
 @import "@teacher-exam/ui/tailwind.css";
 
-html, body, #root {
-  min-height: 100%;
-}
-
-body {
-  background-color: var(--color-bg-app);
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-border-focus) 40%, transparent);
-  outline-offset: 2px;
-}
-
-@media print {
-  nav, button, [data-no-print] {
-    display: none !important;
+@layer base {
+  html, body, #root {
+    min-height: 100%;
   }
+
   body {
-    background: white;
-    font-family: var(--font-serif);
+    background-color: var(--color-bg-app);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-border-focus) 40%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media print {
+    nav, button, [data-no-print] {
+      display: none !important;
+    }
+    body {
+      background: white;
+      font-family: var(--font-serif);
+      font-size: 13px;
+      line-height: 1.5;
+      color: #000;
+    }
+    /* A4 page setup */
+    @page {
+      size: A4 portrait;
+      margin: 2cm;
+    }
+    /* Ensure print content fills page */
+    [data-print-content] {
+      width: 100%;
+      max-width: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    /* Page breaks: legacy explicit divs (kept for compatibility; only break when visible) */
+    .print-page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+    .print-page-break:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    /* Section break-before: only active when printing all sections together,
+       so single-section print (Soal/LJ/Kunci) never produces a leading empty page. */
+    body[data-print-scope="all"] .print-break-before {
+      page-break-before: always;
+      break-before: page;
+    }
+    body[data-print-scope="all"] .print-break-before:first-child {
+      page-break-before: auto;
+      break-before: auto;
+    }
+  }
+}
+
+/* Staggered entry animation — used with style="--index: N" */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up var(--duration-page, 320ms) var(--ease-std, cubic-bezier(0.4, 0, 0.2, 1)) both;
+}
+
+.animate-fade-up-stagger {
+  animation: fade-up var(--duration-page, 320ms) var(--ease-std, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  animation-delay: calc(var(--index, 0) * 80ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-stagger {
+    animation: none;
   }
 }

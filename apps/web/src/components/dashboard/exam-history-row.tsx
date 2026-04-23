@@ -1,0 +1,104 @@
+import type { Exam } from '@teacher-exam/shared'
+import { MoreHorizontal } from 'lucide-react'
+import { Badge, Button } from '@teacher-exam/ui'
+
+interface SubjectMeta {
+  short: string
+  label: string
+  dotClass: string
+}
+
+const SUBJECT_MAP: Record<string, SubjectMeta> = {
+  bahasa_indonesia: {
+    short: 'BI',
+    label: 'Bahasa Indonesia',
+    dotClass: 'text-subject-bi',
+  },
+  pendidikan_pancasila: {
+    short: 'PP',
+    label: 'Pendidikan Pancasila',
+    dotClass: 'text-subject-ppkn',
+  },
+}
+
+const FALLBACK_SUBJECT: SubjectMeta = {
+  short: '?',
+  label: 'Mata Pelajaran',
+  dotClass: 'text-text-tertiary',
+}
+
+function formatShortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+interface ExamHistoryRowProps {
+  exam: Exam
+}
+
+function ExamHistoryRow({ exam }: ExamHistoryRowProps) {
+  const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
+  const isFinal = exam.status === 'final'
+
+  return (
+    <div className="grid items-center px-5 py-3.5 border-b border-border-default last:border-b-0 hover:bg-kertas-50 transition-colors duration-[120ms] grid-cols-[2.4fr_1fr_0.8fr] lg:grid-cols-[2.4fr_1fr_0.8fr_0.9fr_1.2fr]">
+      {/* Title cell */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subj.dotClass}`}
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          {subj.short}
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold text-body-sm text-text-primary leading-snug truncate">
+            {exam.title}
+          </div>
+          <div className="text-caption text-text-tertiary mt-0.5">
+            20 soal · {exam.topic}
+          </div>
+        </div>
+      </div>
+
+      {/* Subject cell */}
+      <div className="text-body-sm text-text-secondary truncate">
+        {subj.label} · K{exam.grade}
+      </div>
+
+      {/* Date cell */}
+      <div className="text-body-sm text-text-secondary tabular-nums">
+        {formatShortDate(exam.createdAt)}
+      </div>
+
+      {/* Status cell — hidden on mobile */}
+      <div className="hidden lg:block">
+        <Badge variant={isFinal ? 'success' : 'warning'}>
+          {isFinal ? 'Final' : 'Draft'}
+        </Badge>
+      </div>
+
+      {/* Actions cell — hidden on mobile */}
+      <div className="hidden lg:flex justify-end gap-1.5">
+        {isFinal ? (
+          <>
+            <Button variant="secondary" size="sm">Cetak</Button>
+            <Button variant="secondary" size="sm">Koreksi</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" size="sm">Edit</Button>
+            <Button variant="secondary" size="sm">Duplikat</Button>
+          </>
+        )}
+        <Button variant="ghost" size="icon" aria-label="Menu lain">
+          <MoreHorizontal size={14} />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export { ExamHistoryRow }

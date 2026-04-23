@@ -2,11 +2,12 @@ import { Schema } from 'effect'
 import {
   ExamSubjectSchema,
   ExamDifficultySchema,
+  ExamTypeSchema,
   ReviewModeSchema,
   AnswerSchema,
 } from './primitives.js'
-import { ExamSchema, ExamWithQuestionsSchema, QuestionSchema } from './entities.js'
-import type { Exam, ExamWithQuestions, Question, PdfUpload, User } from './entities.js'
+import { GradeSchema } from './entities.js'
+import type { Exam, ExamWithQuestions, Question, PdfUpload, UserProfile } from './entities.js'
 
 // ── Exam API ───────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ export const GenerateExamInputSchema = Schema.Struct({
   difficulty:       ExamDifficultySchema,
   topic:            Schema.NonEmptyString,
   reviewMode:       ReviewModeSchema,
+  examType:         Schema.optional(ExamTypeSchema),
   classContext:     Schema.optional(Schema.String),
   pdfUploadId:      Schema.optional(Schema.String),
   exampleQuestions: Schema.optional(Schema.String),
@@ -27,10 +29,11 @@ export const UpdateExamInputSchema = Schema.Struct({
   title:           Schema.optional(Schema.String),
   schoolName:      Schema.optional(Schema.String),
   academicYear:    Schema.optional(Schema.String),
-  examType:        Schema.optional(Schema.String),
+  examType:        Schema.optional(ExamTypeSchema),
   examDate:        Schema.optional(Schema.String),
   durationMinutes: Schema.optional(Schema.Int),
   instructions:    Schema.optional(Schema.String),
+  classContext:    Schema.optional(Schema.String),
   status:          Schema.optional(Schema.Literal('draft', 'final')),
   reviewMode:      Schema.optional(ReviewModeSchema),
 })
@@ -47,11 +50,25 @@ export const UpdateQuestionInputSchema = Schema.Struct({
 })
 export type UpdateQuestionInput = typeof UpdateQuestionInputSchema.Type
 
+// ── User profile API ───────────────────────────────────────
+
+export const UpdateProfileInputSchema = Schema.Struct({
+  name:           Schema.optional(Schema.String.pipe(Schema.minLength(1))),
+  username:       Schema.optional(Schema.String.pipe(Schema.pattern(/^[a-z0-9._-]{3,32}$/))),
+  school:         Schema.optional(Schema.String.pipe(Schema.minLength(1))),
+  gradesTaught:   Schema.optional(Schema.Array(GradeSchema).pipe(Schema.minItems(1))),
+  subjectsTaught: Schema.optional(Schema.Array(ExamSubjectSchema).pipe(Schema.minItems(1))),
+  locale:         Schema.optional(Schema.String),
+  timezone:       Schema.optional(Schema.String),
+})
+export type UpdateProfileInput = typeof UpdateProfileInputSchema.Type
+
 // ── API Response type aliases ──────────────────────────────
 export type ExamListResponse = Exam[]
 export type ExamDetailResponse = ExamWithQuestions
 export type QuestionResponse = Question
 export type HealthResponse = { status: string; service: string; timestamp: string }
+export type UserProfileResponse = UserProfile
 
 // Re-export entity types for convenient single-import in apps/web
-export type { Exam, ExamWithQuestions, Question, PdfUpload, User } from './entities.js'
+export type { Exam, ExamWithQuestions, Question, PdfUpload, UserProfile, Grade } from './entities.js'

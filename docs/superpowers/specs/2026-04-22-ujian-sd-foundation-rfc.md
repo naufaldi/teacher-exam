@@ -241,6 +241,10 @@ export const exams = pgTable('exams', {
   schoolName:      text('school_name'),
   academicYear:    text('academic_year'),              // '2025/2026'
   examType:        text('exam_type').default('TKA').notNull(),
+  // Literal union (validated in shared schema, not PG enum):
+  //   'latihan' | 'formatif' | 'sts' | 'sas' | 'tka'
+  // Steers AI generation via EXAM_TYPE_PROFILE (see §9). Legacy 'TKA' (uppercase)
+  // accepted at read-time and normalized to 'tka'. See PRD §8.6.
   examDate:        text('exam_date'),
   durationMinutes: integer('duration_minutes'),
   instructions:    text('instructions'),
@@ -533,15 +537,54 @@ Browser                     apps/api                   Google OAuth
 
 **Model:** `claude-opus-4-6`
 
-**System prompt** (assembled at runtime):
+#### Exam Type Profile (steering table)
+
+Setiap nilai `examType` (PRD §8.6) memiliki *profil asesmen* yang menentukan distribusi kesulitan default, level kognitif Bloom yang diizinkan, dan gaya stem soal. Tabel ini hidup di `apps/api/src/lib/exam-type-profile.ts` dan di-resolve oleh prompt builder.
+
+```typescript
+type ExamTypeProfile = {
+  difficultyDist:  { mudah: number; sedang: number; sulit: number }  // dari 20 soal
+  cognitiveLevels: ReadonlyArray<'C1' | 'C2' | 'C3' | 'C4'>          // Bloom diizinkan
+  stemHint:        string                                            // 1 kalimat gaya soal
+  promptPreamble:  string                                            // 1-2 kalimat framing
+  kopLabel:        string                                            // dicetak di kop lembar
+}
+
+export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
+  latihan:  { difficultyDist: { mudah: 8, sedang: 8,  sulit: 4 }, cognitiveLevels: ['C1','C2','C3'], ... },
+  formatif: { difficultyDist: { mudah: 6, sedang: 10, sulit: 4 }, cognitiveLevels: ['C1','C2','C3'], ... },
+  sts:      { difficultyDist: { mudah: 6, sedang: 10, sulit: 4 }, cognitiveLevels: ['C1','C2','C3'], ... },
+  sas:      { difficultyDist: { mudah: 4, sedang: 10, sulit: 6 }, cognitiveLevels: ['C2','C3','C4'], ... },
+  tka:      { difficultyDist: { mudah: 3, sedang: 9,  sulit: 8 }, cognitiveLevels: ['C2','C3','C4'], ... },
+}
 ```
-Kamu adalah pembuat soal ujian untuk SD Kelas {grade} mata pelajaran {subject}.
-Buat tepat 20 soal pilihan ganda (a, b, c, d) dengan tingkat kesulitan {difficulty}.
-Topik: {topic}. Kurikulum: Merdeka Fase C.
+
+**Rationale — kenapa structured (bukan tone-only):**
+- *Konsisten & terukur* — distribusi & level kognitif di-enforce per jenis; bisa di-audit post-generation.
+- *Defensible secara pedagogis* — selaras dengan kerangka asesmen Kurmer yang minta variasi level kognitif.
+- *Maintainable* — satu mapping table, satu titik tuning. Nambah jenis baru = 1 row.
+- *Lebih aman dari "full template"* — tidak overload prompt dengan instruksi yang bisa tabrakan (mis. "C4 tapi mudah").
+
+**Override manual:** jika user pilih `difficulty` eksplisit (`'mudah'|'sedang'|'sulit'`), `difficultyDist` profil di-bypass; kalau pilih `'campuran'` (default), pakai distribusi profil.
+
+#### System prompt (assembled at runtime)
+
+```
+{profile.promptPreamble}
+Mata Pelajaran: {subjectLabel}. Kelas: {grade} SD. Topik: {topic}.
+Kurikulum: Merdeka Fase C.
+
+Distribusi kesulitan target (dari 20 soal): mudah {dist.mudah}, sedang {dist.sedang}, sulit {dist.sulit}.
+Level kognitif yang diizinkan (Bloom): {profile.cognitiveLevels.join(', ')}.
+Gaya soal: {profile.stemHint}
+
 [Hardcoded CP/TP text for the subject from PRD §8.1 / §8.2]
-{classContext if present}
+{classContext ? `Konteks/Fokus guru: ${classContext}` : ''}
+{exampleQuestions ? `Contoh gaya soal yang diinginkan: ${exampleQuestions}` : ''}
 {extractedPdfText if present}
-Jawab dalam format JSON array.
+
+Jawab dalam format JSON array berisi 20 soal. Setiap soal punya field:
+text, option_a..d, correct_answer, topic, difficulty, cognitive_level (C1..C4).
 ```
 
 **Response schema:**
@@ -556,10 +599,11 @@ type GeneratedQuestion = {
   correct_answer: 'a' | 'b' | 'c' | 'd'
   topic: string
   difficulty: 'mudah' | 'sedang' | 'sulit'
+  cognitive_level?: 'C1' | 'C2' | 'C3' | 'C4'  // baru — opsional di MVP, validator post-gen di fase polish
 }
 ```
 
-**Validation:** After parsing, confirm `array.length === 20`, all fields non-empty, `correct_answer` ∈ {a,b,c,d}. Invalid items trigger Fast Track → Slow Track fallback per PRD.
+**Validation:** After parsing, confirm `array.length === 20`, all fields non-empty, `correct_answer` ∈ {a,b,c,d}. Invalid items trigger Fast Track → Slow Track fallback per PRD. Validator distribusi (count actual vs target ± 20%) defer ke fase polish.
 
 ---
 

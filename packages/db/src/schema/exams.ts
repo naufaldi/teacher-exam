@@ -1,5 +1,5 @@
 import { pgTable, uuid, text, integer, timestamp } from 'drizzle-orm/pg-core'
-import { users } from './users'
+import { user } from './users'
 import {
   examSubjectEnum,
   examDifficultyEnum,
@@ -9,8 +9,8 @@ import {
 
 export const exams = pgTable('exams', {
   id:              uuid('id').primaryKey().defaultRandom(),
-  userId:          uuid('user_id').notNull()
-                     .references(() => users.id, { onDelete: 'cascade' }),
+  userId:          text('user_id').notNull()
+                     .references(() => user.id, { onDelete: 'cascade' }),
   title:           text('title').notNull(),
   subject:         examSubjectEnum('subject').notNull(),
   grade:           integer('grade').notNull(),

@@ -11,7 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthReviewRouteImport } from './routes/_auth.review'
+import { Route as AuthProfileRouteImport } from './routes/_auth.profile'
+import { Route as AuthPreviewRouteImport } from './routes/_auth.preview'
+import { Route as AuthOnboardingRouteImport } from './routes/_auth.onboarding'
+import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
+import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
+import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -22,32 +29,117 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthReviewRoute = AuthReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthProfileRoute = AuthProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthPreviewRoute = AuthPreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthHistoryRoute = AuthHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthGenerateRoute = AuthGenerateRouteImport.update({
+  id: '/generate',
+  path: '/generate',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthDashboardRoute = AuthDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
+  id: '/correction/$examId',
+  path: '/correction/$examId',
   getParentRoute: () => AuthRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/generate': typeof AuthGenerateRoute
+  '/history': typeof AuthHistoryRoute
+  '/onboarding': typeof AuthOnboardingRoute
+  '/preview': typeof AuthPreviewRoute
+  '/profile': typeof AuthProfileRoute
+  '/review': typeof AuthReviewRoute
+  '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/generate': typeof AuthGenerateRoute
+  '/history': typeof AuthHistoryRoute
+  '/onboarding': typeof AuthOnboardingRoute
+  '/preview': typeof AuthPreviewRoute
+  '/profile': typeof AuthProfileRoute
+  '/review': typeof AuthReviewRoute
+  '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_auth/dashboard': typeof AuthDashboardRoute
+  '/_auth/generate': typeof AuthGenerateRoute
+  '/_auth/history': typeof AuthHistoryRoute
+  '/_auth/onboarding': typeof AuthOnboardingRoute
+  '/_auth/preview': typeof AuthPreviewRoute
+  '/_auth/profile': typeof AuthProfileRoute
+  '/_auth/review': typeof AuthReviewRoute
+  '/_auth/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/generate'
+    | '/history'
+    | '/onboarding'
+    | '/preview'
+    | '/profile'
+    | '/review'
+    | '/correction/$examId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard'
-  id: '__root__' | '/' | '/_auth' | '/_auth/dashboard'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/generate'
+    | '/history'
+    | '/onboarding'
+    | '/preview'
+    | '/profile'
+    | '/review'
+    | '/correction/$examId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_auth'
+    | '/_auth/dashboard'
+    | '/_auth/generate'
+    | '/_auth/history'
+    | '/_auth/onboarding'
+    | '/_auth/preview'
+    | '/_auth/profile'
+    | '/_auth/review'
+    | '/_auth/correction/$examId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -71,6 +163,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/review': {
+      id: '/_auth/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof AuthReviewRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/profile': {
+      id: '/_auth/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthProfileRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/preview': {
+      id: '/_auth/preview'
+      path: '/preview'
+      fullPath: '/preview'
+      preLoaderRoute: typeof AuthPreviewRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/onboarding': {
+      id: '/_auth/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/history': {
+      id: '/_auth/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthHistoryRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/generate': {
+      id: '/_auth/generate'
+      path: '/generate'
+      fullPath: '/generate'
+      preLoaderRoute: typeof AuthGenerateRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/dashboard': {
       id: '/_auth/dashboard'
       path: '/dashboard'
@@ -78,15 +212,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/correction/$examId': {
+      id: '/_auth/correction/$examId'
+      path: '/correction/$examId'
+      fullPath: '/correction/$examId'
+      preLoaderRoute: typeof AuthCorrectionExamIdRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
   AuthDashboardRoute: typeof AuthDashboardRoute
+  AuthGenerateRoute: typeof AuthGenerateRoute
+  AuthHistoryRoute: typeof AuthHistoryRoute
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthPreviewRoute: typeof AuthPreviewRoute
+  AuthProfileRoute: typeof AuthProfileRoute
+  AuthReviewRoute: typeof AuthReviewRoute
+  AuthCorrectionExamIdRoute: typeof AuthCorrectionExamIdRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardRoute: AuthDashboardRoute,
+  AuthGenerateRoute: AuthGenerateRoute,
+  AuthHistoryRoute: AuthHistoryRoute,
+  AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthPreviewRoute: AuthPreviewRoute,
+  AuthProfileRoute: AuthProfileRoute,
+  AuthReviewRoute: AuthReviewRoute,
+  AuthCorrectionExamIdRoute: AuthCorrectionExamIdRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
