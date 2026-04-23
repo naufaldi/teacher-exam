@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { Schema } from 'effect'
 import { eq, and } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
-import { UpdateQuestionInputSchema } from '@teacher-exam/shared'
+import { UpdateQuestionInputSchema, type UpdateQuestionInput } from '@teacher-exam/shared'
 import { toQuestion } from '../lib/exams-query'
 
 export const questionsRouter = new Hono()
@@ -22,14 +22,15 @@ questionsRouter.patch('/:id', async (c) => {
   const input = parsed.right
 
   // Build update object early so we can fail fast before hitting the DB
-  const updateData: Record<string, unknown> = {}
-  if (input.text !== undefined)          updateData['text']          = input.text
-  if (input.optionA !== undefined)       updateData['optionA']       = input.optionA
-  if (input.optionB !== undefined)       updateData['optionB']       = input.optionB
-  if (input.optionC !== undefined)       updateData['optionC']       = input.optionC
-  if (input.optionD !== undefined)       updateData['optionD']       = input.optionD
-  if (input.correctAnswer !== undefined) updateData['correctAnswer'] = input.correctAnswer
-  if (input.status !== undefined)        updateData['status']        = input.status
+  // Mutable partial so we can assign fields individually; type is still derived from the schema.
+  const updateData = {} as { -readonly [K in keyof UpdateQuestionInput]?: UpdateQuestionInput[K] }
+  if (input.text          !== undefined) updateData.text          = input.text
+  if (input.optionA       !== undefined) updateData.optionA       = input.optionA
+  if (input.optionB       !== undefined) updateData.optionB       = input.optionB
+  if (input.optionC       !== undefined) updateData.optionC       = input.optionC
+  if (input.optionD       !== undefined) updateData.optionD       = input.optionD
+  if (input.correctAnswer !== undefined) updateData.correctAnswer = input.correctAnswer
+  if (input.status        !== undefined) updateData.status        = input.status
 
   if (Object.keys(updateData).length === 0) {
     return c.json({ error: 'No fields to update', code: 'VALIDATION_ERROR' }, 422)
@@ -45,7 +46,7 @@ questionsRouter.patch('/:id', async (c) => {
 
   if (!rows[0]) return c.json({ error: 'Question not found', code: 'NOT_FOUND' }, 404)
 
-  await db.update(questions).set(updateData).where(eq(questions.id, id))
+  await db.update(questions).set(updateData as Record<string, unknown>).where(eq(questions.id, id))
 
   const after = await db.select().from(questions).where(eq(questions.id, id)).limit(1)
   if (!after[0]) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)

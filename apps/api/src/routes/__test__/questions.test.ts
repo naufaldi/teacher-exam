@@ -11,9 +11,8 @@ vi.mock('@teacher-exam/db', () => ({
 }))
 
 vi.mock('drizzle-orm', () => ({
-  eq:        vi.fn((col, val) => ({ op: 'eq', col, val })),
-  and:       vi.fn((...args) => ({ op: 'and', args })),
-  innerJoin: vi.fn((table, cond) => ({ op: 'innerJoin', table, cond })),
+  eq:  vi.fn((col, val) => ({ op: 'eq', col, val })),
+  and: vi.fn((...args) => ({ op: 'and', args })),
 }))
 
 import { db } from '@teacher-exam/db'
