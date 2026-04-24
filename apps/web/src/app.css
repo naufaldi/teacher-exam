@@ -22,10 +22,11 @@
   }
 
   @media print {
-    nav, button, [data-no-print] {
+    nav, button, [data-no-print], [data-screen-only] {
       display: none !important;
     }
-    body {
+
+    body[data-print-scope] {
       background: white;
       font-family: var(--font-serif);
       font-size: 13px;
@@ -37,19 +38,38 @@
       size: A4 portrait;
       margin: 2cm;
     }
+
+    body[data-print-scope] [data-print-app-shell],
+    body[data-print-scope] [data-print-app-content],
+    body[data-print-scope] [data-print-app-main] {
+      min-height: 0 !important;
+      max-width: none !important;
+      width: auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+      box-shadow: none !important;
+    }
+
     /* Ensure print content fills page */
-    [data-print-content] {
+    body[data-print-scope] [data-print-content] {
       width: 100%;
       max-width: none !important;
       padding: 0 !important;
       margin: 0 !important;
     }
+
+    body[data-print-scope] [data-print-content] > * {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
     /* Page breaks: legacy explicit divs (kept for compatibility; only break when visible) */
-    .print-page-break {
+    body[data-print-scope] .print-page-break {
       page-break-after: always;
       break-after: page;
     }
-    .print-page-break:last-child {
+    body[data-print-scope] .print-page-break:last-child {
       page-break-after: auto;
       break-after: auto;
     }
