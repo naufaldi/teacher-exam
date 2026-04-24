@@ -33,7 +33,6 @@ export type UserProfile = typeof UserProfileSchema.Type
 
 // ── Question ───────────────────────────────────────────────
 
-// Shared 4-option object used by mcq_single and mcq_multi
 const Options4Schema = Schema.Struct({
   a: Schema.NonEmptyString,
   b: Schema.NonEmptyString,
@@ -41,7 +40,6 @@ const Options4Schema = Schema.Struct({
   d: Schema.NonEmptyString,
 })
 
-// Common fields shared by all question variants
 const QuestionCommonFields = {
   id:               Schema.String,
   examId:           Schema.String,
@@ -133,17 +131,20 @@ export type PdfUpload = typeof PdfUploadSchema.Type
 
 // ── AI-generated question (from Claude response) ───────────
 
-// Common AI wire fields shared across mcq variants
-const GeneratedMcqCommonFields = {
+const GeneratedBaseFields = {
   number:          Schema.Int,
   text:            Schema.NonEmptyString,
-  option_a:        Schema.NonEmptyString,
-  option_b:        Schema.NonEmptyString,
-  option_c:        Schema.NonEmptyString,
-  option_d:        Schema.NonEmptyString,
   topic:           Schema.String,
   difficulty:      Schema.String,
   cognitive_level: Schema.optional(CognitiveLevelSchema),
+} as const
+
+const GeneratedMcqCommonFields = {
+  ...GeneratedBaseFields,
+  option_a: Schema.NonEmptyString,
+  option_b: Schema.NonEmptyString,
+  option_c: Schema.NonEmptyString,
+  option_d: Schema.NonEmptyString,
 } as const
 
 const GeneratedMcqSingleSchema = Schema.Struct({
@@ -159,13 +160,9 @@ const GeneratedMcqMultiSchema = Schema.Struct({
 })
 
 const GeneratedTrueFalseSchema = Schema.Struct({
-  _tag:            Schema.Literal('true_false'),
-  number:          Schema.Int,
-  text:            Schema.NonEmptyString,
-  topic:           Schema.String,
-  difficulty:      Schema.String,
-  cognitive_level: Schema.optional(CognitiveLevelSchema),
-  statements:      Schema.Array(
+  _tag:       Schema.Literal('true_false'),
+  ...GeneratedBaseFields,
+  statements: Schema.Array(
     Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal('B', 'S') })
   ).pipe(Schema.minItems(3), Schema.maxItems(4)),
 })

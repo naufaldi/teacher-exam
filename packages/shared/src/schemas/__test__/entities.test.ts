@@ -46,6 +46,13 @@ describe('QuestionSchema — mcq_multi', () => {
     })
     expect(Either.isLeft(result)).toBe(true)
   })
+  test("rejects correct: ['a','a'] (duplicate letters)", () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion, _tag: 'mcq_multi',
+      options: { a: 'x', b: 'y', c: 'z', d: 'w' }, correct: ['a', 'a'],
+    })
+    expect(Either.isLeft(result)).toBe(true)
+  })
 })
 
 describe('QuestionSchema — true_false', () => {
@@ -64,6 +71,17 @@ describe('QuestionSchema — true_false', () => {
     const result = Schema.decodeUnknownEither(QuestionSchema)({
       ...baseQuestion, _tag: 'true_false',
       statements: [{ text: 'x', answer: true }, { text: 'y', answer: false }],
+    })
+    expect(Either.isLeft(result)).toBe(true)
+  })
+  test("rejects 5 statements (above max 4)", () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion, _tag: 'true_false',
+      statements: [
+        { text: 'p1', answer: true }, { text: 'p2', answer: false },
+        { text: 'p3', answer: true }, { text: 'p4', answer: false },
+        { text: 'p5', answer: true },
+      ],
     })
     expect(Either.isLeft(result)).toBe(true)
   })
@@ -105,6 +123,15 @@ describe('GeneratedQuestionSchema — true_false', () => {
       _tag: 'true_false', number: 3,
       text: 'x', topic: 'IPS', difficulty: 'sulit',
       statements: [{ text: 'p1', answer: true }, { text: 'p2', answer: false }, { text: 'p3', answer: true }],
+    })
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe('QuestionSchema — unknown _tag', () => {
+  test("rejects unknown _tag 'short_answer'", () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion, _tag: 'short_answer',
     })
     expect(Either.isLeft(result)).toBe(true)
   })
