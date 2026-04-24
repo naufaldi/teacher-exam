@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentType } from 'react'
-import type { Question } from '@teacher-exam/shared'
+import type { ExamWithQuestions, Question } from '@teacher-exam/shared'
 
 const { mockNavigate } = vi.hoisted(() => ({
   mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
 }))
+
+// Mutable so individual tests can override loader data (e.g. topics array)
+let mockLoaderData: ExamWithQuestions | undefined = undefined
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -13,6 +16,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
       options: opts,
+      useLoaderData: () => mockLoaderData,
     }),
     redirect: ({ to }: { to: string }) =>
       Object.assign(new Error(`Redirect to ${to}`), { isRedirect: true, to }),
@@ -39,6 +43,31 @@ type RouteOptions = {
 }
 
 const NOW = '2026-04-23T00:00:00.000Z'
+
+function makeExamWithQuestions(topics: string[]): ExamWithQuestions {
+  return {
+    id: 'exam-preview',
+    userId: 'user-1',
+    title: 'Test Exam',
+    subject: 'bahasa_indonesia',
+    grade: 6,
+    difficulty: 'sedang',
+    topics,
+    reviewMode: 'fast',
+    status: 'draft',
+    schoolName: 'SD Nusantara',
+    academicYear: '2025/2026',
+    examType: 'formatif',
+    examDate: '23 April 2026',
+    durationMinutes: 60,
+    instructions: 'Pilih jawaban yang benar.',
+    classContext: null,
+    discussionMd: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    questions: [makeQuestion(1), makeQuestion(2)],
+  }
+}
 
 function makeQuestion(number: number): Question {
   return {
@@ -90,6 +119,7 @@ function closestByAttr(node: HTMLElement, attr: string): HTMLElement | null {
 beforeEach(() => {
   vi.clearAllMocks()
   mockNavigate.mockResolvedValue(undefined)
+  mockLoaderData = undefined
   examDraftStore.reset()
   seedPreviewDraft()
   delete document.body.dataset['printScope']
@@ -157,5 +187,22 @@ describe('PreviewPage print flow', () => {
     expect(styleText).toContain('body[data-print-scope="soal"] [data-print-section="lj"]')
     expect(styleText).toContain('body[data-print-scope="lj"] [data-print-section="kunci"]')
     expect(styleText).toContain('body[data-print-scope="kunci"] [data-print-section="soal"]')
+  })
+})
+
+describe('PreviewPage topics display', () => {
+  it('shows multiple topics joined with middle dot in the paper header', () => {
+    mockLoaderData = makeExamWithQuestions(['Matematika', 'IPA'])
+    renderPreviewPage()
+
+    // The joined topics label should appear somewhere in the printed content
+    expect(screen.getAllByText('Matematika · IPA').length).toBeGreaterThan(0)
+  })
+
+  it('shows a single topic without a separator', () => {
+    mockLoaderData = makeExamWithQuestions(['Teks Narasi'])
+    renderPreviewPage()
+
+    expect(screen.getAllByText('Teks Narasi').length).toBeGreaterThan(0)
   })
 })

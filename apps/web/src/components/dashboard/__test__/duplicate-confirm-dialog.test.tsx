@@ -10,7 +10,7 @@ const makeExam = (overrides: Partial<Exam> = {}): Exam => ({
   subject: 'bahasa_indonesia',
   grade: 5,
   difficulty: 'sedang',
-  topic: 'Ide Pokok',
+  topics: ['Ide Pokok'],
   reviewMode: 'fast',
   status: 'draft',
   schoolName: null,
@@ -44,7 +44,7 @@ describe('DuplicateConfirmDialog', () => {
   it('shows exam metadata: question count placeholder, subject, grade, topic', () => {
     render(
       <DuplicateConfirmDialog
-        exam={makeExam({ subject: 'pendidikan_pancasila', grade: 6, topic: 'Nilai-Nilai Pancasila' })}
+        exam={makeExam({ subject: 'pendidikan_pancasila', grade: 6, topics: ['Nilai-Nilai Pancasila'] })}
         open={true}
         onOpenChange={vi.fn()}
         onConfirm={vi.fn()}

@@ -94,7 +94,7 @@ const VALID_EXAM_WITH_QUESTIONS = {
   subject: 'bahasa_indonesia',
   grade: 6,
   difficulty: 'sedang',
-  topic: 'Teks Narasi',
+  topics: ['Teks Narasi'],
   reviewMode: 'fast',
   status: 'draft',
   schoolName: null,
@@ -121,7 +121,7 @@ describe('api.ai.generate', () => {
       subject: 'bahasa_indonesia' as const,
       grade: 6,
       difficulty: 'sedang' as const,
-      topic: 'Teks Narasi',
+      topics: ['Teks Narasi'],
       reviewMode: 'fast' as const,
     }
 
@@ -147,7 +147,7 @@ describe('api.ai.generate', () => {
         subject: 'bahasa_indonesia' as const,
         grade: 6,
         difficulty: 'sedang' as const,
-        topic: 'Teks Narasi',
+        topics: ['Teks Narasi'],
         reviewMode: 'fast' as const,
       }),
     ).rejects.toThrow()
@@ -165,7 +165,7 @@ describe('api.ai.generate', () => {
         subject: 'bahasa_indonesia' as const,
         grade: 6,
         difficulty: 'sedang' as const,
-        topic: 'Teks Narasi',
+        topics: ['Teks Narasi'],
         reviewMode: 'fast' as const,
       }),
     ).rejects.toSatisfy((err: unknown) => err instanceof RateLimitedError && err.retryAfterSec === 30)
