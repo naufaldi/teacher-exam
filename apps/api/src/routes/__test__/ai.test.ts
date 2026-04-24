@@ -32,7 +32,7 @@ vi.mock('../../lib/prompt', () => ({
 import { db } from '@teacher-exam/db'
 import { buildExamPrompt } from '../../lib/prompt'
 import { createAiRouter } from '../ai'
-import { makeChain, makeQuestionRow } from './helpers.js'
+import { makeChain, makeQuestionRow } from './helpers'
 
 const NOW = '2024-01-01T00:00:00.000Z'
 

@@ -31,11 +31,11 @@ function convertGeneratedToQuestion(
     topic: q.topic ?? null,
     difficulty: q.difficulty ?? null,
     status: meta.status,
-    validationStatus: null as null,
-    validationReason: null as null,
+    validationStatus: null,
+    validationReason: null,
     createdAt: meta.createdAt.toISOString(),
   }
-  const mcqSingleResult = Match.value(q).pipe(
+  const result = Match.value(q).pipe(
     Match.tag('mcq_single', (x) => ({
       ...common,
       _tag: 'mcq_single' as const,
@@ -55,7 +55,7 @@ function convertGeneratedToQuestion(
     })),
     Match.exhaustive,
   )
-  return mcqSingleResult as Question
+  return result
 }
 
 /**
@@ -153,7 +153,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
             id: crypto.randomUUID(),
             examId,
             number: i + 1,
-            status: (input.reviewMode === 'fast' ? 'accepted' : 'pending') as 'accepted' | 'pending',
+            status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
             createdAt: now,
           })
           const rowFields = questionToRow(dbQuestion)
@@ -162,8 +162,8 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
             examId: dbQuestion.examId,
             number: dbQuestion.number,
             text: dbQuestion.text,
-            topic: q.topic ?? null,
-            difficulty: q.difficulty ?? null,
+            topic: dbQuestion.topic,
+            difficulty: dbQuestion.difficulty,
             status: dbQuestion.status,
             createdAt: now,
             type: rowFields.type,
@@ -171,7 +171,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
             optionB: rowFields.optionB,
             optionC: rowFields.optionC,
             optionD: rowFields.optionD,
-            correctAnswer: rowFields.correctAnswer as 'a' | 'b' | 'c' | 'd' | null,
+            correctAnswer: rowFields.correctAnswer,
             payload: rowFields.payload,
           }
         }),

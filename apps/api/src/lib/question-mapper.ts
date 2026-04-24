@@ -89,7 +89,7 @@ export function questionToRow(q: Question): {
   optionB: string | null
   optionC: string | null
   optionD: string | null
-  correctAnswer: string | null
+  correctAnswer: 'a' | 'b' | 'c' | 'd' | null
   payload: unknown
 } {
   return Match.value(q).pipe(
