@@ -31,18 +31,7 @@ vi.mock('../../lib/prompt', () => ({
 
 import { db } from '@teacher-exam/db'
 import { createAiRouter } from '../ai'
-
-function makeChain(result: unknown) {
-  const p = Promise.resolve(result)
-  const chain: Record<string, unknown> = {
-    then: (p as Promise<unknown>).then.bind(p),
-    catch: (p as Promise<unknown>).catch.bind(p),
-  }
-  for (const m of ['from', 'where', 'orderBy', 'limit', 'values', 'returning']) {
-    chain[m] = vi.fn(() => chain)
-  }
-  return chain
-}
+import { makeChain, makeQuestionRow } from './helpers.js'
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
@@ -89,26 +78,6 @@ function makeExamRow(overrides: Record<string, unknown> = {}) {
     createdAt: new Date(NOW),
     updatedAt: new Date(NOW),
     ...overrides,
-  }
-}
-
-function makeQuestionRow(n: number, examId = 'exam-gen-1') {
-  return {
-    id: `q-${n}`,
-    examId,
-    number: n,
-    text: `Question ${n}`,
-    optionA: 'Option A',
-    optionB: 'Option B',
-    optionC: 'Option C',
-    optionD: 'Option D',
-    correctAnswer: 'a',
-    topic: 'Teks Narasi',
-    difficulty: 'sedang',
-    status: 'pending',
-    validationStatus: null,
-    validationReason: null,
-    createdAt: new Date(NOW),
   }
 }
 
@@ -173,7 +142,20 @@ describe('POST /api/ai/generate', () => {
 
   it('returns 201 with ExamWithQuestions on success', async () => {
     const examRow = makeExamRow()
-    const questionRows = Array.from({ length: 20 }, (_, i) => makeQuestionRow(i + 1))
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({
+        id:         `q-${i + 1}`,
+        examId:     'exam-gen-1',
+        number:     i + 1,
+        text:       `Question ${i + 1}`,
+        optionA:    'Option A',
+        optionB:    'Option B',
+        optionC:    'Option C',
+        optionD:    'Option D',
+        topic:      'Teks Narasi',
+        difficulty: 'sedang',
+      }),
+    )
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
@@ -206,6 +188,66 @@ describe('POST /api/ai/generate', () => {
     expect(((body['questions'] as Record<string, unknown>[])[0] ?? {})['number']).toBe(1)
     expect(db.transaction).toHaveBeenCalledOnce()
     expect(db.insert).toHaveBeenCalledTimes(2)
+  })
+
+  it('inserts questions with status=accepted when reviewMode is fast', async () => {
+    const examRow = makeExamRow({ reviewMode: 'fast' })
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    )
+
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = buildTestApp()
+    await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_BODY, reviewMode: 'fast' }),
+    })
+
+    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as Array<{ status: string }> | undefined
+    expect(insertedQuestions).toBeDefined()
+    expect(insertedQuestions?.every((q) => q.status === 'accepted')).toBe(true)
+  })
+
+  it('inserts questions with status=pending when reviewMode is slow', async () => {
+    const examRow = makeExamRow({ reviewMode: 'slow' })
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1, status: 'pending' }),
+    )
+
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = buildTestApp()
+    await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_BODY, reviewMode: 'slow' }),
+    })
+
+    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as Array<{ status: string }> | undefined
+    expect(insertedQuestions).toBeDefined()
+    expect(insertedQuestions?.every((q) => q.status === 'pending')).toBe(true)
   })
 
   it('returns 502 and skips DB insert when AiService fails', async () => {

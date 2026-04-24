@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import {
   CheckCircle2,
@@ -6,7 +6,6 @@ import {
   Pencil,
   RefreshCw,
   ChevronRight,
-  Loader2,
 } from 'lucide-react'
 import {
   Button,
@@ -23,8 +22,9 @@ import {
   SelectValue,
   PageHeader,
   useToast,
+  DatePicker,
 } from '@teacher-exam/ui'
-import type { ExamType, Question } from '@teacher-exam/shared'
+import type { ExamType, Question, UpdateExamInput, UpdateQuestionInput } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
@@ -55,64 +55,23 @@ export const Route = createFileRoute('/_auth/review')({
       examType: exam.examType as ExamType,
       classContext: exam.classContext ?? '',
     })
+    examDraftStore.setMetadata({
+      schoolName: exam.schoolName ?? '',
+      academicYear: exam.academicYear ?? '',
+      examDate: exam.examDate ?? '',
+      durationMinutes: exam.durationMinutes ?? 60,
+      instructions: exam.instructions ?? '',
+    })
     return exam
   },
 })
 
 type QuestionStatus = 'pending' | 'accepted' | 'rejected'
 
-const REPLACEMENT_TEMPLATES: Array<Omit<Question, 'id' | 'examId' | 'number' | 'createdAt'>> = [
-  {
-    text: 'Bacalah teks berikut!\n\n"Sekolah kami mengadakan kegiatan kerja bakti setiap hari Jumat. Semua siswa membersihkan ruang kelas dan halaman sekolah. Kebiasaan ini membuat lingkungan sekolah selalu bersih dan nyaman."\n\nGagasan utama paragraf di atas adalah ...',
-    optionA: 'Kerja bakti membuat lingkungan sekolah selalu bersih dan nyaman',
-    optionB: 'Siswa malas membersihkan ruang kelas',
-    optionC: 'Kegiatan kerja bakti dilakukan setiap hari',
-    optionD: 'Hanya guru yang ikut kerja bakti',
-    correctAnswer: 'a',
-    topic: 'Ide Pokok dan Gagasan Pendukung',
-    difficulty: 'sedang',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-  {
-    text: 'Makna kata "tekun" pada kalimat "Andi belajar dengan tekun setiap malam" adalah ...',
-    optionA: 'Asal-asalan',
-    optionB: 'Bersungguh-sungguh',
-    optionC: 'Cepat bosan',
-    optionD: 'Sambil bermain',
-    correctAnswer: 'b',
-    topic: 'Kosakata',
-    difficulty: 'mudah',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-  {
-    text: 'Kalimat berikut yang menggunakan tanda baca dengan tepat adalah ...',
-    optionA: 'Saya membeli, buku pensil, dan penghapus.',
-    optionB: 'Ibu pergi ke pasar membeli sayur dan buah-buahan.',
-    optionC: 'Apakah kamu sudah makan!',
-    optionD: 'Wah indahnya pemandangan ini?',
-    correctAnswer: 'b',
-    topic: 'Tanda Baca dan Ejaan',
-    difficulty: 'sedang',
-    status: 'accepted',
-    validationStatus: 'valid',
-    validationReason: null,
-  },
-]
-
-function buildReplacement(original: Question, seed: number): Question {
-  const tpl = REPLACEMENT_TEMPLATES[seed % REPLACEMENT_TEMPLATES.length] as
-    Omit<Question, 'id' | 'examId' | 'number' | 'createdAt'>
-  return {
-    ...tpl,
-    id: `${original.id}-r${seed}`,
-    examId: original.examId,
-    number: original.number,
-    createdAt: new Date().toISOString(),
-  }
+const STATUS_BORDER: Record<QuestionStatus, string> = {
+  accepted: 'border-l-success-solid opacity-75',
+  rejected: 'border-l-danger-solid',
+  pending:  'border-l-border-default',
 }
 
 function ReviewPage() {
@@ -126,20 +85,19 @@ function ReviewPage() {
     examDraftStore.setReviewMode(mode)
   }, [mode])
 
-  // Per-question accept/reject state — defaults derived from mode
+  // Per-question accept/reject state — fast mode always starts accepted; slow mode seeds from server
   const [questionStatuses, setQuestionStatuses] = useState<Record<string, QuestionStatus>>(() =>
     Object.fromEntries(
-      draft.questions.map((q) => [q.id, mode === 'fast' ? 'accepted' : 'pending']),
+      draft.questions.map((q) => [
+        q.id,
+        mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending'),
+      ]),
     ),
   )
-
-  // Track which question is being replaced (showing inline spinner)
-  const [replacingId, setReplacingId] = useState<string | null>(null)
 
   // Track which questions have been edited (for dirty-state on switch)
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set())
 
-  // Modal state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
@@ -168,10 +126,9 @@ function ReviewPage() {
       const next = { ...prev }
       for (const q of draft.questions) {
         if (!(q.id in next)) {
-          next[q.id] = mode === 'fast' ? 'accepted' : 'pending'
+          next[q.id] = mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending')
         }
       }
-      // remove dangling ids
       for (const id of Object.keys(next)) {
         if (!draft.questions.find((q) => q.id === id)) delete next[id]
       }
@@ -179,22 +136,34 @@ function ReviewPage() {
     })
   }, [draft.questions, mode])
 
-  const sekolah = draft.metadata.schoolName
-  const tahunPelajaran = draft.metadata.academicYear
-  const jenisUjian = draft.metadata.examType
-  const tanggal = draft.metadata.examDate
-  const durasi = String(draft.metadata.durationMinutes)
-  const petunjuk = draft.metadata.instructions
+  const {
+    schoolName = '',
+    academicYear = '',
+    examType,
+    examDate = '',
+    durationMinutes,
+    instructions = '',
+  } = draft.metadata
 
-  const setMeta = (patch: Parameters<typeof examDraftStore.setMetadata>[0]) =>
-    examDraftStore.setMetadata(patch)
+  const persistMetaField = useCallback(async (patch: Partial<UpdateExamInput>) => {
+    if (!examId) return
+    try {
+      await api.exams.patch(examId, patch)
+    } catch (err) {
+      toast({
+        variant: 'error',
+        title: 'Gagal menyimpan metadata',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
+  }, [examId, toast])
 
   const questions = draft.questions
   const acceptedCount = useMemo(
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
   )
-  const isMetadataComplete = Boolean(sekolah && tahunPelajaran && jenisUjian && tanggal && durasi)
+  const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
   const canPreview = acceptedCount === questions.length && isMetadataComplete
 
   const editingQuestion = editingId !== null
@@ -225,33 +194,131 @@ function ReviewPage() {
     void navigate({ to: '/review', search: { mode: target } })
   }
 
-  const handleEditSave = (updated: Question) => {
+  const handleEditSave = async (updated: Question) => {
+    const original = questions.find((q) => q.id === updated.id)
+    if (!original) return
+    const diffMut: {
+      text?: string
+      optionA?: string
+      optionB?: string
+      optionC?: string
+      optionD?: string
+      correctAnswer?: 'a' | 'b' | 'c' | 'd'
+    } = {}
+    if (updated.text          !== original.text)          diffMut.text          = updated.text
+    if (updated.optionA       !== original.optionA)       diffMut.optionA       = updated.optionA
+    if (updated.optionB       !== original.optionB)       diffMut.optionB       = updated.optionB
+    if (updated.optionC       !== original.optionC)       diffMut.optionC       = updated.optionC
+    if (updated.optionD       !== original.optionD)       diffMut.optionD       = updated.optionD
+    if (updated.correctAnswer !== original.correctAnswer) diffMut.correctAnswer = updated.correctAnswer
+    const diff: UpdateQuestionInput = diffMut
+    setEditingId(null)
+    if (Object.keys(diff).length === 0) return
+
     examDraftStore.updateQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
-    setEditingId(null)
+    try {
+      const server = await api.questions.patch(updated.id, diff)
+      examDraftStore.updateQuestion(server.id, server)
+    } catch (err) {
+      examDraftStore.updateQuestion(updated.id, original)
+      toast({
+        variant: 'error',
+        title: 'Gagal menyimpan perubahan',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
   }
 
-  const handleRejectConfirm = () => {
+  const setStatus = async (id: string, status: 'accepted' | 'rejected') => {
+    const prev = questionStatuses[id] ?? 'pending'
+    setQuestionStatuses((p) => ({ ...p, [id]: status }))
+    try {
+      await api.questions.patch(id, { status })
+    } catch (err) {
+      setQuestionStatuses((p) => ({ ...p, [id]: prev }))
+      toast({
+        variant: 'error',
+        title: status === 'accepted' ? 'Gagal menerima soal' : 'Gagal menolak soal',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    }
+  }
+
+  const handleRejectConfirm = async () => {
     if (rejectingId === null) return
     const targetId = rejectingId
     setRejectingId(null)
-    setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'rejected' }))
-    setReplacingId(targetId)
+    await setStatus(targetId, 'rejected')
+  }
 
-    window.setTimeout(() => {
-      const original = examDraftStore.getSnapshot().questions.find((q) => q.id === targetId)
-      if (original !== undefined) {
-        const replacement = buildReplacement(original, Date.now())
-        examDraftStore.replaceQuestion(targetId, replacement)
-        setQuestionStatuses((prev) => {
-          const next = { ...prev }
-          delete next[targetId]
-          next[replacement.id] = 'accepted'
-          return next
-        })
+  const handleResetRejected = () => {
+    setQuestionStatuses((prev) =>
+      Object.fromEntries(
+        questions.map((q) => [
+          q.id,
+          prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
+        ]),
+      ),
+    )
+  }
+
+  const handleTerimaSemuaClick = async () => {
+    const pending = questions.filter((q) => (questionStatuses[q.id] ?? 'pending') !== 'accepted')
+    if (pending.length === 0) return
+    const prevStatuses = Object.fromEntries(
+      pending.map((q) => [q.id, questionStatuses[q.id] ?? 'pending'] as const),
+    )
+    setQuestionStatuses((p) => ({
+      ...p,
+      ...Object.fromEntries(pending.map((q) => [q.id, 'accepted' as const])),
+    }))
+    const results = await Promise.allSettled(
+      pending.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+    )
+    const failedIds = pending
+      .filter((_, i) => results[i]?.status === 'rejected')
+      .map((q) => q.id)
+    if (failedIds.length > 0) {
+      setQuestionStatuses((p) => ({
+        ...p,
+        ...Object.fromEntries(failedIds.map((id) => [id, prevStatuses[id] ?? 'pending'] as const)),
+      }))
+      toast({
+        variant: 'error',
+        title: `Gagal menerima ${failedIds.length} soal`,
+        description: 'Sebagian soal perlu dicoba ulang.',
+      })
+    }
+  }
+
+  const [finalizing, setFinalizing] = useState(false)
+
+  const handlePreviewClick = async () => {
+    if (!examId) return
+    setFinalizing(true)
+    try {
+      if (mode === 'fast') {
+        const toSync = draft.questions.filter((q) => (q.status as string) !== 'accepted')
+        if (toSync.length > 0) {
+          await Promise.allSettled(
+            toSync.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+          )
+        }
       }
-      setReplacingId(null)
-    }, 1500)
+      await api.exams.finalize(examId)
+      void navigate({ to: '/preview', search: { examId } })
+    } catch (err) {
+      const code = err != null && typeof err === 'object' && 'code' in err
+        ? (err as { code?: string }).code
+        : undefined
+      let description = 'Coba lagi.'
+      if (err instanceof Error) description = err.message
+      if (code === 'FINALIZE_NOT_ALLOWED') description = 'Semua soal harus diterima sebelum finalisasi.'
+      toast({ variant: 'error', title: 'Gagal finalisasi', description })
+    } finally {
+      setFinalizing(false)
+    }
   }
 
   const handleRegenerateConfirm = () => {
@@ -262,7 +329,6 @@ function ReviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* PageHeader */}
       {mode === 'fast' ? (
         <PageHeader
           title="Konfirmasi Paket"
@@ -280,10 +346,8 @@ function ReviewPage() {
         </PageHeader>
       )}
 
-      {/* Fast Track Mode */}
       {mode === 'fast' && (
         <div>
-          {/* Bulk action bar */}
           <div className="flex items-center justify-between mb-4">
             <span className="text-body-sm text-text-secondary">
               {questions.length} soal auto-diterima
@@ -297,7 +361,6 @@ function ReviewPage() {
             </Button>
           </div>
 
-          {/* Question list */}
           <div className="max-h-[480px] overflow-y-auto rounded-sm border border-border-default divide-y divide-border-default">
             {questions.map((q) => (
               <div
@@ -332,37 +395,20 @@ function ReviewPage() {
         </div>
       )}
 
-      {/* Slow Track Mode */}
       {mode === 'slow' && (
         <div>
-          {/* Bulk action bar */}
           <div className="flex items-center gap-3 mb-6">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => {
-                setQuestionStatuses(
-                  Object.fromEntries(
-                    questions.map((q) => [q.id, 'accepted' as QuestionStatus]),
-                  ),
-                )
-              }}
+              onClick={() => { void handleTerimaSemuaClick() }}
             >
               Terima Semua
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setQuestionStatuses((prev) =>
-                  Object.fromEntries(
-                    questions.map((q) => [
-                      q.id,
-                      prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
-                    ]),
-                  ),
-                )
-              }}
+              onClick={handleResetRejected}
             >
               Ganti ditolak
             </Button>
@@ -376,34 +422,15 @@ function ReviewPage() {
             </Button>
           </div>
 
-          {/* Question cards */}
           <div className="space-y-4">
             {questions.map((q) => {
               const status = questionStatuses[q.id] ?? 'pending'
-              const isReplacing = replacingId === q.id
               return (
                 <Card
                   key={q.id}
-                  className={`relative border-l-4 transition-colors ${
-                    status === 'accepted'
-                      ? 'border-l-success-solid opacity-75'
-                      : status === 'rejected'
-                        ? 'border-l-danger-solid'
-                        : 'border-l-border-default'
-                  }`}
+                  className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
                 >
-                  {/* Replacement spinner overlay */}
-                  {isReplacing ? (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-surface/80 rounded-md">
-                      <div className="flex items-center gap-2 text-body-sm text-text-secondary">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
-                        <span>Mengganti soal #{q.number}...</span>
-                      </div>
-                    </div>
-                  ) : null}
-
                   <CardContent className="p-4">
-                    {/* Header: number + difficulty badge + topic chip */}
                     <div className="flex items-center gap-2 mb-3">
                       <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
                       {q.difficulty && (
@@ -419,18 +446,16 @@ function ReviewPage() {
                           Diedit
                         </Badge>
                       )}
-                      {status === 'rejected' && !isReplacing && (
+                      {status === 'rejected' && (
                         <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
                       )}
-                      {status === 'accepted' && !isReplacing && (
+                      {status === 'accepted' && (
                         <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Diterima
                         </span>
                       )}
                     </div>
-                    {/* Question text */}
                     <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
-                    {/* Options */}
                     <div className="grid grid-cols-2 gap-1 mb-4">
                       {(['a', 'b', 'c', 'd'] as const).map((letter) => (
                         <div
@@ -450,15 +475,12 @@ function ReviewPage() {
                         </div>
                       ))}
                     </div>
-                    {/* Action buttons */}
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="secondary"
                         className="text-success-fg border-success-border"
-                        onClick={() =>
-                          setQuestionStatuses((prev) => ({ ...prev, [q.id]: 'accepted' }))
-                        }
+                        onClick={() => { void setStatus(q.id, 'accepted') }}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
                       </Button>
@@ -486,36 +508,39 @@ function ReviewPage() {
         </div>
       )}
 
-      {/* Metadata form */}
       <div className="mt-8 space-y-5">
         <h3 className="text-h3 font-semibold text-text-primary">Detail Lembar Ujian</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Sekolah */}
           <div className="space-y-1.5">
             <Label htmlFor="sekolah">Nama Sekolah</Label>
             <Input
               id="sekolah"
-              value={sekolah}
-              onChange={(e) => setMeta({ schoolName: e.target.value })}
+              value={schoolName}
+              onChange={(e) => examDraftStore.setMetadata({ schoolName: e.target.value })}
+              onBlur={(e) => { void persistMetaField({ schoolName: e.target.value }) }}
               placeholder="SD Negeri ..."
             />
           </div>
-          {/* Tahun Pelajaran */}
           <div className="space-y-1.5">
             <Label htmlFor="tahun">Tahun Pelajaran</Label>
             <Input
               id="tahun"
-              value={tahunPelajaran}
-              onChange={(e) => setMeta({ academicYear: e.target.value })}
+              value={academicYear}
+              onChange={(e) => examDraftStore.setMetadata({ academicYear: e.target.value })}
+              onBlur={(e) => { void persistMetaField({ academicYear: e.target.value }) }}
               placeholder="2025/2026"
             />
           </div>
-          {/* Jenis Ujian (PRD §8.6) */}
+          {/* PRD §8.6 */}
           <div className="space-y-1.5">
             <Label htmlFor="jenis">Jenis Ujian</Label>
             <Select
-              value={jenisUjian}
-              onValueChange={(v) => setMeta({ examType: v as ExamType })}
+              value={examType}
+              onValueChange={(v) => {
+                const next = v as ExamType
+                examDraftStore.setMetadata({ examType: next })
+                void persistMetaField({ examType: next })
+              }}
             >
               <SelectTrigger id="jenis">
                 <SelectValue />
@@ -529,40 +554,47 @@ function ReviewPage() {
               </SelectContent>
             </Select>
           </div>
-          {/* Tanggal */}
           <div className="space-y-1.5">
             <Label htmlFor="tanggal">Tanggal Ujian</Label>
-            <Input
+            <DatePicker
               id="tanggal"
-              type="date"
-              value={tanggal}
-              onChange={(e) => setMeta({ examDate: e.target.value })}
+              value={examDate}
+              onChange={(iso) => examDraftStore.setMetadata({ examDate: iso })}
+              onCommit={(iso) => { void persistMetaField({ examDate: iso }) }}
+              placeholder="Pilih tanggal ujian"
             />
           </div>
-          {/* Durasi */}
           <div className="space-y-1.5">
             <Label htmlFor="durasi">Durasi (menit)</Label>
             <Input
               id="durasi"
-              value={durasi}
-              onChange={(e) => setMeta({ durationMinutes: Number(e.target.value) || 0 })}
+              value={String(durationMinutes)}
+              onChange={(e) => {
+                const raw = e.target.value
+                if (raw === '') { examDraftStore.setMetadata({ durationMinutes: 0 }); return }
+                const n = parseInt(raw, 10)
+                if (!Number.isNaN(n)) examDraftStore.setMetadata({ durationMinutes: n })
+              }}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value, 10)
+                if (!isNaN(val)) { void persistMetaField({ durationMinutes: val }) }
+              }}
               placeholder="60"
             />
           </div>
         </div>
-        {/* Petunjuk — full width */}
         <div className="space-y-1.5">
           <Label htmlFor="petunjuk">Petunjuk Pengerjaan</Label>
           <Textarea
             id="petunjuk"
-            value={petunjuk}
-            onChange={(e) => setMeta({ instructions: e.target.value })}
+            value={instructions}
+            onChange={(e) => examDraftStore.setMetadata({ instructions: e.target.value })}
+            onBlur={(e) => { void persistMetaField({ instructions: e.target.value }) }}
             rows={4}
           />
         </div>
       </div>
 
-      {/* Action bar */}
       <div className="flex items-center justify-between mt-8 pt-6 border-t border-border-default">
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => setShowRegenConfirm(true)}>
@@ -570,19 +602,18 @@ function ReviewPage() {
           </Button>
         </div>
         <Button
-          disabled={!canPreview}
-          onClick={() => void navigate({ to: '/preview' })}
+          disabled={!canPreview || finalizing}
+          onClick={() => { void handlePreviewClick() }}
         >
-          Preview Lembar <ChevronRight className="h-4 w-4 ml-1.5" />
+          {finalizing ? 'Menyimpan...' : 'Preview Lembar'}<ChevronRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
 
-      {/* Modals */}
       <QuestionEditDialog
         open={editingId !== null}
         question={editingQuestion}
         onClose={() => setEditingId(null)}
-        onSave={handleEditSave}
+        onSave={(updated) => { void handleEditSave(updated) }}
       />
       <RejectConfirmDialog
         open={rejectingId !== null}

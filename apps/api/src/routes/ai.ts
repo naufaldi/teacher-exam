@@ -107,7 +107,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
           correctAnswer: q.correct_answer,
           topic:         q.topic ?? null,
           difficulty:    q.difficulty ?? null,
-          status:        'pending' as const,
+          status:        (input.reviewMode === 'fast' ? 'accepted' : 'pending') as 'accepted' | 'pending',
           createdAt:     now,
         })),
       )

@@ -5,6 +5,10 @@ import { ToastProvider } from '@teacher-exam/ui'
 import type { Exam } from '@teacher-exam/shared'
 import { ApiError } from '../../lib/api.js'
 
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}))
+
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -13,7 +17,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: () => (opts: { component: React.ComponentType }) => ({
       options: opts,
     }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   }
 })
 
@@ -124,6 +128,51 @@ describe('HistoryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Ujian BI Kelas 5')).toBeInTheDocument()
       expect(screen.getByText('Draft Matematika')).toBeInTheDocument()
+    })
+  })
+
+  it('shows print/correction actions for final exams', async () => {
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-final', status: 'final' }),
+    ])
+    renderHistoryPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /cetak/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /koreksi/i })).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^duplikat$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows edit/duplicate actions for draft exams', async () => {
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-draft', status: 'draft' }),
+    ])
+    renderHistoryPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^duplikat$/i })).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: /cetak/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /koreksi/i })).not.toBeInTheDocument()
+  })
+
+  it('draft Edit opens the existing exam in review with examId and mode', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-draft-slow', status: 'draft', reviewMode: 'slow' }),
+    ])
+    renderHistoryPage()
+
+    await user.click(await screen.findByRole('button', { name: /^edit$/i }))
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/review',
+      search: { examId: 'exam-draft-slow', mode: 'slow' },
     })
   })
 

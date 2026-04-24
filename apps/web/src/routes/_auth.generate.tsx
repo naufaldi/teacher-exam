@@ -114,7 +114,9 @@ const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
 
 const FOKUS_GURU_MAX = 500
 
-const GENERATE_DURATION_MS = 18000
+// Budget for the elapsed-time animation. Real Claude calls run 25–60s;
+// 45s keeps the bar crawling through ~P75 without freezing early.
+const GENERATE_DURATION_MS = 45000
 
 // ── Fokus Guru chip suggestions (PRD §8.7) ───────────────────────────────────
 

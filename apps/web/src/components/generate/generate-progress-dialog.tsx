@@ -8,6 +8,17 @@ import {
   Progress,
 } from '@teacher-exam/ui'
 
+// Elapsed seconds counter — shown only when the bar has frozen at 99%
+function useElapsedSeconds(active: boolean) {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    if (!active) { setSeconds(0); return }
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [active])
+  return seconds
+}
+
 const STEPS = [
   { id: 0, label: 'Menganalisis materi & CP Fase C', threshold: 0 },
   { id: 1, label: 'Menyusun 20 soal pilihan ganda', threshold: 20 },
@@ -35,6 +46,8 @@ export function GenerateProgressDialog({
   progress,
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
+  const isOvertime = progress >= 99
+  const overtimeSeconds = useElapsedSeconds(open && isOvertime)
 
   useEffect(() => {
     if (!open) {
@@ -86,9 +99,21 @@ export function GenerateProgressDialog({
 
           {/* Progress bar + counter */}
           <div className="space-y-2">
-            <Progress value={progress} className="h-2" />
+            <Progress
+              value={progress}
+              className={['h-2', isOvertime ? 'animate-pulse' : ''].join(' ')}
+            />
             <div className="flex items-center justify-between text-caption text-text-tertiary tabular-nums">
-              <span>{Math.round(progress)}% selesai</span>
+              <span>
+                {isOvertime ? (
+                  <span className="flex items-center gap-1.5 text-text-secondary">
+                    <Loader2 size={11} className="animate-spin shrink-0" />
+                    Menunggu AI… {overtimeSeconds > 0 ? `${overtimeSeconds}dtk` : ''}
+                  </span>
+                ) : (
+                  `${Math.round(progress)}% selesai`
+                )}
+              </span>
               <span>
                 Soal{' '}
                 <span className="font-mono font-semibold text-text-primary">

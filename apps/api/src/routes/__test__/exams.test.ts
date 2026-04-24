@@ -24,19 +24,7 @@ vi.mock('drizzle-orm', () => ({
 
 import { db } from '@teacher-exam/db'
 import { examsRouter } from '../exams'
-
-// Helper: build a chainable Drizzle mock that resolves to `result`
-function makeChain(result: unknown) {
-  const p = Promise.resolve(result)
-  const chain: Record<string, unknown> = {
-    then: (p as Promise<unknown>).then.bind(p),
-    catch: (p as Promise<unknown>).catch.bind(p),
-  }
-  for (const m of ['from', 'where', 'orderBy', 'limit', 'set', 'values', 'returning']) {
-    chain[m] = vi.fn(() => chain)
-  }
-  return chain
-}
+import { makeChain, makeQuestionRow } from './helpers.js'
 
 // Fixed timestamp for testing
 const NOW = '2024-01-01T00:00:00.000Z'
@@ -61,25 +49,6 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   discussionMd: null,
   createdAt: new Date(NOW),
   updatedAt: new Date(NOW),
-  ...overrides,
-})
-
-const makeQuestionRow = (overrides: Record<string, unknown> = {}) => ({
-  id: 'q-1',
-  examId: 'exam-1',
-  number: 1,
-  text: 'Question text',
-  optionA: 'A',
-  optionB: 'B',
-  optionC: 'C',
-  optionD: 'D',
-  correctAnswer: 'a',
-  topic: null,
-  difficulty: null,
-  status: 'pending',
-  validationStatus: null,
-  validationReason: null,
-  createdAt: new Date(NOW),
   ...overrides,
 })
 
@@ -287,6 +256,111 @@ describe('POST /api/exams/:id/duplicate', () => {
     const body = await res.json() as Record<string, unknown>
     expect(body['id']).toBe('new-exam-id')
     expect(body['status']).toBe('draft')
+    expect(Array.isArray(body['questions'])).toBe(true)
+  })
+})
+
+describe('POST /api/exams/:id/finalize', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 404 for non-existent or unowned exam', async () => {
+    ;(db.select as Mock).mockReturnValue(makeChain([]))
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/no-exam/finalize', { method: 'POST' })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 422 when exam has no questions', async () => {
+    const examRow = makeExamRow()
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])  // ownership check
+      return makeChain([])                                // no questions
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(422)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['code']).toBe('FINALIZE_NOT_ALLOWED')
+  })
+
+  it('returns 422 when any question is pending or rejected in slow mode', async () => {
+    const examRow = makeExamRow({ reviewMode: 'slow' })
+    // 19 accepted + 1 pending
+    const acceptedQ = makeQuestionRow({ status: 'accepted' })
+    const pendingQ  = makeQuestionRow({ id: 'q-pending', status: 'pending' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])     // ownership check
+      return makeChain([acceptedQ, pendingQ])                // questions select
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(422)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['code']).toBe('FINALIZE_NOT_ALLOWED')
+    const details = body['details'] as Record<string, unknown>
+    expect(details['pendingCount']).toBe(1)
+    expect(details['rejectedCount']).toBe(0)
+  })
+
+  it('auto-accepts pending questions and finalizes when exam reviewMode is fast', async () => {
+    const examRow      = makeExamRow({ reviewMode: 'fast' })
+    const pendingQ     = makeQuestionRow({ status: 'pending' })
+    const finalExamRow = makeExamRow({ status: 'final', reviewMode: 'fast' })
+    const acceptedQ    = makeQuestionRow({ status: 'accepted' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])      // ownership check
+      if (selectCount === 2) return makeChain([pendingQ])     // questions
+      if (selectCount === 3) return makeChain([finalExamRow]) // fetchExamWithQuestions → exam
+      return makeChain([acceptedQ])                           // fetchExamWithQuestions → questions
+    })
+
+    const updateChain = makeChain([])
+    ;(db.update as Mock).mockReturnValue(updateChain)
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['status']).toBe('final')
+    // db.update called twice: once to auto-accept questions, once to set exam status=final
+    expect(db.update).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns 200 with status=final when all questions accepted', async () => {
+    const examRow        = makeExamRow()
+    const finalExamRow   = makeExamRow({ status: 'final' })
+    const acceptedQ      = makeQuestionRow({ status: 'accepted' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])       // ownership check
+      if (selectCount === 2) return makeChain([acceptedQ])     // questions — all accepted
+      if (selectCount === 3) return makeChain([finalExamRow])  // fetchExamWithQuestions → exam
+      return makeChain([acceptedQ])                            // fetchExamWithQuestions → questions
+    })
+
+    const updateChain = makeChain([])
+    ;(db.update as Mock).mockReturnValue(updateChain)
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['status']).toBe('final')
     expect(Array.isArray(body['questions'])).toBe(true)
   })
 })

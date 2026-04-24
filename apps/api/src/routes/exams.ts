@@ -209,3 +209,49 @@ examsRouter.post('/:id/duplicate', async (c) => {
 
   return c.json(newExamWithQuestions, 201)
 })
+
+// POST /:id/finalize — transition exam to status=final only if every question is accepted
+examsRouter.post('/:id/finalize', async (c) => {
+  const userId = c.get('userId')
+  const { id } = c.req.param()
+
+  const [examRows, questionRows] = await Promise.all([
+    db.select().from(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))).limit(1),
+    db.select().from(questions).where(eq(questions.examId, id)),
+  ])
+
+  if (!examRows[0]) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
+
+  if (questionRows.length === 0) {
+    return c.json({
+      error: 'Exam has no questions to finalize',
+      code: 'FINALIZE_NOT_ALLOWED',
+      details: { pendingCount: 0, rejectedCount: 0 },
+    }, 422)
+  }
+
+  const pendingCount  = questionRows.filter((q) => q.status === 'pending').length
+  const rejectedCount = questionRows.filter((q) => q.status === 'rejected').length
+
+  if (pendingCount > 0 || rejectedCount > 0) {
+    if (examRows[0]?.reviewMode === 'fast') {
+      // Fast mode: auto-accept all questions to honour the "20 soal auto-diterima" contract
+      await db.update(questions).set({ status: 'accepted' }).where(eq(questions.examId, id))
+    } else {
+      return c.json({
+        error: 'Not all questions are accepted',
+        code: 'FINALIZE_NOT_ALLOWED',
+        details: { pendingCount, rejectedCount },
+      }, 422)
+    }
+  }
+
+  await db
+    .update(exams)
+    .set({ status: 'final', updatedAt: new Date() })
+    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+
+  const result = await fetchExamWithQuestions(id)
+  if (!result) return c.json({ error: 'Failed to retrieve finalized exam', code: 'DATABASE_ERROR' }, 500)
+  return c.json(result)
+})
