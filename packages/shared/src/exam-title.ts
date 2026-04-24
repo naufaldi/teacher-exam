@@ -3,7 +3,7 @@ export interface FormatExamTitleInput {
   grade: number
   examType: string
   examDate: string | null
-  topics: string[]
+  topics: readonly string[]
 }
 
 export function formatExamTitle(input: FormatExamTitleInput): string {
@@ -21,7 +21,7 @@ export function formatExamTitle(input: FormatExamTitleInput): string {
 
   const parts = [
     `${subjectLabel} / Kelas ${grade}`,
-    typeSegment,
+    ...(typeSegment ? [typeSegment] : []),
     ...(dateSegment ? [dateSegment] : []),
   ]
 
