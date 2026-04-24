@@ -5,12 +5,11 @@ import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/sha
  * sheets are consistent and auditable. See PRD §8.6 and RFC §9.
  *
  * Tuning: changes here affect every generation. The `difficultyDist` values
- * are a baseline distribution that sums to 20 (legacy lembar size). Use
- * `rescaleDifficultyDist()` to scale to any total, including `defaultTotalSoal`
- * when it differs from 20.
+ * are a baseline distribution that sums to each type's `defaultTotalSoal`.
+ * Use `rescaleDifficultyDist()` to scale to any other total.
  */
 export interface ExamTypeProfile {
-  /** Baseline distribution across difficulty buckets. Use rescaleDifficultyDist() to scale to other totals. */
+  /** Baseline distribution across difficulty buckets; sums to defaultTotalSoal. Use rescaleDifficultyDist() to scale to other totals. */
   difficultyDist: { mudah: number; sedang: number; sulit: number }
   /** Default total number of questions for this exam type. */
   defaultTotalSoal: number
@@ -46,7 +45,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     kopLabel: 'ULANGAN HARIAN',
   },
   sts: {
-    difficultyDist: { mudah: 6, sedang: 10, sulit: 4 },
+    difficultyDist: { mudah: 8, sedang: 13, sulit: 4 },
     defaultTotalSoal: 25,
     cognitiveLevels: ['C1', 'C2', 'C3'],
     stemHint:
@@ -56,7 +55,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     kopLabel: 'PENILAIAN TENGAH SEMESTER',
   },
   sas: {
-    difficultyDist: { mudah: 4, sedang: 10, sulit: 6 },
+    difficultyDist: { mudah: 5, sedang: 13, sulit: 7 },
     defaultTotalSoal: 25,
     cognitiveLevels: ['C2', 'C3', 'C4'],
     stemHint:
@@ -66,7 +65,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     kopLabel: 'PENILAIAN AKHIR SEMESTER',
   },
   tka: {
-    difficultyDist: { mudah: 3, sedang: 9, sulit: 8 },
+    difficultyDist: { mudah: 4, sedang: 11, sulit: 10 },
     defaultTotalSoal: 25,
     cognitiveLevels: ['C2', 'C3', 'C4'],
     stemHint:
