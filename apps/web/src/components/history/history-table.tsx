@@ -143,7 +143,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
               {exam.title}
             </div>
             <div className="text-caption text-text-tertiary mt-0.5 truncate">
-              {exam.examType} · {exam.topic}
+              {exam.examType} · {exam.topics.join(', ')}
             </div>
           </div>
         </div>

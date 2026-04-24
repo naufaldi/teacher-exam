@@ -120,7 +120,7 @@ function HistoryPage() {
       if (grade !== 'all' && String(exam.grade) !== grade) return false
       if (!withinPeriod(exam.createdAt, period)) return false
       if (q) {
-        const haystack = `${exam.title} ${exam.topic}`.toLowerCase()
+        const haystack = `${exam.title} ${exam.topics.join(' ')}`.toLowerCase()
         if (!haystack.includes(q)) return false
       }
       return true
