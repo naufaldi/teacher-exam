@@ -633,7 +633,7 @@ function GeneratePage() {
                       min={0}
                       value={composition.mcqSingle}
                       onChange={(e) =>
-                        setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) }))
+                        setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))
                       }
                     />
                   </div>
@@ -645,7 +645,7 @@ function GeneratePage() {
                       min={0}
                       value={composition.mcqMulti}
                       onChange={(e) =>
-                        setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) }))
+                        setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))
                       }
                     />
                   </div>
@@ -657,7 +657,7 @@ function GeneratePage() {
                       min={0}
                       value={composition.trueFalse}
                       onChange={(e) =>
-                        setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) }))
+                        setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))
                       }
                     />
                   </div>
