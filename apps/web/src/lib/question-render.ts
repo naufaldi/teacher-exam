@@ -10,7 +10,7 @@ export const matchQuestion = <T>(q: Question, h: {
   Match.tag('mcq_multi',  (x) => h.mcq_multi(x)),
   Match.tag('true_false', (x) => h.true_false(x)),
   Match.exhaustive,
-) as T
+) as T // Match.exhaustive infers Unify<T>, not T — cast required
 
 export const questionCorrectLabel = (q: Question): string =>
   matchQuestion(q, {
