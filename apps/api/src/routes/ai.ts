@@ -51,6 +51,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
       topic: input.topic,
+      totalSoal: 20,
       curriculumText,
       classContext: input.classContext,
       exampleQuestions: input.exampleQuestions,

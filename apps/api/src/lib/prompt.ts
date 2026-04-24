@@ -7,6 +7,7 @@ export interface BuildPromptInput {
   subjectLabel: string
   grade: number
   topic: string
+  totalSoal: number
   /**
    * Full markdown corpus from `apps/api/src/curriculum/md/{subject}-kelas-{n}.md`
    * loaded via `getCurriculumText`. Becomes the baseline grounding in the
@@ -52,7 +53,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     '--- AKHIR KORPUS ---',
     '',
     'Output rules:',
-    '- Jawab HANYA dengan JSON array berisi tepat 20 soal — tanpa prosa, tanpa pembungkus markdown.',
+    `- Jawab HANYA dengan JSON array berisi tepat ${input.totalSoal} soal — tanpa prosa, tanpa pembungkus markdown.`,
     '- Setiap soal punya field: text, option_a, option_b, option_c, option_d, correct_answer (a|b|c|d), topic, difficulty (mudah|sedang|sulit), cognitive_level (C1|C2|C3|C4).',
     `- Hormati distribusi kesulitan target dan level kognitif yang diizinkan untuk jenis lembar ini.`,
     `- Gaya soal: ${profile.stemHint}`,
@@ -63,6 +64,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     mata_pelajaran: input.subjectLabel,
     topik: input.topic,
     jenis_lembar: input.examType,
+    jumlah_soal: input.totalSoal,
     distribusi_kesulitan: dist,
     level_kognitif: profile.cognitiveLevels,
   }
@@ -74,7 +76,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   }
 
   const user = [
-    'Buatkan satu lembar berisi 20 soal pilihan ganda berdasarkan parameter berikut.',
+    `Buatkan satu lembar berisi ${input.totalSoal} soal pilihan ganda berdasarkan parameter berikut.`,
     'Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik.',
     'Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk konteks lokal/terkini.',
     '',

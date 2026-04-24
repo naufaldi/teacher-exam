@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import { buildExamPrompt } from '../prompt'
 
 const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merdeka)
@@ -88,5 +88,27 @@ describe('buildExamPrompt', () => {
     expect(user).toContain('konteks_guru')
     expect(user).toContain('teks persuasi')
     expect(user).toContain('contoh_soal')
+  })
+})
+
+describe('buildExamPrompt — totalSoal', () => {
+  const basePromptInput = {
+    examType: 'formatif' as const,
+    difficulty: 'campuran' as const,
+    subjectLabel: 'Bahasa Indonesia',
+    grade: 6,
+    topic: 'Pemahaman Bacaan',
+    curriculumText: FAKE_CURRICULUM,
+  }
+
+  test('system prompt contains exact totalSoal count (not hardcoded 20)', () => {
+    const { system } = buildExamPrompt({ ...basePromptInput, totalSoal: 25 })
+    expect(system).toContain('25')
+    expect(system).not.toContain('tepat 20')
+  })
+
+  test('user prompt contains totalSoal count', () => {
+    const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30 })
+    expect(user).toContain('30')
   })
 })
