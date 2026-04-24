@@ -4,8 +4,10 @@ import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/sha
  * Per-exam-type steering profile injected into the AI prompt so generated
  * sheets are consistent and auditable. See PRD §8.6 and RFC §9.
  *
- * Tuning: changes here affect every generation. Keep distributions summing to
- * 20 (matches the fixed lembar size from PRD US-8).
+ * Tuning: changes here affect every generation. The `difficultyDist` values
+ * are a baseline distribution that sums to 20 (legacy lembar size). Use
+ * `rescaleDifficultyDist()` to scale to any total, including `defaultTotalSoal`
+ * when it differs from 20.
  */
 export interface ExamTypeProfile {
   /** Baseline distribution across difficulty buckets. Use rescaleDifficultyDist() to scale to other totals. */
@@ -75,6 +77,8 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
 }
 
+// TODO(phase2-task5): this returns the raw baseline difficultyDist (sum = defaultTotalSoal of each profile).
+// When wiring totalSoal in routes/ai.ts, call rescaleDifficultyDist(examType, totalSoal) instead.
 /**
  * Resolve the effective difficulty distribution. If the teacher explicitly
  * picks a single bucket (mudah/sedang/sulit), bias the full sheet to that
@@ -105,14 +109,14 @@ export function resolveDifficultyDist(
  * remainder so the sum is always exactly `totalSoal`.
  */
 export function rescaleDifficultyDist(
-  examType: keyof typeof EXAM_TYPE_PROFILE,
+  examType: ExamType,
   totalSoal: number,
 ): { mudah: number; sedang: number; sulit: number } {
   const base = EXAM_TYPE_PROFILE[examType].difficultyDist
   const baseTotal = base.mudah + base.sedang + base.sulit
   const mudah = Math.round((base.mudah / baseTotal) * totalSoal)
   const sedang = Math.round((base.sedang / baseTotal) * totalSoal)
-  const sulit = totalSoal - mudah - sedang
+  const sulit = Math.max(0, totalSoal - mudah - sedang)
   return { mudah, sedang, sulit }
 }
 
