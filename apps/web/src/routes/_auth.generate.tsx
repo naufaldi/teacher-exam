@@ -22,6 +22,7 @@ import {
 } from '@teacher-exam/ui'
 import type { ExamType } from '@teacher-exam/shared'
 import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
+import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
 import { api, RateLimitedError } from '../lib/api.js'
@@ -195,7 +196,8 @@ function GeneratePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [kelas, setKelas] = useState<string>('')
   const [mapel, setMapel] = useState<string>('bahasa_indonesia')
-  const [topik, setTopik] = useState<string>('')
+  const [topiks, setTopiks] = useState<string[]>([])
+  const [showCustomInput, setShowCustomInput] = useState(false)
   const [customTopik, setCustomTopik] = useState<string>('')
   const [kesulitan, setKesulitan] = useState<string>('campuran')
   const [examType, setExamType] = useState<ExamType>('formatif')
@@ -240,15 +242,19 @@ function GeneratePage() {
 
   const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI : TOPIK_PPKN
 
-  // Effective topic value for submission
-  const effectiveTopik = topik === '__custom' ? customTopik : topik
+  // Effective topics array for submission
+  const effectiveTopiks: string[] = showCustomInput && customTopik.trim() !== ''
+    ? [...topiks, customTopik.trim()]
+    : topiks
 
   // Sidebar completion count (5 required fields with examType)
-  const filledCount = [kelas, mapel, effectiveTopik, kesulitan, examType].filter(
-    Boolean,
-  ).length
+  const filledCount = [kelas, mapel, effectiveTopiks.length > 0 ? 'ok' : '', kesulitan, examType].filter(Boolean).length
 
   const runGenerate = useCallback(() => {
+    const topics: string[] = showCustomInput && customTopik.trim() !== ''
+      ? [...topiks, customTopik.trim()]
+      : topiks
+
     setError(null)
     setShowErrorDialog(false)
     setIsGenerating(true)
@@ -268,7 +274,7 @@ function GeneratePage() {
       subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
       grade: Number(kelas) as 5 | 6,
       difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
-      topic: effectiveTopik,
+      topics,
       reviewMode,
       examType,
       totalSoal,
@@ -300,7 +306,7 @@ function GeneratePage() {
   }, [
     clearTimers,
     contohSoal,
-    effectiveTopik,
+    customTopik,
     examType,
     fokusGuru,
     kelas,
@@ -308,6 +314,8 @@ function GeneratePage() {
     mapel,
     navigate,
     reviewMode,
+    showCustomInput,
+    topiks,
     totalSoal,
   ])
 
@@ -320,7 +328,9 @@ function GeneratePage() {
     runGenerate()
   }
 
-  const isFormValid = Boolean(kelas && mapel && effectiveTopik && kesulitan && !isGenerating && totalSoalError === null)
+  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null)
+
+  const topikSummary = effectiveTopiks.join(', ')
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] gap-8">
@@ -440,8 +450,9 @@ function GeneratePage() {
                 value={mapel}
                 onValueChange={(v) => {
                   setMapel(v)
-                  setTopik('')
+                  setTopiks([])
                   setCustomTopik('')
+                  setShowCustomInput(false)
                 }}
               >
                 <SelectTrigger id="mapel">
@@ -455,29 +466,36 @@ function GeneratePage() {
             </div>
 
             {/* Topik */}
-            <div className="space-y-1.5">
-              <Label htmlFor="topik">Topik</Label>
-              <Select value={topik} onValueChange={setTopik}>
-                <SelectTrigger id="topik">
-                  <SelectValue placeholder="Pilih topik" />
-                </SelectTrigger>
-                <SelectContent key={mapel}>
-                  {topikOptions.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__custom">Lainnya (ketik sendiri)...</SelectItem>
-                </SelectContent>
-              </Select>
-              {topik === '__custom' ? (
-                <Input
-                  id="topik-custom"
-                  placeholder="Ketik topik Anda..."
-                  value={customTopik}
-                  onChange={(e) => setCustomTopik(e.target.value)}
-                  className="mt-2"
-                />
+            <div className="space-y-2">
+              <Label>Topik</Label>
+              <TopicMultiSelect
+                options={topikOptions}
+                selected={topiks}
+                onChange={setTopiks}
+                onCustom={() => setShowCustomInput(true)}
+                maxItems={5}
+                placeholder="Pilih 1–5 topik..."
+              />
+              {showCustomInput ? (
+                <div className="flex gap-2 mt-2 items-center">
+                  <Input
+                    placeholder="Ketik topik kustom..."
+                    value={customTopik}
+                    onChange={(e) => setCustomTopik(e.target.value)}
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    className="text-text-tertiary hover:text-danger-600 p-1"
+                    onClick={() => { setShowCustomInput(false); setCustomTopik('') }}
+                    aria-label="Batalkan topik kustom"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : null}
+              {effectiveTopiks.length === 0 ? (
+                <p className="text-caption text-text-tertiary">Pilih minimal 1 topik.</p>
               ) : null}
             </div>
           </section>
@@ -645,7 +663,7 @@ function GeneratePage() {
                 }
               />
               <FokusGuruChips
-                topik={effectiveTopik}
+                topik={effectiveTopiks[0] ?? ''}
                 onAppend={(snippet) => {
                   setFokusGuru((prev) => {
                     const sep = prev.length === 0 || prev.endsWith('\n') ? '' : '\n'
@@ -799,9 +817,11 @@ function GeneratePage() {
               <div className="flex justify-between items-start gap-2">
                 <span className="text-text-tertiary shrink-0">Topik</span>
                 <span className="text-text-primary max-w-[160px] text-right">
-                  {topik === '__custom'
-                    ? (customTopik || '—')
-                    : (topik || '—')}
+                  {effectiveTopiks.length > 0
+                    ? topikSummary.length > 50
+                      ? topikSummary.slice(0, 50) + '…'
+                      : topikSummary
+                    : '—'}
                 </span>
               </div>
 

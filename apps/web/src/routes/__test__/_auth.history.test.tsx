@@ -54,7 +54,7 @@ const makeExam = (overrides: Partial<Exam> = {}): Exam => ({
   subject: 'bahasa_indonesia',
   grade: 5,
   difficulty: 'sedang',
-  topic: 'Pemahaman Bacaan',
+  topics: ['Pemahaman Bacaan'],
   reviewMode: 'fast',
   status: 'final',
   schoolName: null,

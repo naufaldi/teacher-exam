@@ -65,7 +65,7 @@ function makeExamRow(overrides: Record<string, unknown> = {}) {
     subject: 'bahasa_indonesia',
     grade: 6,
     difficulty: 'sedang',
-    topic: 'Teks Narasi',
+    topics: ['Teks Narasi'],
     reviewMode: 'fast',
     status: 'draft',
     schoolName: null,
@@ -86,7 +86,7 @@ const VALID_BODY = {
   subject: 'bahasa_indonesia',
   grade: 6,
   difficulty: 'sedang',
-  topic: 'Teks Narasi',
+  topics: ['Teks Narasi'],
   reviewMode: 'fast',
   examType: 'formatif',
 }
@@ -337,7 +337,7 @@ describe('POST /api/ai/generate', () => {
   })
 
   it('uses formatExamTitle unified format for the generated exam title', async () => {
-    const examRow = makeExamRow({ examType: 'formatif', examDate: null, topic: 'Teks Narasi' })
+    const examRow = makeExamRow({ examType: 'formatif', examDate: null, topics: ['Teks Narasi'] })
     const questionRows = Array.from({ length: 20 }, (_, i) =>
       makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
     )
@@ -373,5 +373,65 @@ describe('POST /api/ai/generate', () => {
     // Must be unified format, NOT the old "· Kelas ·" format
     expect(examInsert['title']).not.toContain('·')
     expect(examInsert['title']).toBe('Bahasa Indonesia / Kelas 6 / formatif')
+  })
+})
+
+describe('POST /api/ai/generate — multi-topic', () => {
+  it('accepts topics array and returns 201', async () => {
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+
+    const examRow = makeExamRow({ topics: ['Teks Narasi', 'Puisi'] })
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = new Hono()
+    app.use('*', async (c, next) => { c.set('userId', 'test-user-id'); await next() })
+    app.route('/api/ai', createAiRouter({ aiService: fakeAiService }))
+
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: 'bahasa_indonesia',
+        grade: 6,
+        difficulty: 'campuran',
+        topics: ['Teks Narasi', 'Puisi'],
+        reviewMode: 'fast',
+        examType: 'sas',
+      }),
+    })
+
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects body with old single topic string field', async () => {
+    const app = new Hono()
+    app.use('*', async (c, next) => { c.set('userId', 'test-user-id'); await next() })
+    app.route('/api/ai', createAiRouter({ aiService: fakeAiService }))
+
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: 'bahasa_indonesia',
+        grade: 6,
+        difficulty: 'campuran',
+        topic: 'Teks Narasi',
+        reviewMode: 'fast',
+      }),
+    })
+
+    expect(res.status).toBe(400)
   })
 })

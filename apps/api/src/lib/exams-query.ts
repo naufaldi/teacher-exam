@@ -15,7 +15,7 @@ export function toExam(row: ExamRow): Exam {
     subject:         row.subject,
     grade:           row.grade,
     difficulty:      row.difficulty,
-    topic:           row.topic,
+    topics:          row.topics as string[],
     reviewMode:      row.reviewMode,
     status:          row.status,
     schoolName:      row.schoolName ?? null,

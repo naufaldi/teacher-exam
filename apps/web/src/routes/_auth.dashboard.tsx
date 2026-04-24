@@ -334,7 +334,7 @@ function DashboardPage() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-secondary mb-3">
                   <span>
                     <span className="text-text-tertiary mr-1">Topik:</span>
-                    {lastExam.topic}
+                    {lastExam.topics.join(', ')}
                   </span>
                   <span>
                     <span className="text-text-tertiary mr-1">Dibuat:</span>

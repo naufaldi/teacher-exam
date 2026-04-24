@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, timestamp, jsonb } from 'drizzle-orm/pg-core'
 import { user } from './users'
 import {
   examSubjectEnum,
@@ -15,7 +15,7 @@ export const exams = pgTable('exams', {
   subject:         examSubjectEnum('subject').notNull(),
   grade:           integer('grade').notNull(),
   difficulty:      examDifficultyEnum('difficulty').notNull(),
-  topic:           text('topic').notNull(),
+  topics:          jsonb('topics').$type<string[]>().notNull().default([]),
   reviewMode:      reviewModeEnum('review_mode').default('fast').notNull(),
   status:          examStatusEnum('status').default('draft').notNull(),
   schoolName:      text('school_name'),
