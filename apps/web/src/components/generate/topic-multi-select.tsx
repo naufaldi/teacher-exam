@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, X, Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@teacher-exam/ui'
+import { cn } from '@teacher-exam/ui/lib/utils'
 
 interface TopicMultiSelectProps {
   options: readonly string[]
@@ -29,8 +30,7 @@ export function TopicMultiSelect({
     }
   }
 
-  const remove = (option: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const remove = (option: string) => {
     onChange(selected.filter((s) => s !== option))
   }
 
@@ -39,17 +39,26 @@ export function TopicMultiSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
+        {/* div avoids nested-button invalid HTML; combobox role announces it as a selector */}
+        <div
+          role="combobox"
           aria-haspopup="listbox"
           aria-expanded={open}
-          className={[
-            'w-full min-h-[40px] px-3 py-2 rounded-sm border text-left',
+          aria-label="Pilih topik"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setOpen((o) => !o)
+            }
+          }}
+          className={cn(
+            'w-full min-h-[40px] px-3 py-2 rounded-sm border text-left cursor-pointer',
             'flex flex-wrap gap-1.5 items-center',
             'bg-bg-surface border-border-ui',
             'hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400',
             'transition-colors duration-[120ms]',
-          ].join(' ')}
+          )}
         >
           {selected.length === 0 ? (
             <span className="text-text-tertiary text-sm flex-1">{placeholder}</span>
@@ -62,9 +71,12 @@ export function TopicMultiSelect({
                 {s}
                 <button
                   type="button"
-                  onClick={(e) => remove(s, e)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    remove(s)
+                  }}
                   aria-label={`Hapus topik: ${s}`}
-                  className="hover:text-primary-900"
+                  className="p-0.5 hover:text-primary-900 rounded-sm"
                 >
                   <X size={10} />
                 </button>
@@ -72,62 +84,54 @@ export function TopicMultiSelect({
             ))
           )}
           <ChevronDown size={16} className="ml-auto shrink-0 text-text-tertiary" />
-        </button>
+        </div>
       </PopoverTrigger>
 
       <PopoverContent
         className="p-0 w-[var(--radix-popover-trigger-width)] max-h-64 overflow-y-auto"
         align="start"
       >
-        <ul role="listbox" aria-multiselectable="true" className="py-1">
+        <ul role="listbox" aria-multiselectable="true" aria-label="Daftar topik" className="py-1">
           {options.map((option) => {
             const checked = selected.includes(option)
             const disabled = !checked && isAtMax
             return (
-              <li key={option}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={checked}
-                  disabled={disabled}
-                  onClick={() => toggle(option)}
-                  className={[
-                    'w-full flex items-center gap-2 px-3 py-2 text-sm text-left',
-                    'transition-colors duration-[80ms]',
-                    disabled
-                      ? 'text-text-tertiary cursor-not-allowed opacity-50'
-                      : 'hover:bg-kertas-100 cursor-pointer',
-                    checked ? 'text-primary-700 font-medium' : 'text-text-primary',
-                  ].join(' ')}
+              <li
+                key={option}
+                role="option"
+                aria-selected={checked}
+                aria-disabled={disabled}
+                onClick={() => { if (!disabled) toggle(option) }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-sm text-left select-none',
+                  'transition-colors duration-[80ms]',
+                  disabled
+                    ? 'text-text-tertiary cursor-not-allowed opacity-50'
+                    : 'hover:bg-kertas-100 cursor-pointer',
+                  checked ? 'text-primary-700 font-medium' : 'text-text-primary',
+                )}
+              >
+                <span
+                  className={cn(
+                    'w-4 h-4 rounded-sm border flex items-center justify-center shrink-0',
+                    checked ? 'bg-primary-600 border-primary-600' : 'border-border-ui bg-bg-surface',
+                  )}
                 >
-                  <span
-                    className={[
-                      'w-4 h-4 rounded-sm border flex items-center justify-center shrink-0',
-                      checked
-                        ? 'bg-primary-600 border-primary-600'
-                        : 'border-border-ui bg-bg-surface',
-                    ].join(' ')}
-                  >
-                    {checked ? <Check size={10} className="text-white" /> : null}
-                  </span>
-                  {option}
-                </button>
+                  {checked ? <Check size={10} className="text-kertas-50" /> : null}
+                </span>
+                {option}
               </li>
             )
           })}
 
           {onCustom ? (
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  onCustom()
-                  setOpen(false)
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-text-secondary hover:bg-kertas-100 cursor-pointer border-t border-border-default mt-1"
-              >
-                Lainnya (ketik sendiri)...
-              </button>
+            <li
+              role="option"
+              aria-selected={false}
+              onClick={() => { onCustom(); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-text-secondary hover:bg-kertas-100 cursor-pointer border-t border-border-default mt-1 select-none"
+            >
+              Lainnya (ketik sendiri)...
             </li>
           ) : null}
         </ul>
