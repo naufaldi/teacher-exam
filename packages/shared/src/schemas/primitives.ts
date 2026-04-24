@@ -47,6 +47,22 @@ export type ExamStatus = typeof ExamStatusSchema.Type
 export const AnswerSchema = Schema.Literal('a', 'b', 'c', 'd')
 export type Answer = typeof AnswerSchema.Type
 
+// Single answer letter (lowercase a-d)
+export const AnswerLetterSchema = Schema.Literal('a', 'b', 'c', 'd')
+export type AnswerLetter = typeof AnswerLetterSchema.Type
+
+// Multiple answer letters, 2–3 unique entries
+export const MultiAnswerSchema = Schema.Array(AnswerLetterSchema).pipe(
+  Schema.minItems(2),
+  Schema.maxItems(3),
+  Schema.filter((xs) => new Set(xs).size === xs.length, { message: () => 'duplicate letters' }),
+)
+export type MultiAnswer = typeof MultiAnswerSchema.Type
+
+// Question type discriminant
+export const QuestionTypeSchema = Schema.Literal('mcq_single', 'mcq_multi', 'true_false')
+export type QuestionType = typeof QuestionTypeSchema.Type
+
 export const QuestionStatusSchema = Schema.Literal('pending', 'accepted', 'rejected')
 export type QuestionStatus = typeof QuestionStatusSchema.Type
 
