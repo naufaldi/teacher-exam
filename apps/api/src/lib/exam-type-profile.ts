@@ -8,6 +8,13 @@ import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/sha
  * are a baseline distribution that sums to each type's `defaultTotalSoal`.
  * Use `rescaleDifficultyDist()` to scale to any other total.
  */
+
+export interface Composition {
+  mcqSingle: number
+  mcqMulti: number
+  trueFalse: number
+}
+
 export interface ExamTypeProfile {
   /** Baseline distribution across difficulty buckets; sums to defaultTotalSoal. Use rescaleDifficultyDist() to scale to other totals. */
   difficultyDist: { mudah: number; sedang: number; sulit: number }
@@ -21,6 +28,8 @@ export interface ExamTypeProfile {
   promptPreamble: string
   /** Uppercase label printed on the exam sheet header (kop). */
   kopLabel: string
+  /** Default question-type composition summing to defaultTotalSoal. Use resolveComposition() to scale to other totals. */
+  composition: Composition
 }
 
 export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
@@ -33,6 +42,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     promptPreamble:
       'Lembar ini untuk LATIHAN mandiri. Tone ramah, fokus membangun pemahaman dasar dan aplikasi sederhana.',
     kopLabel: 'LATIHAN SOAL',
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
   },
   formatif: {
     difficultyDist: { mudah: 6, sedang: 10, sulit: 4 },
@@ -43,6 +53,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     promptPreamble:
       'Lembar ini untuk ULANGAN HARIAN (Asesmen Formatif). Ukur penguasaan satu topik dengan soal terukur dan distractor edukatif.',
     kopLabel: 'ULANGAN HARIAN',
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
   },
   sts: {
     difficultyDist: { mudah: 8, sedang: 13, sulit: 4 },
@@ -53,6 +64,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     promptPreamble:
       'Lembar ini untuk UTS / Sumatif Tengah Semester. Cakupan lebih luas dari ulangan harian, distribusi kesulitan terukur.',
     kopLabel: 'PENILAIAN TENGAH SEMESTER',
+    composition: { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 },
   },
   sas: {
     difficultyDist: { mudah: 5, sedang: 13, sulit: 7 },
@@ -63,6 +75,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     promptPreamble:
       'Lembar ini untuk UAS / Sumatif Akhir Semester. Cakupan satu semester penuh; sertakan elemen analisis dan evaluasi.',
     kopLabel: 'PENILAIAN AKHIR SEMESTER',
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
   },
   tka: {
     difficultyDist: { mudah: 4, sedang: 11, sulit: 10 },
@@ -73,6 +86,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
     promptPreamble:
       'Lembar ini untuk TKA (Tes Kemampuan Akademik). Format formal, soal HOTS, banyak konteks dan analisis.',
     kopLabel: 'TKA',
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
   },
 }
 
@@ -117,5 +131,38 @@ export function rescaleDifficultyDist(
   const sedang = Math.round((base.sedang / baseTotal) * totalSoal)
   const sulit = Math.max(0, totalSoal - mudah - sedang)
   return { mudah, sedang, sulit }
+}
+
+/**
+ * Resolve the effective question-type composition for a given exam type and
+ * total number of questions.
+ *
+ * When `override` is provided it is validated (sum must equal `totalSoal`) and
+ * returned as-is, giving callers full control over the split.
+ *
+ * Without an override the profile's default composition is scaled
+ * proportionally using the same rounding strategy as `rescaleDifficultyDist`:
+ * `mcqSingle` and `mcqMulti` are rounded independently; `trueFalse` absorbs
+ * the remainder so the sum is always exactly `totalSoal`.
+ */
+export function resolveComposition(
+  examType: ExamType,
+  totalSoal: number,
+  override?: Composition,
+): Composition {
+  if (override !== undefined) {
+    const sum = override.mcqSingle + override.mcqMulti + override.trueFalse
+    if (sum !== totalSoal) {
+      throw new Error(`Composition sum (${sum}) must equal totalSoal (${totalSoal})`)
+    }
+    return override
+  }
+  const base = EXAM_TYPE_PROFILE[examType].composition
+  const baseTotal = base.mcqSingle + base.mcqMulti + base.trueFalse
+  if (baseTotal === 0) return { mcqSingle: totalSoal, mcqMulti: 0, trueFalse: 0 }
+  const mcqSingle = Math.round((base.mcqSingle / baseTotal) * totalSoal)
+  const mcqMulti = Math.round((base.mcqMulti / baseTotal) * totalSoal)
+  const trueFalse = Math.max(0, totalSoal - mcqSingle - mcqMulti)
+  return { mcqSingle, mcqMulti, trueFalse }
 }
 
