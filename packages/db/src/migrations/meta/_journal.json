@@ -8,6 +8,13 @@
       "when": 1776912667281,
       "tag": "0000_big_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777031872016,
+      "tag": "0001_sour_lake",
+      "breakpoints": true
     }
   ]
 }
