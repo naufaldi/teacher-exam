@@ -38,6 +38,8 @@ const NOW = '2024-01-01T00:00:00.000Z'
 
 function makeFakeQuestion(n: number): GeneratedQuestion {
   return {
+    _tag: 'mcq_single',
+    number: n,
     text: `Question ${n}`,
     option_a: 'Option A',
     option_b: 'Option B',
@@ -333,6 +335,54 @@ describe('POST /api/ai/generate', () => {
       expect(fakeAiService.generate as Mock).toHaveBeenCalledWith(
         expect.objectContaining({ expectedCount: 20 }),
       )
+    })
+  })
+
+  describe('POST /api/ai/generate — composition', () => {
+    it('resolves composition from profile default when not provided', async () => {
+      const app = buildTestApp()
+      ;(db.insert as Mock).mockReturnValue(makeChain([]))
+      ;(db.transaction as Mock).mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+
+      const examRow = makeExamRow({ examType: 'latihan' })
+      const questionRows = Array.from({ length: 20 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+
+      // capture what buildExamPrompt was called with
+      const buildMock = buildExamPrompt as Mock
+      buildMock.mockClear()
+      buildMock.mockReturnValue({ system: 'sys', user: 'usr' })
+
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'latihan' }),
+      })
+
+      // latihan default: mcqSingle=20, mcqMulti=0, trueFalse=0
+      const callArg = buildMock.mock.calls[0]?.[0] as { composition: { mcqSingle: number; mcqMulti: number; trueFalse: number } }
+      expect(callArg?.composition).toEqual({ mcqSingle: 20, mcqMulti: 0, trueFalse: 0 })
+    })
+
+    it('returns 400 when composition sum !== totalSoal', async () => {
+      const app = buildTestApp()
+      const res = await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...VALID_BODY,
+          totalSoal: 25,
+          composition: { mcqSingle: 10, mcqMulti: 10, trueFalse: 10 }, // sum=30, not 25
+        }),
+      })
+      expect(res.status).toBe(400)
     })
   })
 

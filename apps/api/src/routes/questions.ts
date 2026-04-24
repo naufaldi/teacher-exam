@@ -3,7 +3,7 @@ import { Schema } from 'effect'
 import { eq, and } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, type UpdateQuestionInput } from '@teacher-exam/shared'
-import { toQuestion } from '../lib/exams-query'
+import { rowToQuestion } from '../lib/question-mapper'
 
 export const questionsRouter = new Hono()
 
@@ -49,5 +49,5 @@ questionsRouter.patch('/:id', async (c) => {
     .where(eq(questions.id, id))
     .returning()
   if (!updated) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)
-  return c.json(toQuestion(updated))
+  return c.json(rowToQuestion(updated))
 })
