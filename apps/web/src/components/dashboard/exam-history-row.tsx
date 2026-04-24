@@ -82,7 +82,7 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
             {exam.title}
           </div>
           <div className="text-caption text-text-tertiary mt-0.5">
-            20 soal · {exam.topic}
+            {exam.topic}
           </div>
         </div>
       </div>

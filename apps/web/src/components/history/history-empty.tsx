@@ -26,7 +26,7 @@ function HistoryEmpty({ variant, onReset, onGenerate }: HistoryEmptyProps) {
         <p className="text-body-sm text-text-secondary leading-relaxed">
           {isNoMatch
             ? 'Coba ubah atau bersihkan filter untuk melihat lembar lainnya.'
-            : 'Mulai buat lembar pertama Anda — pilih mata pelajaran dan topik, AI akan menyiapkan 20 soal pilihan ganda.'}
+            : 'Mulai buat lembar pertama Anda — pilih mata pelajaran dan topik, AI akan menyiapkan soal pilihan ganda.'}
         </p>
 
         <div className="mt-6 inline-flex gap-2">
