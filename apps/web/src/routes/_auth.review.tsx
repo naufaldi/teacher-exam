@@ -22,6 +22,7 @@ import {
   SelectValue,
   PageHeader,
   useToast,
+  DatePicker,
 } from '@teacher-exam/ui'
 import type { ExamType, Question, UpdateExamInput, UpdateQuestionInput } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
@@ -84,10 +85,13 @@ function ReviewPage() {
     examDraftStore.setReviewMode(mode)
   }, [mode])
 
-  // Per-question accept/reject state — defaults derived from mode
+  // Per-question accept/reject state — fast mode always starts accepted; slow mode seeds from server
   const [questionStatuses, setQuestionStatuses] = useState<Record<string, QuestionStatus>>(() =>
     Object.fromEntries(
-      draft.questions.map((q) => [q.id, mode === 'fast' ? 'accepted' : 'pending']),
+      draft.questions.map((q) => [
+        q.id,
+        mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending'),
+      ]),
     ),
   )
 
@@ -122,7 +126,7 @@ function ReviewPage() {
       const next = { ...prev }
       for (const q of draft.questions) {
         if (!(q.id in next)) {
-          next[q.id] = mode === 'fast' ? 'accepted' : 'pending'
+          next[q.id] = mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending')
         }
       }
       for (const id of Object.keys(next)) {
@@ -294,6 +298,14 @@ function ReviewPage() {
     if (!examId) return
     setFinalizing(true)
     try {
+      if (mode === 'fast') {
+        const toSync = draft.questions.filter((q) => (q.status as string) !== 'accepted')
+        if (toSync.length > 0) {
+          await Promise.allSettled(
+            toSync.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+          )
+        }
+      }
       await api.exams.finalize(examId)
       void navigate({ to: '/preview', search: { examId } })
     } catch (err) {
@@ -544,12 +556,12 @@ function ReviewPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tanggal">Tanggal Ujian</Label>
-            <Input
+            <DatePicker
               id="tanggal"
-              type="date"
               value={examDate}
-              onChange={(e) => examDraftStore.setMetadata({ examDate: e.target.value })}
-              onBlur={(e) => { void persistMetaField({ examDate: e.target.value }) }}
+              onChange={(iso) => examDraftStore.setMetadata({ examDate: iso })}
+              onCommit={(iso) => { void persistMetaField({ examDate: iso }) }}
+              placeholder="Pilih tanggal ujian"
             />
           </div>
           <div className="space-y-1.5">

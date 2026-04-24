@@ -289,8 +289,8 @@ describe('POST /api/exams/:id/finalize', () => {
     expect(body['code']).toBe('FINALIZE_NOT_ALLOWED')
   })
 
-  it('returns 422 when any question is pending or rejected', async () => {
-    const examRow = makeExamRow()
+  it('returns 422 when any question is pending or rejected in slow mode', async () => {
+    const examRow = makeExamRow({ reviewMode: 'slow' })
     // 19 accepted + 1 pending
     const acceptedQ = makeQuestionRow({ status: 'accepted' })
     const pendingQ  = makeQuestionRow({ id: 'q-pending', status: 'pending' })
@@ -310,6 +310,33 @@ describe('POST /api/exams/:id/finalize', () => {
     const details = body['details'] as Record<string, unknown>
     expect(details['pendingCount']).toBe(1)
     expect(details['rejectedCount']).toBe(0)
+  })
+
+  it('auto-accepts pending questions and finalizes when exam reviewMode is fast', async () => {
+    const examRow      = makeExamRow({ reviewMode: 'fast' })
+    const pendingQ     = makeQuestionRow({ status: 'pending' })
+    const finalExamRow = makeExamRow({ status: 'final', reviewMode: 'fast' })
+    const acceptedQ    = makeQuestionRow({ status: 'accepted' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])      // ownership check
+      if (selectCount === 2) return makeChain([pendingQ])     // questions
+      if (selectCount === 3) return makeChain([finalExamRow]) // fetchExamWithQuestions → exam
+      return makeChain([acceptedQ])                           // fetchExamWithQuestions → questions
+    })
+
+    const updateChain = makeChain([])
+    ;(db.update as Mock).mockReturnValue(updateChain)
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/finalize', { method: 'POST' })
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['status']).toBe('final')
+    // db.update called twice: once to auto-accept questions, once to set exam status=final
+    expect(db.update).toHaveBeenCalledTimes(2)
   })
 
   it('returns 200 with status=final when all questions accepted', async () => {

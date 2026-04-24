@@ -234,11 +234,16 @@ examsRouter.post('/:id/finalize', async (c) => {
   const rejectedCount = questionRows.filter((q) => q.status === 'rejected').length
 
   if (pendingCount > 0 || rejectedCount > 0) {
-    return c.json({
-      error: 'Not all questions are accepted',
-      code: 'FINALIZE_NOT_ALLOWED',
-      details: { pendingCount, rejectedCount },
-    }, 422)
+    if (examRows[0]?.reviewMode === 'fast') {
+      // Fast mode: auto-accept all questions to honour the "20 soal auto-diterima" contract
+      await db.update(questions).set({ status: 'accepted' }).where(eq(questions.examId, id))
+    } else {
+      return c.json({
+        error: 'Not all questions are accepted',
+        code: 'FINALIZE_NOT_ALLOWED',
+        details: { pendingCount, rejectedCount },
+      }, 422)
+    }
   }
 
   await db

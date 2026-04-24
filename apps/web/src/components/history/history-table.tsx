@@ -114,7 +114,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
   }
 
   function handleEdit() {
-    void navigate({ to: '/generate', search: { examId: exam.id } })
+    void navigate({ to: '/review', search: { examId: exam.id, mode: exam.reviewMode } })
   }
 
   function handleDuplicate() {

@@ -473,8 +473,10 @@ test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
 })
 
 function makeExamWithCompleteMetadata(id = 'E'): ExamWithQuestions {
+  const base = makeExamWithQuestions(id)
   return {
-    ...makeExamWithQuestions(id),
+    ...base,
+    questions: base.questions.map((q) => ({ ...q, status: 'accepted' as const })),
     schoolName: 'SD Negeri 1',
     academicYear: '2025/2026',
     examType: 'formatif',
@@ -506,6 +508,65 @@ test('Preview Lembar click calls api.exams.finalize then navigates with examId',
   })
 
   finalizeSpy.mockRestore()
+})
+
+test('fast mode handlePreviewClick auto-accepts server-pending questions before calling finalize', async () => {
+  const user = userEvent.setup()
+  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
+  const patchSpy    = vi.spyOn(api.questions, 'patch').mockResolvedValue({} as never)
+
+  mockSearchParams = { mode: 'fast', examId: 'exam_fast_auto' }
+  // Complete metadata so Preview button is enabled, but questions still server-pending
+  const exam: ExamWithQuestions = {
+    ...makeExamWithCompleteMetadata('exam_fast_auto'),
+    questions: makeExamWithQuestions('exam_fast_auto').questions, // status: 'pending'
+  }
+  mockExamsGet.mockResolvedValueOnce(exam)
+  await getLoader()({ deps: { examId: 'exam_fast_auto' } })
+
+  renderReviewPage()
+
+  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  await user.click(previewButton)
+
+  await waitFor(() => {
+    expect(patchSpy).toHaveBeenCalledTimes(20)
+    expect(
+      patchSpy.mock.calls.every((c) => (c[1] as { status: string }).status === 'accepted'),
+    ).toBe(true)
+    expect(finalizeSpy).toHaveBeenCalledWith('exam_fast_auto')
+  })
+
+  finalizeSpy.mockRestore()
+  patchSpy.mockRestore()
+})
+
+test('slow mode handlePreviewClick does NOT auto-accept questions before finalize', async () => {
+  const user = userEvent.setup()
+  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
+  const patchSpy    = vi.spyOn(api.questions, 'patch').mockResolvedValue({} as never)
+
+  mockSearchParams = { mode: 'slow', examId: 'exam_slow_no_auto' }
+  const exam: ExamWithQuestions = {
+    ...makeExamWithCompleteMetadata('exam_slow_no_auto'),
+    questions: makeExamWithCompleteMetadata('exam_slow_no_auto').questions, // status: 'accepted'
+  }
+  mockExamsGet.mockResolvedValueOnce(exam)
+  await getLoader()({ deps: { examId: 'exam_slow_no_auto' } })
+
+  renderReviewPage()
+
+  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  await user.click(previewButton)
+
+  await waitFor(() => {
+    expect(finalizeSpy).toHaveBeenCalledWith('exam_slow_no_auto')
+  })
+  // No patch calls should be made for auto-accept in slow mode
+  expect(patchSpy.mock.calls.filter((c) => (c[1] as { status?: string }).status === 'accepted')).toHaveLength(0)
+
+  finalizeSpy.mockRestore()
+  patchSpy.mockRestore()
 })
 
 test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOWED', async () => {
