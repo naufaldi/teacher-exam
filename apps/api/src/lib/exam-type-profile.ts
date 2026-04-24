@@ -8,8 +8,10 @@ import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/sha
  * 20 (matches the fixed lembar size from PRD US-8).
  */
 export interface ExamTypeProfile {
-  /** Default distribution across difficulty buckets. Sum must equal 20. */
+  /** Baseline distribution across difficulty buckets. Use rescaleDifficultyDist() to scale to other totals. */
   difficultyDist: { mudah: number; sedang: number; sulit: number }
+  /** Default total number of questions for this exam type. */
+  defaultTotalSoal: number
   /** Bloom levels the model is allowed to emit for this jenis. */
   cognitiveLevels: ReadonlyArray<CognitiveLevel>
   /** One-line stem/style hint appended to the prompt. */
@@ -23,6 +25,7 @@ export interface ExamTypeProfile {
 export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   latihan: {
     difficultyDist: { mudah: 8, sedang: 8, sulit: 4 },
+    defaultTotalSoal: 20,
     cognitiveLevels: ['C1', 'C2', 'C3'],
     stemHint:
       'Gunakan konteks kehidupan sehari-hari siswa SD; soal eksploratif dan ramah.',
@@ -32,6 +35,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
   formatif: {
     difficultyDist: { mudah: 6, sedang: 10, sulit: 4 },
+    defaultTotalSoal: 20,
     cognitiveLevels: ['C1', 'C2', 'C3'],
     stemHint:
       'Soal berfokus pada satu topik; tonjolkan miskonsepsi umum siswa sebagai distractor.',
@@ -41,6 +45,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
   sts: {
     difficultyDist: { mudah: 6, sedang: 10, sulit: 4 },
+    defaultTotalSoal: 25,
     cognitiveLevels: ['C1', 'C2', 'C3'],
     stemHint:
       'Cakup variasi sub-topik dalam bab; sebagian soal berbasis stimulus singkat (1-2 kalimat).',
@@ -50,6 +55,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
   sas: {
     difficultyDist: { mudah: 4, sedang: 10, sulit: 6 },
+    defaultTotalSoal: 25,
     cognitiveLevels: ['C2', 'C3', 'C4'],
     stemHint:
       'Cakup seluruh topik semester; tambahkan beberapa soal dengan stimulus paragraf pendek (3-4 kalimat) untuk analisis.',
@@ -59,6 +65,7 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
   tka: {
     difficultyDist: { mudah: 3, sedang: 9, sulit: 8 },
+    defaultTotalSoal: 25,
     cognitiveLevels: ['C2', 'C3', 'C4'],
     stemHint:
       'Soal kontekstual / HOTS dengan stimulus berupa paragraf 3-5 kalimat, infografik sederhana, atau dialog. Distractor menggoda.',
@@ -90,5 +97,22 @@ export function resolveDifficultyDist(
     case 'sulit':
       return { mudah: 1, sedang: 3, sulit: 16 }
   }
+}
+
+/**
+ * Proportionally scale the baseline difficulty distribution of an exam type
+ * to any total number of questions. The last bucket (sulit) absorbs rounding
+ * remainder so the sum is always exactly `totalSoal`.
+ */
+export function rescaleDifficultyDist(
+  examType: keyof typeof EXAM_TYPE_PROFILE,
+  totalSoal: number,
+): { mudah: number; sedang: number; sulit: number } {
+  const base = EXAM_TYPE_PROFILE[examType].difficultyDist
+  const baseTotal = base.mudah + base.sedang + base.sulit
+  const mudah = Math.round((base.mudah / baseTotal) * totalSoal)
+  const sedang = Math.round((base.sedang / baseTotal) * totalSoal)
+  const sulit = totalSoal - mudah - sedang
+  return { mudah, sedang, sulit }
 }
 
