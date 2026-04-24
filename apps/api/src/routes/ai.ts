@@ -51,6 +51,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
       topic: input.topic,
+      // TODO(phase2-task5): replace with totalSoal from request input or profile default
       totalSoal: 20,
       curriculumText,
       classContext: input.classContext,
