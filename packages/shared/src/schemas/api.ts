@@ -21,6 +21,11 @@ export const GenerateExamInputSchema = Schema.Struct({
   classContext:     Schema.optional(Schema.String),
   pdfUploadId:      Schema.optional(Schema.String),
   exampleQuestions: Schema.optional(Schema.String),
+  composition:      Schema.optional(Schema.Struct({
+    mcqSingle: Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
+    mcqMulti:  Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
+    trueFalse: Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
+  })),
 })
 export type GenerateExamInput = typeof GenerateExamInputSchema.Type
 
