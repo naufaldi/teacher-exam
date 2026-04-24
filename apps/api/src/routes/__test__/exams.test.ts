@@ -26,7 +26,7 @@ vi.mock('drizzle-orm', () => ({
 
 import { db } from '@teacher-exam/db'
 import { examsRouter } from '../exams'
-import { makeChain, makeQuestionRow } from './helpers.js'
+import { makeChain, makeQuestionRow } from './helpers'
 
 // Fixed timestamp for testing
 const NOW = '2024-01-01T00:00:00.000Z'
