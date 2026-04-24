@@ -18,7 +18,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -35,7 +35,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'sulit',
       subjectLabel: 'Pendidikan Pancasila',
       grade: 5,
-      topic: 'Hak dan Kewajiban',
+      topics: ['Hak dan Kewajiban'],
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -52,7 +52,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -67,7 +67,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       curriculumText: FAKE_CURRICULUM,
     })
     expect(user).not.toContain('konteks_guru')
@@ -80,7 +80,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       curriculumText: FAKE_CURRICULUM,
       classContext: 'Anak-anak masih bingung membedakan teks persuasi.',
       exampleQuestions: 'Contoh: Bacalah teks berikut...',
@@ -88,5 +88,34 @@ describe('buildExamPrompt', () => {
     expect(user).toContain('konteks_guru')
     expect(user).toContain('teks persuasi')
     expect(user).toContain('contoh_soal')
+  })
+
+  it('injects all topics in the user message when multiple provided', () => {
+    const { user } = buildExamPrompt({
+      examType: 'sas',
+      difficulty: 'campuran',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 6,
+      topics: ['Teks Narasi', 'Puisi', 'Opini dan Fakta'],
+      curriculumText: FAKE_CURRICULUM,
+    })
+
+    expect(user).toContain('Teks Narasi')
+    expect(user).toContain('Puisi')
+    expect(user).toContain('Opini dan Fakta')
+    expect(user).toMatch(/merata|distribusikan/i)
+  })
+
+  it('works with a single topic (backward-compatible)', () => {
+    const { user } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'mudah',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: ['Kosakata'],
+      curriculumText: FAKE_CURRICULUM,
+    })
+
+    expect(user).toContain('Kosakata')
   })
 })
