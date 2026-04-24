@@ -62,7 +62,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     let generatedQuestions: ReadonlyArray<GeneratedQuestion>
     try {
-      generatedQuestions = await aiService.generate({ system, user })
+      generatedQuestions = await aiService.generate({ system, user, expectedCount: 20 /* TODO(phase2-task5): replace with resolved totalSoal */ })
     } catch (err) {
       if (err instanceof AiGenerationError) {
         return c.json({ error: 'AI generation failed', message: err.message }, 502)

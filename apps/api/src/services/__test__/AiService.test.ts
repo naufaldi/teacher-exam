@@ -104,3 +104,23 @@ describe('AiService.generate', () => {
     )
   })
 })
+
+describe('AiService.generate — expectedCount', () => {
+  it('throws AiGenerationError with both numbers when AI returns fewer questions than expectedCount', async () => {
+    const fiveQuestions = VALID_QUESTIONS.slice(0, 5)
+    const { client } = fakeClient(JSON.stringify(fiveQuestions))
+    const ai = createAiService({ client })
+    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 10 }).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(AiGenerationError)
+    expect((err as AiGenerationError).message).toContain('10')
+    expect((err as AiGenerationError).message).toContain('5')
+  })
+
+  it('resolves successfully when AI returns exactly expectedCount questions', async () => {
+    const tenQuestions = VALID_QUESTIONS.slice(0, 10)
+    const { client } = fakeClient(JSON.stringify(tenQuestions))
+    const ai = createAiService({ client })
+    const result = await ai.generate({ system: 's', user: 'u', expectedCount: 10 })
+    expect(result).toHaveLength(10)
+  })
+})

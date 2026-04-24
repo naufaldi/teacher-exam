@@ -24,6 +24,8 @@ export interface GenerateInput {
   user: string
   /** Optional PDF bytes — attached as a Claude `document` content block. */
   pdfBytes?: Buffer | undefined
+  /** Number of questions the AI is expected to return. Defaults to 20. */
+  expectedCount?: number | undefined
 }
 
 export interface AiService {
@@ -62,7 +64,7 @@ export function createAiService(config: AiServiceConfig): AiService {
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
 
   return {
-    async generate({ system, user, pdfBytes }) {
+    async generate({ system, user, pdfBytes, expectedCount }) {
       const content: Anthropic.ContentBlockParam[] = []
       if (pdfBytes) {
         content.push({
@@ -89,9 +91,10 @@ export function createAiService(config: AiServiceConfig): AiService {
       }
 
       const questions = parseAndValidate(firstBlock.text)
-      if (questions.length !== 20) {
+      const count = expectedCount ?? 20
+      if (questions.length !== count) {
         throw new AiGenerationError(
-          `Expected 20 questions, got ${questions.length}`,
+          `Expected ${count} questions, got ${questions.length}`,
         )
       }
       return questions
