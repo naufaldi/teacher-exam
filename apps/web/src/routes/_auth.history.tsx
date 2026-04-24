@@ -14,6 +14,8 @@ import {
   type SubjectFilter,
 } from '../components/history/index.js'
 import { api, ApiError } from '../lib/api.js'
+import { DuplicateConfirmDialog } from '../components/dashboard/duplicate-confirm-dialog.js'
+import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
 
 export const Route = createFileRoute('/_auth/history')({
   component: HistoryPage,
@@ -53,6 +55,7 @@ function sortExams(exams: ReadonlyArray<Exam>, order: SortOrder): Exam[] {
 function HistoryPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const duplicate = useDuplicateExam()
 
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,17 +96,6 @@ function HistoryPage() {
       toast({ variant: 'success', title: 'Lembar berhasil dihapus' })
     } catch (err: unknown) {
       const message = err instanceof ApiError ? err.message : 'Gagal menghapus lembar'
-      toast({ variant: 'error', title: message })
-    }
-  }
-
-  async function handleDuplicate(id: string) {
-    try {
-      const newExam = await api.exams.duplicate(id)
-      setExams((prev) => [newExam, ...prev])
-      toast({ variant: 'success', title: 'Lembar berhasil diduplikat' })
-    } catch (err: unknown) {
-      const message = err instanceof ApiError ? err.message : 'Gagal menduplikat lembar'
       toast({ variant: 'error', title: message })
     }
   }
@@ -220,7 +212,7 @@ function HistoryPage() {
             <HistoryTable
               exams={visibleExams}
               onDelete={handleDelete}
-              onDuplicate={handleDuplicate}
+              onDuplicate={duplicate.openFor}
             />
 
             <div className="flex items-center justify-between pt-1">
@@ -245,6 +237,16 @@ function HistoryPage() {
           </>
         )}
       </section>
+
+      {duplicate.confirmingExam && (
+        <DuplicateConfirmDialog
+          exam={duplicate.confirmingExam}
+          open={true}
+          onOpenChange={(open) => { if (!open) duplicate.close() }}
+          onConfirm={() => { void duplicate.confirm() }}
+          isPending={duplicate.isPending}
+        />
+      )}
     </div>
   )
 }

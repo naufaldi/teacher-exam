@@ -258,6 +258,46 @@ describe('POST /api/exams/:id/duplicate', () => {
     expect(body['status']).toBe('draft')
     expect(Array.isArray(body['questions'])).toBe(true)
   })
+
+  it('uses formatExamTitle for the cloned title, not the source verbatim title', async () => {
+    const examRow = makeExamRow({
+      title: 'Test Exam',
+      subject: 'bahasa_indonesia',
+      grade: 5,
+      examType: 'formatif',
+      examDate: null,
+      topic: 'Ide Pokok',
+    })
+    const questionRow = makeQuestionRow()
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      if (selectCount === 2) return makeChain([questionRow])
+      if (selectCount === 3) return makeChain([{ ...examRow, id: 'new-exam-id', status: 'draft' }])
+      return makeChain([{ ...questionRow, id: 'new-q-id', examId: 'new-exam-id' }])
+    })
+
+    const insertedValues: unknown[] = []
+    ;(db.insert as Mock).mockImplementation(() => {
+      const chain = makeChain([])
+      ;(chain['values'] as ReturnType<typeof vi.fn>).mockImplementation((vals: unknown) => {
+        insertedValues.push(vals)
+        return chain
+      })
+      return chain
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/duplicate', { method: 'POST' })
+    expect(res.status).toBe(201)
+
+    // The first insert is the exam row — its title must NOT be the source verbatim title
+    const examInsert = insertedValues[0] as Record<string, unknown>
+    expect(examInsert['title']).not.toBe('Test Exam')
+    expect(examInsert['title']).toBe('Bahasa Indonesia / Kelas 5 / formatif')
+  })
 })
 
 describe('POST /api/exams/:id/finalize', () => {

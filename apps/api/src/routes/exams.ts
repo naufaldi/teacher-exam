@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import { Schema } from 'effect'
 import { eq, and, desc } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
-import { UpdateExamInputSchema } from '@teacher-exam/shared'
-import type { ExamWithQuestions } from '@teacher-exam/shared'
+import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
+import type { ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
 import { toExam, toQuestion, fetchExamWithQuestions } from '../lib/exams-query'
 
 export const examsRouter = new Hono()
@@ -156,10 +156,18 @@ examsRouter.post('/:id/duplicate', async (c) => {
   const newExamId = crypto.randomUUID()
 
   // Insert new exam
+  const newTitle = formatExamTitle({
+    subjectLabel: SUBJECT_LABEL[examRow.subject as ExamSubject] ?? examRow.subject,
+    grade: examRow.grade,
+    examType: examRow.examType ?? '',
+    examDate: examRow.examDate ?? null,
+    topic: examRow.topic,
+  })
+
   await db.insert(exams).values({
     id:              newExamId,
     userId:          examRow.userId,
-    title:           examRow.title,
+    title:           newTitle,
     subject:         examRow.subject,
     grade:           examRow.grade,
     difficulty:      examRow.difficulty,

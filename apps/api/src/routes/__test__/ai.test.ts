@@ -266,4 +266,43 @@ describe('POST /api/ai/generate', () => {
     expect(db.transaction).not.toHaveBeenCalled()
     expect(db.insert).not.toHaveBeenCalled()
   })
+
+  it('uses formatExamTitle unified format for the generated exam title', async () => {
+    const examRow = makeExamRow({ examType: 'formatif', examDate: null, topic: 'Teks Narasi' })
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    )
+
+    const insertedValues: unknown[] = []
+    ;(db.insert as Mock).mockImplementation(() => {
+      const chain = makeChain([])
+      ;(chain['values'] as ReturnType<typeof vi.fn>).mockImplementation((vals: unknown) => {
+        insertedValues.push(vals)
+        return chain
+      })
+      return chain
+    })
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = buildTestApp()
+    await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_BODY),
+    })
+
+    const examInsert = insertedValues[0] as Record<string, unknown>
+    // Must be unified format, NOT the old "· Kelas ·" format
+    expect(examInsert['title']).not.toContain('·')
+    expect(examInsert['title']).toBe('Bahasa Indonesia / Kelas 6 / formatif')
+  })
 })

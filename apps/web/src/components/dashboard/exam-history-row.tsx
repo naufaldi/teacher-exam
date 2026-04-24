@@ -1,5 +1,6 @@
 import type { Exam } from '@teacher-exam/shared'
 import { MoreHorizontal } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 import { Badge, Button } from '@teacher-exam/ui'
 
 interface SubjectMeta {
@@ -37,11 +38,34 @@ function formatShortDate(dateStr: string): string {
 
 interface ExamHistoryRowProps {
   exam: Exam
+  onDuplicate?: (exam: Exam) => void
 }
 
-function ExamHistoryRow({ exam }: ExamHistoryRowProps) {
+function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
+  const navigate = useNavigate()
   const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
   const isFinal = exam.status === 'final'
+
+  function handleEdit() {
+    void navigate({
+      to: '/review',
+      search: { examId: exam.id, mode: exam.reviewMode },
+    })
+  }
+
+  function handlePrint() {
+    void navigate({ to: '/preview', search: { examId: exam.id } })
+  }
+
+  function handleCorrect() {
+    void navigate({ to: '/review', search: { examId: exam.id, mode: 'fast' } })
+  }
+
+  function handleDuplicate() {
+    if (onDuplicate) {
+      onDuplicate(exam)
+    }
+  }
 
   return (
     <div className="grid items-center px-5 py-3.5 border-b border-border-default last:border-b-0 hover:bg-kertas-50 transition-colors duration-[120ms] grid-cols-[2.4fr_1fr_0.8fr] lg:grid-cols-[2.4fr_1fr_0.8fr_0.9fr_1.2fr]">
@@ -84,16 +108,16 @@ function ExamHistoryRow({ exam }: ExamHistoryRowProps) {
       <div className="hidden lg:flex justify-end gap-1.5">
         {isFinal ? (
           <>
-            <Button variant="secondary" size="sm">Cetak</Button>
-            <Button variant="secondary" size="sm">Koreksi</Button>
+            <Button variant="secondary" size="sm" onClick={handlePrint}>Cetak</Button>
+            <Button variant="secondary" size="sm" onClick={handleCorrect}>Koreksi</Button>
           </>
         ) : (
           <>
-            <Button variant="secondary" size="sm">Edit</Button>
-            <Button variant="secondary" size="sm">Duplikat</Button>
+            <Button variant="secondary" size="sm" onClick={handleEdit}>Edit</Button>
+            <Button variant="secondary" size="sm" onClick={handleDuplicate}>Duplikat</Button>
           </>
         )}
-        <Button variant="ghost" size="icon" aria-label="Menu lain">
+        <Button variant="ghost" size="icon" aria-label="Aksi lain">
           <MoreHorizontal size={14} />
         </Button>
       </div>
