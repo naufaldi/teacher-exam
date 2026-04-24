@@ -24,8 +24,8 @@ export interface GenerateInput {
   user: string
   /** Optional PDF bytes — attached as a Claude `document` content block. */
   pdfBytes?: Buffer | undefined
-  /** Number of questions the AI is expected to return. Defaults to 20. */
-  expectedCount?: number | undefined
+  /** Number of questions the AI is expected to return. */
+  expectedCount: number
 }
 
 export interface AiService {
@@ -91,10 +91,9 @@ export function createAiService(config: AiServiceConfig): AiService {
       }
 
       const questions = parseAndValidate(firstBlock.text)
-      const count = expectedCount ?? 20
-      if (questions.length !== count) {
+      if (questions.length !== expectedCount) {
         throw new AiGenerationError(
-          `Expected ${count} questions, got ${questions.length}`,
+          `Expected ${expectedCount} questions, got ${questions.length}`,
         )
       }
       return questions
