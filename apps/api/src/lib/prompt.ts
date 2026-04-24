@@ -90,7 +90,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     composition_soal: {
       mcq_single: input.composition.mcqSingle,
       mcq_multi: input.composition.mcqMulti,
-      benar_salah: input.composition.trueFalse,
+      true_false: input.composition.trueFalse,
     },
   }
   if (input.classContext && input.classContext.trim() !== '') {
