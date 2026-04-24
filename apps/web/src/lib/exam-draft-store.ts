@@ -75,10 +75,10 @@ export const examDraftStore = {
     emit()
   },
 
-  updateQuestion(id: string, patch: Partial<Question>) {
+  updateQuestion(id: string, replacement: Question) {
     state = {
       ...state,
-      questions: state.questions.map((q) => (q.id === id ? { ...q, ...patch } : q)),
+      questions: state.questions.map((q) => (q.id === id ? replacement : q)),
     }
     emit()
   },

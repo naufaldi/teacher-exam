@@ -80,15 +80,13 @@ function makeExamWithQuestions(id = 'exam_123'): ExamWithQuestions {
     createdAt: NOW,
     updatedAt: NOW,
     questions: Array.from({ length: 20 }, (_, i) => ({
+      _tag: 'mcq_single' as const,
       id: `q-${i + 1}`,
       examId: id,
       number: i + 1,
       text: `Question ${i + 1}`,
-      optionA: 'A',
-      optionB: 'B',
-      optionC: 'C',
-      optionD: 'D',
-      correctAnswer: 'a' as const,
+      options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+      correct: 'a' as const,
       topic: 'Teks Narasi',
       difficulty: 'sedang',
       status: 'pending' as const,
@@ -218,7 +216,7 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
     await user.click(saveButton)
 
     await waitFor(() => {
-      expect(patchSpy).toHaveBeenCalledWith('q-1', { text: 'Teks yang gagal' })
+      expect(patchSpy).toHaveBeenCalledWith('q-1', expect.objectContaining({ text: 'Teks yang gagal' }))
     })
 
     // After failure, the store should have been reverted to the original text
@@ -237,15 +235,13 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
     await getLoader()({ deps: { examId: 'exam_edit' } })
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_edit',
       number: 1,
       text: 'Teks baru',
-      optionA: 'A',
-      optionB: 'B',
-      optionC: 'C',
-      optionD: 'D',
-      correctAnswer: 'a' as const,
+      options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+      correct: 'a' as const,
       topic: null,
       difficulty: null,
       status: 'accepted' as const,
@@ -267,7 +263,7 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
     await user.click(saveButton)
 
     await waitFor(() => {
-      expect(patchSpy).toHaveBeenCalledWith('q-1', { text: 'Teks baru' })
+      expect(patchSpy).toHaveBeenCalledWith('q-1', expect.objectContaining({ text: 'Teks baru' }))
     })
 
     patchSpy.mockRestore()
@@ -282,15 +278,13 @@ describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => 
     await getLoader()({ deps: { examId: 'exam_terima' } })
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_terima',
       number: 1,
       text: 'Question 1',
-      optionA: 'A',
-      optionB: 'B',
-      optionC: 'C',
-      optionD: 'D',
-      correctAnswer: 'a' as const,
+      options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+      correct: 'a' as const,
       topic: null,
       difficulty: null,
       status: 'accepted' as const,
@@ -318,15 +312,13 @@ describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => 
     await getLoader()({ deps: { examId: 'exam_terima_semua' } })
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_terima_semua',
       number: 1,
       text: 'Question 1',
-      optionA: 'A',
-      optionB: 'B',
-      optionC: 'C',
-      optionD: 'D',
-      correctAnswer: 'a' as const,
+      options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+      correct: 'a' as const,
       topic: null,
       difficulty: null,
       status: 'accepted' as const,
@@ -363,15 +355,13 @@ describe('ReviewPage — Terima Semua partial failure reverts failed statuses', 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockImplementation((id) => {
       if (id === 'q-2') return Promise.reject(new Error('Network error'))
       return Promise.resolve({
+        _tag: 'mcq_single' as const,
         id,
         examId: 'exam_partial_fail',
         number: 1,
         text: 'Question',
-        optionA: 'A',
-        optionB: 'B',
-        optionC: 'C',
-        optionD: 'D',
-        correctAnswer: 'a' as const,
+        options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+        correct: 'a' as const,
         topic: null,
         difficulty: null,
         status: 'accepted' as const,
@@ -594,4 +584,168 @@ test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOW
   })
 
   finalizeSpy.mockRestore()
+})
+
+// ── Task 13 — Multi-question type tests ────────────────────────────────────
+
+function makeExamWithMixedTypes(id = 'exam_mixed') {
+  const base = {
+    id,
+    userId: 'user_1',
+    title: 'Mixed Types Exam',
+    subject: 'bahasa_indonesia' as const,
+    grade: 6,
+    difficulty: 'sedang' as const,
+    topic: 'Teks',
+    reviewMode: 'fast' as const,
+    status: 'draft' as const,
+    schoolName: null,
+    academicYear: null,
+    examType: 'formatif',
+    examDate: null,
+    durationMinutes: null,
+    instructions: null,
+    classContext: null,
+    discussionMd: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+  }
+  return {
+    ...base,
+    questions: [
+      {
+        _tag: 'mcq_multi' as const,
+        id: 'q-multi-1',
+        examId: id,
+        number: 1,
+        text: 'Multi question',
+        options: { a: 'Option A', b: 'Option B', c: 'Option C', d: 'Option D' },
+        correct: ['a', 'c'] as unknown as McqMultiCorrect,
+        topic: null,
+        difficulty: null,
+        status: 'pending' as const,
+        validationStatus: null,
+        validationReason: null,
+        createdAt: NOW,
+      },
+      {
+        _tag: 'true_false' as const,
+        id: 'q-tf-1',
+        examId: id,
+        number: 2,
+        text: 'True/False question',
+        statements: [
+          { text: 'Statement 1', answer: true },
+          { text: 'Statement 2', answer: false },
+          { text: 'Statement 3', answer: true },
+        ] as unknown as TfStatements,
+        topic: null,
+        difficulty: null,
+        status: 'pending' as const,
+        validationStatus: null,
+        validationReason: null,
+        createdAt: NOW,
+      },
+    ],
+  }
+}
+
+// Type aliases to satisfy strict MinItems/MaxItems branded arrays
+type McqMultiCorrect = readonly ['a' | 'b' | 'c' | 'd', ...('a' | 'b' | 'c' | 'd')[]] & { readonly length: 2 | 3 }
+type TfStatements = readonly [{ readonly text: string; readonly answer: boolean }, { readonly text: string; readonly answer: boolean }, { readonly text: string; readonly answer: boolean }]
+
+describe('ReviewPage — Task 13: Fast mode badges show correct label per type', () => {
+  it('mcq_multi question badge shows "A, C"', async () => {
+    mockSearchParams = { mode: 'fast', examId: 'exam_mixed' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed') as ExamWithQuestions)
+    await getLoader()({ deps: { examId: 'exam_mixed' } })
+
+    renderReviewPage()
+
+    expect(screen.getByText('A, C')).toBeInTheDocument()
+  })
+
+  it('true_false question badge shows "B, S, B"', async () => {
+    mockSearchParams = { mode: 'fast', examId: 'exam_mixed2' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed2') as ExamWithQuestions)
+    await getLoader()({ deps: { examId: 'exam_mixed2' } })
+
+    renderReviewPage()
+
+    expect(screen.getByText('B, S, B')).toBeInTheDocument()
+  })
+})
+
+describe('ReviewPage — Task 13: Slow mode card highlights correctly', () => {
+  it('mcq_multi card highlights both correct letters A and C', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_mixed_slow' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed_slow') as ExamWithQuestions)
+    await getLoader()({ deps: { examId: 'exam_mixed_slow' } })
+
+    renderReviewPage()
+
+    // Both correct options should have success styling (rendered with data-testid)
+    const optionA = screen.getByTestId('slow-option-a-q-multi-1')
+    const optionC = screen.getByTestId('slow-option-c-q-multi-1')
+    expect(optionA).toHaveClass('bg-success-bg')
+    expect(optionC).toHaveClass('bg-success-bg')
+  })
+
+  it('true_false card shows 3 statement rows with B/S indicators', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_mixed_slow2' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed_slow2') as ExamWithQuestions)
+    await getLoader()({ deps: { examId: 'exam_mixed_slow2' } })
+
+    renderReviewPage()
+
+    // Each statement row should show B or S
+    expect(screen.getAllByText('B')).toHaveLength(2)
+    expect(screen.getAllByText('S')).toHaveLength(1)
+  })
+})
+
+describe('ReviewPage — Task 13: Edit dialog save fires api.questions.patch with typed payload', () => {
+  it('mcq_multi edit save sends {_tag:"mcq_multi", correct:[...]} to patch', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'fast', examId: 'exam_multi_edit' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_multi_edit') as ExamWithQuestions)
+    await getLoader()({ deps: { examId: 'exam_multi_edit' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      _tag: 'mcq_multi' as const,
+      id: 'q-multi-1',
+      examId: 'exam_multi_edit',
+      number: 1,
+      text: 'Multi question updated',
+      options: { a: 'Option A', b: 'Option B', c: 'Option C', d: 'Option D' },
+      correct: ['a', 'c'] as unknown as McqMultiCorrect,
+      topic: null,
+      difficulty: null,
+      status: 'accepted' as const,
+      validationStatus: null,
+      validationReason: null,
+      createdAt: NOW,
+    } as ExamWithQuestions['questions'][number])
+
+    renderReviewPage()
+
+    const editButton = screen.getByRole('button', { name: 'Edit cepat soal 1' })
+    await user.click(editButton)
+
+    const textArea = await screen.findByLabelText(/teks soal/i)
+    await user.clear(textArea)
+    await user.type(textArea, 'Multi question updated')
+
+    const saveButton = screen.getByRole('button', { name: /simpan perubahan/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        'q-multi-1',
+        expect.objectContaining({ _tag: 'mcq_multi', text: 'Multi question updated' }),
+      )
+    })
+
+    patchSpy.mockRestore()
+  })
 })

@@ -24,9 +24,10 @@ import {
   useToast,
   DatePicker,
 } from '@teacher-exam/ui'
-import type { ExamType, Question, UpdateExamInput, UpdateQuestionInput } from '@teacher-exam/shared'
+import type { ExamType, Question, UpdateExamInput } from '@teacher-exam/shared'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
+import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
 import { RejectConfirmDialog } from '../components/review/reject-confirm-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
@@ -197,31 +198,46 @@ function ReviewPage() {
   const handleEditSave = async (updated: Question) => {
     const original = questions.find((q) => q.id === updated.id)
     if (!original) return
-    const diffMut: {
-      text?: string
-      optionA?: string
-      optionB?: string
-      optionC?: string
-      optionD?: string
-      correctAnswer?: 'a' | 'b' | 'c' | 'd'
-    } = {}
-    if (updated.text          !== original.text)          diffMut.text          = updated.text
-    if (updated.optionA       !== original.optionA)       diffMut.optionA       = updated.optionA
-    if (updated.optionB       !== original.optionB)       diffMut.optionB       = updated.optionB
-    if (updated.optionC       !== original.optionC)       diffMut.optionC       = updated.optionC
-    if (updated.optionD       !== original.optionD)       diffMut.optionD       = updated.optionD
-    if (updated.correctAnswer !== original.correctAnswer) diffMut.correctAnswer = updated.correctAnswer
-    const diff: UpdateQuestionInput = diffMut
-    setEditingId(null)
-    if (Object.keys(diff).length === 0) return
 
-    examDraftStore.updateQuestion(updated.id, updated)
+    const diff = matchQuestion(updated, {
+      mcq_single: (u) => {
+        const o = original as typeof u
+        const d: Record<string, unknown> = { _tag: 'mcq_single' }
+        if (u.text !== o.text) d['text'] = u.text
+        if (u.correct !== o.correct) d['correct'] = u.correct
+        if (JSON.stringify(u.options) !== JSON.stringify(o.options)) d['options'] = u.options
+        return d
+      },
+      mcq_multi: (u) => {
+        const o = original as typeof u
+        const d: Record<string, unknown> = { _tag: 'mcq_multi' }
+        if (u.text !== o.text) d['text'] = u.text
+        if (JSON.stringify(u.correct) !== JSON.stringify(o.correct)) d['correct'] = u.correct
+        if (JSON.stringify(u.options) !== JSON.stringify(o.options)) d['options'] = u.options
+        return d
+      },
+      true_false: (u) => {
+        const o = original as typeof u
+        const d: Record<string, unknown> = { _tag: 'true_false' }
+        if (u.text !== o.text) d['text'] = u.text
+        if (JSON.stringify(u.statements) !== JSON.stringify(o.statements)) d['statements'] = u.statements
+        return d
+      },
+    })
+
+    // Only _tag means no actual changes
+    const hasChanges = Object.keys(diff).filter((k) => k !== '_tag').length > 0
+
+    setEditingId(null)
+    if (!hasChanges) return
+
+    examDraftStore.replaceQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
     try {
-      const server = await api.questions.patch(updated.id, diff)
-      examDraftStore.updateQuestion(server.id, server)
+      const server = await api.questions.patch(updated.id, diff as Parameters<typeof api.questions.patch>[1])
+      examDraftStore.replaceQuestion(server.id, server)
     } catch (err) {
-      examDraftStore.updateQuestion(updated.id, original)
+      examDraftStore.replaceQuestion(updated.id, original)
       toast({
         variant: 'error',
         title: 'Gagal menyimpan perubahan',
@@ -374,7 +390,7 @@ function ReviewPage() {
                   {q.text.split('\n')[0]}
                 </p>
                 <span className="font-mono text-caption bg-bg-muted px-1.5 py-0.5 rounded-xs shrink-0">
-                  {q.correctAnswer.toUpperCase()}
+                  {questionCorrectLabel(q)}
                 </span>
                 {q.topic && (
                   <Badge variant="secondary" className="text-caption shrink-0">
@@ -456,25 +472,66 @@ function ReviewPage() {
                       )}
                     </div>
                     <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
-                    <div className="grid grid-cols-2 gap-1 mb-4">
-                      {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                        <div
-                          key={letter}
-                          className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
-                            q.correctAnswer === letter
-                              ? 'bg-success-bg text-success-fg font-medium'
-                              : 'text-text-secondary'
-                          }`}
-                        >
-                          <span className="font-mono text-caption shrink-0">
-                            {letter.toUpperCase()}.
-                          </span>
-                          <span>
-                            {q[`option${letter.toUpperCase() as 'A' | 'B' | 'C' | 'D'}`]}
-                          </span>
+                    {matchQuestion(q, {
+                      mcq_single: (sq) => (
+                        <div className="grid grid-cols-2 gap-1 mb-4">
+                          {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                            <div
+                              key={letter}
+                              data-testid={`slow-option-${letter}-${sq.id}`}
+                              className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
+                                sq.correct === letter
+                                  ? 'bg-success-bg text-success-fg font-medium'
+                                  : 'text-text-secondary'
+                              }`}
+                            >
+                              <span className="font-mono text-caption shrink-0">
+                                {letter.toUpperCase()}.
+                              </span>
+                              <span>{sq.options[letter]}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      ),
+                      mcq_multi: (mq) => (
+                        <div className="grid grid-cols-2 gap-1 mb-4">
+                          {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                            <div
+                              key={letter}
+                              data-testid={`slow-option-${letter}-${mq.id}`}
+                              className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
+                                mq.correct.includes(letter)
+                                  ? 'bg-success-bg text-success-fg font-medium'
+                                  : 'text-text-secondary'
+                              }`}
+                            >
+                              <span className="font-mono text-caption shrink-0">
+                                {letter.toUpperCase()}.
+                              </span>
+                              <span>{mq.options[letter]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ),
+                      true_false: (tf) => (
+                        <div className="space-y-2 mb-4">
+                          {tf.statements.map((s, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-3 px-3 py-2 rounded-xs border border-border-default"
+                            >
+                              <span className="font-mono text-caption shrink-0 w-5">{idx + 1}.</span>
+                              <span className="flex-1 text-body-sm text-text-primary">{s.text}</span>
+                              <span className={`font-mono font-semibold text-body-sm px-2 py-0.5 rounded-xs ${
+                                s.answer ? 'bg-success-bg text-success-fg' : 'bg-danger-bg text-danger-fg'
+                              }`}>
+                                {s.answer ? 'B' : 'S'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ),
+                    })}
                     <div className="flex gap-2">
                       <Button
                         size="sm"
