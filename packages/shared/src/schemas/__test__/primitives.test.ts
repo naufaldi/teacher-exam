@@ -49,6 +49,11 @@ describe('MultiAnswerSchema', () => {
     expect(Either.isRight(result)).toBe(true)
   })
 
+  test("rejects [] (below min 2)", () => {
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)([])
+    expect(Either.isLeft(result)).toBe(true)
+  })
+
   test("rejects ['a'] (below min 2)", () => {
     const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a'])
     expect(Either.isLeft(result)).toBe(true)
@@ -56,6 +61,11 @@ describe('MultiAnswerSchema', () => {
 
   test("rejects ['a','a'] (duplicate letters)", () => {
     const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'a'])
+    expect(Either.isLeft(result)).toBe(true)
+  })
+
+  test("rejects ['a','e'] (invalid letter in array)", () => {
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'e'])
     expect(Either.isLeft(result)).toBe(true)
   })
 
