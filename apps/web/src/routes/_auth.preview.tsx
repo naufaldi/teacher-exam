@@ -84,10 +84,12 @@ function triggerPrint(scope: PrintScope) {
 function PreviewPage() {
   const navigate = useNavigate()
   const draft = useExamDraft()
+  const exam = Route.useLoaderData()
   const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua'>('semua')
 
   const { questions, metadata, subject, grade } = draft
   const subjectLabel = SUBJECT_LABELS[subject] ?? subject
+  const topicsLabel = exam?.topics?.join(' · ') ?? ''
 
   return (
     <div className="space-y-6">
@@ -174,9 +176,9 @@ function PreviewPage() {
 
       {/* Preview content — all sections always rendered; screen visibility controlled via data-screen-tab */}
       <div data-print-content data-screen-tab={tab} className="space-y-6">
-        <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} />
-        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} />
-        <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} />
+        <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
+        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} topicsLabel={topicsLabel} />
+        <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} topicsLabel={topicsLabel} />
       </div>
     </div>
   )
@@ -205,10 +207,12 @@ function PaperHeader({
   metadata,
   subjectLabel,
   grade,
+  topicsLabel,
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number }
   subjectLabel: string
   grade: number
+  topicsLabel: string
 }) {
   return (
     <>
@@ -227,6 +231,7 @@ function PaperHeader({
         <p>Hari/Tanggal : {metadata.examDate || '......................'}</p>
         <p>Kelas : {grade} SD</p>
         <p>Waktu : {metadata.durationMinutes || 60} menit</p>
+        {topicsLabel ? <p className="col-span-2">Materi : {topicsLabel}</p> : null}
       </div>
     </>
   )
@@ -237,16 +242,18 @@ function SoalSection({
   subjectLabel,
   grade,
   questions,
+  topicsLabel,
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number; instructions: string }
   subjectLabel: string
   grade: number
   questions: Question[]
+  topicsLabel: string
 }) {
   return (
     <div data-print-section="soal">
       <PaperFrame>
-        <PaperHeader metadata={metadata} subjectLabel={subjectLabel} grade={grade} />
+        <PaperHeader metadata={metadata} subjectLabel={subjectLabel} grade={grade} topicsLabel={topicsLabel} />
 
         {/* Petunjuk */}
         {metadata.instructions ? (
@@ -292,11 +299,13 @@ function LembarJawabanSection({
   subjectLabel,
   grade,
   count,
+  topicsLabel,
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number }
   subjectLabel: string
   grade: number
   count: number
+  topicsLabel: string
 }) {
   const numbers = Array.from({ length: count }, (_, i) => i + 1)
   const left = numbers.slice(0, Math.ceil(count / 2))
@@ -313,6 +322,7 @@ function LembarJawabanSection({
           <p className="text-sm">
             {kopLabelFor(metadata.examType)} · {subjectLabel} — Kelas {grade} SD
           </p>
+          {topicsLabel ? <p className="text-sm">{topicsLabel}</p> : null}
         </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-5">
           <p>Nama : ............................................</p>
@@ -369,11 +379,13 @@ function KunciSection({
   grade,
   questions,
   examType,
+  topicsLabel,
 }: {
   subjectLabel: string
   grade: number
   questions: Question[]
   examType: string
+  topicsLabel: string
 }) {
   return (
     <div data-print-section="kunci" className="print-break-before">
@@ -383,6 +395,7 @@ function KunciSection({
           <p className="text-sm mt-1">
             {examType} {subjectLabel} — Kelas {grade} SD
           </p>
+          {topicsLabel ? <p className="text-sm mt-0.5">{topicsLabel}</p> : null}
         </div>
         <div className="grid grid-cols-5 gap-3 text-sm">
           {questions.map((q) => (
