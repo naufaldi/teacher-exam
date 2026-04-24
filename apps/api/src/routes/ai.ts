@@ -8,6 +8,7 @@ import {
   SUBJECT_LABEL,
 } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
+import { EXAM_TYPE_PROFILE } from '../lib/exam-type-profile'
 import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
 import {
@@ -44,6 +45,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     const input = parsed.right
 
     const examType = normalizeExamType(input.examType ?? 'formatif')
+    const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
     const curriculumText = await getCurriculumText(input.subject, input.grade)
     const { system, user } = buildExamPrompt({
       examType,
@@ -51,8 +53,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
       topic: input.topic,
-      // TODO(phase2-task5): replace with totalSoal from request input or profile default
-      totalSoal: 20,
+      totalSoal,
       curriculumText,
       classContext: input.classContext,
       exampleQuestions: input.exampleQuestions,
@@ -62,8 +63,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     let generatedQuestions: ReadonlyArray<GeneratedQuestion>
     try {
-      // TODO(phase2-task5): replace with resolved totalSoal
-      generatedQuestions = await aiService.generate({ system, user, expectedCount: 20 })
+      generatedQuestions = await aiService.generate({ system, user, expectedCount: totalSoal })
     } catch (err) {
       if (err instanceof AiGenerationError) {
         return c.json({ error: 'AI generation failed', message: err.message }, 502)
