@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import {
   Sparkles,
   FolderOpen,
@@ -8,29 +8,25 @@ import {
   Copy,
   CalendarDays,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button, Badge } from '@teacher-exam/ui'
-import {
-  getMockExams,
-  MOCK_DASHBOARD_STATS,
-  MOCK_WEEKLY_ACTIVITY,
-} from '../lib/mock-data.js'
-import {
-  StatSummary,
-  MiniPaperPreview,
-  CurriculumTipsCard,
-  ExamHistoryRow,
-} from '../components/dashboard/index.js'
+import { api } from '../lib/api.js'
+import { computeStats, computeWeeklyActivity, getRecentSheets } from '../lib/dashboard-selectors.js'
+import { StatSummary } from '../components/dashboard/stat-summary.js'
+import { MiniPaperPreview } from '../components/dashboard/mini-paper-preview.js'
+import { CurriculumTipsCard } from '../components/dashboard/curriculum-tips-card.js'
+import { ExamHistoryRow } from '../components/dashboard/exam-history-row.js'
+import { DuplicateConfirmDialog } from '../components/dashboard/duplicate-confirm-dialog.js'
+import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
 
 export const Route = createFileRoute('/_auth/dashboard')({
+  loader: async () => ({ exams: await api.exams.list() }),
+  pendingComponent: DashboardSkeleton,
+  errorComponent: DashboardError,
   component: DashboardPage,
 })
 
 // ── Module-level helpers (hoisted to avoid recreation on each render) ─────────
-
-const SUBJECT_LABELS: Record<string, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-}
 
 function getGreetingTime(): string {
   const h = new Date().getHours()
@@ -74,6 +70,7 @@ const ACTION_CARDS = [
     cta: 'Mulai generate',
     kbd: 'G',
     cardBg: 'bg-gradient-to-b from-white to-primary-50 border-primary-100',
+    disabled: false,
   },
   {
     id: 'history',
@@ -89,10 +86,11 @@ const ACTION_CARDS = [
     cta: 'Buka riwayat',
     kbd: null,
     cardBg: 'bg-bg-surface border-border-default',
+    disabled: false,
   },
   {
     id: 'review',
-    to: '/dashboard' as const, // /review requires search params — navigated via button onClick
+    to: '/dashboard' as const,
     variant: 'accent' as const,
     iconBg: 'bg-accent-50',
     iconColor: 'text-accent-700',
@@ -104,16 +102,56 @@ const ACTION_CARDS = [
     cta: 'Mulai koreksi',
     kbd: null,
     cardBg: 'bg-bg-surface border-border-default',
+    disabled: true,
   },
 ] as const
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-10 animate-pulse">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
+        <div className="h-52 rounded-lg bg-kertas-100" />
+        <div className="h-52 rounded-lg bg-kertas-100" />
+      </div>
+      <div className="h-10 w-60 rounded bg-kertas-100" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="h-48 rounded-md bg-kertas-100" />
+        <div className="h-48 rounded-md bg-kertas-100" />
+        <div className="h-48 rounded-md bg-kertas-100" />
+      </div>
+      <div className="h-64 rounded-md bg-kertas-100" />
+      <div className="h-48 rounded-md bg-kertas-100" />
+    </div>
+  )
+}
+
+function DashboardError({ error }: { error: Error }) {
+  const router = useRouter()
+  return (
+    <div className="py-20 text-center space-y-3">
+      <p className="text-body text-danger-700">
+        {error.message || 'Gagal memuat data dashboard'}
+      </p>
+      <Button variant="secondary" size="sm" onClick={() => void router.invalidate()}>
+        Coba lagi
+      </Button>
+    </div>
+  )
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 function DashboardPage() {
   const { user } = Route.useRouteContext()
+  const { exams } = Route.useLoaderData()
   const navigate = useNavigate()
-  const exams = getMockExams()
-  const lastExam = exams[0]
+  const duplicate = useDuplicateExam()
+
+  const stats = useMemo(() => computeStats(exams), [exams])
+  const weekly = useMemo(() => computeWeeklyActivity(exams, new Date()), [exams])
+  const recent = useMemo(() => getRecentSheets(exams, 5), [exams])
+  const lastExam = recent[0] ?? null
+
   const firstName = user.name.split(' ')[0] ?? user.name
   const greeting = getGreetingTime()
 
@@ -127,7 +165,6 @@ function DashboardPage() {
       >
         {/* Greeting card */}
         <div className="relative overflow-hidden rounded-lg border border-border-default bg-white p-7">
-          {/* Subtle red radial wash top-left */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -150,7 +187,6 @@ function DashboardPage() {
               otomatis — Anda cukup pilih kelas, mata pelajaran, dan topik.
             </p>
 
-            {/* Chips row */}
             <div className="mt-5 flex flex-wrap gap-2">
               <Badge variant="pill">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary-600 inline-block" />
@@ -165,7 +201,6 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Decorative kop-stamp watermark */}
           <img
             src="/assets/kop-stamp.svg"
             alt=""
@@ -175,7 +210,7 @@ function DashboardPage() {
         </div>
 
         {/* Stats card */}
-        <StatSummary stats={MOCK_DASHBOARD_STATS} weeklyActivity={MOCK_WEEKLY_ACTIVITY} />
+        <StatSummary stats={stats} weeklyActivity={weekly} />
       </section>
 
       {/* ── Section 2: Primary Actions ──────────────────────────────────── */}
@@ -191,13 +226,8 @@ function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {ACTION_CARDS.map((card) => {
             const Icon = card.icon
-            return (
-              <Link
-                key={card.id}
-                to={card.to}
-                className={`group relative flex flex-col p-6 rounded-md border overflow-hidden cursor-pointer transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-md hover:border-primary-200 ${card.cardBg}`}
-              >
-                {/* Radial glow on primary card */}
+            const cardContent = (
+              <>
                 {card.variant === 'primary' ? (
                   <div
                     className="pointer-events-none absolute -right-10 -top-10 w-40 h-40"
@@ -208,11 +238,17 @@ function DashboardPage() {
                   />
                 ) : null}
 
-                {/* Icon */}
-                <div
-                  className={`w-11 h-11 rounded-[12px] flex items-center justify-center mb-4 ${card.iconBg} ${card.iconColor}`}
-                >
-                  <Icon size={22} />
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className={`w-11 h-11 rounded-[12px] flex items-center justify-center ${card.iconBg} ${card.iconColor}`}
+                  >
+                    <Icon size={22} />
+                  </div>
+                  {card.disabled ? (
+                    <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-kertas-100 text-text-tertiary border border-border-default">
+                      Segera hadir
+                    </span>
+                  ) : null}
                 </div>
 
                 <h3 className="text-h3 font-semibold text-text-primary mb-1">
@@ -228,13 +264,37 @@ function DashboardPage() {
                   {card.description}
                 </p>
 
-                <span className={`mt-5 inline-flex items-center gap-1.5 text-body-sm font-semibold ${card.ctaColor}`}>
-                  {card.cta}
-                  <ArrowRight
-                    size={14}
-                    className="transition-transform duration-[180ms] group-hover:translate-x-1"
-                  />
+                <span className={`mt-5 inline-flex items-center gap-1.5 text-body-sm font-semibold ${card.disabled ? 'text-text-tertiary' : card.ctaColor}`}>
+                  {card.disabled ? 'Belum tersedia' : card.cta}
+                  {card.disabled ? null : (
+                    <ArrowRight
+                      size={14}
+                      className="transition-transform duration-[180ms] group-hover:translate-x-1"
+                    />
+                  )}
                 </span>
+              </>
+            )
+
+            if (card.disabled) {
+              return (
+                <div
+                  key={card.id}
+                  className={`relative flex flex-col p-6 rounded-md border overflow-hidden opacity-60 cursor-not-allowed select-none ${card.cardBg}`}
+                  aria-disabled="true"
+                >
+                  {cardContent}
+                </div>
+              )
+            }
+
+            return (
+              <Link
+                key={card.id}
+                to={card.to}
+                className={`group relative flex flex-col p-6 rounded-md border overflow-hidden cursor-pointer transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-md hover:border-primary-200 ${card.cardBg}`}
+              >
+                {cardContent}
               </Link>
             )
           })}
@@ -262,12 +322,10 @@ function DashboardPage() {
 
           {lastExam ? (
             <div className="flex gap-5 p-4 bg-kertas-50 border border-border-default rounded-sm">
-              {/* Mini A4 preview */}
               <div className="w-[140px] shrink-0 hidden sm:block">
                 <MiniPaperPreview exam={lastExam} />
               </div>
 
-              {/* Exam details */}
               <div className="flex flex-col min-w-0">
                 <h4 className="text-h3 font-bold text-text-primary m-0 mb-2 leading-snug">
                   {lastExam.title}
@@ -282,10 +340,12 @@ function DashboardPage() {
                     <span className="text-text-tertiary mr-1">Dibuat:</span>
                     {formatDate(lastExam.createdAt)}
                   </span>
-                  <span>
-                    <span className="text-text-tertiary mr-1">Durasi:</span>
-                    {lastExam.durationMinutes} menit
-                  </span>
+                  {lastExam.durationMinutes !== null ? (
+                    <span>
+                      <span className="text-text-tertiary mr-1">Durasi:</span>
+                      {lastExam.durationMinutes} menit
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -306,7 +366,7 @@ function DashboardPage() {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => void navigate({ to: '/dashboard' })}
+                    onClick={() => void navigate({ to: '/preview', search: { examId: lastExam.id } })}
                   >
                     <PrinterIcon size={13} />
                     Cetak lembar
@@ -319,7 +379,11 @@ function DashboardPage() {
                     <CheckSquare size={13} />
                     Koreksi
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => duplicate.openFor(lastExam)}
+                  >
                     <Copy size={13} />
                     Duplikat
                   </Button>
@@ -345,7 +409,7 @@ function DashboardPage() {
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-h2 font-bold text-text-primary">Riwayat terbaru</h2>
           <span className="text-body-sm text-text-tertiary">
-            {exams.length} dari {MOCK_DASHBOARD_STATS.totalSheets} · urut terbaru
+            {recent.length} dari {stats.totalSheets} · urut terbaru
           </span>
         </div>
 
@@ -370,14 +434,20 @@ function DashboardPage() {
           </div>
 
           {/* Rows */}
-          {exams.map((exam) => (
-            <ExamHistoryRow key={exam.id} exam={exam} />
-          ))}
+          {recent.length > 0 ? (
+            recent.map((exam) => (
+              <ExamHistoryRow key={exam.id} exam={exam} onDuplicate={duplicate.openFor} />
+            ))
+          ) : (
+            <div className="py-8 text-center text-text-tertiary text-body-sm">
+              Belum ada riwayat ujian.
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between px-5 py-3.5 bg-kertas-50 border-t border-border-default">
             <span className="text-body-sm text-text-tertiary">
-              Tampilkan {exams.length} dari {MOCK_DASHBOARD_STATS.totalSheets} lembar
+              Tampilkan {recent.length} dari {stats.totalSheets} lembar
             </span>
             <Link
               to="/history"
@@ -388,6 +458,16 @@ function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {duplicate.confirmingExam && (
+        <DuplicateConfirmDialog
+          exam={duplicate.confirmingExam}
+          open={true}
+          onOpenChange={(open) => { if (!open) duplicate.close() }}
+          onConfirm={() => { void duplicate.confirm() }}
+          isPending={duplicate.isPending}
+        />
+      )}
     </div>
   )
 }

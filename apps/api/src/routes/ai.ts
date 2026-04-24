@@ -4,7 +4,8 @@ import { db, exams, questions } from '@teacher-exam/db'
 import {
   GenerateExamInputSchema,
   normalizeExamType,
-  type ExamSubject,
+  formatExamTitle,
+  SUBJECT_LABEL,
 } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
 import { buildExamPrompt } from '../lib/prompt'
@@ -15,11 +16,6 @@ import {
   type AiService,
   type GeneratedQuestion,
 } from '../services/AiService'
-
-const SUBJECT_LABEL: Record<ExamSubject, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-}
 
 /**
  * Build the `/api/ai` router. Accepts an injected `AiService` for tests; in
@@ -72,8 +68,13 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       throw err
     }
 
-    const rawTitle = `${SUBJECT_LABEL[input.subject]} · Kelas ${input.grade} · ${input.topic}`
-    const title = rawTitle.slice(0, 80)
+    const title = formatExamTitle({
+      subjectLabel: SUBJECT_LABEL[input.subject],
+      grade: input.grade,
+      examType,
+      examDate: null,
+      topic: input.topic,
+    })
     const examId = crypto.randomUUID()
     const now = new Date()
 

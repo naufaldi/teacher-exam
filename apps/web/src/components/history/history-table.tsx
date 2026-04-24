@@ -49,7 +49,7 @@ function formatShortDate(dateStr: string): string {
 interface HistoryTableProps {
   exams: ReadonlyArray<Exam>
   onDelete: (id: string) => Promise<void>
-  onDuplicate: (id: string) => Promise<void>
+  onDuplicate: (exam: Exam) => void
 }
 
 const COLUMN_TEMPLATE =
@@ -96,7 +96,7 @@ function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
 interface HistoryTableRowProps {
   exam: Exam
   onDelete: (id: string) => Promise<void>
-  onDuplicate: (id: string) => Promise<void>
+  onDuplicate: (exam: Exam) => void
 }
 
 function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) {
@@ -118,7 +118,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
   }
 
   function handleDuplicate() {
-    void onDuplicate(exam.id)
+    onDuplicate(exam)
   }
 
   function handleDeleteConfirm() {
