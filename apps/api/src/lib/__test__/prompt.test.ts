@@ -118,4 +118,17 @@ describe('buildExamPrompt', () => {
 
     expect(user).toContain('Kosakata')
   })
+
+  it('throws when topics array is empty', () => {
+    expect(() =>
+      buildExamPrompt({
+        examType: 'formatif',
+        difficulty: 'campuran',
+        subjectLabel: 'Bahasa Indonesia',
+        grade: 6,
+        topics: [],
+        curriculumText: FAKE_CURRICULUM,
+      }),
+    ).toThrow('topics must contain at least one item')
+  })
 })

@@ -6,13 +6,9 @@ export interface BuildPromptInput {
   difficulty: ExamDifficulty
   subjectLabel: string
   grade: number
-  /** 1–5 topics for the paper. AI distributes questions evenly across them. */
+  /** One or more topics for the paper. AI distributes questions evenly across them when multiple are given. */
   topics: string[]
-  /**
-   * Full markdown corpus from `apps/api/src/curriculum/md/{subject}-kelas-{n}.md`
-   * loaded via `getCurriculumText`. Becomes the baseline grounding in the
-   * Claude system message — see RFC §9.
-   */
+  /** Full markdown curriculum corpus sent as the system-message baseline. */
   curriculumText: string
   classContext?: string | undefined
   exampleQuestions?: string | undefined
@@ -27,6 +23,9 @@ export interface BuiltPrompt {
 
 export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   const profile = EXAM_TYPE_PROFILE[input.examType]
+  if (input.topics.length === 0) {
+    throw new Error('buildExamPrompt: topics must contain at least one item')
+  }
   const dist = resolveDifficultyDist(input.examType, input.difficulty)
 
   const system = [
