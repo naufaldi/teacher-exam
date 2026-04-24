@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { rowToQuestion, questionToRow } from '../question-mapper.js'
+import { rowToQuestion, questionToRow } from '../question-mapper'
 
 const baseRow = {
   id: 'q_1',
