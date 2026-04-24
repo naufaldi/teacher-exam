@@ -14,6 +14,31 @@ export function makeChain(result: unknown) {
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
+export function makeExamRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id:              'exam-1',
+    userId:          'test-user-id',
+    title:           'Bahasa Indonesia · Kelas 6',
+    subject:         'bahasa_indonesia',
+    grade:           6,
+    difficulty:      'sedang',
+    topic:           'Teks Narasi',
+    reviewMode:      'slow',
+    status:          'draft',
+    schoolName:      null,
+    academicYear:    null,
+    examType:        'formatif',
+    examDate:        null,
+    durationMinutes: null,
+    instructions:    null,
+    classContext:    null,
+    discussionMd:    null,
+    createdAt:       new Date(NOW),
+    updatedAt:       new Date(NOW),
+    ...overrides,
+  }
+}
+
 export function makeQuestionRow(overrides: Record<string, unknown> = {}) {
   return {
     id:               'q-1',

@@ -34,7 +34,7 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
     api: {
       ...orig.api,
       exams: { ...orig.api.exams, get: vi.fn() },
-      questions: { patch: vi.fn() },
+      questions: { patch: vi.fn(), regenerate: vi.fn() },
     },
   }
 })
@@ -55,6 +55,7 @@ import { examDraftStore } from '../../lib/exam-draft-store.js'
 
 const mockExamsGet = (api as unknown as { exams: { get: ReturnType<typeof vi.fn> } }).exams.get
 const mockQuestionsPatch = (api as unknown as { questions: { patch: ReturnType<typeof vi.fn> } }).questions.patch
+const mockQuestionsRegenerate = (api as unknown as { questions: { regenerate: ReturnType<typeof vi.fn> } }).questions.regenerate
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
@@ -594,4 +595,292 @@ test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOW
   })
 
   finalizeSpy.mockRestore()
+})
+
+// ── Edit status-transition tests ──────────────────────────────────────────────
+
+describe('ReviewPage — Edit status transition (rejected → pending)', () => {
+  it('sends status=pending in the PATCH diff when editing a rejected question', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_rej_edit' }
+
+    const exam = makeExamWithQuestions('exam_rej_edit')
+    const q0 = { ...exam.questions[0]!, status: 'rejected' as const }
+    const questions = [...exam.questions]
+    questions[0] = q0
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions })
+    await getLoader()({ deps: { examId: 'exam_rej_edit' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      ...q0,
+      text: 'Teks baru',
+      status: 'pending' as const,
+    })
+
+    renderReviewPage()
+
+    const editButtons = screen.getAllByText('Edit')
+    await user.click(editButtons[0]!)
+
+    const textArea = await screen.findByLabelText(/teks soal/i)
+    await user.clear(textArea)
+    await user.type(textArea, 'Teks baru')
+
+    const saveButton = screen.getByRole('button', { name: /simpan perubahan/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        'q-1',
+        expect.objectContaining({ text: 'Teks baru', status: 'pending' }),
+      )
+    })
+
+    patchSpy.mockRestore()
+  })
+
+  it('sends status=accepted in the PATCH diff when editing a pending question', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_pending_edit' }
+
+    const exam = makeExamWithQuestions('exam_pending_edit')
+    // questions default to status: 'pending' in makeExamWithQuestions
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_pending_edit' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      ...exam.questions[0]!,
+      text: 'Teks baru',
+      status: 'accepted' as const,
+    })
+
+    renderReviewPage()
+
+    const editButtons = screen.getAllByText('Edit')
+    await user.click(editButtons[0]!)
+
+    const textArea = await screen.findByLabelText(/teks soal/i)
+    await user.clear(textArea)
+    await user.type(textArea, 'Teks baru')
+
+    const saveButton = screen.getByRole('button', { name: /simpan perubahan/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        'q-1',
+        expect.objectContaining({ text: 'Teks baru', status: 'accepted' }),
+      )
+    })
+
+    patchSpy.mockRestore()
+  })
+})
+
+// ── Per-card AI regeneration tests ───────────────────────────────────────────
+
+describe('ReviewPage — "Ganti dengan AI" per-card regeneration', () => {
+  it('shows "Ganti dengan AI" button only on rejected cards in slow mode', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_btn' }
+
+    const exam = makeExamWithQuestions('exam_regen_btn')
+    const questions_btn = [...exam.questions]
+    questions_btn[0] = { ...questions_btn[0]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_btn })
+    await getLoader()({ deps: { examId: 'exam_regen_btn' } })
+
+    renderReviewPage()
+
+    expect(screen.getAllByText('Ganti dengan AI')).toHaveLength(1)
+  })
+
+  it('calls api.questions.regenerate after confirming in the dialog', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_call' }
+
+    const exam = makeExamWithQuestions('exam_regen_call')
+    const q0_call = { ...exam.questions[0]!, status: 'rejected' as const }
+    const questions_call = [...exam.questions]
+    questions_call[0] = q0_call
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_call })
+    await getLoader()({ deps: { examId: 'exam_regen_call' } })
+
+    mockQuestionsRegenerate.mockResolvedValueOnce({
+      ...q0_call,
+      text: 'Soal baru dari AI',
+      status: 'pending' as const,
+    })
+
+    renderReviewPage()
+
+    const gantiBtn = screen.getByText('Ganti dengan AI')
+    await user.click(gantiBtn)
+
+    const confirmBtn = await screen.findByRole('button', { name: /^Ganti$/i })
+    await user.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-1', expect.any(Object))
+    })
+  })
+
+  it('replaces card text with AI result after regeneration', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_replace' }
+
+    const exam = makeExamWithQuestions('exam_regen_replace')
+    const q0_replace = { ...exam.questions[0]!, status: 'rejected' as const }
+    const questions_replace = [...exam.questions]
+    questions_replace[0] = q0_replace
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_replace })
+    await getLoader()({ deps: { examId: 'exam_regen_replace' } })
+
+    mockQuestionsRegenerate.mockResolvedValueOnce({
+      ...q0_replace,
+      text: 'Soal baru dari AI',
+      status: 'pending' as const,
+    })
+
+    renderReviewPage()
+
+    const gantiBtn = screen.getByText('Ganti dengan AI')
+    await user.click(gantiBtn)
+
+    const confirmBtn = await screen.findByRole('button', { name: /^Ganti$/i })
+    await user.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Soal baru dari AI')).toBeInTheDocument()
+    })
+  })
+
+  it('shows retry button when regeneration fails', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_fail' }
+
+    const exam = makeExamWithQuestions('exam_regen_fail')
+    const questions_fail = [...exam.questions]
+    questions_fail[0] = { ...questions_fail[0]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_fail })
+    await getLoader()({ deps: { examId: 'exam_regen_fail' } })
+
+    mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI failed'))
+
+    renderReviewPage()
+
+    const gantiBtn = screen.getByText('Ganti dengan AI')
+    await user.click(gantiBtn)
+
+    const confirmBtn = await screen.findByRole('button', { name: /^Ganti$/i })
+    await user.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Coba lagi')).toBeInTheDocument()
+    })
+  })
+})
+
+// ── Batch AI regeneration tests ───────────────────────────────────────────────
+
+describe('ReviewPage — "Ganti semua ditolak" batch regeneration', () => {
+  it('opens batch confirm dialog when "Ganti semua ditolak" is clicked', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_batch_open' }
+
+    const exam = makeExamWithQuestions('exam_batch_open')
+    const questions_open = [...exam.questions]
+    questions_open[0] = { ...questions_open[0]!, status: 'rejected' as const }
+    questions_open[1] = { ...questions_open[1]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_open })
+    await getLoader()({ deps: { examId: 'exam_batch_open' } })
+
+    renderReviewPage()
+
+    const batchBtn = screen.getByText(/Ganti semua ditolak/i)
+    await user.click(batchBtn)
+
+    // Batch confirm dialog should be visible
+    expect(await screen.findByText(/Ganti 2 soal ditolak dengan AI/i)).toBeInTheDocument()
+  })
+
+  it('calls api.questions.regenerate for each rejected question after batch confirm', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_batch_call' }
+
+    const exam = makeExamWithQuestions('exam_batch_call')
+    const q0_batch = { ...exam.questions[0]!, status: 'rejected' as const }
+    const questions_batch = [...exam.questions]
+    questions_batch[0] = q0_batch
+    questions_batch[2] = { ...questions_batch[2]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_batch })
+    await getLoader()({ deps: { examId: 'exam_batch_call' } })
+
+    mockQuestionsRegenerate.mockResolvedValue({
+      ...q0_batch,
+      text: 'Soal baru dari AI',
+      status: 'pending' as const,
+    })
+
+    renderReviewPage()
+
+    const batchBtn = screen.getByText(/Ganti semua ditolak/i)
+    await user.click(batchBtn)
+
+    const confirmBtn = await screen.findByRole('button', { name: /Ganti semua/i })
+    await user.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(mockQuestionsRegenerate).toHaveBeenCalledTimes(2)
+      expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-1', expect.any(Object))
+      expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-3', expect.any(Object))
+    })
+  })
+
+  it('one failure in a batch of 3 leaves the failing card rejected; other two succeed', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_batch_partial' }
+
+    const exam = makeExamWithQuestions('exam_batch_partial')
+    const threeQs = exam.questions.slice(0, 3).map((q) => ({ ...q, status: 'rejected' as const }))
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: threeQs })
+    await getLoader()({ deps: { examId: 'exam_batch_partial' } })
+
+    // q-2 fails; q-1 and q-3 succeed
+    mockQuestionsRegenerate.mockImplementation((id: string) => {
+      if (id === 'q-2') return Promise.reject(new Error('AI failed'))
+      return Promise.resolve({
+        id,
+        examId: 'exam_batch_partial',
+        number: 1,
+        text: 'Soal baru dari AI',
+        optionA: 'A', optionB: 'B', optionC: 'C', optionD: 'D',
+        correctAnswer: 'a' as const,
+        topic: null, difficulty: null,
+        status: 'pending' as const,
+        validationStatus: null, validationReason: null,
+        createdAt: NOW,
+      })
+    })
+
+    renderReviewPage()
+
+    const batchBtn = screen.getByText(/Ganti semua ditolak/i)
+    await user.click(batchBtn)
+
+    const confirmBtn = await screen.findByRole('button', { name: /Ganti semua/i })
+    await user.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(mockQuestionsRegenerate).toHaveBeenCalledTimes(3)
+    })
+
+    // q-2 failed: its card should still show "Perlu diganti" or "Coba lagi"
+    await waitFor(() => {
+      expect(screen.getByText('Coba lagi')).toBeInTheDocument()
+    })
+
+    // q-1 and q-3 succeeded: "Soal baru dari AI" should appear twice (or more via cards)
+    const newTexts = screen.getAllByText('Soal baru dari AI')
+    expect(newTexts.length).toBeGreaterThanOrEqual(2)
+  })
 })

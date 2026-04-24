@@ -45,9 +45,14 @@ export const UpdateQuestionInputSchema = Schema.Struct({
   optionC:       Schema.optional(Schema.String),
   optionD:       Schema.optional(Schema.String),
   correctAnswer: Schema.optional(AnswerSchema),
-  status:        Schema.optional(Schema.Literal('accepted', 'rejected')),
+  status:        Schema.optional(Schema.Literal('pending', 'accepted', 'rejected')),
 })
 export type UpdateQuestionInput = typeof UpdateQuestionInputSchema.Type
+
+export const RegenerateQuestionInputSchema = Schema.Struct({
+  hint: Schema.optional(Schema.String),
+})
+export type RegenerateQuestionInput = typeof RegenerateQuestionInputSchema.Type
 
 // ── User profile API ───────────────────────────────────────
 

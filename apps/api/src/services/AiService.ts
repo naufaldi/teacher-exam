@@ -88,13 +88,7 @@ export function createAiService(config: AiServiceConfig): AiService {
         throw new AiGenerationError('Anthropic returned no text block')
       }
 
-      const questions = parseAndValidate(firstBlock.text)
-      if (questions.length !== 20) {
-        throw new AiGenerationError(
-          `Expected 20 questions, got ${questions.length}`,
-        )
-      }
-      return questions
+      return parseAndValidate(firstBlock.text)
     },
   }
 }

@@ -25,6 +25,8 @@ import {
   DatePicker,
 } from '@teacher-exam/ui'
 import type { ExamType, Question, UpdateExamInput, UpdateQuestionInput } from '@teacher-exam/shared'
+import { RegenerateSingleDialog } from '../components/review/regenerate-single-dialog.js'
+import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dialog.js'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
@@ -102,6 +104,11 @@ function ReviewPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   const [pendingSwitchTo, setPendingSwitchTo] = useState<'fast' | 'slow' | null>(null)
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set())
+  const [failedRegenIds, setFailedRegenIds] = useState<Set<string>>(new Set())
+  const [regenSingleTargetId, setRegenSingleTargetId] = useState<string | null>(null)
+  const [regenSingleDialogOpen, setRegenSingleDialogOpen] = useState(false)
+  const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
 
   // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
@@ -163,6 +170,10 @@ function ReviewPage() {
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
   )
+  const rejectedCount = useMemo(
+    () => Object.values(questionStatuses).filter((s) => s === 'rejected').length,
+    [questionStatuses],
+  )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
   const canPreview = acceptedCount === questions.length && isMetadataComplete
 
@@ -204,6 +215,7 @@ function ReviewPage() {
       optionC?: string
       optionD?: string
       correctAnswer?: 'a' | 'b' | 'c' | 'd'
+      status?: 'pending' | 'accepted' | 'rejected'
     } = {}
     if (updated.text          !== original.text)          diffMut.text          = updated.text
     if (updated.optionA       !== original.optionA)       diffMut.optionA       = updated.optionA
@@ -211,17 +223,40 @@ function ReviewPage() {
     if (updated.optionC       !== original.optionC)       diffMut.optionC       = updated.optionC
     if (updated.optionD       !== original.optionD)       diffMut.optionD       = updated.optionD
     if (updated.correctAnswer !== original.correctAnswer) diffMut.correctAnswer = updated.correctAnswer
+
+    // Compute next status based on current UI status (not DB status)
+    const currentStatus = questionStatuses[updated.id] ?? 'pending'
+    const nextStatus: QuestionStatus =
+      currentStatus === 'rejected' ? 'pending' :
+      currentStatus === 'pending'  ? 'accepted' :
+      'accepted'
+
+    // Only include status in diff if it would change
+    if (nextStatus !== currentStatus) {
+      diffMut.status = nextStatus
+    }
+
     const diff: UpdateQuestionInput = diffMut
     setEditingId(null)
     if (Object.keys(diff).length === 0) return
 
-    examDraftStore.updateQuestion(updated.id, updated)
+    examDraftStore.updateQuestion(updated.id, { ...updated, status: nextStatus })
     setEditedIds((prev) => new Set(prev).add(updated.id))
+    if (nextStatus !== currentStatus) {
+      setQuestionStatuses((prev) => ({ ...prev, [updated.id]: nextStatus }))
+    }
     try {
       const server = await api.questions.patch(updated.id, diff)
-      examDraftStore.updateQuestion(server.id, server)
+      examDraftStore.updateQuestion(server.id, { ...server, status: nextStatus })
+      toast({
+        variant: 'success',
+        title: 'Soal disimpan',
+      })
     } catch (err) {
       examDraftStore.updateQuestion(updated.id, original)
+      if (nextStatus !== currentStatus) {
+        setQuestionStatuses((prev) => ({ ...prev, [updated.id]: currentStatus }))
+      }
       toast({
         variant: 'error',
         title: 'Gagal menyimpan perubahan',
@@ -252,15 +287,42 @@ function ReviewPage() {
     await setStatus(targetId, 'rejected')
   }
 
-  const handleResetRejected = () => {
-    setQuestionStatuses((prev) =>
-      Object.fromEntries(
-        questions.map((q) => [
-          q.id,
-          prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
-        ]),
-      ),
-    )
+  const handleRegenerateBatch = async () => {
+    const rejectedIds = questions
+      .filter((q) => (questionStatuses[q.id] ?? 'pending') === 'rejected')
+      .map((q) => q.id)
+    if (rejectedIds.length === 0) return
+
+    await Promise.allSettled(rejectedIds.map((id) => handleRegenerateOne(id)))
+
+    const succeeded = rejectedIds.filter((id) => !failedRegenIds.has(id))
+    const failedCount = rejectedIds.length - succeeded.length
+    if (failedCount > 0) {
+      toast({
+        variant: 'error',
+        title: `Berhasil ${succeeded.length} · Gagal ${failedCount}`,
+        description: 'Soal yang gagal perlu dicoba ulang satu per satu.',
+      })
+    } else {
+      toast({
+        variant: 'success',
+        title: `${succeeded.length} soal berhasil diganti`,
+      })
+    }
+  }
+
+  const handleRegenerateOne = async (id: string, hint?: string) => {
+    setRegeneratingIds((prev) => new Set(prev).add(id))
+    try {
+      const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
+      examDraftStore.updateQuestion(id, server)
+      setQuestionStatuses((prev) => ({ ...prev, [id]: 'pending' }))
+      setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+    } catch {
+      setFailedRegenIds((prev) => new Set(prev).add(id))
+    } finally {
+      setRegeneratingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+    }
   }
 
   const handleTerimaSemuaClick = async () => {
@@ -405,13 +467,15 @@ function ReviewPage() {
             >
               Terima Semua
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetRejected}
-            >
-              Ganti ditolak
-            </Button>
+            {rejectedCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRegenBatchDialogOpen(true)}
+              >
+                Ganti semua ditolak ({rejectedCount})
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -431,75 +495,111 @@ function ReviewPage() {
                   className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
-                      {q.difficulty && (
-                        <Badge variant="secondary" className="text-caption">
-                          {q.difficulty}
-                        </Badge>
-                      )}
-                      {q.topic && (
-                        <span className="text-caption text-text-tertiary">{q.topic}</span>
-                      )}
-                      {editedIds.has(q.id) && (
-                        <Badge variant="secondary" className="text-caption">
-                          Diedit
-                        </Badge>
-                      )}
-                      {status === 'rejected' && (
-                        <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
-                      )}
-                      {status === 'accepted' && (
-                        <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Diterima
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
-                    <div className="grid grid-cols-2 gap-1 mb-4">
-                      {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                        <div
-                          key={letter}
-                          className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
-                            q.correctAnswer === letter
-                              ? 'bg-success-bg text-success-fg font-medium'
-                              : 'text-text-secondary'
-                          }`}
-                        >
-                          <span className="font-mono text-caption shrink-0">
-                            {letter.toUpperCase()}.
-                          </span>
-                          <span>
-                            {q[`option${letter.toUpperCase() as 'A' | 'B' | 'C' | 'D'}`]}
-                          </span>
+                    {regeneratingIds.has(q.id) ? (
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-4 bg-kertas-200 rounded w-3/4" />
+                        <div className="h-4 bg-kertas-200 rounded w-full" />
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                          {[0,1,2,3].map(i => <div key={i} className="h-8 bg-kertas-100 rounded" />)}
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="text-success-fg border-success-border"
-                        onClick={() => { void setStatus(q.id, 'accepted') }}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingId(q.id)}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger-fg hover:text-danger-fg"
-                        onClick={() => setRejectingId(q.id)}
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
-                      </Button>
-                    </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
+                          {q.difficulty && (
+                            <Badge variant="secondary" className="text-caption">
+                              {q.difficulty}
+                            </Badge>
+                          )}
+                          {q.topic && (
+                            <span className="text-caption text-text-tertiary">{q.topic}</span>
+                          )}
+                          {editedIds.has(q.id) && (
+                            <Badge variant="secondary" className="text-caption">
+                              Diedit
+                            </Badge>
+                          )}
+                          {status === 'rejected' && (
+                            <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
+                          )}
+                          {status === 'accepted' && (
+                            <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Diterima
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
+                        <div className="grid grid-cols-2 gap-1 mb-4">
+                          {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                            <div
+                              key={letter}
+                              className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
+                                q.correctAnswer === letter
+                                  ? 'bg-success-bg text-success-fg font-medium'
+                                  : 'text-text-secondary'
+                              }`}
+                            >
+                              <span className="font-mono text-caption shrink-0">
+                                {letter.toUpperCase()}.
+                              </span>
+                              <span>
+                                {q[`option${letter.toUpperCase() as 'A' | 'B' | 'C' | 'D'}`]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-success-fg border-success-border"
+                            onClick={() => { void setStatus(q.id, 'accepted') }}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingId(q.id)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger-fg hover:text-danger-fg"
+                            onClick={() => setRejectingId(q.id)}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
+                          </Button>
+                          {status === 'rejected' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setRegenSingleTargetId(q.id)
+                                setRegenSingleDialogOpen(true)
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Ganti dengan AI
+                            </Button>
+                          )}
+                          {failedRegenIds.has(q.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setRegenSingleTargetId(q.id)
+                                setRegenSingleDialogOpen(true)
+                              }}
+                            >
+                              Coba lagi
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               )
@@ -632,6 +732,26 @@ function ReviewPage() {
         targetMode={pendingSwitchTo ?? 'fast'}
         onConfirm={handleSwitchConfirm}
         onClose={() => setPendingSwitchTo(null)}
+      />
+      <RegenerateSingleDialog
+        open={regenSingleDialogOpen}
+        onOpenChange={(v) => {
+          setRegenSingleDialogOpen(v)
+          if (!v) setRegenSingleTargetId(null)
+        }}
+        onConfirm={(hint) => {
+          setRegenSingleDialogOpen(false)
+          if (regenSingleTargetId !== null) {
+            void handleRegenerateOne(regenSingleTargetId, hint)
+          }
+          setRegenSingleTargetId(null)
+        }}
+      />
+      <RegenerateBatchDialog
+        open={regenBatchDialogOpen}
+        onOpenChange={setRegenBatchDialogOpen}
+        count={rejectedCount}
+        onConfirm={() => { void handleRegenerateBatch() }}
       />
     </div>
   )
