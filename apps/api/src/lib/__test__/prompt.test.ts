@@ -21,6 +21,7 @@ describe('buildExamPrompt', () => {
       topic: 'Pemahaman Bacaan',
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
     })
 
     expect(system).toContain(FAKE_CURRICULUM)
@@ -39,6 +40,7 @@ describe('buildExamPrompt', () => {
       topic: 'Hak dan Kewajiban',
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
     })
 
     expect(user).toContain('Hak dan Kewajiban')
@@ -57,6 +59,7 @@ describe('buildExamPrompt', () => {
       topic: 'Pemahaman Bacaan',
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
     })
 
     expect(system.toLowerCase()).toContain('authority order')
@@ -73,6 +76,7 @@ describe('buildExamPrompt', () => {
       topic: 'Pemahaman Bacaan',
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
     })
     expect(user).not.toContain('konteks_guru')
     expect(user).not.toContain('contoh_soal')
@@ -87,6 +91,7 @@ describe('buildExamPrompt', () => {
       topic: 'Pemahaman Bacaan',
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
       classContext: 'Anak-anak masih bingung membedakan teks persuasi.',
       exampleQuestions: 'Contoh: Bacalah teks berikut...',
     })
@@ -104,6 +109,7 @@ describe('buildExamPrompt — totalSoal', () => {
     grade: 6,
     topic: 'Pemahaman Bacaan',
     curriculumText: FAKE_CURRICULUM,
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
   }
 
   test('system prompt contains exact totalSoal count (not hardcoded 20)', () => {
@@ -113,7 +119,56 @@ describe('buildExamPrompt — totalSoal', () => {
   })
 
   test('user prompt contains totalSoal count', () => {
-    const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30 })
+    const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30, composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 } })
     expect(user).toContain('berisi 30 soal')
+  })
+})
+
+describe('buildExamPrompt — composition and multi-type', () => {
+  const base = {
+    examType: 'latihan' as const,
+    difficulty: 'campuran' as const,
+    subjectLabel: 'Bahasa Indonesia',
+    grade: 5,
+    topic: 'Teks Narasi',
+    totalSoal: 25,
+    curriculumText: 'Dummy curriculum.',
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+  }
+
+  test('system message mentions _tag field', () => {
+    const { system } = buildExamPrompt(base)
+    expect(system).toContain('_tag')
+  })
+
+  test('system message mentions all three _tag values', () => {
+    const { system } = buildExamPrompt(base)
+    expect(system).toContain('mcq_single')
+    expect(system).toContain('mcq_multi')
+    expect(system).toContain('true_false')
+  })
+
+  test('system message describes correct_answers for mcq_multi', () => {
+    const { system } = buildExamPrompt(base)
+    expect(system).toContain('correct_answers')
+  })
+
+  test('system message describes statements for true_false', () => {
+    const { system } = buildExamPrompt(base)
+    expect(system).toContain('statements')
+  })
+
+  test('user message contains count for each non-zero type', () => {
+    const { user } = buildExamPrompt(base)
+    expect(user).toContain('15 soal pilihan ganda')
+    expect(user).toContain('5 soal pilihan ganda kompleks')
+    expect(user).toContain('5 soal benar/salah')
+  })
+
+  test('user message does NOT mention type with 0 count', () => {
+    const pureLatihan = { ...base, composition: { mcqSingle: 25, mcqMulti: 0, trueFalse: 0 }, totalSoal: 25 }
+    const { user } = buildExamPrompt(pureLatihan)
+    expect(user).not.toContain('pilihan ganda kompleks')
+    expect(user).not.toContain('benar/salah')
   })
 })
