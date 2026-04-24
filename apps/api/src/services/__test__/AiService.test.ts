@@ -78,14 +78,6 @@ describe('AiService.generate', () => {
     expect(out).toHaveLength(20)
   })
 
-  it('throws AiGenerationError when count is not 20', async () => {
-    const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS.slice(0, 5)))
-    const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u' })).rejects.toBeInstanceOf(
-      AiGenerationError,
-    )
-  })
-
   it('throws AiGenerationError on non-JSON output', async () => {
     const { client } = fakeClient('not json')
     const ai = createAiService({ client })

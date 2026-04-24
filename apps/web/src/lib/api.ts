@@ -11,6 +11,7 @@ import type {
   UpdateExamInput,
   UpdateQuestionInput,
   QuestionResponse,
+  RegenerateQuestionInput,
 } from '@teacher-exam/shared'
 import { ExamWithQuestionsSchema } from '@teacher-exam/shared'
 
@@ -147,6 +148,11 @@ export const api = {
       apiFetch<QuestionResponse>(`/questions/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
+      }),
+    regenerate: (id: string, body?: RegenerateQuestionInput) =>
+      apiFetch<QuestionResponse>(`/questions/${id}/regenerate`, {
+        method: 'POST',
+        body: JSON.stringify(body ?? {}),
       }),
   },
   me: {

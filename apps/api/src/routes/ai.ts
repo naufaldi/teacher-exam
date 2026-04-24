@@ -68,6 +68,13 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       throw err
     }
 
+    if (generatedQuestions.length !== 20) {
+      return c.json(
+        { error: 'AI generation failed', message: `Expected 20 questions, got ${generatedQuestions.length}` },
+        502,
+      )
+    }
+
     const title = formatExamTitle({
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,

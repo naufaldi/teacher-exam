@@ -225,3 +225,39 @@ describe('api.questions.patch', () => {
     await expect(api.questions.patch('Q', { status: 'accepted' })).rejects.toMatchObject({ status: 404 })
   })
 })
+
+describe('api.questions.regenerate', () => {
+  test('POSTs to /api/questions/:id/regenerate with optional hint body', async () => {
+    mockFetch.mockResolvedValue(makeResponse({
+      id: 'Q', examId: 'E', number: 1, text: 'New AI question',
+      optionA: 'a', optionB: 'b', optionC: 'c', optionD: 'd',
+      correctAnswer: 'b', topic: null, difficulty: null, status: 'pending',
+      validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
+    }))
+    const result = await api.questions.regenerate('Q', { hint: 'fokus sila ke-3' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/questions/Q/regenerate',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ hint: 'fokus sila ke-3' }),
+        credentials: 'include',
+      }),
+    )
+    expect(result.status).toBe('pending')
+    expect(result.text).toBe('New AI question')
+  })
+
+  test('POSTs with empty body when no hint provided', async () => {
+    mockFetch.mockResolvedValue(makeResponse({
+      id: 'Q', examId: 'E', number: 1, text: 'New AI question',
+      optionA: 'a', optionB: 'b', optionC: 'c', optionD: 'd',
+      correctAnswer: 'b', topic: null, difficulty: null, status: 'pending',
+      validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
+    }))
+    await api.questions.regenerate('Q')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/questions/Q/regenerate',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({}) }),
+    )
+  })
+})
