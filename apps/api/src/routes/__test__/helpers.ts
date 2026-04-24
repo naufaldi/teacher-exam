@@ -22,7 +22,7 @@ export function makeExamRow(overrides: Record<string, unknown> = {}) {
     subject:         'bahasa_indonesia',
     grade:           6,
     difficulty:      'sedang',
-    topic:           'Teks Narasi',
+    topics:          ['Teks Narasi'],
     reviewMode:      'slow',
     status:          'draft',
     schoolName:      null,

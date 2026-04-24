@@ -108,7 +108,7 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
     const userPayload: Record<string, unknown> = {
       kelas:            exam.grade,
       mata_pelajaran:   exam.subject,
-      topik:            question.topic ?? exam.topic,
+      topik:            question.topic ?? exam.topics[0] ?? exam.subject,
       kesulitan:        question.difficulty ?? exam.difficulty,
       hindari_soal_mirip: siblingTexts.slice(0, 10).map((t) => t.substring(0, 80)),
     }
@@ -122,7 +122,7 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
 
     let result: ReadonlyArray<import('../services/AiService').GeneratedQuestion>
     try {
-      result = await aiService.generate({ system, user })
+      result = await aiService.generate({ system, user, expectedCount: 1 })
     } catch {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)
     }
