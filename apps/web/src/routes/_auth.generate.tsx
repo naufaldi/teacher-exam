@@ -233,6 +233,10 @@ function GeneratePage() {
   const filledCount = [kelas, mapel, effectiveTopiks.length > 0 ? 'ok' : '', kesulitan, examType].filter(Boolean).length
 
   const runGenerate = useCallback(() => {
+    const topics: string[] = showCustomInput && customTopik.trim() !== ''
+      ? [...topiks, customTopik.trim()]
+      : topiks
+
     setError(null)
     setShowErrorDialog(false)
     setIsGenerating(true)
@@ -252,7 +256,7 @@ function GeneratePage() {
       subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
       grade: Number(kelas) as 5 | 6,
       difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
-      topics: effectiveTopiks,
+      topics,
       reviewMode,
       examType,
       classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
@@ -283,7 +287,7 @@ function GeneratePage() {
   }, [
     clearTimers,
     contohSoal,
-    effectiveTopiks,
+    customTopik,
     examType,
     fokusGuru,
     kelas,
@@ -291,6 +295,8 @@ function GeneratePage() {
     mapel,
     navigate,
     reviewMode,
+    showCustomInput,
+    topiks,
   ])
 
   const handleGenerate = () => {
@@ -303,6 +309,8 @@ function GeneratePage() {
   }
 
   const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating)
+
+  const topikSummary = effectiveTopiks.join(', ')
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] gap-8">
@@ -772,9 +780,9 @@ function GeneratePage() {
                 <span className="text-text-tertiary shrink-0">Topik</span>
                 <span className="text-text-primary max-w-[160px] text-right">
                   {effectiveTopiks.length > 0
-                    ? effectiveTopiks.join(', ').length > 50
-                      ? effectiveTopiks.join(', ').slice(0, 50) + '…'
-                      : effectiveTopiks.join(', ')
+                    ? topikSummary.length > 50
+                      ? topikSummary.slice(0, 50) + '…'
+                      : topikSummary
                     : '—'}
                 </span>
               </div>
