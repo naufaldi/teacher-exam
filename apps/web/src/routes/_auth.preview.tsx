@@ -10,6 +10,7 @@ import {
   PageHeader,
 } from '@teacher-exam/ui'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
+import { pointsPerQuestion } from '../lib/points.js'
 import type { ExamType, Question } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 
@@ -409,8 +410,16 @@ function KunciSection({
           ))}
         </div>
         <div className="mt-6 text-sm text-center">
-          <p>Setiap jawaban benar bernilai <strong>5 poin</strong>.</p>
-          <p className="font-bold">Total: {questions.length * 5} poin</p>
+          {(() => {
+            const poinPerSoal = pointsPerQuestion(questions.length)
+            const totalPoin = questions.length * poinPerSoal
+            return (
+              <>
+                <p>Setiap jawaban benar bernilai <strong>{poinPerSoal} poin</strong>.</p>
+                <p className="font-bold">Total: {totalPoin} poin</p>
+              </>
+            )
+          })()}
         </div>
       </PaperFrame>
     </div>

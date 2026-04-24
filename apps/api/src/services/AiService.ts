@@ -24,6 +24,8 @@ export interface GenerateInput {
   user: string
   /** Optional PDF bytes — attached as a Claude `document` content block. */
   pdfBytes?: Buffer | undefined
+  /** Number of questions the AI is expected to return. */
+  expectedCount: number
 }
 
 export interface AiService {
@@ -62,7 +64,7 @@ export function createAiService(config: AiServiceConfig): AiService {
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
 
   return {
-    async generate({ system, user, pdfBytes }) {
+    async generate({ system, user, pdfBytes, expectedCount }) {
       const content: Anthropic.ContentBlockParam[] = []
       if (pdfBytes) {
         content.push({
@@ -88,7 +90,13 @@ export function createAiService(config: AiServiceConfig): AiService {
         throw new AiGenerationError('Anthropic returned no text block')
       }
 
-      return parseAndValidate(firstBlock.text)
+      const questions = parseAndValidate(firstBlock.text)
+      if (questions.length !== expectedCount) {
+        throw new AiGenerationError(
+          `Expected ${expectedCount} questions, got ${questions.length}`,
+        )
+      }
+      return questions
     },
   }
 }

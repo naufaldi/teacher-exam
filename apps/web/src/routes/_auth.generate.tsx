@@ -115,6 +115,16 @@ const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
 
 const FOKUS_GURU_MAX = 500
 
+// ── Default total soal per jenis (PRD §8.x) ───────────────────────────────────
+
+const DEFAULT_TOTAL_SOAL: Record<string, number> = {
+  latihan:  20,
+  formatif: 20,
+  sts:      25,
+  sas:      25,
+  tka:      25,
+}
+
 // Budget for the elapsed-time animation. Real Claude calls run 25–60s;
 // 45s keeps the bar crawling through ~P75 without freezing early.
 const GENERATE_DURATION_MS = 45000
@@ -191,6 +201,8 @@ function GeneratePage() {
   const [customTopik, setCustomTopik] = useState<string>('')
   const [kesulitan, setKesulitan] = useState<string>('campuran')
   const [examType, setExamType] = useState<ExamType>('formatif')
+  const [totalSoal, setTotalSoal] = useState<number>(DEFAULT_TOTAL_SOAL['formatif'] ?? 20)
+  const [totalSoalError, setTotalSoalError] = useState<string | null>(null)
   const [reviewMode, setReviewMode] = useState<'fast' | 'slow'>('fast')
   const [fokusGuru, setFokusGuru] = useState<string>('')
   const [contohSoal, setContohSoal] = useState<string>('')
@@ -205,6 +217,12 @@ function GeneratePage() {
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleJenisChange = useCallback((next: ExamType) => {
+    setExamType(next)
+    setTotalSoal(DEFAULT_TOTAL_SOAL[next] ?? 20)
+    setTotalSoalError(null)
+  }, [])
 
   const clearTimers = useCallback(() => {
     if (progressIntervalRef.current !== null) {
@@ -259,6 +277,7 @@ function GeneratePage() {
       topics,
       reviewMode,
       examType,
+      totalSoal,
       classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
       exampleQuestions: contohSoal.trim() !== '' ? contohSoal.trim() : undefined,
     }).then((result) => {
@@ -297,6 +316,7 @@ function GeneratePage() {
     reviewMode,
     showCustomInput,
     topiks,
+    totalSoal,
   ])
 
   const handleGenerate = () => {
@@ -308,7 +328,7 @@ function GeneratePage() {
     runGenerate()
   }
 
-  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating)
+  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null)
 
   const topikSummary = effectiveTopiks.join(', ')
 
@@ -353,7 +373,7 @@ function GeneratePage() {
                     Generate Lembar (AI)
                   </h1>
                   <p className="text-body text-text-tertiary mt-0.5">
-                    1 lembar = 20 soal pilihan ganda
+                    1 lembar = {totalSoal} soal pilihan ganda
                   </p>
                 </div>
               </div>
@@ -492,7 +512,7 @@ function GeneratePage() {
               <Label>Jenis Lembar</Label>
               <RadioGroup
                 value={examType}
-                onValueChange={(v) => setExamType(v as ExamType)}
+                onValueChange={(v) => handleJenisChange(v as ExamType)}
               >
                 <div className="grid grid-cols-2 gap-3">
                   {EXAM_TYPE_OPTIONS.map((opt) => {
@@ -554,10 +574,28 @@ function GeneratePage() {
               )}
             </div>
 
-            {/* Jumlah Soal (fixed info — PRD US-8) */}
-            <div className="flex items-center justify-between p-3 rounded-sm bg-bg-muted border border-border-default">
-              <Label className="text-body text-text-secondary cursor-default">Jumlah Soal</Label>
-              <Badge variant="secondary">20 soal</Badge>
+            {/* Jumlah Soal (editable — PRD US-8) */}
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="totalSoal">Jumlah Soal</Label>
+              <Input
+                id="totalSoal"
+                type="number"
+                min={5}
+                max={50}
+                value={totalSoal}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  setTotalSoal(n)
+                  if (!Number.isInteger(n) || n < 5) setTotalSoalError('Minimum 5 soal')
+                  else if (n > 50) setTotalSoalError('Maksimum 50 soal')
+                  else setTotalSoalError(null)
+                }}
+                aria-invalid={totalSoalError !== null}
+                aria-describedby={totalSoalError !== null ? 'totalSoal-error' : undefined}
+              />
+              {totalSoalError !== null ? (
+                <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p>
+              ) : null}
             </div>
 
             {/* Mode Review */}
@@ -580,7 +618,7 @@ function GeneratePage() {
                   >
                     <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
                     <span className="text-body font-medium text-text-primary">Cepat</span>
-                    <span className="text-body-sm text-text-tertiary">Auto-terima 20 soal</span>
+                    <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
                   </Label>
                   <Label
                     htmlFor="mode-slow"
@@ -713,7 +751,7 @@ function GeneratePage() {
                 Generate Lembar
               </Button>
               <p className="text-caption text-text-tertiary text-center mt-2">
-                AI akan membuat 20 soal sesuai Capaian Pembelajaran Fase C
+                AI akan membuat {totalSoal} soal sesuai Capaian Pembelajaran Fase C
               </p>
             </div>
           </section>
@@ -816,7 +854,7 @@ function GeneratePage() {
             {/* Fixed info row */}
             <div className="flex justify-between items-center text-body-sm">
               <span className="text-text-tertiary">Jumlah soal</span>
-              <Badge variant="secondary">20 soal</Badge>
+              <Badge variant="secondary">{totalSoal} soal</Badge>
             </div>
 
             {/* File indicator */}

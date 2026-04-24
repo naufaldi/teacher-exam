@@ -118,6 +118,51 @@ async function clickGenerateAndFlush() {
   })
 }
 
+describe('Jumlah Soal input', () => {
+  it('defaults to 20 for default jenis (formatif)', () => {
+    renderGeneratePage()
+    const input = screen.getByLabelText('Jumlah Soal') as HTMLInputElement
+    expect(input.value).toBe('20')
+  })
+
+  it('auto-fills to 25 when UAS (sas) jenis is selected', () => {
+    renderGeneratePage()
+    fireEvent.click(screen.getByText('UAS'))
+    const input = screen.getByLabelText('Jumlah Soal') as HTMLInputElement
+    expect(input.value).toBe('25')
+  })
+
+  it('shows error when value is below 5', () => {
+    renderGeneratePage()
+    const input = screen.getByLabelText('Jumlah Soal')
+    fireEvent.change(input, { target: { value: '3' } })
+    expect(screen.getByText('Minimum 5 soal')).toBeInTheDocument()
+  })
+
+  it('shows error when value is above 50', () => {
+    renderGeneratePage()
+    const input = screen.getByLabelText('Jumlah Soal')
+    fireEvent.change(input, { target: { value: '51' } })
+    expect(screen.getByText('Maksimum 50 soal')).toBeInTheDocument()
+  })
+
+  it('api.ai.generate is called with totalSoal in body', async () => {
+    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+
+    renderGeneratePage()
+
+    // Change totalSoal to 25
+    const input = screen.getByLabelText('Jumlah Soal')
+    fireEvent.change(input, { target: { value: '25' } })
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ totalSoal: 25 }),
+    )
+  })
+})
+
 describe('GeneratePage — runGenerate flow', () => {
   it('calls api.ai.generate and navigates to /review with examId on success', async () => {
     mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))

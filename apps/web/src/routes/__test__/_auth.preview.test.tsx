@@ -131,6 +131,41 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+describe('variable points per question', () => {
+  function seedDraftWithQuestions(count: number) {
+    const questions = Array.from({ length: count }, (_, i) => makeQuestion(i + 1))
+    examDraftStore.setQuestions(questions)
+    examDraftStore.setReviewMode('fast')
+    examDraftStore.setConfig({
+      subject: 'bahasa_indonesia',
+      grade: 6,
+      topic: 'Teks Narasi',
+      examType: 'formatif',
+    })
+    examDraftStore.setMetadata({
+      schoolName: 'SD Nusantara',
+      academicYear: '2025/2026',
+      examDate: '23 April 2026',
+      durationMinutes: 60,
+      instructions: 'Pilih jawaban yang benar.',
+    })
+  }
+
+  it('25 soal → 4 poin per soal, 100 total poin', () => {
+    seedDraftWithQuestions(25)
+    renderPreviewPage()
+    expect(screen.getByText('4 poin')).toBeInTheDocument()
+    expect(screen.getByText('Total: 100 poin')).toBeInTheDocument()
+  })
+
+  it('10 soal → 10 poin per soal, 100 total poin', () => {
+    seedDraftWithQuestions(10)
+    renderPreviewPage()
+    expect(screen.getByText('10 poin')).toBeInTheDocument()
+    expect(screen.getByText('Total: 100 poin')).toBeInTheDocument()
+  })
+})
+
 describe('PreviewPage print flow', () => {
   it('keeps print scope active until afterprint fires', () => {
     vi.useFakeTimers()

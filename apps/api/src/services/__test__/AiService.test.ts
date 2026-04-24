@@ -37,7 +37,7 @@ describe('AiService.generate', () => {
 
     const system = 'BASELINE\n## Capaian Pembelajaran\n- foo'
     const user = 'task params'
-    await ai.generate({ system, user })
+    await ai.generate({ system, user, expectedCount: 20 })
 
     expect(create).toHaveBeenCalledOnce()
     const params = create.mock.calls[0]![0] as {
@@ -61,7 +61,7 @@ describe('AiService.generate', () => {
     const ai = createAiService({ client })
 
     const pdfBytes = Buffer.from('%PDF-1.4 fake')
-    await ai.generate({ system: 's', user: 'u', pdfBytes })
+    await ai.generate({ system: 's', user: 'u', pdfBytes, expectedCount: 20 })
 
     const params = create.mock.calls[0]![0] as {
       messages: Array<{ content: Array<{ type: string }> }>
@@ -74,14 +74,23 @@ describe('AiService.generate', () => {
     const fenced = '```json\n' + JSON.stringify(VALID_QUESTIONS) + '\n```'
     const { client } = fakeClient(fenced)
     const ai = createAiService({ client })
-    const out = await ai.generate({ system: 's', user: 'u' })
+    const out = await ai.generate({ system: 's', user: 'u', expectedCount: 20 })
     expect(out).toHaveLength(20)
   })
+
+  it('throws AiGenerationError when question count does not match expectedCount', async () => {
+    const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS.slice(0, 5)))
+    const ai = createAiService({ client })
+    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
+      AiGenerationError,
+    )
+  })
+
 
   it('throws AiGenerationError on non-JSON output', async () => {
     const { client } = fakeClient('not json')
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u' })).rejects.toBeInstanceOf(
+    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
       AiGenerationError,
     )
   })
@@ -91,8 +100,28 @@ describe('AiService.generate', () => {
     bad[0] = { ...bad[0]!, correct_answer: 'z' as 'a' }
     const { client } = fakeClient(JSON.stringify(bad))
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u' })).rejects.toBeInstanceOf(
+    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
       AiGenerationError,
     )
+  })
+})
+
+describe('AiService.generate — expectedCount', () => {
+  it('throws AiGenerationError with both numbers when AI returns fewer questions than expectedCount', async () => {
+    const fiveQuestions = VALID_QUESTIONS.slice(0, 5)
+    const { client } = fakeClient(JSON.stringify(fiveQuestions))
+    const ai = createAiService({ client })
+    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 10 }).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(AiGenerationError)
+    expect((err as AiGenerationError).message).toContain('10')
+    expect((err as AiGenerationError).message).toContain('5')
+  })
+
+  it('resolves successfully when AI returns exactly expectedCount questions', async () => {
+    const tenQuestions = VALID_QUESTIONS.slice(0, 10)
+    const { client } = fakeClient(JSON.stringify(tenQuestions))
+    const ai = createAiService({ client })
+    const result = await ai.generate({ system: 's', user: 'u', expectedCount: 10 })
+    expect(result).toHaveLength(10)
   })
 })

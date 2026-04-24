@@ -116,7 +116,7 @@ function ReviewPage() {
       toast({
         variant: 'success',
         title: 'Lembar berhasil dibuat',
-        description: '20 soal berhasil dibuat — siap di-review.',
+        description: `${draft.questions.length} soal berhasil dibuat — siap di-review.`,
       })
       void navigate({
         to: '/review',
@@ -394,7 +394,7 @@ function ReviewPage() {
       {mode === 'fast' ? (
         <PageHeader
           title="Konfirmasi Paket"
-          subtitle="20 soal auto-diterima"
+          subtitle={`${questions.length} soal auto-diterima`}
           onBack={() => { void navigate({ to: '/generate' }) }}
         >
           <Badge variant="secondary">Mode Cepat</Badge>

@@ -21,14 +21,14 @@ function useElapsedSeconds(active: boolean) {
 
 const STEPS = [
   { id: 0, label: 'Menganalisis materi & CP Fase C', threshold: 0 },
-  { id: 1, label: 'Menyusun 20 soal pilihan ganda', threshold: 20 },
+  { id: 1, label: 'Menyusun soal pilihan ganda', threshold: 20 },
   { id: 2, label: 'Membuat kunci jawaban', threshold: 60 },
   { id: 3, label: 'Validasi akhir', threshold: 90 },
 ] as const
 
 const TIPS = [
   'AI menyertakan Capaian Pembelajaran Fase C secara otomatis.',
-  'Setiap lembar berisi 20 soal pilihan ganda — siap dicetak ke A4.',
+  'Setiap lembar berisi soal pilihan ganda — siap dicetak ke A4.',
   'Setelah selesai, Anda bisa edit setiap soal sebelum dicetak.',
 ] as const
 
@@ -92,7 +92,7 @@ export function GenerateProgressDialog({
             <div className="space-y-1">
               <DialogTitle className="text-h3">Membuat lembar ujian Anda</DialogTitle>
               <DialogDescription className="text-body-sm">
-                AI sedang menyusun 20 soal sesuai Kurikulum Merdeka Fase C.
+                AI sedang menyusun soal sesuai Kurikulum Merdeka Fase C.
               </DialogDescription>
             </div>
           </div>

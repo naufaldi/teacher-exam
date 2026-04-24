@@ -24,6 +24,7 @@ export const GenerateExamInputSchema = Schema.Struct({
   classContext:     Schema.optional(Schema.String),
   pdfUploadId:      Schema.optional(Schema.String),
   exampleQuestions: Schema.optional(Schema.String),
+  totalSoal:        Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
 })
 export type GenerateExamInput = typeof GenerateExamInputSchema.Type
 

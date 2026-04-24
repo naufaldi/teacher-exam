@@ -30,6 +30,7 @@ vi.mock('../../lib/prompt', () => ({
 }))
 
 import { db } from '@teacher-exam/db'
+import { buildExamPrompt } from '../../lib/prompt'
 import { createAiRouter } from '../ai'
 import { makeChain, makeQuestionRow } from './helpers.js'
 
@@ -265,6 +266,74 @@ describe('POST /api/ai/generate', () => {
     expect(res.status).toBe(502)
     expect(db.transaction).not.toHaveBeenCalled()
     expect(db.insert).not.toHaveBeenCalled()
+  })
+
+  describe('totalSoal resolution', () => {
+    function setupDbMocks(examType = 'formatif') {
+      const examRow = makeExamRow({ examType })
+      const questionRows = Array.from({ length: 20 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      const insertChain = makeChain([])
+      ;(db.insert as Mock).mockReturnValue(insertChain)
+      ;(db.transaction as Mock).mockImplementation(
+        async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+    }
+
+    it('uses input.totalSoal when provided (sas, totalSoal: 30)', async () => {
+      setupDbMocks('sas')
+      const app = buildTestApp()
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'sas', totalSoal: 30 }),
+      })
+      expect(buildExamPrompt as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ totalSoal: 30 }),
+      )
+      expect(fakeAiService.generate as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedCount: 30 }),
+      )
+    })
+
+    it('uses profile defaultTotalSoal when totalSoal omitted (sas → 25)', async () => {
+      setupDbMocks('sas')
+      const app = buildTestApp()
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'sas' }),
+      })
+      expect(buildExamPrompt as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ totalSoal: 25 }),
+      )
+      expect(fakeAiService.generate as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedCount: 25 }),
+      )
+    })
+
+    it('uses profile defaultTotalSoal when totalSoal omitted (latihan → 20)', async () => {
+      setupDbMocks('latihan')
+      const app = buildTestApp()
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'latihan' }),
+      })
+      expect(buildExamPrompt as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ totalSoal: 20 }),
+      )
+      expect(fakeAiService.generate as Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedCount: 20 }),
+      )
+    })
   })
 
   it('uses formatExamTitle unified format for the generated exam title', async () => {

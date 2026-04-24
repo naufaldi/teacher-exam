@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import { buildExamPrompt } from '../prompt'
 
 const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merdeka)
@@ -19,6 +19,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -36,6 +37,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Pendidikan Pancasila',
       grade: 5,
       topics: ['Hak dan Kewajiban'],
+      totalSoal: 25,
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -53,6 +55,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -68,6 +71,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
     })
     expect(user).not.toContain('konteks_guru')
@@ -81,6 +85,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       classContext: 'Anak-anak masih bingung membedakan teks persuasi.',
       exampleQuestions: 'Contoh: Bacalah teks berikut...',
@@ -97,6 +102,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Teks Narasi', 'Puisi', 'Opini dan Fakta'],
+      totalSoal: 25,
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -113,6 +119,7 @@ describe('buildExamPrompt', () => {
       subjectLabel: 'Bahasa Indonesia',
       grade: 5,
       topics: ['Kosakata'],
+      totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
     })
 
@@ -127,8 +134,31 @@ describe('buildExamPrompt', () => {
         subjectLabel: 'Bahasa Indonesia',
         grade: 6,
         topics: [],
+        totalSoal: 20,
         curriculumText: FAKE_CURRICULUM,
       }),
     ).toThrow('topics must contain at least one item')
+  })
+})
+
+describe('buildExamPrompt — totalSoal', () => {
+  const basePromptInput = {
+    examType: 'formatif' as const,
+    difficulty: 'campuran' as const,
+    subjectLabel: 'Bahasa Indonesia',
+    grade: 6,
+    topics: ['Pemahaman Bacaan'],
+    curriculumText: FAKE_CURRICULUM,
+  }
+
+  test('system prompt contains exact totalSoal count (not hardcoded 20)', () => {
+    const { system } = buildExamPrompt({ ...basePromptInput, totalSoal: 25 })
+    expect(system).toContain('tepat 25 soal')
+    expect(system).not.toContain('tepat 20')
+  })
+
+  test('user prompt contains totalSoal count', () => {
+    const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30 })
+    expect(user).toContain('berisi 30 soal')
   })
 })
