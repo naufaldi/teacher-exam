@@ -3,8 +3,9 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentType } from 'react'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, ExamWithQuestions, Question } from '@teacher-exam/shared'
 
-const { mockNavigate } = vi.hoisted(() => ({
+const { mockNavigate, mockGenerateDiscussion } = vi.hoisted(() => ({
   mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
+  mockGenerateDiscussion: vi.fn(),
 }))
 
 // Mutable so individual tests can override loader data (e.g. topics array)
@@ -30,7 +31,11 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
     ...orig,
     api: {
       ...orig.api,
-      exams: { ...orig.api.exams, get: vi.fn() },
+      exams: {
+        ...orig.api.exams,
+        get: vi.fn(),
+        generateDiscussion: mockGenerateDiscussion,
+      },
     },
   }
 })
@@ -364,5 +369,79 @@ describe('PreviewPage topics display', () => {
     renderPreviewPage()
 
     expect(screen.getAllByText('Teks Narasi').length).toBeGreaterThan(0)
+  })
+})
+
+describe('Pembahasan tab', () => {
+  it('renders Pembahasan tab trigger in the tab list', () => {
+    mockLoaderData = makeExamWithQuestions(['Teks Narasi'])
+    renderPreviewPage()
+
+    expect(screen.getByRole('tab', { name: /pembahasan/i })).toBeInTheDocument()
+  })
+
+  it('renders Generate Pembahasan CTA when discussionMd is null', () => {
+    mockLoaderData = { ...makeExamWithQuestions(['Teks Narasi']), discussionMd: null }
+    renderPreviewPage()
+
+    const pembahasanSection = document.querySelector('[data-print-section="pembahasan"]')
+    expect(pembahasanSection).not.toBeNull()
+    expect(within(pembahasanSection as HTMLElement).getByRole('button', { name: /generate pembahasan/i })).toBeInTheDocument()
+  })
+
+  it('renders markdown read-only when discussionMd is non-null on load', () => {
+    mockLoaderData = {
+      ...makeExamWithQuestions(['Teks Narasi']),
+      discussionMd: '## 1. Soal\n**Jawaban Benar: B**\n\nPenjelasan singkat.',
+    }
+    renderPreviewPage()
+
+    const pembahasanSection = document.querySelector('[data-print-section="pembahasan"]')
+    expect(pembahasanSection).not.toBeNull()
+    expect(within(pembahasanSection as HTMLElement).getByText(/Jawaban Benar/)).toBeInTheDocument()
+    expect(within(pembahasanSection as HTMLElement).queryByRole('button', { name: /generate pembahasan/i })).not.toBeInTheDocument()
+  })
+
+  it('clicking Generate calls api.exams.generateDiscussion and renders returned markdown', async () => {
+    mockLoaderData = { ...makeExamWithQuestions(['Teks Narasi']), discussionMd: null }
+    mockGenerateDiscussion.mockResolvedValueOnce({
+      ...makeExamWithQuestions(['Teks Narasi']),
+      discussionMd: '## 1. Hasil\n\n**Jawaban Benar: A**\n\nOke.',
+    })
+
+    renderPreviewPage()
+
+    const pembahasanSection = document.querySelector('[data-print-section="pembahasan"]')
+    const generateBtn = within(pembahasanSection as HTMLElement).getByRole('button', { name: /generate pembahasan/i })
+    fireEvent.click(generateBtn)
+
+    expect(mockGenerateDiscussion).toHaveBeenCalledWith('exam-preview')
+    expect(await screen.findByText(/Jawaban Benar/)).toBeInTheDocument()
+  })
+
+  it('Cetak Pembahasan button calls triggerPrint with pembahasan scope', () => {
+    vi.useFakeTimers()
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
+    mockLoaderData = {
+      ...makeExamWithQuestions(['Teks Narasi']),
+      discussionMd: '## Pembahasan',
+    }
+    renderPreviewPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /cetak pembahasan/i }))
+
+    expect(document.body.dataset['printScope']).toBe('pembahasan')
+    act(() => { vi.advanceTimersByTime(50) })
+    expect(printSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('CSS includes pembahasan print scope rules', () => {
+    mockLoaderData = makeExamWithQuestions(['Teks Narasi'])
+    const { container } = renderPreviewPage()
+    const styleText = Array.from(container.querySelectorAll('style'))
+      .map((s) => s.textContent ?? '')
+      .join('\n')
+
+    expect(styleText).toContain('body[data-print-scope="pembahasan"]')
   })
 })

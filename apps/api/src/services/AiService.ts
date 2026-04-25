@@ -14,8 +14,14 @@ export interface GenerateInput {
   expectedCount: number
 }
 
+export interface DiscussionInput {
+  system: string
+  user: string
+}
+
 export interface AiService {
   generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
+  generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
 }
 
 /**
@@ -32,10 +38,12 @@ export interface AiServiceConfig {
   client: AnthropicLike
   model?: string
   maxTokens?: number
+  discussionMaxTokens?: number
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5'
 const DEFAULT_MAX_TOKENS = 32000
+const DEFAULT_DISCUSSION_MAX_TOKENS = 4096
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 
 /**
@@ -49,6 +57,7 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 export function createAiService(config: AiServiceConfig): AiService {
   const model = config.model ?? DEFAULT_MODEL
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
+  const discussionMaxTokens = config.discussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
 
   return {
     generate({ system, user, pdfBytes, expectedCount }) {
@@ -66,33 +75,8 @@ export function createAiService(config: AiServiceConfig): AiService {
       content.push({ type: 'text', text: user })
 
       return Effect.gen(function* () {
-        const response = yield* Effect.tryPromise({
-          try: () =>
-            config.client.messages.create({
-              model,
-              max_tokens: maxTokens,
-              system,
-              messages: [{ role: 'user', content }],
-            }),
-          catch: (cause) => new AiGenerationError({ cause }),
-        })
-
-        if (response.stop_reason !== 'end_turn') {
-          return yield* Effect.fail(
-            new AiGenerationError({
-              cause: `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
-            }),
-          )
-        }
-
-        const firstBlock = response.content[0]
-        if (!firstBlock || firstBlock.type !== 'text') {
-          return yield* Effect.fail(
-            new AiGenerationError({ cause: 'Anthropic returned no text block' }),
-          )
-        }
-
-        const questions = yield* parseAndValidate(firstBlock.text)
+        const text = yield* callAnthropicText({ config, model, max_tokens: maxTokens, system, content })
+        const questions = yield* parseAndValidate(text)
         if (questions.length !== expectedCount) {
           return yield* Effect.fail(
             new AiGenerationError({
@@ -102,6 +86,16 @@ export function createAiService(config: AiServiceConfig): AiService {
         }
         return questions
       })
+    },
+
+    generateDiscussion({ system, user }) {
+      return callAnthropicText({
+        config,
+        model,
+        max_tokens: discussionMaxTokens,
+        system,
+        content: [{ type: 'text', text: user }],
+      }).pipe(Effect.map((text) => stripCodeFence(text)))
     },
   }
 }
@@ -116,6 +110,50 @@ export function createDefaultAiService(): AiService {
     throw new Error('ANTHROPIC_API_KEY is required to use AiService')
   }
   return createAiService({ client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }) })
+}
+
+function callAnthropicText({
+  config,
+  model,
+  max_tokens,
+  system,
+  content,
+}: {
+  config: AiServiceConfig
+  model: string
+  max_tokens: number
+  system: string
+  content: Anthropic.ContentBlockParam[]
+}): Effect.Effect<string, AiGenerationError> {
+  return Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        config.client.messages.create({
+          model,
+          max_tokens,
+          system,
+          messages: [{ role: 'user', content }],
+        }),
+      catch: (cause) => new AiGenerationError({ cause }),
+    })
+
+    if (response.stop_reason !== 'end_turn') {
+      return yield* Effect.fail(
+        new AiGenerationError({
+          cause: `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
+        }),
+      )
+    }
+
+    const firstBlock = response.content[0]
+    if (!firstBlock || firstBlock.type !== 'text') {
+      return yield* Effect.fail(
+        new AiGenerationError({ cause: 'Anthropic returned no text block' }),
+      )
+    }
+
+    return firstBlock.text
+  })
 }
 
 function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, AiGenerationError> {
@@ -147,7 +185,7 @@ function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, 
 function stripCodeFence(raw: string): string {
   const trimmed = raw.trim()
   if (trimmed.startsWith('```')) {
-    const inner = trimmed.replace(/^```(?:json)?\n?/i, '').replace(/```\s*$/, '')
+    const inner = trimmed.replace(/^```(?:json|markdown)?\n?/i, '').replace(/```\s*$/, '')
     return inner.trim()
   }
   return trimmed

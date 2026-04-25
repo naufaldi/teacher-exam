@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Printer, FileText, ClipboardList, Key, Layers } from 'lucide-react'
+import { Printer, FileText, ClipboardList, Key, Layers, BookOpen } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import {
   Button,
   Badge,
@@ -12,7 +13,7 @@ import {
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
-import type { ExamType, Question } from '@teacher-exam/shared'
+import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/preview')({
@@ -60,7 +61,7 @@ function kopLabelFor(examType: string): string {
   return EXAM_TYPE_KOP_LABELS[examType as ExamType] ?? examType.toUpperCase()
 }
 
-type PrintScope = 'all' | 'soal' | 'lj' | 'kunci'
+type PrintScope = 'all' | 'soal' | 'lj' | 'kunci' | 'pembahasan'
 const PRINT_CLEANUP_FALLBACK_MS = 10_000
 
 function triggerPrint(scope: PrintScope) {
@@ -87,7 +88,7 @@ function PreviewPage() {
   const navigate = useNavigate()
   const draft = useExamDraft()
   const exam = Route.useLoaderData()
-  const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua'>('semua')
+  const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua' | 'pembahasan'>('semua')
 
   const { questions, metadata, subject, grade } = draft
   const subjectLabel = SUBJECT_LABELS[subject] ?? subject
@@ -128,6 +129,9 @@ function PreviewPage() {
             <TabsTrigger value="kunci">
               <Key className="h-3.5 w-3.5 mr-1.5" /> Kunci
             </TabsTrigger>
+            <TabsTrigger value="pembahasan">
+              <BookOpen className="h-3.5 w-3.5 mr-1.5" /> Pembahasan
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex flex-wrap gap-2">
@@ -140,6 +144,9 @@ function PreviewPage() {
           <Button variant="ghost" size="sm" onClick={() => triggerPrint('kunci')}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Kunci
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint('pembahasan')}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
+          </Button>
           <Button onClick={() => triggerPrint('all')}>
             <Printer className="h-4 w-4 mr-2" /> Cetak Semua
           </Button>
@@ -151,20 +158,32 @@ function PreviewPage() {
         @media screen {
           [data-print-content][data-screen-tab="soal"] [data-print-section="lj"],
           [data-print-content][data-screen-tab="soal"] [data-print-section="kunci"],
+          [data-print-content][data-screen-tab="soal"] [data-print-section="pembahasan"],
           [data-print-content][data-screen-tab="lj"] [data-print-section="soal"],
           [data-print-content][data-screen-tab="lj"] [data-print-section="kunci"],
+          [data-print-content][data-screen-tab="lj"] [data-print-section="pembahasan"],
           [data-print-content][data-screen-tab="kunci"] [data-print-section="soal"],
-          [data-print-content][data-screen-tab="kunci"] [data-print-section="lj"] {
+          [data-print-content][data-screen-tab="kunci"] [data-print-section="lj"],
+          [data-print-content][data-screen-tab="kunci"] [data-print-section="pembahasan"],
+          [data-print-content][data-screen-tab="pembahasan"] [data-print-section="soal"],
+          [data-print-content][data-screen-tab="pembahasan"] [data-print-section="lj"],
+          [data-print-content][data-screen-tab="pembahasan"] [data-print-section="kunci"] {
             display: none !important;
           }
         }
         @media print {
           body[data-print-scope="soal"] [data-print-section="lj"],
           body[data-print-scope="soal"] [data-print-section="kunci"],
+          body[data-print-scope="soal"] [data-print-section="pembahasan"],
           body[data-print-scope="lj"] [data-print-section="soal"],
           body[data-print-scope="lj"] [data-print-section="kunci"],
+          body[data-print-scope="lj"] [data-print-section="pembahasan"],
           body[data-print-scope="kunci"] [data-print-section="soal"],
-          body[data-print-scope="kunci"] [data-print-section="lj"] {
+          body[data-print-scope="kunci"] [data-print-section="lj"],
+          body[data-print-scope="kunci"] [data-print-section="pembahasan"],
+          body[data-print-scope="pembahasan"] [data-print-section="soal"],
+          body[data-print-scope="pembahasan"] [data-print-section="lj"],
+          body[data-print-scope="pembahasan"] [data-print-section="kunci"] {
             display: none !important;
           }
           [data-preview-frame] {
@@ -181,6 +200,7 @@ function PreviewPage() {
         <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
         <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
         <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} topicsLabel={topicsLabel} />
+        {exam ? <PembahasanSection exam={exam} /> : null}
       </div>
     </div>
   )
@@ -504,6 +524,50 @@ function KunciSection({
             )
           })()}
         </div>
+      </PaperFrame>
+    </div>
+  )
+}
+
+function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
+  const [md, setMd] = useState<string | null>(exam.discussionMd)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
+  const handleGenerate = () => {
+    setIsGenerating(true)
+    setGenerateError(null)
+    void api.exams.generateDiscussion(exam.id).then((updated) => {
+      setMd(updated.discussionMd)
+    }).catch((err: unknown) => {
+      setGenerateError(err instanceof Error ? err.message : 'Gagal membuat pembahasan. Coba lagi.')
+    }).finally(() => {
+      setIsGenerating(false)
+    })
+  }
+
+  return (
+    <div data-print-section="pembahasan" className="print-break-before">
+      <PaperFrame>
+        <div className="text-center border-b-2 border-black pb-3 mb-5">
+          <p className="text-base font-bold uppercase">PEMBAHASAN</p>
+        </div>
+        {md === null ? (
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <p className="text-sm text-kertas-600">Pembahasan belum dibuat untuk ujian ini.</p>
+            {generateError ? (
+              <p className="text-sm text-danger-600">{generateError}</p>
+            ) : null}
+            <Button onClick={handleGenerate} disabled={isGenerating}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              {isGenerating ? 'Membuat Pembahasan...' : 'Generate Pembahasan'}
+            </Button>
+          </div>
+        ) : (
+          <div className="prose prose-sm max-w-none text-[13px] leading-relaxed">
+            <ReactMarkdown>{md}</ReactMarkdown>
+          </div>
+        )}
       </PaperFrame>
     </div>
   )

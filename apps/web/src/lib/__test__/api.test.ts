@@ -284,3 +284,40 @@ describe('api.questions.regenerate', () => {
     )
   })
 })
+
+describe('api.exams.generateDiscussion', () => {
+  it('POSTs to /api/exams/:id/discussion and returns ExamWithQuestions', async () => {
+    const examWithDiscussion = {
+      ...VALID_EXAM_WITH_QUESTIONS,
+      status: 'final',
+      discussionMd: '## 1. Soal\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.',
+    }
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(examWithDiscussion),
+    })
+
+    const result = await api.exams.generateDiscussion('exam_1')
+    expect(result.id).toBe('exam_1')
+    expect(result.discussionMd).toContain('Jawaban Benar')
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/exams/exam_1/discussion',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('propagates ApiError on 409 (discussion already exists)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      statusText: 'Conflict',
+      json: () => Promise.resolve({ error: 'Discussion already exists', code: 'DISCUSSION_ALREADY_EXISTS' }),
+    })
+
+    await expect(api.exams.generateDiscussion('exam_1')).rejects.toSatisfy((err: unknown) => {
+      if (!(err instanceof ApiError)) return false
+      return err.status === 409 && err.code === 'DISCUSSION_ALREADY_EXISTS'
+    })
+  })
+})

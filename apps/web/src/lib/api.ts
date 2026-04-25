@@ -126,6 +126,8 @@ export const api = {
     duplicate: (id: string) => apiFetch<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
     finalize: (id: string) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
+    generateDiscussion: (id: string) =>
+      apiFetch<ExamDetailResponse>(`/exams/${id}/discussion`, { method: 'POST' }),
   },
   ai: {
     generate: async (input: GenerateExamInput): Promise<ExamWithQuestions> => {

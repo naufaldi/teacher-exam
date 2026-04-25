@@ -206,3 +206,53 @@ describe('AiService.generate — multi-type schema validation', () => {
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
 })
+
+describe('AiService.generateDiscussion', () => {
+  const FAKE_MARKDOWN = `## 1. Soal tentang ide pokok\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.\n\n---`
+
+  it('returns the raw markdown string from Claude', async () => {
+    const { client } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    const result = await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
+    expect(result).toBe(FAKE_MARKDOWN)
+  })
+
+  it('sends system and user to Anthropic in the correct positions', async () => {
+    const { client, create } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    await Effect.runPromise(ai.generateDiscussion({ system: 'SYS', user: 'USR' }))
+    const params = create.mock.calls[0]![0] as {
+      system: string
+      messages: Array<{ content: Array<{ type: string; text?: string }> }>
+    }
+    expect(params.system).toBe('SYS')
+    const textBlocks = params.messages[0]!.content.filter((b) => b.type === 'text')
+    expect(textBlocks[0]!.text).toBe('USR')
+  })
+
+  it('strips code-fence wrapper if Claude wraps output in ```markdown', async () => {
+    const fenced = '```markdown\n' + FAKE_MARKDOWN + '\n```'
+    const { client } = fakeClient(fenced)
+    const ai = createAiService({ client })
+    const result = await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
+    expect(result).not.toContain('```')
+    expect(result).toContain('Jawaban Benar')
+  })
+
+  it('returns AiGenerationError when stop_reason is not end_turn', async () => {
+    const { client } = fakeClient(FAKE_MARKDOWN, { stopReason: 'max_tokens' })
+    const ai = createAiService({ client })
+    await expectAiGenerationError(ai.generateDiscussion({ system: 's', user: 'u' }))
+  })
+
+  it('returns AiGenerationError when Claude returns no text block', async () => {
+    const create = vi.fn().mockResolvedValue({
+      content: [],
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+    })
+    const client: AnthropicLike = { messages: { create } }
+    const ai = createAiService({ client })
+    await expectAiGenerationError(ai.generateDiscussion({ system: 's', user: 'u' }))
+  })
+})
