@@ -90,29 +90,38 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   },
 }
 
-// TODO(phase2-task5): this returns the raw baseline difficultyDist (sum = defaultTotalSoal of each profile).
-// When wiring totalSoal in routes/ai.ts, call rescaleDifficultyDist(examType, totalSoal) instead.
+function scaleDifficultyDist(
+  base: { mudah: number; sedang: number; sulit: number },
+  totalSoal: number,
+): { mudah: number; sedang: number; sulit: number } {
+  const baseTotal = base.mudah + base.sedang + base.sulit
+  const mudah = Math.round((base.mudah / baseTotal) * totalSoal)
+  const sedang = Math.round((base.sedang / baseTotal) * totalSoal)
+  const sulit = Math.max(0, totalSoal - mudah - sedang)
+  return { mudah, sedang, sulit }
+}
+
 /**
  * Resolve the effective difficulty distribution. If the teacher explicitly
  * picks a single bucket (mudah/sedang/sulit), bias the full sheet to that
  * bucket — overriding the profile default. `'campuran'` (default) yields the
- * profile's natural distribution.
+ * profile's natural distribution, scaled to the requested total.
  */
 export function resolveDifficultyDist(
   examType: ExamType,
   difficulty: ExamDifficulty,
+  totalSoal: number,
 ): { mudah: number; sedang: number; sulit: number } {
-  const profile = EXAM_TYPE_PROFILE[examType]
-  if (difficulty === 'campuran') return profile.difficultyDist
+  if (difficulty === 'campuran') return rescaleDifficultyDist(examType, totalSoal)
   // Heavy bias to the chosen bucket but keep small variation so the sheet
   // doesn't feel monotone (16/3/1 instead of 20/0/0).
   switch (difficulty) {
     case 'mudah':
-      return { mudah: 16, sedang: 3, sulit: 1 }
+      return scaleDifficultyDist({ mudah: 16, sedang: 3, sulit: 1 }, totalSoal)
     case 'sedang':
-      return { mudah: 3, sedang: 14, sulit: 3 }
+      return scaleDifficultyDist({ mudah: 3, sedang: 14, sulit: 3 }, totalSoal)
     case 'sulit':
-      return { mudah: 1, sedang: 3, sulit: 16 }
+      return scaleDifficultyDist({ mudah: 1, sedang: 3, sulit: 16 }, totalSoal)
   }
 }
 
@@ -125,12 +134,7 @@ export function rescaleDifficultyDist(
   examType: ExamType,
   totalSoal: number,
 ): { mudah: number; sedang: number; sulit: number } {
-  const base = EXAM_TYPE_PROFILE[examType].difficultyDist
-  const baseTotal = base.mudah + base.sedang + base.sulit
-  const mudah = Math.round((base.mudah / baseTotal) * totalSoal)
-  const sedang = Math.round((base.sedang / baseTotal) * totalSoal)
-  const sulit = Math.max(0, totalSoal - mudah - sedang)
-  return { mudah, sedang, sulit }
+  return scaleDifficultyDist(EXAM_TYPE_PROFILE[examType].difficultyDist, totalSoal)
 }
 
 /**

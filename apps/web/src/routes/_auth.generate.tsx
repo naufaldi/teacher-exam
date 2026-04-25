@@ -25,7 +25,7 @@ import { GenerateProgressDialog } from '../components/generate/generate-progress
 import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
-import { api, RateLimitedError } from '../lib/api.js'
+import { api, ApiError, RateLimitedError } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/generate')({
   component: GeneratePage,
@@ -234,6 +234,7 @@ function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [generateErrorMessage, setGenerateErrorMessage] = useState<string | null>(null)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -278,6 +279,7 @@ function GeneratePage() {
       : topiks
 
     setError(null)
+    setGenerateErrorMessage(null)
     setShowErrorDialog(false)
     setIsGenerating(true)
     setProgress(0)
@@ -320,7 +322,12 @@ function GeneratePage() {
       setProgress(0)
 
       if (err instanceof RateLimitedError) {
-        setError(`Terlalu banyak permintaan. Coba lagi dalam ${err.retryAfterSec} detik.`)
+        const message = `Terlalu banyak permintaan. Coba lagi dalam ${err.retryAfterSec} detik.`
+        setError(message)
+        setGenerateErrorMessage(message)
+        setShowErrorDialog(true)
+      } else if (err instanceof ApiError) {
+        setGenerateErrorMessage(err.message)
         setShowErrorDialog(true)
       } else {
         setShowErrorDialog(true)
@@ -349,6 +356,7 @@ function GeneratePage() {
 
   const handleRetry = () => {
     setShowErrorDialog(false)
+    setGenerateErrorMessage(null)
     runGenerate()
   }
 
@@ -960,11 +968,16 @@ function GeneratePage() {
       <GenerateProgressDialog
         open={isGenerating}
         progress={progress}
+        totalSoal={totalSoal}
       />
       <GenerateErrorDialog
         open={showErrorDialog}
         onRetry={handleRetry}
-        onClose={() => setShowErrorDialog(false)}
+        onClose={() => {
+          setShowErrorDialog(false)
+          setGenerateErrorMessage(null)
+        }}
+        message={generateErrorMessage ?? undefined}
       />
     </div>
   )

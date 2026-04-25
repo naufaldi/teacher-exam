@@ -29,7 +29,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   if (input.topics.length === 0) {
     throw new Error('buildExamPrompt: topics must contain at least one item')
   }
-  const dist = resolveDifficultyDist(input.examType, input.difficulty)
+  const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
 
   const system = [
     profile.promptPreamble,

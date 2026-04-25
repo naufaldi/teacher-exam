@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { Schema, Either } from 'effect'
+import { Effect, Schema, Either } from 'effect'
 import { GeneratedQuestionSchema, type GeneratedQuestion } from '@teacher-exam/shared'
+import { AiGenerationError } from '../errors'
 
 export interface GenerateInput {
   /** Sent verbatim as the Anthropic `system` field. Carries curriculum corpus. */
@@ -14,7 +15,7 @@ export interface GenerateInput {
 }
 
 export interface AiService {
-  generate: (input: GenerateInput) => Promise<ReadonlyArray<GeneratedQuestion>>
+  generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
 }
 
 /**
@@ -50,7 +51,7 @@ export function createAiService(config: AiServiceConfig): AiService {
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
 
   return {
-    async generate({ system, user, pdfBytes, expectedCount }) {
+    generate({ system, user, pdfBytes, expectedCount }) {
       const content: Anthropic.ContentBlockParam[] = []
       if (pdfBytes) {
         content.push({
@@ -64,31 +65,43 @@ export function createAiService(config: AiServiceConfig): AiService {
       }
       content.push({ type: 'text', text: user })
 
-      const response = await config.client.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: [{ role: 'user', content }],
+      return Effect.gen(function* () {
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            config.client.messages.create({
+              model,
+              max_tokens: maxTokens,
+              system,
+              messages: [{ role: 'user', content }],
+            }),
+          catch: (cause) => new AiGenerationError({ cause }),
+        })
+
+        if (response.stop_reason !== 'end_turn') {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
+            }),
+          )
+        }
+
+        const firstBlock = response.content[0]
+        if (!firstBlock || firstBlock.type !== 'text') {
+          return yield* Effect.fail(
+            new AiGenerationError({ cause: 'Anthropic returned no text block' }),
+          )
+        }
+
+        const questions = yield* parseAndValidate(firstBlock.text)
+        if (questions.length !== expectedCount) {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Expected ${expectedCount} questions, got ${questions.length}`,
+            }),
+          )
+        }
+        return questions
       })
-
-      if (response.stop_reason !== 'end_turn') {
-        throw new AiGenerationError(
-          `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
-        )
-      }
-
-      const firstBlock = response.content[0]
-      if (!firstBlock || firstBlock.type !== 'text') {
-        throw new AiGenerationError('Anthropic returned no text block')
-      }
-
-      const questions = parseAndValidate(firstBlock.text)
-      if (questions.length !== expectedCount) {
-        throw new AiGenerationError(
-          `Expected ${expectedCount} questions, got ${questions.length}`,
-        )
-      }
-      return questions
     },
   }
 }
@@ -105,25 +118,30 @@ export function createDefaultAiService(): AiService {
   return createAiService({ client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }) })
 }
 
-export class AiGenerationError extends Error {
-  override readonly name = 'AiGenerationError'
-}
+function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, AiGenerationError> {
+  return Effect.gen(function* () {
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(stripCodeFence(raw)) as unknown,
+      catch: (cause) =>
+        new AiGenerationError({
+          cause: `Claude returned non-JSON output: ${(cause as Error).message}`,
+        }),
+    })
 
-function parseAndValidate(raw: string): Array<GeneratedQuestion> {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(stripCodeFence(raw))
-  } catch (err) {
-    throw new AiGenerationError(`Claude returned non-JSON output: ${(err as Error).message}`)
-  }
-  if (!Array.isArray(parsed)) {
-    throw new AiGenerationError('Claude returned non-array JSON')
-  }
-  const decoded = Schema.decodeUnknownEither(Schema.Array(GeneratedQuestionSchema))(parsed)
-  if (Either.isLeft(decoded)) {
-    throw new AiGenerationError(`AI output failed schema validation: ${String(decoded.left)}`)
-  }
-  return Array.from(decoded.right)
+    if (!Array.isArray(parsed)) {
+      return yield* Effect.fail(new AiGenerationError({ cause: 'Claude returned non-array JSON' }))
+    }
+
+    const decoded = Schema.decodeUnknownEither(Schema.Array(GeneratedQuestionSchema))(parsed)
+    if (Either.isLeft(decoded)) {
+      return yield* Effect.fail(
+        new AiGenerationError({
+          cause: `AI output failed schema validation: ${String(decoded.left)}`,
+        }),
+      )
+    }
+    return Array.from(decoded.right)
+  })
 }
 
 function stripCodeFence(raw: string): string {

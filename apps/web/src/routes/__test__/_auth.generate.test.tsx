@@ -41,7 +41,7 @@ vi.mock('@teacher-exam/ui', async (importOriginal) => {
   }
 })
 
-import { api } from '../../lib/api.js'
+import { api, ApiError } from '../../lib/api.js'
 import { Route } from '../_auth.generate.js'
 
 const mockApi = api as unknown as { ai: { generate: ReturnType<typeof vi.fn> } }
@@ -187,6 +187,21 @@ describe('GeneratePage — runGenerate flow', () => {
     await clickGenerateAndFlush()
 
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('shows the API error message in the failure dialog', async () => {
+    mockApi.ai.generate.mockRejectedValueOnce(
+      new ApiError({
+        message: 'Expected 40 questions, got 20',
+        code: 'AI_GENERATION_ERROR',
+        status: 502,
+      }),
+    )
+
+    renderGeneratePage()
+    await clickGenerateAndFlush()
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Expected 40 questions, got 20')
   })
 
   it('uses the dynamic examId from api response, not a fixed value', async () => {

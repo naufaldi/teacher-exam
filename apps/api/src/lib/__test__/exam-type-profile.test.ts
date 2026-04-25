@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { EXAM_TYPE_PROFILE, rescaleDifficultyDist, resolveComposition } from '../exam-type-profile'
+import { EXAM_TYPE_PROFILE, rescaleDifficultyDist, resolveComposition, resolveDifficultyDist } from '../exam-type-profile'
 
 describe('EXAM_TYPE_PROFILE.defaultTotalSoal', () => {
   test('latihan defaults to 20', () => {
@@ -68,6 +68,21 @@ describe('rescaleDifficultyDist', () => {
       expect(r).toEqual(profile.difficultyDist)
     }
   })
+})
+
+describe('resolveDifficultyDist', () => {
+  test('campuran distribution scales to requested totalSoal', () => {
+    const result = resolveDifficultyDist('formatif', 'campuran', 30)
+    expect(result.mudah + result.sedang + result.sulit).toBe(30)
+  })
+
+  test.each(['mudah', 'sedang', 'sulit'] as const)(
+    '%s distribution scales to requested totalSoal',
+    (difficulty) => {
+      const result = resolveDifficultyDist('formatif', difficulty, 30)
+      expect(result.mudah + result.sedang + result.sulit).toBe(30)
+    },
+  )
 })
 
 describe('EXAM_TYPE_PROFILE composition defaults', () => {

@@ -35,15 +35,17 @@ const TIPS = [
 export interface GenerateProgressDialogProps {
   open: boolean
   progress: number
+  totalSoal: number
 }
 
 /**
  * Centered modal that mimics a real AI streaming response while a lembar is generated.
- * Renders a 4-step checklist, a "Soal n / 20" counter, and a rotating tip.
+ * Renders a 4-step checklist, generated-question counter, and a rotating tip.
  */
 export function GenerateProgressDialog({
   open,
   progress,
+  totalSoal,
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
   const isOvertime = progress >= 99
@@ -60,11 +62,10 @@ export function GenerateProgressDialog({
     return () => clearInterval(id)
   }, [open])
 
-  // Soal counter starts ramping when step 2 begins (progress > 20),
-  // hits 20 when validation begins (progress ≥ 90).
+  // Counter starts ramping when step 2 begins and caps at the requested total.
   const soalCount = Math.max(
     0,
-    Math.min(20, Math.floor(((progress - 20) / 70) * 20)),
+    Math.min(totalSoal, Math.floor(((progress - 20) / 70) * totalSoal)),
   )
 
   const activeStepIndex = STEPS.reduce(
@@ -119,7 +120,7 @@ export function GenerateProgressDialog({
                 <span className="font-mono font-semibold text-text-primary">
                   {soalCount}
                 </span>{' '}
-                / 20 dibuat
+                / {totalSoal} dibuat
               </span>
             </div>
           </div>

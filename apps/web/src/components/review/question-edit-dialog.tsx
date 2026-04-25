@@ -19,7 +19,7 @@ import { matchQuestion } from '../../lib/question-render.js'
 
 export interface QuestionEditDialogProps {
   open: boolean
-  question: Question | null
+  question: Question
   onClose: () => void
   onSave: (updated: Question) => void
 }
@@ -296,18 +296,7 @@ export function QuestionEditDialog({
   onClose,
   onSave,
 }: QuestionEditDialogProps) {
-  const [editState, setEditState] = useState<EditState | null>(() =>
-    question !== null ? initState(question) : null,
-  )
-
-  // Re-initialize state when question identity changes
-  const [lastQuestionId, setLastQuestionId] = useState<string | null>(question?.id ?? null)
-  if (question !== null && question.id !== lastQuestionId) {
-    setLastQuestionId(question.id)
-    setEditState(initState(question))
-  }
-
-  if (question === null || editState === null) return null
+  const [editState, setEditState] = useState<EditState>(() => initState(question))
 
   const isValid = isValidState(editState)
 
@@ -339,7 +328,7 @@ export function QuestionEditDialog({
             <Textarea
               id="q-text"
               value={editState.text}
-              onChange={(e) => setEditState((s) => s !== null ? { ...s, text: e.target.value } : s)}
+              onChange={(e) => setEditState((s) => ({ ...s, text: e.target.value }))}
               rows={5}
             />
           </div>

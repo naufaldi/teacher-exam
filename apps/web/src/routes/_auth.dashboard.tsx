@@ -19,6 +19,7 @@ import { CurriculumTipsCard } from '../components/dashboard/curriculum-tips-card
 import { ExamHistoryRow } from '../components/dashboard/exam-history-row.js'
 import { DuplicateConfirmDialog } from '../components/dashboard/duplicate-confirm-dialog.js'
 import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../lib/feature-flags.js'
 
 export const Route = createFileRoute('/_auth/dashboard')({
   loader: async () => ({ exams: await api.exams.list() }),
@@ -377,7 +378,14 @@ function DashboardPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        disabled
+                        disabled={!KOREKSI_ENABLED}
+                        title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+                        onClick={() =>
+                          void navigate({
+                            to: '/correction/$examId',
+                            params: { examId: lastExam.id },
+                          })
+                        }
                       >
                         <CheckSquare size={13} />
                         Koreksi

@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { Schema, Match } from 'effect'
+import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
@@ -182,8 +182,15 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
 
     const siblingTexts = siblingRows.map((r) => r.text)
 
-    // Step 3: build a single-question prompt
-    const system = 'Anda adalah generator soal ulangan SD. Jawab HANYA dengan JSON array berisi tepat 1 soal. Setiap soal: text, option_a, option_b, option_c, option_d, correct_answer (a|b|c|d), topic, difficulty (mudah|sedang|sulit).'
+    // Step 3: build a single-question prompt.
+    // Shape MUST match `GeneratedQuestionSchema` (tagged Schema.Union in
+    // packages/shared) — `_tag` is the discriminator and `number` is required.
+    const system = [
+      'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka.',
+      'Jawab HANYA dengan JSON array berisi tepat 1 objek soal pilihan ganda — tanpa prosa, tanpa pembungkus markdown.',
+      'Format wajib (semua field diperlukan):',
+      '  { "_tag": "mcq_single", "number": 1, "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit" }',
+    ].join('\n')
     const userPayload: Record<string, unknown> = {
       kelas:            exam.grade,
       mata_pelajaran:   exam.subject,
@@ -199,12 +206,13 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
     // Step 4: call AI service
     aiService ??= createDefaultAiService()
 
-    let result: ReadonlyArray<GeneratedQuestion>
-    try {
-      result = await aiService.generate({ system, user, expectedCount: 1 })
-    } catch {
+    const aiResult = await Effect.runPromise(
+      Effect.either(aiService.generate({ system, user, expectedCount: 1 })),
+    )
+    if (Either.isLeft(aiResult)) {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)
     }
+    const result = aiResult.right
 
     if (result.length === 0 || !result[0]) {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)

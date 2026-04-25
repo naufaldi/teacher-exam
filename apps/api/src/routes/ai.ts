@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { Schema, Match } from 'effect'
+import { Effect, Either, Schema, Match } from 'effect'
 import { db, exams, questions } from '@teacher-exam/db'
 import {
   GenerateExamInputSchema,
@@ -14,7 +14,6 @@ import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
 import { questionToRow } from '../lib/question-mapper'
 import {
-  AiGenerationError,
   createDefaultAiService,
   type AiService,
 } from '../services/AiService'
@@ -110,15 +109,14 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     aiService ??= createDefaultAiService()
 
-    let generatedQuestions: ReadonlyArray<GeneratedQuestion>
-    try {
-      generatedQuestions = await aiService.generate({ system, user, expectedCount: totalSoal })
-    } catch (err) {
-      if (err instanceof AiGenerationError) {
-        return c.json({ error: 'AI generation failed', message: err.message }, 502)
-      }
-      throw err
+    const generated = await Effect.runPromise(
+      Effect.either(aiService.generate({ system, user, expectedCount: totalSoal })),
+    )
+    if (Either.isLeft(generated)) {
+      const err = generated.left
+      return c.json({ error: 'AI generation failed', message: String(err.cause) }, 502)
     }
+    const generatedQuestions = generated.right
 
     const title = formatExamTitle({
       subjectLabel: SUBJECT_LABEL[input.subject],

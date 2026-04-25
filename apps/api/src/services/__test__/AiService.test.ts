@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+import { Effect, Either } from 'effect'
 import {
-  AiGenerationError,
   createAiService,
   type AnthropicLike,
 } from '../AiService'
+import { AiGenerationError } from '../../errors'
 
 const VALID_QUESTIONS = Array.from({ length: 20 }, (_, i) => ({
   _tag: 'mcq_single' as const,
@@ -37,6 +38,16 @@ function fakeClient(
   }
 }
 
+async function expectAiGenerationError(
+  effect: Effect.Effect<unknown, AiGenerationError>,
+): Promise<AiGenerationError> {
+  const result = await Effect.runPromise(Effect.either(effect))
+  expect(Either.isLeft(result)).toBe(true)
+  if (Either.isRight(result)) throw new Error('Expected AiGenerationError')
+  expect(result.left).toBeInstanceOf(AiGenerationError)
+  return result.left
+}
+
 describe('AiService.generate', () => {
   it('sends curriculum via the top-level system field, not in user content', async () => {
     const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
@@ -44,7 +55,7 @@ describe('AiService.generate', () => {
 
     const system = 'BASELINE\n## Capaian Pembelajaran\n- foo'
     const user = 'task params'
-    await ai.generate({ system, user, expectedCount: 20 })
+    await Effect.runPromise(ai.generate({ system, user, expectedCount: 20 }))
 
     expect(create).toHaveBeenCalledOnce()
     const params = create.mock.calls[0]![0] as {
@@ -69,7 +80,7 @@ describe('AiService.generate', () => {
     const ai = createAiService({ client })
 
     const pdfBytes = Buffer.from('%PDF-1.4 fake')
-    await ai.generate({ system: 's', user: 'u', pdfBytes, expectedCount: 20 })
+    await Effect.runPromise(ai.generate({ system: 's', user: 'u', pdfBytes, expectedCount: 20 }))
 
     const params = create.mock.calls[0]![0] as {
       messages: Array<{ content: Array<{ type: string }> }>
@@ -82,16 +93,14 @@ describe('AiService.generate', () => {
     const fenced = '```json\n' + JSON.stringify(VALID_QUESTIONS) + '\n```'
     const { client } = fakeClient(fenced)
     const ai = createAiService({ client })
-    const out = await ai.generate({ system: 's', user: 'u', expectedCount: 20 })
+    const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
     expect(out).toHaveLength(20)
   })
 
   it('throws AiGenerationError when question count does not match expectedCount', async () => {
     const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS.slice(0, 5)))
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
-      AiGenerationError,
-    )
+    await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 
   it('throws a clear AiGenerationError when Claude stops at max_tokens', async () => {
@@ -100,20 +109,17 @@ describe('AiService.generate', () => {
     })
     const ai = createAiService({ client })
 
-    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 20 }).catch((e: unknown) => e)
+    const err = await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
 
-    expect(err).toBeInstanceOf(AiGenerationError)
-    expect((err as AiGenerationError).message).toContain('max_tokens')
-    expect((err as AiGenerationError).message).toContain('incomplete')
+    expect(String(err.cause)).toContain('max_tokens')
+    expect(String(err.cause)).toContain('incomplete')
   })
 
 
   it('throws AiGenerationError on non-JSON output', async () => {
     const { client } = fakeClient('not json')
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
-      AiGenerationError,
-    )
+    await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 
   it('throws AiGenerationError when a question fails schema validation', async () => {
@@ -121,9 +127,7 @@ describe('AiService.generate', () => {
     bad[0] = { ...bad[0]!, correct_answer: 'z' as 'a' }
     const { client } = fakeClient(JSON.stringify(bad))
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
-      AiGenerationError,
-    )
+    await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 })
 
@@ -132,17 +136,19 @@ describe('AiService.generate — expectedCount', () => {
     const fiveQuestions = VALID_QUESTIONS.slice(0, 5)
     const { client } = fakeClient(JSON.stringify(fiveQuestions))
     const ai = createAiService({ client })
-    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 10 }).catch((e: unknown) => e)
-    expect(err).toBeInstanceOf(AiGenerationError)
-    expect((err as AiGenerationError).message).toContain('10')
-    expect((err as AiGenerationError).message).toContain('5')
+    const err = await expectAiGenerationError(
+      ai.generate({ system: 's', user: 'u', expectedCount: 10 }),
+    )
+    expect(err._tag).toBe('AiGenerationError')
+    expect(String(err.cause)).toContain('10')
+    expect(String(err.cause)).toContain('5')
   })
 
   it('resolves successfully when AI returns exactly expectedCount questions', async () => {
     const tenQuestions = VALID_QUESTIONS.slice(0, 10)
     const { client } = fakeClient(JSON.stringify(tenQuestions))
     const ai = createAiService({ client })
-    const result = await ai.generate({ system: 's', user: 'u', expectedCount: 10 })
+    const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 10 }))
     expect(result).toHaveLength(10)
   })
 })
@@ -171,7 +177,7 @@ describe('AiService.generate — multi-type schema validation', () => {
     ]
     const { client } = fakeClient(JSON.stringify(mixed))
     const ai = createAiService({ client })
-    const result = await ai.generate({ system: 's', user: 'u', expectedCount: 3 })
+    const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 3 }))
     expect(result).toHaveLength(3)
     expect(result[0]!._tag).toBe('mcq_single')
     expect(result[1]!._tag).toBe('mcq_multi')
@@ -190,13 +196,13 @@ describe('AiService.generate — multi-type schema validation', () => {
     ]
     const { client } = fakeClient(JSON.stringify(bad))
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 1 })).rejects.toBeInstanceOf(AiGenerationError)
+    await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
 
   it('throws AiGenerationError for unknown _tag', async () => {
     const bad = [{ _tag: 'essay', number: 1, text: 'Ceritakan!', topic: 'T', difficulty: 'mudah' }]
     const { client } = fakeClient(JSON.stringify(bad))
     const ai = createAiService({ client })
-    await expect(ai.generate({ system: 's', user: 'u', expectedCount: 1 })).rejects.toBeInstanceOf(AiGenerationError)
+    await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
 })

@@ -11,6 +11,16 @@ const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merde
 **Topik utama:** Identitas diri.
 `
 
+function parsePromptParams(user: string) {
+  const jsonStart = user.indexOf('{')
+  if (jsonStart === -1) throw new Error('Prompt user message does not contain JSON params')
+  return JSON.parse(user.slice(jsonStart)) as {
+    jumlah_soal: number
+    distribusi_kesulitan: { mudah: number; sedang: number; sulit: number }
+    composition_soal: { mcq_single: number; mcq_multi: number; true_false: number }
+  }
+}
+
 describe('buildExamPrompt', () => {
   it('puts the full curriculum corpus in the system message, not in user', () => {
     const { system, user } = buildExamPrompt({
@@ -166,6 +176,49 @@ describe('buildExamPrompt — totalSoal', () => {
   test('user prompt contains totalSoal count', () => {
     const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30, composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 } })
     expect(user).toContain('berisi 30 soal')
+  })
+
+  test('difficulty distribution in prompt sums to totalSoal', () => {
+    const { user } = buildExamPrompt({
+      ...basePromptInput,
+      difficulty: 'sedang',
+      totalSoal: 30,
+      composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 },
+    })
+    const params = parsePromptParams(user)
+    const dist = params.distribusi_kesulitan
+
+    expect(params.jumlah_soal).toBe(30)
+    expect(dist.mudah + dist.sedang + dist.sulit).toBe(30)
+  })
+
+  test('sts sulit prompt keeps requested 40-question totals consistent', () => {
+    const { user } = buildExamPrompt({
+      examType: 'sts',
+      difficulty: 'sulit',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: [
+        'Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat)',
+        'Ide Pokok dan Gagasan Pendukung',
+        'Teks Eksposisi',
+        'Teks Eksplanasi',
+        'Teks Deskripsi',
+      ],
+      totalSoal: 40,
+      curriculumText: FAKE_CURRICULUM,
+      classContext:
+        'Fokus pada: Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat).\nHubungkan dengan keagamaan',
+      composition: { mcqSingle: 29, mcqMulti: 6, trueFalse: 5 },
+    })
+    const params = parsePromptParams(user)
+    const dist = params.distribusi_kesulitan
+    const composition = params.composition_soal
+
+    expect(params.jumlah_soal).toBe(40)
+    expect(dist.mudah + dist.sedang + dist.sulit).toBe(40)
+    expect(composition.mcq_single + composition.mcq_multi + composition.true_false).toBe(40)
+    expect(composition).toEqual({ mcq_single: 29, mcq_multi: 6, true_false: 5 })
   })
 })
 

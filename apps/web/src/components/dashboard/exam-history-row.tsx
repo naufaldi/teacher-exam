@@ -2,6 +2,7 @@ import type { Exam } from '@teacher-exam/shared'
 import { MoreHorizontal } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { Badge, Button } from '@teacher-exam/ui'
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
 
 interface SubjectMeta {
   short: string
@@ -57,6 +58,10 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
     void navigate({ to: '/preview', search: { examId: exam.id } })
   }
 
+  function handleCorrect() {
+    void navigate({ to: '/correction/$examId', params: { examId: exam.id } })
+  }
+
   function handleDuplicate() {
     if (onDuplicate) {
       onDuplicate(exam)
@@ -105,7 +110,15 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
         {isFinal ? (
           <>
             <Button variant="secondary" size="sm" onClick={handlePrint}>Cetak</Button>
-            <Button variant="secondary" size="sm" disabled>Koreksi</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCorrect}
+              disabled={!KOREKSI_ENABLED}
+              title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+            >
+              Koreksi
+            </Button>
           </>
         ) : (
           <>
