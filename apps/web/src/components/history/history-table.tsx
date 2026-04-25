@@ -12,6 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@teacher-exam/ui'
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
 
 interface SubjectMeta {
   short: string
@@ -172,7 +173,13 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
                 <PrinterIcon size={13} />
                 Cetak
               </Button>
-              <Button variant="secondary" size="sm" onClick={handleCorrection}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCorrection}
+                disabled={!KOREKSI_ENABLED}
+                title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+              >
                 <CheckSquare size={13} />
                 Koreksi
               </Button>
