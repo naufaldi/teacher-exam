@@ -22,6 +22,13 @@
       "when": 1777031872016,
       "tag": "0002_sour_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777086000000,
+      "tag": "0003_repair_question_shape_columns",
+      "breakpoints": true
     }
   ]
 }

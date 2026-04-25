@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, test } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
-import type { ExamWithQuestions } from '@teacher-exam/shared'
+import type { ExamWithQuestions, Question } from '@teacher-exam/shared'
 
 const mockNavigate = vi.fn<(opts: unknown) => Promise<void>>()
 
@@ -58,6 +58,16 @@ const mockQuestionsPatch = (api as unknown as { questions: { patch: ReturnType<t
 const mockQuestionsRegenerate = (api as unknown as { questions: { regenerate: ReturnType<typeof vi.fn> } }).questions.regenerate
 
 const NOW = '2024-01-01T00:00:00.000Z'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
 
 function makeExamWithQuestions(id = 'exam_123'): ExamWithQuestions {
   return {
@@ -148,38 +158,44 @@ describe('ReviewPage — component', () => {
   })
 })
 
-describe('ReviewPage — Slow Track reject wires to api.questions.patch', () => {
-  it('calls api.questions.patch with status=rejected when Tolak is confirmed', async () => {
+describe('ReviewPage — Slow Track reject regenerates with AI', () => {
+  it('shows loading and replaces the card when Tolak is confirmed', async () => {
     const user = userEvent.setup()
     mockSearchParams = { mode: 'slow', examId: 'exam_slow' }
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_slow'))
+    const exam = makeExamWithQuestions('exam_slow')
+    mockExamsGet.mockResolvedValueOnce(exam)
     await getLoader()({ deps: { examId: 'exam_slow' } })
 
-    mockQuestionsPatch.mockResolvedValueOnce({ id: 'q-1', status: 'rejected' })
+    const pending = deferred<Question>()
+    mockQuestionsRegenerate.mockReturnValueOnce(pending.promise)
 
     renderReviewPage()
 
-    // Click the first individual card Tolak button (not the bulk "Ganti ditolak")
-    // The button text is " Tolak" with an icon — find all matching and pick the first
     const tolakButtons = screen.getAllByText('Tolak')
     await user.click(tolakButtons[0]!)
 
-    // Confirm in the AlertDialog — button text is "Tolak & ganti"
     const confirmButton = await screen.findByText('Tolak & ganti')
     await user.click(confirmButton)
 
-    await waitFor(() => {
-      expect(mockQuestionsPatch).toHaveBeenCalledWith('q-1', { status: 'rejected' })
+    expect(await screen.findByText('AI sedang mengganti soal...')).toBeInTheDocument()
+    expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-1', expect.any(Object))
+
+    pending.resolve({
+      ...exam.questions[0]!,
+      text: 'Soal pengganti setelah ditolak',
+      status: 'pending' as const,
     })
+
+    expect(await screen.findByText('Soal pengganti setelah ditolak')).toBeInTheDocument()
   })
 
-  it('reverts question status to pending when api.questions.patch fails', async () => {
+  it('keeps the card rejected with retry when AI replacement fails after Tolak', async () => {
     const user = userEvent.setup()
     mockSearchParams = { mode: 'slow', examId: 'exam_slow2' }
     mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_slow2'))
     await getLoader()({ deps: { examId: 'exam_slow2' } })
 
-    mockQuestionsPatch.mockRejectedValueOnce(new Error('Network error'))
+    mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI generation failed'))
 
     renderReviewPage()
 
@@ -190,7 +206,8 @@ describe('ReviewPage — Slow Track reject wires to api.questions.patch', () => 
     await user.click(confirmButton)
 
     await waitFor(() => {
-      expect(mockQuestionsPatch).toHaveBeenCalledWith('q-1', { status: 'rejected' })
+      expect(screen.getByText('Coba lagi')).toBeInTheDocument()
+      expect(screen.getByText('Perlu diganti')).toBeInTheDocument()
     })
   })
 })
@@ -878,6 +895,36 @@ describe('ReviewPage — "Ganti dengan AI" per-card regeneration', () => {
     })
   })
 
+  it('shows a loading state while AI replaces a rejected card', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_loading' }
+
+    const exam = makeExamWithQuestions('exam_regen_loading')
+    const q0_loading = { ...exam.questions[0]!, status: 'rejected' as const }
+    const questions_loading = [...exam.questions]
+    questions_loading[0] = q0_loading
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_loading })
+    await getLoader()({ deps: { examId: 'exam_regen_loading' } })
+
+    const pending = deferred<Question>()
+    mockQuestionsRegenerate.mockReturnValueOnce(pending.promise)
+
+    renderReviewPage()
+
+    await user.click(screen.getByText('Ganti dengan AI'))
+    await user.click(await screen.findByRole('button', { name: /^Ganti$/i }))
+
+    expect(await screen.findByText('AI sedang mengganti soal...')).toBeInTheDocument()
+
+    pending.resolve({
+      ...q0_loading,
+      text: 'Soal baru dari AI',
+      status: 'pending' as const,
+    })
+
+    expect(await screen.findByText('Soal baru dari AI')).toBeInTheDocument()
+  })
+
   it('replaces card text with AI result after regeneration', async () => {
     const user = userEvent.setup()
     mockSearchParams = { mode: 'slow', examId: 'exam_regen_replace' }
@@ -930,6 +977,34 @@ describe('ReviewPage — "Ganti dengan AI" per-card regeneration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Coba lagi')).toBeInTheDocument()
+    })
+  })
+
+  it('shows an error toast when regeneration fails', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_fail_toast' }
+
+    const exam = makeExamWithQuestions('exam_regen_fail_toast')
+    const questions_fail = [...exam.questions]
+    questions_fail[0] = { ...questions_fail[0]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_fail })
+    await getLoader()({ deps: { examId: 'exam_regen_fail_toast' } })
+
+    mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI generation failed'))
+
+    renderReviewPage()
+
+    await user.click(screen.getByText('Ganti dengan AI'))
+    await user.click(await screen.findByRole('button', { name: /^Ganti$/i }))
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'error',
+          title: 'Gagal mengganti soal',
+          description: 'AI generation failed',
+        }),
+      )
     })
   })
 })
@@ -988,6 +1063,38 @@ describe('ReviewPage — "Ganti semua ditolak" batch regeneration', () => {
       expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-1', expect.any(Object))
       expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-3', expect.any(Object))
     })
+  })
+
+  it('shows batch loading while replacing rejected questions', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_batch_loading' }
+
+    const exam = makeExamWithQuestions('exam_batch_loading')
+    const questions_loading = [...exam.questions]
+    questions_loading[0] = { ...questions_loading[0]!, status: 'rejected' as const }
+    questions_loading[1] = { ...questions_loading[1]!, status: 'rejected' as const }
+    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: questions_loading })
+    await getLoader()({ deps: { examId: 'exam_batch_loading' } })
+
+    const first = deferred<typeof questions_loading[number]>()
+    const second = deferred<typeof questions_loading[number]>()
+    mockQuestionsRegenerate
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+
+    renderReviewPage()
+
+    await user.click(screen.getByText(/Ganti semua ditolak/i))
+    await user.click(await screen.findByRole('button', { name: /Ganti semua/i }))
+
+    expect(await screen.findByRole('button', { name: /Mengganti/i })).toBeDisabled()
+    expect(screen.getAllByText('AI sedang mengganti soal...')).toHaveLength(2)
+
+    first.resolve({ ...questions_loading[0]!, text: 'Soal AI 1', status: 'pending' as const })
+    second.resolve({ ...questions_loading[1]!, text: 'Soal AI 2', status: 'pending' as const })
+
+    expect(await screen.findByText('Soal AI 1')).toBeInTheDocument()
+    expect(await screen.findByText('Soal AI 2')).toBeInTheDocument()
   })
 
   it('one failure in a batch of 3 leaves the failing card rejected; other two succeed', async () => {
