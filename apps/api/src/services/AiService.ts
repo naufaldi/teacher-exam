@@ -14,8 +14,14 @@ export interface GenerateInput {
   expectedCount: number
 }
 
+export interface DiscussionInput {
+  system: string
+  user: string
+}
+
 export interface AiService {
   generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
+  generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
 }
 
 /**
@@ -101,6 +107,38 @@ export function createAiService(config: AiServiceConfig): AiService {
           )
         }
         return questions
+      })
+    },
+
+    generateDiscussion({ system, user }) {
+      return Effect.gen(function* () {
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            config.client.messages.create({
+              model,
+              max_tokens: maxTokens,
+              system,
+              messages: [{ role: 'user', content: [{ type: 'text', text: user }] }],
+            }),
+          catch: (cause) => new AiGenerationError({ cause }),
+        })
+
+        if (response.stop_reason !== 'end_turn') {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Claude returned incomplete discussion (stop_reason: ${response.stop_reason})`,
+            }),
+          )
+        }
+
+        const firstBlock = response.content[0]
+        if (!firstBlock || firstBlock.type !== 'text') {
+          return yield* Effect.fail(
+            new AiGenerationError({ cause: 'Anthropic returned no text block for discussion' }),
+          )
+        }
+
+        return stripCodeFence(firstBlock.text)
       })
     },
   }

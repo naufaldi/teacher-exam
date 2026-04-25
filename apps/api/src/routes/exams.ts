@@ -1,16 +1,22 @@
 import { Hono } from 'hono'
-import { Schema } from 'effect'
+import { Schema, Effect, Either } from 'effect'
 import { eq, and, desc } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
 import type { ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
 import { toExam, fetchExamWithQuestions } from '../lib/exams-query'
 import { rowToQuestion } from '../lib/question-mapper'
+import type { AiService } from '../services/AiService'
+import { createDefaultAiService } from '../services/AiService'
+import { buildPembahasanPrompt } from '../lib/pembahasan-prompt'
 
-export const examsRouter = new Hono()
+export function createExamsRouter(opts: { aiService?: AiService } = {}): Hono {
+  let aiService = opts.aiService
+
+const router = new Hono()
 
 // GET / — list all exams for the authenticated user
-examsRouter.get('/', async (c) => {
+router.get('/', async (c) => {
   const userId = c.get('userId')
 
   const rows = await db
@@ -23,7 +29,7 @@ examsRouter.get('/', async (c) => {
 })
 
 // GET /:id — get single exam with questions
-examsRouter.get('/:id', async (c) => {
+router.get('/:id', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
@@ -51,7 +57,7 @@ examsRouter.get('/:id', async (c) => {
 })
 
 // PATCH /:id — update exam fields
-examsRouter.patch('/:id', async (c) => {
+router.patch('/:id', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
@@ -114,7 +120,7 @@ examsRouter.patch('/:id', async (c) => {
 })
 
 // DELETE /:id — delete exam (questions cascade via FK)
-examsRouter.delete('/:id', async (c) => {
+router.delete('/:id', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
@@ -132,7 +138,7 @@ examsRouter.delete('/:id', async (c) => {
 })
 
 // POST /:id/duplicate — clone exam and its questions
-examsRouter.post('/:id/duplicate', async (c) => {
+router.post('/:id/duplicate', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
@@ -222,7 +228,7 @@ examsRouter.post('/:id/duplicate', async (c) => {
 })
 
 // POST /:id/finalize — transition exam to status=final only if every question is accepted
-examsRouter.post('/:id/finalize', async (c) => {
+router.post('/:id/finalize', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
@@ -266,3 +272,72 @@ examsRouter.post('/:id/finalize', async (c) => {
   if (!result) return c.json({ error: 'Failed to retrieve finalized exam', code: 'DATABASE_ERROR' }, 500)
   return c.json(result)
 })
+
+// POST /:id/discussion — generate and persist per-question explanations (one-shot)
+router.post('/:id/discussion', async (c) => {
+  const userId = c.get('userId')
+  const { id } = c.req.param()
+
+  const [examRows, questionRows] = await Promise.all([
+    db.select().from(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))).limit(1),
+    db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
+  ])
+
+  if (!examRows[0]) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
+
+  const exam = examRows[0]
+
+  if (exam.status !== 'final') {
+    return c.json({ error: 'Exam must be finalized before generating discussion', code: 'EXAM_NOT_FINAL' }, 400)
+  }
+
+  if (exam.discussionMd !== null) {
+    return c.json({ error: 'Discussion already exists for this exam', code: 'DISCUSSION_ALREADY_EXISTS' }, 409)
+  }
+
+  const { system, user } = buildPembahasanPrompt({
+    exam: {
+      subject: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,
+      grade: exam.grade,
+      examType: exam.examType ?? 'formatif',
+    },
+    questions: questionRows.map((q) => ({
+      number: q.number,
+      text: q.text,
+      optionA: q.optionA ?? '',
+      optionB: q.optionB ?? '',
+      optionC: q.optionC ?? '',
+      optionD: q.optionD ?? '',
+      correctAnswer: q.correctAnswer ?? '',
+      topic: q.topic ?? '',
+      difficulty: q.difficulty ?? '',
+    })),
+  })
+
+  aiService ??= createDefaultAiService()
+
+  const discussionResult = await Effect.runPromise(
+    Effect.either(aiService.generateDiscussion({ system, user })),
+  )
+
+  if (Either.isLeft(discussionResult)) {
+    const err = discussionResult.left
+    return c.json({ error: 'AI discussion generation failed', message: String(err.cause) }, 502)
+  }
+
+  const discussionMd = discussionResult.right
+
+  await db
+    .update(exams)
+    .set({ discussionMd, updatedAt: new Date() })
+    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+
+  const updated = await fetchExamWithQuestions(id)
+  if (!updated) return c.json({ error: 'Failed to retrieve updated exam', code: 'DATABASE_ERROR' }, 500)
+  return c.json(updated)
+})
+
+  return router
+}
+
+export const examsRouter = createExamsRouter()
