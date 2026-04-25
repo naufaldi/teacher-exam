@@ -14,5 +14,6 @@ FROM deps AS app
 COPY . .
 RUN mkdir -p /app/uploads && chown -R node:node /app
 USER node
+WORKDIR /app/apps/api
 EXPOSE 3001
-CMD ["node", "--import", "tsx/esm", "apps/api/src/index.ts"]
+CMD ["node", "--import", "tsx/esm", "src/index.ts"]
