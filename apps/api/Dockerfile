@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS app
 COPY . .
-RUN mkdir -p /app/uploads && chown -R node:node /app
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3001
