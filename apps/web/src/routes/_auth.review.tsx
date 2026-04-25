@@ -197,7 +197,7 @@ function ReviewPage() {
     if (isDirty) {
       setPendingSwitchTo(target)
     } else {
-      void navigate({ to: '/review', search: { mode: target } })
+      void navigate({ to: '/review', search: (prev) => ({ ...prev, mode: target }) })
     }
   }
 
@@ -205,7 +205,7 @@ function ReviewPage() {
     if (pendingSwitchTo === null) return
     const target = pendingSwitchTo
     setPendingSwitchTo(null)
-    void navigate({ to: '/review', search: { mode: target } })
+    void navigate({ to: '/review', search: (prev) => ({ ...prev, mode: target }) })
   }
 
   const handleEditSave = async (updated: Question) => {
