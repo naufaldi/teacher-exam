@@ -81,7 +81,8 @@ Implikasi desain:
 | Artefak utama | **Lembar soal** siap cetak (20 PG) + **lembar jawaban siswa** + **kunci jawaban**        | Penyusunan dari **bank soal** + wizard                        |
 | AI            | Satu aksi generate → **satu lembar** (20 soal), CP Fase C otomatis + PDF materi opsional | Variasi jumlah, template, multi-fase                          |
 | Mode review   | **Fast Track** (default) **& Slow Track** (per-soal)                                     | Confidence-driven auto-routing                                |
-| Evaluasi      | **Koreksi cepat** per murid (input jawaban → skor) — tanpa simpan data murid             | Scoring batch, rekap per kelas persisten, analisis butir soal |
+| Evaluasi      | **Dibangun (US-19/20) tapi tidak pada jalur demo** — entry dashboard sengaja dinonaktifkan untuk fokus alur generate; akses tetap via Riwayat | Scoring batch, rekap persisten, analisis butir soal |
+| **Hackathon AI** *(baru)* | **Pembahasan Generator (§10.4) WAJIB demo**; Adaptive Difficulty chips (§8.7) WAJIB demo; Penjaga Kurikulum (§10.2) opsional/stretch | Confidence-driven auto-routing, soal acak, item analysis |
 | Bank soal     | Tidak menjadi pintu masuk utama                                                          | Browse, tambah manual, filter per mapel                       |
 | Kelas & mapel | Kelas 5–6, BI + PPKN                                                                     | Tambah kelas (1–4), tambah mapel (Matematika, IPAS)           |
 | Kurikulum     | Merdeka only (Fase C, disabled di form)                                                  | Tambah K13, enable dropdown kurikulum                         |
@@ -100,6 +101,7 @@ Implikasi desain:
 | Lembar Jawaban Siswa      | Tidak ada                      | **Baru: US-18**                                                   |
 | Koreksi/Evaluasi          | Out of scope                   | **Baru: US-19, US-20** (koreksi manual dipercepat)                |
 | Curriculum reference (§8) | Kelas 1–2, Merdeka + K13       | **Kelas 5–6 Fase C, Merdeka only**                                |
+| Demo storyline            | (tidak ada)                    | **Generate-first**: Login → Generate (chips §8.7) → Review → Preview/Cetak (Pembahasan §10.4). Koreksi tetap fungsional via Riwayat tapi entry dashboard dinonaktifkan untuk fokus visual demo. |
 
 
 ---
@@ -767,6 +769,9 @@ State `regenerating`, `new-replacement`, dan `regenerate-failed` adalah **state 
 | Kelas 1–4, mapel lain (Matematika, IPAS)            | MVP fokus Fase C (Kelas 5–6) — BI + PPKN    |
 | K13                                                 | MVP fokus Kurikulum Merdeka only            |
 | Export ke DOCX/PDF file                             | Browser print sudah cukup                   |
+| **Tambah Matematika / IPAS pada hackathon window**  | Korpus Buku Siswa belum terekstrak; PRD §5.4 mensyaratkan grounding pada buku resmi — shipping mapel tanpa korpus melanggar pillar akurasi kurikulum |
+| **Tambah kelas 1–4 pada hackathon window**          | Sama — korpus per `(mapel, kelas)` harus eksis lebih dulu; kode ~6 touchpoints tapi korpus adalah real cost |
+| **Re-enable Koreksi entry di dashboard**            | Sengaja dinonaktifkan (commit `b4d58b3`) untuk fokus alur Generate di demo; akses tetap tersedia via halaman Riwayat |
 
 
 ---
@@ -950,6 +955,8 @@ Setiap lembar yang di-generate diasosiasikan dengan **Jenis Lembar** yang menent
 
 ### 8.7 Fokus / Tujuan Guru (Class Context)
 
+> **Status MVP (hackathon):** chips suggestion implementasi **WAJIB** sebelum demo. Tanpa chips, field `class_context` tetap berfungsi sebagai textarea biasa, tapi UX hackathon-grade memerlukan chip clickable untuk demoability.
+
 Field opsional pada form Generate untuk menangkap *intent pedagogis* guru — apa yang sedang ingin ditekankan minggu ini, miskonsepsi yang sering muncul di kelas, atau penyesuaian konteks lokal.
 
 - **UI:** Textarea (3 baris) + chip suggestion dinamis yang menempel template ke textarea saat diklik:
@@ -1012,6 +1019,12 @@ Field opsional pada form Generate untuk menangkap *intent pedagogis* guru — ap
 
 
 **Total estimasi: ~5-8 jam** setelah MVP selesai.
+
+> **Prioritas hackathon (revised 2026-04-25):**
+>
+> 1. **Pembahasan Generator (§10.4)** — `🟢 DEMO-CRITICAL`. Estimasi 2–3 jam. Output: artefak cetak baru "📖 Lembar Pembahasan" — paling visual untuk juri, reuse pola Claude API call yang sudah ada.
+> 2. **Adaptive Difficulty chips (§10.3 + §8.7)** — `🟢 DEMO-CRITICAL`. Estimasi 30 menit. Plumbing `classContext` sudah end-to-end; yang dibutuhkan hanya UI chip suggestion di form Generate.
+> 3. **Penjaga Kurikulum (§10.2)** — `🟡 STRETCH`. Estimasi 2 jam. Touch `_auth.review.tsx` (file baru distabilkan) — risk-of-regression tinggi pada eve demo. Kerjakan hanya jika P1+P2 selesai dengan margin waktu.
 
 ---
 
@@ -1162,4 +1175,17 @@ Untuk tiap soal, AI menghasilkan:
 - Generate < 15 detik untuk 20 soal
 - Layout cetak A4 rapi, page-break otomatis
 - Tersimpan di DB agar tidak generate ulang
+
+---
+
+**Demo-day verification (2026-04-26):**
+
+- [ ] Login → Generate → Review → Preview/Cetak mengalir <5 menit (PRD §7)
+- [ ] Form Generate menampilkan 4 chip suggestion §8.7; klik chip menambah template ke textarea `class_context`
+- [ ] Preview menampilkan tab "📖 Pembahasan" + tombol cetak terpisah
+- [ ] Cetak Pembahasan menghasilkan halaman A4 rapi dengan blok per-soal (jawaban + 2–4 kalimat penjelasan)
+- [ ] `pnpm type-check` + `pnpm test` hijau di branch demo
+- [ ] `agent-browser` snapshot tanpa console error/warning pada flow demo
+- [ ] Dashboard tidak memiliki tombol "Koreksi" yang aktif (intentional — commit `b4d58b3`)
+- [ ] Riwayat berisi ≥ 2 ujian seed agar demo Riwayat tidak kosong
 
