@@ -34,7 +34,8 @@ export interface AiServiceConfig {
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5'
-const DEFAULT_MAX_TOKENS = 8192
+const DEFAULT_MAX_TOKENS = 32000
+const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 
 /**
  * Create an `AiService` bound to a given Anthropic client.
@@ -70,6 +71,12 @@ export function createAiService(config: AiServiceConfig): AiService {
         messages: [{ role: 'user', content }],
       })
 
+      if (response.stop_reason !== 'end_turn') {
+        throw new AiGenerationError(
+          `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
+        )
+      }
+
       const firstBlock = response.content[0]
       if (!firstBlock || firstBlock.type !== 'text') {
         throw new AiGenerationError('Anthropic returned no text block')
@@ -95,7 +102,7 @@ export function createDefaultAiService(): AiService {
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is required to use AiService')
   }
-  return createAiService({ client: new Anthropic({ apiKey }) })
+  return createAiService({ client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }) })
 }
 
 export class AiGenerationError extends Error {

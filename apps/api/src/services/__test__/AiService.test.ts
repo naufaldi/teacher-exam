@@ -19,12 +19,17 @@ const VALID_QUESTIONS = Array.from({ length: 20 }, (_, i) => ({
   cognitive_level: 'C2' as const,
 }))
 
-function fakeClient(text: string): {
+function fakeClient(
+  text: string,
+  opts: { stopReason?: string } = {},
+): {
   client: AnthropicLike
   create: ReturnType<typeof vi.fn>
 } {
   const create = vi.fn().mockResolvedValue({
     content: [{ type: 'text', text }],
+    stop_reason: opts.stopReason ?? 'end_turn',
+    stop_sequence: null,
   })
   return {
     client: { messages: { create } } as unknown as AnthropicLike,
@@ -48,6 +53,7 @@ describe('AiService.generate', () => {
     }
     expect(params.system).toBe(system)
     expect(params.system).toContain('## Capaian Pembelajaran')
+    expect(params['max_tokens']).toBe(32000)
 
     const userBlocks = params.messages[0]!.content
     const joined = userBlocks
@@ -86,6 +92,19 @@ describe('AiService.generate', () => {
     await expect(ai.generate({ system: 's', user: 'u', expectedCount: 20 })).rejects.toBeInstanceOf(
       AiGenerationError,
     )
+  })
+
+  it('throws a clear AiGenerationError when Claude stops at max_tokens', async () => {
+    const { client } = fakeClient('[{"_tag":"mcq_single","text":"truncated', {
+      stopReason: 'max_tokens',
+    })
+    const ai = createAiService({ client })
+
+    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 20 }).catch((e: unknown) => e)
+
+    expect(err).toBeInstanceOf(AiGenerationError)
+    expect((err as AiGenerationError).message).toContain('max_tokens')
+    expect((err as AiGenerationError).message).toContain('incomplete')
   })
 
 

@@ -29,6 +29,13 @@
       "when": 1777086000000,
       "tag": "0003_repair_question_shape_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777095074508,
+      "tag": "0004_drop_legacy_exam_topic",
+      "breakpoints": true
     }
   ]
 }
