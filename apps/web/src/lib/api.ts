@@ -15,7 +15,9 @@ import type {
 } from '@teacher-exam/shared'
 import { ExamWithQuestionsSchema } from '@teacher-exam/shared'
 
-const API_BASE = '/api'
+// Prod: VITE_API_URL=https://api.ujiansd.com/api (baked at build time)
+// Dev: unset → relative path, proxied by Vite to :3001
+const API_BASE = import.meta.env['VITE_API_URL'] ?? '/api'
 
 /**
  * Thrown when an API call returns 401. Caller should clear local session

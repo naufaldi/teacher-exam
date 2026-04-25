@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - teacher-exam-private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["pnpm", "--filter", "@teacher-exam/db", "db:migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - teacher-exam-private
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - migrate
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: https://${DOMAIN}
+      BETTER_AUTH_URL: https://${API_DOMAIN}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      UPLOAD_DIR: /app/uploads
+      API_PORT: 3001
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - edge
+      - teacher-exam-private
+    labels:
+      caddy: ${API_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 3001}}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: https://${API_DOMAIN}/api
+        VITE_APP_ORIGIN: https://${DOMAIN}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-prod}
+        VITE_BUILD_ID: ${VITE_BUILD_ID:-prod}
+    restart: always
+    networks:
+      - edge
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+
+volumes:
+  db_data: {}
+  uploads_data: {}
+
+networks:
+  edge:
+    external: true
+  teacher-exam-private:
+    name: teacher-exam-private
+    driver: bridge

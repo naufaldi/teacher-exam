@@ -10,14 +10,17 @@ function requireEnv(name: string): string {
   return value
 }
 
-const SESSION_SECRET     = requireEnv('SESSION_SECRET')
-const GOOGLE_CLIENT_ID   = requireEnv('GOOGLE_CLIENT_ID')
+const SESSION_SECRET       = requireEnv('SESSION_SECRET')
+const GOOGLE_CLIENT_ID     = requireEnv('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = requireEnv('GOOGLE_CLIENT_SECRET')
-const APP_URL            = process.env['APP_URL'] ?? 'http://localhost:3000'
+const APP_URL              = process.env['APP_URL'] ?? 'http://localhost:3000'
+// Prod: BETTER_AUTH_URL=https://api.ujiansd.com (API host, not web host)
+// Dev: falls back to APP_URL — Vite proxies /api → :3001 so callbacks resolve
+const BETTER_AUTH_URL      = process.env['BETTER_AUTH_URL'] ?? APP_URL
 
 export const auth = betterAuth({
   secret: SESSION_SECRET,
-  baseURL: APP_URL,
+  baseURL: BETTER_AUTH_URL,
   trustedOrigins: [APP_URL],
   database: drizzleAdapter(db, {
     provider: 'pg',
