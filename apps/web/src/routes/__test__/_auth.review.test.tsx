@@ -1078,3 +1078,131 @@ describe('ReviewPage — "Coba lagi yang gagal" top-bar button', () => {
     })
   })
 })
+
+describe('ReviewPage — switch mode preserves examId in URL', () => {
+  // The fix uses TanStack's functional `search` form so existing params (examId) merge through.
+  // Helper: find the most recent navigate call that targets `/review` with a function search,
+  // invoke it against the current search params, and return the resulting search object.
+  function lastReviewSearchResult() {
+    const calls = mockNavigate.mock.calls as unknown as Array<[{ to?: string; search?: unknown }]>
+    const reviewCall = [...calls].reverse().find(
+      (c) => c[0]?.to === '/review' && typeof c[0]?.search === 'function',
+    )
+    if (!reviewCall) throw new Error('expected a navigate({ to: "/review", search: fn }) call')
+    const fn = reviewCall[0].search as (prev: typeof mockSearchParams) => Record<string, unknown>
+    return fn(mockSearchParams)
+  }
+
+  it('navigates with both mode=slow AND examId when switching from fast → slow (clean state)', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'fast', examId: 'exam_switch_1' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_switch_1'))
+    await getLoader()({ deps: { examId: 'exam_switch_1' } })
+
+    renderReviewPage()
+
+    await user.click(screen.getByRole('button', { name: /Switch ke Review Detail/i }))
+
+    expect(lastReviewSearchResult()).toEqual(
+      expect.objectContaining({ mode: 'slow', examId: 'exam_switch_1' }),
+    )
+  })
+
+  it('navigates with both mode=fast AND examId when switching from slow → fast (clean state)', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_switch_2' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_switch_2'))
+    await getLoader()({ deps: { examId: 'exam_switch_2' } })
+
+    renderReviewPage()
+
+    await user.click(screen.getByRole('button', { name: /Switch ke Mode Cepat/i }))
+
+    expect(lastReviewSearchResult()).toEqual(
+      expect.objectContaining({ mode: 'fast', examId: 'exam_switch_2' }),
+    )
+  })
+
+  it('preserves examId through the dirty-state confirm dialog when switching modes', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_switch_dirty' }
+    const exam = makeExamWithQuestions('exam_switch_dirty')
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_switch_dirty' } })
+
+    // Mark a question as accepted (slow-mode "Terima") to make the page dirty
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      ...exam.questions[0]!,
+      status: 'accepted' as const,
+    })
+
+    renderReviewPage()
+
+    const terimaButtons = screen.getAllByText('Terima')
+    await user.click(terimaButtons[0]!)
+    await waitFor(() => expect(patchSpy).toHaveBeenCalled())
+
+    // Now click the switch — dirty path should open the confirm dialog instead of navigating
+    await user.click(screen.getByRole('button', { name: /Switch ke Mode Cepat/i }))
+    expect(mockNavigate).not.toHaveBeenCalled()
+
+    // Confirm the switch in the dialog
+    const confirm = await screen.findByRole('button', { name: /Pindah ke Mode Cepat/i })
+    await user.click(confirm)
+
+    expect(lastReviewSearchResult()).toEqual(
+      expect.objectContaining({ mode: 'fast', examId: 'exam_switch_dirty' }),
+    )
+
+    patchSpy.mockRestore()
+  })
+})
+
+// ── Regression: edit dialog shows regenerated content after close + reopen ──
+
+describe('ReviewPage — Edit dialog shows fresh content after regenerate', () => {
+  it('shows regenerated question text when Edit is opened after a Tolak → regenerate cycle', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_regen_edit' }
+
+    const exam = makeExamWithQuestions('exam_regen_edit')
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_regen_edit' } })
+
+    renderReviewPage()
+
+    // 1. Open Edit on soal 1 → verify it shows original text
+    const editButtons = screen.getAllByText('Edit')
+    await user.click(editButtons[0]!)
+
+    expect(await screen.findByLabelText(/teks soal/i)).toHaveValue('Question 1')
+
+    // 2. Close the dialog via Batal
+    await user.click(screen.getByRole('button', { name: /batal/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/teks soal/i)).not.toBeInTheDocument()
+    })
+
+    // 3. Tolak → regenerate q-1 with new text
+    mockQuestionsRegenerate.mockResolvedValueOnce({
+      ...exam.questions[0]!,
+      text: 'Soal regenerasi baru',
+      status: 'pending' as const,
+    })
+
+    await user.click(screen.getAllByText('Tolak')[0]!)
+    await user.click(await screen.findByRole('button', { name: /^Ganti$/i }))
+
+    // Wait for card to show new text
+    await waitFor(() => {
+      expect(screen.getByText('Soal regenerasi baru')).toBeInTheDocument()
+    })
+
+    // 4. Open Edit on soal 1 again — must show the NEW (regenerated) text
+    const editButtonsAfter = screen.getAllByText('Edit')
+    await user.click(editButtonsAfter[0]!)
+
+    expect(await screen.findByLabelText(/teks soal/i)).toHaveValue('Soal regenerasi baru')
+  })
+})

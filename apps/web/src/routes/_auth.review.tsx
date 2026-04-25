@@ -208,7 +208,7 @@ function ReviewPage() {
     if (isDirty) {
       setPendingSwitchTo(target)
     } else {
-      void navigate({ to: '/review', search: { mode: target } })
+      void navigate({ to: '/review', search: (prev) => ({ ...prev, mode: target }) })
     }
   }
 
@@ -216,7 +216,7 @@ function ReviewPage() {
     if (pendingSwitchTo === null) return
     const target = pendingSwitchTo
     setPendingSwitchTo(null)
-    void navigate({ to: '/review', search: { mode: target } })
+    void navigate({ to: '/review', search: (prev) => ({ ...prev, mode: target }) })
   }
 
   const handleEditSave = async (updated: Question) => {
@@ -877,12 +877,14 @@ function ReviewPage() {
         </Button>
       </div>
 
-      <QuestionEditDialog
-        open={editingId !== null}
-        question={editingQuestion}
-        onClose={() => setEditingId(null)}
-        onSave={(updated) => { void handleEditSave(updated) }}
-      />
+      {editingQuestion !== null ? (
+        <QuestionEditDialog
+          open
+          question={editingQuestion}
+          onClose={() => setEditingId(null)}
+          onSave={(updated) => { void handleEditSave(updated) }}
+        />
+      ) : null}
       <TolakRegenerateDialog
         open={tolakDialogState.kind === 'open'}
         questionNumber={tolakDialogQuestion?.number ?? null}
