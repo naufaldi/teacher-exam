@@ -377,12 +377,7 @@ function DashboardPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() =>
-                          void navigate({
-                            to: '/correction/$examId',
-                            params: { examId: lastExam.id },
-                          })
-                        }
+                        disabled
                       >
                         <CheckSquare size={13} />
                         Koreksi

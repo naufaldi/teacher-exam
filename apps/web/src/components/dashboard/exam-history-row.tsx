@@ -57,10 +57,6 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
     void navigate({ to: '/preview', search: { examId: exam.id } })
   }
 
-  function handleCorrect() {
-    void navigate({ to: '/correction/$examId', params: { examId: exam.id } })
-  }
-
   function handleDuplicate() {
     if (onDuplicate) {
       onDuplicate(exam)
@@ -109,7 +105,7 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
         {isFinal ? (
           <>
             <Button variant="secondary" size="sm" onClick={handlePrint}>Cetak</Button>
-            <Button variant="secondary" size="sm" onClick={handleCorrect}>Koreksi</Button>
+            <Button variant="secondary" size="sm" disabled>Koreksi</Button>
           </>
         ) : (
           <>
