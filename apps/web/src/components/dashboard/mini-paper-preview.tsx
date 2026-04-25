@@ -4,6 +4,15 @@ interface MiniPaperPreviewProps {
   exam: Exam
 }
 
+function formatTopicsDisplay(topics: readonly string[]): string {
+  if (topics.length <= 2) {
+    return topics.join(' · ')
+  }
+  const visible = topics.slice(0, 2).join(' · ')
+  const remaining = topics.length - 2
+  return `${visible} +${remaining}`
+}
+
 const SUBJECT_SHORT: Record<string, string> = {
   bahasa_indonesia: 'BI',
   pendidikan_pancasila: 'PPKN',
@@ -22,6 +31,7 @@ const QUESTION_SKELETONS = [
 
 function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
   const subjectShort = SUBJECT_SHORT[exam.subject] ?? exam.subject
+  const topicsDisplay = formatTopicsDisplay(exam.topics)
 
   return (
     <div
@@ -37,6 +47,11 @@ function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
         <div className="text-[5px] mt-0.5 text-text-secondary">
           {exam.examType} {subjectShort} · {exam.academicYear}
         </div>
+        {topicsDisplay !== '' && (
+          <div className="text-[4.5px] mt-0.5 text-text-secondary truncate">
+            {topicsDisplay}
+          </div>
+        )}
       </div>
 
       {/* Title */}
@@ -73,4 +88,4 @@ function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
   )
 }
 
-export { MiniPaperPreview }
+export { MiniPaperPreview, formatTopicsDisplay }

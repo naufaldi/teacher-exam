@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Hono } from 'hono'
+import { Schema, Either } from 'effect'
+import { QuestionSchema } from '@teacher-exam/shared'
 
 // Mock the DB module before importing the router
 vi.mock('@teacher-exam/db', () => {
@@ -24,7 +26,7 @@ vi.mock('drizzle-orm', () => ({
 
 import { db } from '@teacher-exam/db'
 import { examsRouter } from '../exams'
-import { makeChain, makeQuestionRow } from './helpers.js'
+import { makeChain, makeQuestionRow } from './helpers'
 
 // Fixed timestamp for testing
 const NOW = '2024-01-01T00:00:00.000Z'
@@ -36,7 +38,7 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   subject: 'bahasa_indonesia',
   grade: 5,
   difficulty: 'mudah',
-  topic: 'topic-a',
+  topics: ['topic-a'],
   reviewMode: 'fast',
   status: 'draft',
   schoolName: null,
@@ -126,6 +128,130 @@ describe('GET /api/exams/:id', () => {
     expect(body['id']).toBe('exam-1')
     expect(Array.isArray(body['questions'])).toBe(true)
     expect((body['questions'] as unknown[]).length).toBe(1)
+  })
+
+  it('returns questions with correct _tag for mixed row types (mcq_single, mcq_multi, true_false)', async () => {
+    const examRow = makeExamRow()
+    const mcqSingleRow = makeQuestionRow({
+      id: 'q-1',
+      number: 1,
+      type: 'mcq_single',
+      payload: null,
+      optionA: 'Option A',
+      optionB: 'Option B',
+      optionC: 'Option C',
+      optionD: 'Option D',
+      correctAnswer: 'a',
+    })
+    const mcqMultiRow = makeQuestionRow({
+      id: 'q-2',
+      number: 2,
+      type: 'mcq_multi',
+      payload: {
+        options: { a: 'Option A', b: 'Option B', c: 'Option C', d: 'Option D' },
+        correct: ['a', 'c'],
+      },
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+    })
+    const trueFalseRow = makeQuestionRow({
+      id: 'q-3',
+      number: 3,
+      type: 'true_false',
+      payload: {
+        statements: [
+          { text: 'Pernyataan pertama', answer: true },
+          { text: 'Pernyataan kedua', answer: false },
+          { text: 'Pernyataan ketiga', answer: true },
+        ],
+      },
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+    })
+
+    let callCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) return makeChain([examRow])
+      return makeChain([mcqSingleRow, mcqMultiRow, trueFalseRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1')
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    const qs = body['questions'] as Array<Record<string, unknown>>
+    expect(qs).toHaveLength(3)
+    expect(qs[0]?.['_tag']).toBe('mcq_single')
+    expect(qs[1]?.['_tag']).toBe('mcq_multi')
+    expect(qs[2]?.['_tag']).toBe('true_false')
+  })
+
+  it('GET /api/exams/:id questions decode successfully with QuestionSchema', async () => {
+    const examRow = makeExamRow()
+    const mcqSingleRow = makeQuestionRow({
+      id: 'q-1',
+      number: 1,
+      type: 'mcq_single',
+      payload: null,
+      optionA: 'Option A',
+      optionB: 'Option B',
+      optionC: 'Option C',
+      optionD: 'Option D',
+      correctAnswer: 'a',
+    })
+    const mcqMultiRow = makeQuestionRow({
+      id: 'q-2',
+      number: 2,
+      type: 'mcq_multi',
+      payload: {
+        options: { a: 'Option A', b: 'Option B', c: 'Option C', d: 'Option D' },
+        correct: ['a', 'c'],
+      },
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+    })
+    const trueFalseRow = makeQuestionRow({
+      id: 'q-3',
+      number: 3,
+      type: 'true_false',
+      payload: {
+        statements: [
+          { text: 'Pernyataan pertama', answer: true },
+          { text: 'Pernyataan kedua', answer: false },
+          { text: 'Pernyataan ketiga', answer: true },
+        ],
+      },
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+    })
+
+    let callCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) return makeChain([examRow])
+      return makeChain([mcqSingleRow, mcqMultiRow, trueFalseRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1')
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+
+    const decodeResult = Schema.decodeUnknownEither(Schema.Array(QuestionSchema))(body['questions'])
+    expect(Either.isRight(decodeResult)).toBe(true)
   })
 })
 
@@ -266,7 +392,7 @@ describe('POST /api/exams/:id/duplicate', () => {
       grade: 5,
       examType: 'formatif',
       examDate: null,
-      topic: 'Ide Pokok',
+      topics: ['Ide Pokok'],
     })
     const questionRow = makeQuestionRow()
 

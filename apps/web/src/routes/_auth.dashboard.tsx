@@ -67,7 +67,7 @@ const ACTION_CARDS = [
     icon: Sparkles,
     title: 'Generate Lembar (AI)',
     description:
-      'Satu paket 20 soal pilihan ganda selaras Capaian Pembelajaran Fase C. Bahasa Indonesia atau Pendidikan Pancasila — 10 sampai 30 detik.',
+      'Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C. Bahasa Indonesia atau Pendidikan Pancasila — 10 sampai 30 detik.',
     cta: 'Mulai generate',
     kbd: 'G',
     cardBg: 'bg-gradient-to-b from-white to-primary-50 border-primary-100',
@@ -335,7 +335,7 @@ function DashboardPage() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-secondary mb-3">
                   <span>
                     <span className="text-text-tertiary mr-1">Topik:</span>
-                    {lastExam.topic}
+                    {lastExam.topics.join(', ')}
                   </span>
                   <span>
                     <span className="text-text-tertiary mr-1">Dibuat:</span>
@@ -360,7 +360,7 @@ function DashboardPage() {
                 </div>
 
                 <p className="text-body-sm text-text-secondary m-0 mt-3 leading-snug">
-                  20 dari 20 soal siap. Lembar jawaban dan kunci jawaban tergabung dalam satu file cetak.
+                  Semua soal siap. Lembar jawaban dan kunci jawaban tergabung dalam satu file cetak.
                 </p>
 
                 <div className="flex gap-2 flex-wrap mt-4">

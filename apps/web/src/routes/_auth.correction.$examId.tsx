@@ -17,6 +17,7 @@ import {
 } from '@teacher-exam/ui'
 import { MOCK_STUDENTS } from '../lib/mock-data.js'
 import { api } from '../lib/api.js'
+import { matchQuestion } from '../lib/question-render.js'
 
 export const Route = createFileRoute('/_auth/correction/$examId')({
   loader: async ({ params }) => api.exams.get(params.examId),
@@ -327,7 +328,13 @@ function CorrectionPage() {
     () =>
       [...exam.questions]
         .sort((a, b) => a.number - b.number)
-        .map((q) => q.correctAnswer),
+        .map((q) =>
+          matchQuestion(q, {
+            mcq_single: (x) => x.correct as Answer,
+            mcq_multi: (x) => x.correct[0] ?? 'a',
+            true_false: () => 'a' as Answer,
+          }),
+        ),
     [exam.questions],
   )
 

@@ -38,7 +38,7 @@ export function RegenerateConfirmDialog({
             <div className="space-y-1">
               <AlertDialogTitle>Regenerate seluruh paket?</AlertDialogTitle>
               <AlertDialogDescription>
-                Ke-20 soal pada lembar ini akan dibuang dan AI akan membuat paket baru
+                Semua soal pada lembar ini akan dibuang dan AI akan membuat paket baru
                 dengan konfigurasi yang sama.
                 {typeof acceptedCount === 'number' && acceptedCount > 0 ? (
                   <>

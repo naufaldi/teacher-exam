@@ -9,7 +9,7 @@ const makeExam = (overrides: Partial<Exam> = {}): Exam => ({
   subject: 'bahasa_indonesia',
   grade: 5,
   difficulty: 'sedang',
-  topic: 'Topik A',
+  topics: ['Topik A'],
   reviewMode: 'fast',
   status: 'draft',
   schoolName: null,

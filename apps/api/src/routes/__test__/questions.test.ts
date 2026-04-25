@@ -17,7 +17,7 @@ vi.mock('drizzle-orm', () => ({
 
 import { db } from '@teacher-exam/db'
 import { questionsRouter } from '../questions'
-import { makeChain, makeQuestionRow } from './helpers.js'
+import { makeChain, makeQuestionRow } from './helpers'
 
 function buildTestApp() {
   const app = new Hono()

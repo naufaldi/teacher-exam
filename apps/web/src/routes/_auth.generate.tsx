@@ -22,6 +22,7 @@ import {
 } from '@teacher-exam/ui'
 import type { ExamType } from '@teacher-exam/shared'
 import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
+import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
 import { api, RateLimitedError } from '../lib/api.js'
@@ -114,6 +115,35 @@ const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
 
 const FOKUS_GURU_MAX = 500
 
+// ── Default total soal per jenis (PRD §8.x) ───────────────────────────────────
+
+const DEFAULT_TOTAL_SOAL: Record<string, number> = {
+  latihan:  20,
+  formatif: 20,
+  sts:      25,
+  sas:      25,
+  tka:      25,
+}
+
+// ── Default composition per jenis (Task 5 profile defaults) ──────────────────
+
+type Composition = { mcqSingle: number; mcqMulti: number; trueFalse: number }
+
+const DEFAULT_COMPOSITION_BY_JENIS = {
+  latihan:  { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+  formatif: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+  sts:      { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 },
+  sas:      { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+  tka:      { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+} as const satisfies Record<ExamType, Composition>
+
+function rescaleComposition(profileComp: Composition, oldTotal: number, newTotal: number): Composition {
+  const mcqSingle = Math.round(profileComp.mcqSingle / oldTotal * newTotal)
+  const mcqMulti = Math.round(profileComp.mcqMulti / oldTotal * newTotal)
+  const trueFalse = Math.max(0, newTotal - mcqSingle - mcqMulti)
+  return { mcqSingle, mcqMulti, trueFalse }
+}
+
 // Budget for the elapsed-time animation. Real Claude calls run 25–60s;
 // 45s keeps the bar crawling through ~P75 without freezing early.
 const GENERATE_DURATION_MS = 45000
@@ -185,13 +215,18 @@ function GeneratePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [kelas, setKelas] = useState<string>('')
   const [mapel, setMapel] = useState<string>('bahasa_indonesia')
-  const [topik, setTopik] = useState<string>('')
+  const [topiks, setTopiks] = useState<string[]>([])
+  const [showCustomInput, setShowCustomInput] = useState(false)
   const [customTopik, setCustomTopik] = useState<string>('')
   const [kesulitan, setKesulitan] = useState<string>('campuran')
   const [examType, setExamType] = useState<ExamType>('formatif')
+  const [totalSoal, setTotalSoal] = useState<number>(DEFAULT_TOTAL_SOAL['formatif'] ?? 20)
+  const [totalSoalError, setTotalSoalError] = useState<string | null>(null)
   const [reviewMode, setReviewMode] = useState<'fast' | 'slow'>('fast')
   const [fokusGuru, setFokusGuru] = useState<string>('')
   const [contohSoal, setContohSoal] = useState<string>('')
+  const [composition, setComposition] = useState<Composition>(() => DEFAULT_COMPOSITION_BY_JENIS['formatif'])
+  const [compExpanded, setCompExpanded] = useState(false)
 
   const fokusGuruRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -203,6 +238,13 @@ function GeneratePage() {
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleJenisChange = useCallback((next: ExamType) => {
+    setExamType(next)
+    setTotalSoal(DEFAULT_TOTAL_SOAL[next] ?? 20)
+    setTotalSoalError(null)
+    setComposition(DEFAULT_COMPOSITION_BY_JENIS[next])
+  }, [])
 
   const clearTimers = useCallback(() => {
     if (progressIntervalRef.current !== null) {
@@ -222,15 +264,19 @@ function GeneratePage() {
 
   const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI : TOPIK_PPKN
 
-  // Effective topic value for submission
-  const effectiveTopik = topik === '__custom' ? customTopik : topik
+  // Effective topics array for submission
+  const effectiveTopiks: string[] = showCustomInput && customTopik.trim() !== ''
+    ? [...topiks, customTopik.trim()]
+    : topiks
 
   // Sidebar completion count (5 required fields with examType)
-  const filledCount = [kelas, mapel, effectiveTopik, kesulitan, examType].filter(
-    Boolean,
-  ).length
+  const filledCount = [kelas, mapel, effectiveTopiks.length > 0 ? 'ok' : '', kesulitan, examType].filter(Boolean).length
 
   const runGenerate = useCallback(() => {
+    const topics: string[] = showCustomInput && customTopik.trim() !== ''
+      ? [...topiks, customTopik.trim()]
+      : topiks
+
     setError(null)
     setShowErrorDialog(false)
     setIsGenerating(true)
@@ -250,9 +296,11 @@ function GeneratePage() {
       subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
       grade: Number(kelas) as 5 | 6,
       difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
-      topic: effectiveTopik,
+      topics,
       reviewMode,
       examType,
+      totalSoal,
+      composition,
       classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
       exampleQuestions: contohSoal.trim() !== '' ? contohSoal.trim() : undefined,
     }).then((result) => {
@@ -280,8 +328,9 @@ function GeneratePage() {
     })
   }, [
     clearTimers,
+    composition,
     contohSoal,
-    effectiveTopik,
+    customTopik,
     examType,
     fokusGuru,
     kelas,
@@ -289,6 +338,9 @@ function GeneratePage() {
     mapel,
     navigate,
     reviewMode,
+    showCustomInput,
+    topiks,
+    totalSoal,
   ])
 
   const handleGenerate = () => {
@@ -300,7 +352,11 @@ function GeneratePage() {
     runGenerate()
   }
 
-  const isFormValid = Boolean(kelas && mapel && effectiveTopik && kesulitan && !isGenerating)
+  const compositionSum = composition.mcqSingle + composition.mcqMulti + composition.trueFalse
+  const isCompositionValid = compositionSum === totalSoal
+  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null && isCompositionValid)
+
+  const topikSummary = effectiveTopiks.join(', ')
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] gap-8">
@@ -343,7 +399,7 @@ function GeneratePage() {
                     Generate Lembar (AI)
                   </h1>
                   <p className="text-body text-text-tertiary mt-0.5">
-                    1 lembar = 20 soal pilihan ganda
+                    1 lembar = {totalSoal} soal pilihan ganda
                   </p>
                 </div>
               </div>
@@ -420,8 +476,9 @@ function GeneratePage() {
                 value={mapel}
                 onValueChange={(v) => {
                   setMapel(v)
-                  setTopik('')
+                  setTopiks([])
                   setCustomTopik('')
+                  setShowCustomInput(false)
                 }}
               >
                 <SelectTrigger id="mapel">
@@ -435,29 +492,36 @@ function GeneratePage() {
             </div>
 
             {/* Topik */}
-            <div className="space-y-1.5">
-              <Label htmlFor="topik">Topik</Label>
-              <Select value={topik} onValueChange={setTopik}>
-                <SelectTrigger id="topik">
-                  <SelectValue placeholder="Pilih topik" />
-                </SelectTrigger>
-                <SelectContent key={mapel}>
-                  {topikOptions.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__custom">Lainnya (ketik sendiri)...</SelectItem>
-                </SelectContent>
-              </Select>
-              {topik === '__custom' ? (
-                <Input
-                  id="topik-custom"
-                  placeholder="Ketik topik Anda..."
-                  value={customTopik}
-                  onChange={(e) => setCustomTopik(e.target.value)}
-                  className="mt-2"
-                />
+            <div className="space-y-2">
+              <Label>Topik</Label>
+              <TopicMultiSelect
+                options={topikOptions}
+                selected={topiks}
+                onChange={setTopiks}
+                onCustom={() => setShowCustomInput(true)}
+                maxItems={5}
+                placeholder="Pilih 1–5 topik..."
+              />
+              {showCustomInput ? (
+                <div className="flex gap-2 mt-2 items-center">
+                  <Input
+                    placeholder="Ketik topik kustom..."
+                    value={customTopik}
+                    onChange={(e) => setCustomTopik(e.target.value)}
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    className="text-text-tertiary hover:text-danger-600 p-1"
+                    onClick={() => { setShowCustomInput(false); setCustomTopik('') }}
+                    aria-label="Batalkan topik kustom"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : null}
+              {effectiveTopiks.length === 0 ? (
+                <p className="text-caption text-text-tertiary">Pilih minimal 1 topik.</p>
               ) : null}
             </div>
           </section>
@@ -474,7 +538,7 @@ function GeneratePage() {
               <Label>Jenis Lembar</Label>
               <RadioGroup
                 value={examType}
-                onValueChange={(v) => setExamType(v as ExamType)}
+                onValueChange={(v) => handleJenisChange(v as ExamType)}
               >
                 <div className="grid grid-cols-2 gap-3">
                   {EXAM_TYPE_OPTIONS.map((opt) => {
@@ -536,10 +600,90 @@ function GeneratePage() {
               )}
             </div>
 
-            {/* Jumlah Soal (fixed info — PRD US-8) */}
-            <div className="flex items-center justify-between p-3 rounded-sm bg-bg-muted border border-border-default">
-              <Label className="text-body text-text-secondary cursor-default">Jumlah Soal</Label>
-              <Badge variant="secondary">20 soal</Badge>
+            {/* Jumlah Soal (editable — PRD US-8) */}
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="totalSoal">Jumlah Soal</Label>
+              <Input
+                id="totalSoal"
+                type="number"
+                min={5}
+                max={50}
+                value={totalSoal}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
+                  setTotalSoal(n)
+                  if (!Number.isInteger(n) || n < 5) setTotalSoalError('Minimum 5 soal')
+                  else if (n > 50) setTotalSoalError('Maksimum 50 soal')
+                  else {
+                    setTotalSoalError(null)
+                    if (n > 0) {
+                      setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
+                    }
+                  }
+                }}
+                aria-invalid={totalSoalError !== null}
+                aria-describedby={totalSoalError !== null ? 'totalSoal-error' : undefined}
+              />
+              {totalSoalError !== null ? (
+                <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p>
+              ) : null}
+            </div>
+
+            {/* Atur Komposisi expandable panel */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                aria-expanded={compExpanded}
+                onClick={() => setCompExpanded((prev) => !prev)}
+                className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
+              >
+                Atur komposisi
+                <span className="text-caption text-text-tertiary">{compExpanded ? '▲' : '▼'}</span>
+              </button>
+              {compExpanded ? (
+                <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
+                    <Input
+                      id="comp-mcq-single"
+                      type="number"
+                      min={0}
+                      value={composition.mcqSingle}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
+                    <Input
+                      id="comp-mcq-multi"
+                      type="number"
+                      min={0}
+                      value={composition.mcqMulti}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-true-false">Benar/Salah</Label>
+                    <Input
+                      id="comp-true-false"
+                      type="number"
+                      min={0}
+                      value={composition.trueFalse}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  {!isCompositionValid ? (
+                    <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             {/* Mode Review */}
@@ -562,7 +706,7 @@ function GeneratePage() {
                   >
                     <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
                     <span className="text-body font-medium text-text-primary">Cepat</span>
-                    <span className="text-body-sm text-text-tertiary">Auto-terima 20 soal</span>
+                    <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
                   </Label>
                   <Label
                     htmlFor="mode-slow"
@@ -607,7 +751,7 @@ function GeneratePage() {
                 }
               />
               <FokusGuruChips
-                topik={effectiveTopik}
+                topik={effectiveTopiks[0] ?? ''}
                 onAppend={(snippet) => {
                   setFokusGuru((prev) => {
                     const sep = prev.length === 0 || prev.endsWith('\n') ? '' : '\n'
@@ -695,7 +839,7 @@ function GeneratePage() {
                 Generate Lembar
               </Button>
               <p className="text-caption text-text-tertiary text-center mt-2">
-                AI akan membuat 20 soal sesuai Capaian Pembelajaran Fase C
+                AI akan membuat {totalSoal} soal sesuai Capaian Pembelajaran Fase C
               </p>
             </div>
           </section>
@@ -761,9 +905,11 @@ function GeneratePage() {
               <div className="flex justify-between items-start gap-2">
                 <span className="text-text-tertiary shrink-0">Topik</span>
                 <span className="text-text-primary max-w-[160px] text-right">
-                  {topik === '__custom'
-                    ? (customTopik || '—')
-                    : (topik || '—')}
+                  {effectiveTopiks.length > 0
+                    ? topikSummary.length > 50
+                      ? topikSummary.slice(0, 50) + '…'
+                      : topikSummary
+                    : '—'}
                 </span>
               </div>
 
@@ -796,7 +942,7 @@ function GeneratePage() {
             {/* Fixed info row */}
             <div className="flex justify-between items-center text-body-sm">
               <span className="text-text-tertiary">Jumlah soal</span>
-              <Badge variant="secondary">20 soal</Badge>
+              <Badge variant="secondary">{totalSoal} soal</Badge>
             </div>
 
             {/* File indicator */}

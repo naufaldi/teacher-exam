@@ -3,13 +3,14 @@ export interface FormatExamTitleInput {
   grade: number
   examType: string
   examDate: string | null
-  topic: string
+  topics: readonly string[]
 }
 
 export function formatExamTitle(input: FormatExamTitleInput): string {
-  const { subjectLabel, grade, examType, examDate, topic } = input
+  const { subjectLabel, grade, examType, examDate, topics } = input
 
-  const typeSegment = examType.trim() || topic
+  const topicSegment = topics.join(', ')
+  const typeSegment = examType.trim() || topicSegment
   const dateSegment = examDate
     ? new Date(examDate).toLocaleDateString('id-ID', {
         day: 'numeric',
@@ -20,7 +21,7 @@ export function formatExamTitle(input: FormatExamTitleInput): string {
 
   const parts = [
     `${subjectLabel} / Kelas ${grade}`,
-    typeSegment,
+    ...(typeSegment ? [typeSegment] : []),
     ...(dateSegment ? [dateSegment] : []),
   ]
 

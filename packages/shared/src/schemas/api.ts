@@ -15,12 +15,16 @@ export const GenerateExamInputSchema = Schema.Struct({
   subject:          ExamSubjectSchema,
   grade:            Schema.Int.pipe(Schema.between(5, 6)),
   difficulty:       ExamDifficultySchema,
-  topic:            Schema.NonEmptyString,
+  topics:           Schema.Array(Schema.NonEmptyString).pipe(
+                      Schema.minItems(1),
+                      Schema.maxItems(5),
+                    ),
   reviewMode:       ReviewModeSchema,
   examType:         Schema.optional(ExamTypeSchema),
   classContext:     Schema.optional(Schema.String),
   pdfUploadId:      Schema.optional(Schema.String),
   exampleQuestions: Schema.optional(Schema.String),
+  totalSoal:        Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
   composition:      Schema.optional(Schema.Struct({
     mcqSingle: Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
     mcqMulti:  Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
@@ -43,16 +47,54 @@ export const UpdateExamInputSchema = Schema.Struct({
 })
 export type UpdateExamInput = typeof UpdateExamInputSchema.Type
 
-export const UpdateQuestionInputSchema = Schema.Struct({
-  text:          Schema.optional(Schema.String),
-  optionA:       Schema.optional(Schema.String),
-  optionB:       Schema.optional(Schema.String),
-  optionC:       Schema.optional(Schema.String),
-  optionD:       Schema.optional(Schema.String),
-  correctAnswer: Schema.optional(AnswerSchema),
-  status:        Schema.optional(Schema.Literal('accepted', 'rejected')),
+const UpdateQuestionInputBase = {
+  text:   Schema.optional(Schema.String),
+  status: Schema.optional(Schema.Literal('pending', 'accepted', 'rejected')),
+} as const
+
+const UpdateMcqSingleInputSchema = Schema.Struct({
+  _tag:    Schema.optional(Schema.Literal('mcq_single')),
+  ...UpdateQuestionInputBase,
+  options: Schema.optional(Schema.Struct({
+    a: Schema.String,
+    b: Schema.String,
+    c: Schema.String,
+    d: Schema.String,
+  })),
+  correct: Schema.optional(AnswerSchema),
 })
+
+const UpdateMcqMultiInputSchema = Schema.Struct({
+  _tag:    Schema.optional(Schema.Literal('mcq_multi')),
+  ...UpdateQuestionInputBase,
+  options: Schema.optional(Schema.Struct({
+    a: Schema.String,
+    b: Schema.String,
+    c: Schema.String,
+    d: Schema.String,
+  })),
+  correct: Schema.optional(Schema.Array(AnswerSchema)),
+})
+
+const UpdateTrueFalseInputSchema = Schema.Struct({
+  _tag:       Schema.optional(Schema.Literal('true_false')),
+  ...UpdateQuestionInputBase,
+  statements: Schema.optional(Schema.Array(
+    Schema.Struct({ text: Schema.String, answer: Schema.Boolean })
+  )),
+})
+
+export const UpdateQuestionInputSchema = Schema.Union(
+  UpdateMcqSingleInputSchema,
+  UpdateMcqMultiInputSchema,
+  UpdateTrueFalseInputSchema,
+)
 export type UpdateQuestionInput = typeof UpdateQuestionInputSchema.Type
+
+export const RegenerateQuestionInputSchema = Schema.Struct({
+  hint: Schema.optional(Schema.String),
+})
+export type RegenerateQuestionInput = typeof RegenerateQuestionInputSchema.Type
 
 // ── User profile API ───────────────────────────────────────
 
