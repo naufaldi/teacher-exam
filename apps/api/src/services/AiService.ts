@@ -77,6 +77,14 @@ export function createAiService(config: AiServiceConfig): AiService {
           catch: (cause) => new AiGenerationError({ cause }),
         })
 
+        if (response.stop_reason !== 'end_turn') {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
+            }),
+          )
+        }
+
         const firstBlock = response.content[0]
         if (!firstBlock || firstBlock.type !== 'text') {
           return yield* Effect.fail(

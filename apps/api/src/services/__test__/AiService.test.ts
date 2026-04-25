@@ -109,11 +109,10 @@ describe('AiService.generate', () => {
     })
     const ai = createAiService({ client })
 
-    const err = await ai.generate({ system: 's', user: 'u', expectedCount: 20 }).catch((e: unknown) => e)
+    const err = await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
 
-    expect(err).toBeInstanceOf(AiGenerationError)
-    expect((err as AiGenerationError).message).toContain('max_tokens')
-    expect((err as AiGenerationError).message).toContain('incomplete')
+    expect(String(err.cause)).toContain('max_tokens')
+    expect(String(err.cause)).toContain('incomplete')
   })
 
 

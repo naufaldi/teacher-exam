@@ -9,3 +9,4 @@ apps/api/src/curriculum/pdf/*.pdf
 apps/api/src/curriculum/cache/
 .cursor/
 .tmp-auth.json
+.mcp.json
