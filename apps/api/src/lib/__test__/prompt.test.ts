@@ -239,6 +239,12 @@ describe('buildExamPrompt — composition and multi-type', () => {
     expect(system).toContain('_tag')
   })
 
+  test('system message requires number on every generated question shape', () => {
+    const { system } = buildExamPrompt(base)
+    expect(system).toContain('"number"')
+    expect(system).toMatch(/number.*1/i)
+  })
+
   test('system message mentions all three _tag values', () => {
     const { system } = buildExamPrompt(base)
     expect(system).toContain('mcq_single')

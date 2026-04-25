@@ -182,8 +182,15 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
 
     const siblingTexts = siblingRows.map((r) => r.text)
 
-    // Step 3: build a single-question prompt
-    const system = 'Anda adalah generator soal ulangan SD. Jawab HANYA dengan JSON array berisi tepat 1 soal. Setiap soal: text, option_a, option_b, option_c, option_d, correct_answer (a|b|c|d), topic, difficulty (mudah|sedang|sulit).'
+    // Step 3: build a single-question prompt.
+    // Shape MUST match `GeneratedQuestionSchema` (tagged Schema.Union in
+    // packages/shared) — `_tag` is the discriminator and `number` is required.
+    const system = [
+      'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka.',
+      'Jawab HANYA dengan JSON array berisi tepat 1 objek soal pilihan ganda — tanpa prosa, tanpa pembungkus markdown.',
+      'Format wajib (semua field diperlukan):',
+      '  { "_tag": "mcq_single", "number": 1, "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit" }',
+    ].join('\n')
     const userPayload: Record<string, unknown> = {
       kelas:            exam.grade,
       mata_pelajaran:   exam.subject,

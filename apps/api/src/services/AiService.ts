@@ -35,7 +35,8 @@ export interface AiServiceConfig {
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5'
-const DEFAULT_MAX_TOKENS = 8192
+const DEFAULT_MAX_TOKENS = 32000
+const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 
 /**
  * Create an `AiService` bound to a given Anthropic client.
@@ -106,7 +107,7 @@ export function createDefaultAiService(): AiService {
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is required to use AiService')
   }
-  return createAiService({ client: new Anthropic({ apiKey }) })
+  return createAiService({ client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }) })
 }
 
 function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, AiGenerationError> {
