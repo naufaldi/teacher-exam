@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { XCircle } from 'lucide-react'
 import {
   AlertDialog,
@@ -8,26 +9,41 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
+  Textarea,
 } from '@teacher-exam/ui'
 
-export interface RejectConfirmDialogProps {
+export interface TolakRegenerateDialogProps {
   open: boolean
   questionNumber: number | null
-  onConfirm: () => void
+  initialHint?: string
+  onConfirm: (hint?: string) => void
   onClose: () => void
 }
 
-/**
- * Slow Track confirmation: tolak a soal triggers an AI re-generate of that single item.
- */
-export function RejectConfirmDialog({
+export function TolakRegenerateDialog({
   open,
   questionNumber,
+  initialHint,
   onConfirm,
   onClose,
-}: RejectConfirmDialogProps) {
+}: TolakRegenerateDialogProps) {
+  const [hint, setHint] = useState(initialHint ?? '')
+
+  useEffect(() => {
+    if (open) setHint(initialHint ?? '')
+  }, [open, initialHint])
+
+  const handleConfirm = () => {
+    const trimmed = hint.trim()
+    onConfirm(trimmed.length > 0 ? trimmed : undefined)
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) onClose()
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={(o: boolean) => { if (!o) onClose() }}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-3">
@@ -40,20 +56,29 @@ export function RejectConfirmDialog({
               </AlertDialogTitle>
               <AlertDialogDescription>
                 AI akan langsung membuat soal pengganti dengan topik dan tingkat kesulitan yang sama.
-                Proses ini biasanya memakan waktu 1–2 detik.
+                Berikan petunjuk di bawah jika ingin mengarahkan AI.
               </AlertDialogDescription>
             </div>
           </div>
         </AlertDialogHeader>
 
+        <Textarea
+          value={hint}
+          onChange={(e) => setHint(e.target.value)}
+          placeholder="Petunjuk untuk AI (opsional) — mis. 'terlalu sulit', 'topik kurang pas'"
+          rows={3}
+          className="mt-2"
+        />
+
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Batal</AlertDialogCancel>
+          <AlertDialogCancel>Batal</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            autoFocus
+            onClick={handleConfirm}
             className="bg-danger-solid hover:bg-danger-solid/90 text-white"
           >
             <XCircle className="h-4 w-4 mr-2" />
-            Tolak & ganti
+            Ganti
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

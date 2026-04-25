@@ -13,7 +13,7 @@ export interface GenerateErrorDialogProps {
   open: boolean
   onRetry: () => void
   onClose: () => void
-  message?: string
+  message?: string | undefined
 }
 
 /**

@@ -230,8 +230,11 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 
 - Hasil generate ditampilkan sebagai **satu paket** untuk satu lembar (card per nomor)
 - Setiap item menampilkan: teks soal, pilihan a/b/c/d, jawaban benar, topik, kesulitan
-- Per soal: ✅ **Terima**, ✏️ **Edit**, ❌ **Tolak**; soal yang ditolak harus **diganti** (regenerate item) sebelum paket bisa menjadi lembar final
-- Bulk: **Terima Semua** / **Tolak Semua**
+- Per soal: ✅ **Terima**, ✏️ **Edit**, ❌ **Tolak**. **Tolak adalah aksi terpadu**: konfirmasi dialog (dengan **petunjuk opsional untuk AI**) → AI langsung menggantikan soal di tempat. Tidak ada tombol "Ganti dengan AI" terpisah.
+- Soal pengganti dari AI muncul kembali dengan status **pending** dan ditandai indikator transient **"Soal baru"** yang hilang setelah guru menekan Terima/Tolak atau setelah ~8 detik.
+- Jika regenerate gagal (network/rate-limit/AI tidak valid), kartu masuk state **error** dengan tombol **Coba lagi** (gunakan ulang petunjuk yang tersimpan) dan **Batalkan** (kembalikan ke konten & status sebelum Tolak). Tanpa auto-retry.
+- **Edit mempertahankan status** soal — perubahan teks/jawaban oleh guru tidak mereset approval state.
+- Bulk: **Terima Semua** (selalu tampil) dan **Coba lagi yang gagal (N)** (hanya tampil saat ada kegagalan regenerate, N > 0). Tombol "Tolak Semua" / "Ganti semua ditolak" dihapus — tidak ada lagi state `rejected` permanen di UI.
 - Counter utama: **"X dari 20 siap lembar"**
 - Tombol **Preview Lembar** tetap nonaktif sampai **20 dari 20** soal sudah siap
 - Sebelum masuk preview, guru melengkapi metadata lembar wajib: **nama sekolah, tahun pelajaran, jenis ujian (default: TKA), tanggal/hari, durasi**, dan **petunjuk** (opsional, default 3 poin standar)
@@ -490,8 +493,9 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 ┌─────────────────────────────────────┐
 │ ← Generate    Review (20 soal)      │
 │ Paket lembar — 17 dari 20 siap      │
-│ [✅ Terima Semua] [♻ Ganti ditolak] │
-│ [⇄ Switch ke Mode Cepat]           │
+│ [✅ Terima Semua]                    │
+│ [♻ Coba lagi yang gagal (N)]        │  ← muncul hanya jika N > 0
+│ [⇄ Switch ke Mode Cepat]            │
 ├─────────────────────────────────────┤
 │ ┌─────────────────────────────────┐ │
 │ │ Soal #1  | Sedang | Pemahaman  │ │
@@ -515,6 +519,20 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 │ [Preview nonaktif: 17/20 siap]      │
 └─────────────────────────────────────┘
 ```
+
+> *Catatan: Tombol **Tolak** membuka dialog konfirmasi dengan input petunjuk opsional untuk AI; setelah konfirmasi, AI langsung menggantikan soal di tempat. Soal pengganti muncul dengan badge transient "Soal baru" sampai guru menekan Terima/Tolak (atau ~8 detik). Jika regenerate gagal, kartu menampilkan state error dengan tombol "Coba lagi" dan "Batalkan".*
+
+### 4.4a State per kartu (Slow Track)
+
+Setiap kartu soal selalu berada di salah satu state berikut:
+
+- **pending** — belum direview; tanpa badge.
+- **accepted** — Terima sudah ditekan; badge "Diterima"; dihitung ke 20/20 siap.
+- **regenerating** — Tolak dikonfirmasi, AI sedang menghasilkan pengganti; spinner, tombol non-aktif.
+- **new-replacement** — pengganti dari AI sudah datang; status `pending` + badge transient "Soal baru".
+- **regenerate-failed** — panggilan AI gagal; tombol [Coba lagi] dan [Batalkan]; petunjuk awal tetap tersimpan.
+
+State `regenerating`, `new-replacement`, dan `regenerate-failed` adalah **state UI saja** — di database hanya ada `pending | accepted | rejected`, dan `rejected` hanya muncul sesaat selama regenerate berlangsung.
 
 ### 4.4b Konfirmasi Fast Track
 

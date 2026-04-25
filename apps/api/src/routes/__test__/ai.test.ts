@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Hono } from 'hono'
-import { AiGenerationError, type AiService, type GeneratedQuestion } from '../../services/AiService'
+import { Effect } from 'effect'
+import type { AiService, GeneratedQuestion } from '../../services/AiService'
+import { AiGenerationError } from '../../errors'
 
 vi.mock('@teacher-exam/db', () => {
   const db = {
@@ -56,7 +58,7 @@ const FAKE_AI_QUESTIONS: GeneratedQuestion[] = Array.from({ length: 20 }, (_, i)
 )
 
 const fakeAiService: AiService = {
-  generate: vi.fn(async () => FAKE_AI_QUESTIONS),
+  generate: vi.fn(() => Effect.succeed(FAKE_AI_QUESTIONS)),
 }
 
 function makeExamRow(overrides: Record<string, unknown> = {}) {
@@ -110,7 +112,7 @@ function buildTestApp() {
 describe('POST /api/ai/generate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(fakeAiService.generate as Mock).mockResolvedValue(FAKE_AI_QUESTIONS)
+    ;(fakeAiService.generate as Mock).mockReturnValue(Effect.succeed(FAKE_AI_QUESTIONS))
   })
 
   it('returns 401 without session', async () => {
@@ -254,8 +256,8 @@ describe('POST /api/ai/generate', () => {
   })
 
   it('returns 502 and skips DB insert when AiService fails', async () => {
-    ;(fakeAiService.generate as Mock).mockRejectedValueOnce(
-      new AiGenerationError('Claude failed'),
+    ;(fakeAiService.generate as Mock).mockReturnValueOnce(
+      Effect.fail(new AiGenerationError({ cause: 'Claude failed' })),
     )
 
     const app = buildTestApp()
@@ -386,8 +388,8 @@ describe('POST /api/ai/generate', () => {
         if (selectCount === 1) return makeChain([examRow])
         return makeChain(questionRows)
       })
-      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(
-        Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)),
+      ;(fakeAiService.generate as Mock).mockReturnValueOnce(
+        Effect.succeed(Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1))),
       )
 
       const buildMock = buildExamPrompt as Mock
@@ -420,8 +422,8 @@ describe('POST /api/ai/generate', () => {
         if (selectCount === 1) return makeChain([examRow])
         return makeChain(questionRows)
       })
-      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(
-        Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)),
+      ;(fakeAiService.generate as Mock).mockReturnValueOnce(
+        Effect.succeed(Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1))),
       )
 
       const buildMock = buildExamPrompt as Mock
@@ -479,7 +481,7 @@ describe('POST /api/ai/generate', () => {
         makeFakeQuestion(4),
         mcqMultiQuestion,
       ]
-      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(mixedQuestions)
+      ;(fakeAiService.generate as Mock).mockReturnValueOnce(Effect.succeed(mixedQuestions))
 
       const examRow = makeExamRow({ examType: 'formatif' })
       const questionRows = Array.from({ length: 5 }, (_, i) =>

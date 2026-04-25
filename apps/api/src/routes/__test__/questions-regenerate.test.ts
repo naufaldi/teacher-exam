@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Hono } from 'hono'
+import { Effect } from 'effect'
 import type { AiService, GeneratedQuestion } from '../../services/AiService'
+import { AiGenerationError } from '../../errors'
 
 vi.mock('@teacher-exam/db', () => ({
   db: {
@@ -100,7 +102,7 @@ describe('POST /api/questions/:id/regenerate', () => {
     ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
 
     const generated = makeGeneratedQuestion()
-    const fakeAi: AiService = { generate: vi.fn().mockResolvedValue([generated]) }
+    const fakeAi: AiService = { generate: vi.fn(() => Effect.succeed([generated])) }
     const app = buildTestApp(fakeAi)
 
     const res = await app.request('/api/questions/q-1/regenerate', {
@@ -128,7 +130,7 @@ describe('POST /api/questions/:id/regenerate', () => {
     ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
 
     const generated = makeGeneratedQuestion()
-    const fakeAi: AiService = { generate: vi.fn().mockResolvedValue([generated]) }
+    const fakeAi: AiService = { generate: vi.fn(() => Effect.succeed([generated])) }
     const app = buildTestApp(fakeAi)
 
     await app.request('/api/questions/q-1/regenerate', {
@@ -154,7 +156,9 @@ describe('POST /api/questions/:id/regenerate', () => {
     })
 
     const fakeAi: AiService = {
-      generate: vi.fn().mockRejectedValue(new Error('Claude quota exceeded')),
+      generate: vi.fn(() =>
+        Effect.fail(new AiGenerationError({ cause: 'Claude quota exceeded' })),
+      ),
     }
     const app = buildTestApp(fakeAi)
 

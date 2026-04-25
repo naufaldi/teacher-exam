@@ -31,16 +31,16 @@ export function RegenerateBatchDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>Ganti {count} soal ditolak dengan AI?</AlertDialogTitle>
+          <AlertDialogTitle>Coba lagi {count} regenerate yang gagal?</AlertDialogTitle>
           <AlertDialogDescription>
-            Setiap soal yang ditolak akan digantikan dengan soal baru yang dihasilkan AI secara
-            bersamaan. Soal yang berhasil diganti akan berstatus pending.
+            Setiap soal yang gagal akan dicoba ulang dengan petunjuk yang sama. Soal yang berhasil
+            diganti akan kembali ke status pending dan ditandai sebagai &ldquo;Soal baru&rdquo;.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel>Batal</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm}>Ganti semua</AlertDialogAction>
+          <AlertDialogAction onClick={handleConfirm}>Coba lagi semua</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

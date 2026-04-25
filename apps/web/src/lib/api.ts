@@ -99,11 +99,12 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText, code: 'UNKNOWN' }))
+    const errorBody = body as { error?: string; message?: string; code?: string; details?: unknown }
     throw new ApiError({
-      message: (body as { error?: string }).error ?? res.statusText,
-      code: (body as { code?: string }).code ?? 'UNKNOWN',
+      message: errorBody.message ?? errorBody.error ?? res.statusText,
+      code: errorBody.code ?? 'UNKNOWN',
       status: res.status,
-      details: (body as { details?: unknown }).details,
+      details: errorBody.details,
     })
   }
   return res.json() as Promise<T>

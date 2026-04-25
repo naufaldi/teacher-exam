@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { Schema, Match } from 'effect'
+import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
@@ -199,12 +199,13 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
     // Step 4: call AI service
     aiService ??= createDefaultAiService()
 
-    let result: ReadonlyArray<GeneratedQuestion>
-    try {
-      result = await aiService.generate({ system, user, expectedCount: 1 })
-    } catch {
+    const aiResult = await Effect.runPromise(
+      Effect.either(aiService.generate({ system, user, expectedCount: 1 })),
+    )
+    if (Either.isLeft(aiResult)) {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)
     }
+    const result = aiResult.right
 
     if (result.length === 0 || !result[0]) {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)

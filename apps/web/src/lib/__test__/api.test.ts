@@ -40,6 +40,29 @@ describe('apiFetch', () => {
     })
   })
 
+  it('prefers detailed message when error response includes one', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      statusText: 'Bad Gateway',
+      json: () =>
+        Promise.resolve({
+          error: 'AI generation failed',
+          message: 'Expected 40 questions, got 20',
+          code: 'AI_GENERATION_ERROR',
+        }),
+    })
+
+    await expect(apiFetch('/ai/generate')).rejects.toSatisfy((err: unknown) => {
+      if (!(err instanceof ApiError)) return false
+      return (
+        err.status === 502 &&
+        err.code === 'AI_GENERATION_ERROR' &&
+        err.message === 'Expected 40 questions, got 20'
+      )
+    })
+  })
+
   it('defaults to UNKNOWN code when error body has no code field', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

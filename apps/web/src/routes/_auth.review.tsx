@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import {
   CheckCircle2,
@@ -25,13 +25,12 @@ import {
   DatePicker,
 } from '@teacher-exam/ui'
 import type { ExamType, Question, UpdateExamInput } from '@teacher-exam/shared'
-import { RegenerateSingleDialog } from '../components/review/regenerate-single-dialog.js'
 import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dialog.js'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
-import { RejectConfirmDialog } from '../components/review/reject-confirm-dialog.js'
+import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
 import { SwitchModeDialog } from '../components/review/switch-mode-dialog.js'
 export const Route = createFileRoute('/_auth/review')({
@@ -102,15 +101,30 @@ function ReviewPage() {
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set())
 
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   const [pendingSwitchTo, setPendingSwitchTo] = useState<'fast' | 'slow' | null>(null)
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set())
   const [failedRegenIds, setFailedRegenIds] = useState<Set<string>>(new Set())
-  const [regenSingleTargetId, setRegenSingleTargetId] = useState<string | null>(null)
-  const [regenSingleDialogOpen, setRegenSingleDialogOpen] = useState(false)
   const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
   const [batchRegenerating, setBatchRegenerating] = useState(false)
+  const [newReplacementIds, setNewReplacementIds] = useState<Set<string>>(new Set())
+  type TolakDialogState =
+    | { kind: 'closed' }
+    | { kind: 'open'; questionId: string; mode: 'tolak' | 'retry'; initialHint?: string }
+  const [tolakDialogState, setTolakDialogState] = useState<TolakDialogState>({ kind: 'closed' })
+
+  // Transient maps — refs avoid re-renders on mutation
+  const lastHintsRef = useRef<Record<string, string>>({})
+  const prevSnapshotsRef = useRef<Record<string, Question>>({})
+  const newBadgeTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  // Cleanup any pending "Soal baru" timers on unmount
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(newBadgeTimersRef.current)) clearTimeout(t)
+      newBadgeTimersRef.current = {}
+    }
+  }, [])
 
   // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
@@ -172,10 +186,6 @@ function ReviewPage() {
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
   )
-  const rejectedCount = useMemo(
-    () => Object.values(questionStatuses).filter((s) => s === 'rejected').length,
-    [questionStatuses],
-  )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
   const canPreview = acceptedCount === questions.length && isMetadataComplete
   const isRegenerating = regeneratingIds.size > 0 || batchRegenerating
@@ -184,9 +194,10 @@ function ReviewPage() {
     ? questions.find((q) => q.id === editingId) ?? null
     : null
 
-  const rejectingQuestion = rejectingId !== null
-    ? questions.find((q) => q.id === rejectingId) ?? null
-    : null
+  const tolakDialogQuestion =
+    tolakDialogState.kind === 'open'
+      ? questions.find((q) => q.id === tolakDialogState.questionId) ?? null
+      : null
 
   const isDirty =
     editedIds.size > 0 ||
@@ -238,17 +249,7 @@ function ReviewPage() {
       },
     })
 
-    // Compute next status based on current UI status (not DB status)
-    const currentStatus = questionStatuses[updated.id] ?? 'pending'
-    const nextStatus: QuestionStatus =
-      currentStatus === 'rejected' ? 'pending' :
-      currentStatus === 'pending'  ? 'accepted' :
-      'accepted'
-
-    if (nextStatus !== currentStatus) {
-      (diff as Record<string, unknown>)['status'] = nextStatus
-    }
-
+    // PRD US-9: Edit preserves current status — teacher-authored edits do not change approval state.
     const hasChanges = Object.keys(diff).filter((k) => k !== '_tag').length > 0
 
     setEditingId(null)
@@ -256,9 +257,6 @@ function ReviewPage() {
 
     examDraftStore.replaceQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
-    if (nextStatus !== currentStatus) {
-      setQuestionStatuses((prev) => ({ ...prev, [updated.id]: nextStatus }))
-    }
     try {
       const server = await api.questions.patch(updated.id, diff as Parameters<typeof api.questions.patch>[1])
       examDraftStore.replaceQuestion(server.id, server)
@@ -268,9 +266,6 @@ function ReviewPage() {
       })
     } catch (err) {
       examDraftStore.replaceQuestion(updated.id, original)
-      if (nextStatus !== currentStatus) {
-        setQuestionStatuses((prev) => ({ ...prev, [updated.id]: currentStatus }))
-      }
       toast({
         variant: 'error',
         title: 'Gagal menyimpan perubahan',
@@ -279,8 +274,42 @@ function ReviewPage() {
     }
   }
 
+  const clearNewBadge = useCallback((id: string) => {
+    const timer = newBadgeTimersRef.current[id]
+    if (timer) {
+      clearTimeout(timer)
+      delete newBadgeTimersRef.current[id]
+    }
+    setNewReplacementIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  const scheduleNewBadge = useCallback((id: string) => {
+    const existing = newBadgeTimersRef.current[id]
+    if (existing) clearTimeout(existing)
+    setNewReplacementIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    newBadgeTimersRef.current[id] = setTimeout(() => {
+      delete newBadgeTimersRef.current[id]
+      setNewReplacementIds((prev) => {
+        if (!prev.has(id)) return prev
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 8000)
+  }, [])
+
   const setStatus = async (id: string, status: 'accepted' | 'rejected') => {
     const prev = questionStatuses[id] ?? 'pending'
+    clearNewBadge(id)
     setQuestionStatuses((p) => ({ ...p, [id]: status }))
     try {
       await api.questions.patch(id, { status })
@@ -294,31 +323,70 @@ function ReviewPage() {
     }
   }
 
-  const handleRejectConfirm = async () => {
-    if (rejectingId === null) return
-    const targetId = rejectingId
-    setRejectingId(null)
-    setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'rejected' }))
-    setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(targetId); return s })
-    await handleRegenerateOne(targetId)
+  const openTolakDialog = (qId: string) => {
+    clearNewBadge(qId)
+    setTolakDialogState({ kind: 'open', questionId: qId, mode: 'tolak' })
   }
 
-  const handleRegenerateBatch = async () => {
-    const rejectedIds = questions
-      .filter((q) => (questionStatuses[q.id] ?? 'pending') === 'rejected')
-      .map((q) => q.id)
-    if (rejectedIds.length === 0) return
+  const openRetryDialog = (qId: string) => {
+    const initialHint = lastHintsRef.current[qId] ?? ''
+    setTolakDialogState({ kind: 'open', questionId: qId, mode: 'retry', initialHint })
+  }
 
+  const closeTolakDialog = () => setTolakDialogState({ kind: 'closed' })
+
+  const handleTolakRegenerateConfirm = (hint?: string) => {
+    if (tolakDialogState.kind !== 'open') return
+    const { questionId, mode } = tolakDialogState
+    if (mode === 'tolak') {
+      const current = questions.find((q) => q.id === questionId)
+      if (current) prevSnapshotsRef.current[questionId] = current
+    }
+    if (hint !== undefined) {
+      lastHintsRef.current[questionId] = hint
+    } else {
+      delete lastHintsRef.current[questionId]
+    }
+    setTolakDialogState({ kind: 'closed' })
+    void handleRegenerateOne(questionId, hint)
+  }
+
+  const handleBatalkan = (qId: string) => {
+    const snapshot = prevSnapshotsRef.current[qId]
+    if (snapshot) {
+      examDraftStore.replaceQuestion(qId, snapshot)
+      setQuestionStatuses((prev) => ({
+        ...prev,
+        [qId]: (snapshot.status as QuestionStatus | undefined) ?? 'pending',
+      }))
+      delete prevSnapshotsRef.current[qId]
+    }
+    delete lastHintsRef.current[qId]
+    setFailedRegenIds((prev) => {
+      if (!prev.has(qId)) return prev
+      const next = new Set(prev)
+      next.delete(qId)
+      return next
+    })
+  }
+
+  const handleRetryAllFailed = async () => {
+    const ids = Array.from(failedRegenIds)
+    if (ids.length === 0) return
     setBatchRegenerating(true)
     try {
-      const results = await Promise.all(rejectedIds.map((id) => handleRegenerateOne(id)))
-      const succeededCount = results.filter(Boolean).length
-      const failedCount = rejectedIds.length - succeededCount
+      const results = await Promise.allSettled(
+        ids.map((id) => handleRegenerateOne(id, lastHintsRef.current[id])),
+      )
+      const succeededCount = results.filter(
+        (r) => r.status === 'fulfilled' && r.value === true,
+      ).length
+      const failedCount = ids.length - succeededCount
       if (failedCount > 0) {
         toast({
           variant: 'error',
           title: `Berhasil ${succeededCount} · Gagal ${failedCount}`,
-          description: 'Soal yang gagal perlu dicoba ulang satu per satu.',
+          description: 'Soal yang masih gagal perlu dicoba ulang satu per satu.',
         })
       } else {
         toast({
@@ -337,7 +405,15 @@ function ReviewPage() {
       const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
       examDraftStore.updateQuestion(id, server)
       setQuestionStatuses((prev) => ({ ...prev, [id]: 'pending' }))
-      setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+      setFailedRegenIds((prev) => {
+        if (!prev.has(id)) return prev
+        const s = new Set(prev)
+        s.delete(id)
+        return s
+      })
+      delete prevSnapshotsRef.current[id]
+      delete lastHintsRef.current[id]
+      scheduleNewBadge(id)
       return true
     } catch (err) {
       setFailedRegenIds((prev) => new Set(prev).add(id))
@@ -495,7 +571,7 @@ function ReviewPage() {
             >
               Terima Semua
             </Button>
-            {rejectedCount > 0 && (
+            {failedRegenIds.size > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -508,7 +584,7 @@ function ReviewPage() {
                     Mengganti...
                   </>
                 ) : (
-                  `Ganti semua ditolak (${rejectedCount})`
+                  `Coba lagi yang gagal (${failedRegenIds.size})`
                 )}
               </Button>
             )}
@@ -562,10 +638,18 @@ function ReviewPage() {
                               Diedit
                             </Badge>
                           )}
-                          {status === 'rejected' && (
-                            <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
+                          {newReplacementIds.has(q.id) && (
+                            <Badge
+                              variant="secondary"
+                              className="text-caption bg-info-bg text-info-fg border-info-border animate-in fade-in"
+                            >
+                              Soal baru
+                            </Badge>
                           )}
-                          {status === 'accepted' && (
+                          {failedRegenIds.has(q.id) && (
+                            <span className="ml-auto text-caption text-danger-fg">Regenerate gagal</span>
+                          )}
+                          {!failedRegenIds.has(q.id) && status === 'accepted' && (
                             <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
                               <CheckCircle2 className="h-3 w-3" /> Diterima
                             </span>
@@ -633,54 +717,53 @@ function ReviewPage() {
                           ),
                         })}
                         <div className="flex gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="text-success-fg border-success-border"
-                            onClick={() => { void setStatus(q.id, 'accepted') }}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={isRegenerating}
-                            onClick={() => setEditingId(q.id)}
-                          >
-                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger-fg hover:text-danger-fg"
-                            disabled={isRegenerating}
-                            onClick={() => setRejectingId(q.id)}
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
-                          </Button>
-                          {status === 'rejected' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setRegenSingleTargetId(q.id)
-                                setRegenSingleDialogOpen(true)
-                              }}
-                            >
-                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Ganti dengan AI
-                            </Button>
-                          )}
-                          {failedRegenIds.has(q.id) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setRegenSingleTargetId(q.id)
-                                setRegenSingleDialogOpen(true)
-                              }}
-                            >
-                              Coba lagi
-                            </Button>
+                          {failedRegenIds.has(q.id) ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={isRegenerating}
+                                onClick={() => openRetryDialog(q.id)}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Coba lagi
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={isRegenerating}
+                                onClick={() => handleBatalkan(q.id)}
+                              >
+                                Batalkan
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="text-success-fg border-success-border"
+                                onClick={() => { void setStatus(q.id, 'accepted') }}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={isRegenerating}
+                                onClick={() => setEditingId(q.id)}
+                              >
+                                <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger-fg hover:text-danger-fg"
+                                disabled={isRegenerating}
+                                onClick={() => openTolakDialog(q.id)}
+                              >
+                                <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
+                              </Button>
+                            </>
                           )}
                         </div>
                       </>
@@ -800,11 +883,14 @@ function ReviewPage() {
         onClose={() => setEditingId(null)}
         onSave={(updated) => { void handleEditSave(updated) }}
       />
-      <RejectConfirmDialog
-        open={rejectingId !== null}
-        questionNumber={rejectingQuestion?.number ?? null}
-        onConfirm={handleRejectConfirm}
-        onClose={() => setRejectingId(null)}
+      <TolakRegenerateDialog
+        open={tolakDialogState.kind === 'open'}
+        questionNumber={tolakDialogQuestion?.number ?? null}
+        {...(tolakDialogState.kind === 'open' && tolakDialogState.initialHint !== undefined
+          ? { initialHint: tolakDialogState.initialHint }
+          : {})}
+        onConfirm={handleTolakRegenerateConfirm}
+        onClose={closeTolakDialog}
       />
       <RegenerateConfirmDialog
         open={showRegenConfirm}
@@ -818,25 +904,11 @@ function ReviewPage() {
         onConfirm={handleSwitchConfirm}
         onClose={() => setPendingSwitchTo(null)}
       />
-      <RegenerateSingleDialog
-        open={regenSingleDialogOpen}
-        onOpenChange={(v) => {
-          setRegenSingleDialogOpen(v)
-          if (!v) setRegenSingleTargetId(null)
-        }}
-        onConfirm={(hint) => {
-          setRegenSingleDialogOpen(false)
-          if (regenSingleTargetId !== null) {
-            void handleRegenerateOne(regenSingleTargetId, hint)
-          }
-          setRegenSingleTargetId(null)
-        }}
-      />
       <RegenerateBatchDialog
         open={regenBatchDialogOpen}
         onOpenChange={setRegenBatchDialogOpen}
-        count={rejectedCount}
-        onConfirm={() => { void handleRegenerateBatch() }}
+        count={failedRegenIds.size}
+        onConfirm={() => { void handleRetryAllFailed() }}
       />
     </div>
   )
