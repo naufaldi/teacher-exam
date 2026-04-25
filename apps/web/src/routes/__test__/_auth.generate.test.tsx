@@ -56,7 +56,7 @@ function makeExamWithQuestions(id = 'exam_abc'): ExamWithQuestions {
     subject: 'bahasa_indonesia',
     grade: 6,
     difficulty: 'sedang',
-    topic: 'Teks Narasi',
+    topics: ['Teks Narasi'],
     reviewMode: 'fast',
     status: 'draft',
     schoolName: null,

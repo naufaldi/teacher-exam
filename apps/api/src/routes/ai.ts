@@ -100,7 +100,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       difficulty: input.difficulty,
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
-      topic: input.topic,
+      topics: [...input.topics],
       totalSoal,
       composition,
       curriculumText,
@@ -125,7 +125,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       grade: input.grade,
       examType,
       examDate: null,
-      topic: input.topic,
+      topics: [...input.topics],
     })
     const examId = crypto.randomUUID()
     const now = new Date()
@@ -138,7 +138,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
         subject:     input.subject,
         grade:       input.grade,
         difficulty:  input.difficulty,
-        topic:       input.topic,
+        topics:      [...input.topics],
         reviewMode:  input.reviewMode,
         status:      'draft',
         examType,

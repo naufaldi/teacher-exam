@@ -25,6 +25,8 @@ import {
   DatePicker,
 } from '@teacher-exam/ui'
 import type { ExamType, Question, UpdateExamInput } from '@teacher-exam/shared'
+import { RegenerateSingleDialog } from '../components/review/regenerate-single-dialog.js'
+import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dialog.js'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
@@ -52,7 +54,7 @@ export const Route = createFileRoute('/_auth/review')({
     examDraftStore.setConfig({
       subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
       grade: exam.grade,
-      topic: exam.topic,
+      topic: exam.topics.join(', '),
       examType: exam.examType as ExamType,
       classContext: exam.classContext ?? '',
     })
@@ -103,6 +105,11 @@ function ReviewPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   const [pendingSwitchTo, setPendingSwitchTo] = useState<'fast' | 'slow' | null>(null)
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set())
+  const [failedRegenIds, setFailedRegenIds] = useState<Set<string>>(new Set())
+  const [regenSingleTargetId, setRegenSingleTargetId] = useState<string | null>(null)
+  const [regenSingleDialogOpen, setRegenSingleDialogOpen] = useState(false)
+  const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
 
   // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
@@ -162,6 +169,10 @@ function ReviewPage() {
   const questions = draft.questions
   const acceptedCount = useMemo(
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
+    [questionStatuses],
+  )
+  const rejectedCount = useMemo(
+    () => Object.values(questionStatuses).filter((s) => s === 'rejected').length,
     [questionStatuses],
   )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
@@ -225,7 +236,17 @@ function ReviewPage() {
       },
     })
 
-    // Only _tag means no actual changes
+    // Compute next status based on current UI status (not DB status)
+    const currentStatus = questionStatuses[updated.id] ?? 'pending'
+    const nextStatus: QuestionStatus =
+      currentStatus === 'rejected' ? 'pending' :
+      currentStatus === 'pending'  ? 'accepted' :
+      'accepted'
+
+    if (nextStatus !== currentStatus) {
+      (diff as Record<string, unknown>)['status'] = nextStatus
+    }
+
     const hasChanges = Object.keys(diff).filter((k) => k !== '_tag').length > 0
 
     setEditingId(null)
@@ -233,11 +254,21 @@ function ReviewPage() {
 
     examDraftStore.replaceQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
+    if (nextStatus !== currentStatus) {
+      setQuestionStatuses((prev) => ({ ...prev, [updated.id]: nextStatus }))
+    }
     try {
       const server = await api.questions.patch(updated.id, diff as Parameters<typeof api.questions.patch>[1])
       examDraftStore.replaceQuestion(server.id, server)
+      toast({
+        variant: 'success',
+        title: 'Soal disimpan',
+      })
     } catch (err) {
       examDraftStore.replaceQuestion(updated.id, original)
+      if (nextStatus !== currentStatus) {
+        setQuestionStatuses((prev) => ({ ...prev, [updated.id]: currentStatus }))
+      }
       toast({
         variant: 'error',
         title: 'Gagal menyimpan perubahan',
@@ -268,15 +299,42 @@ function ReviewPage() {
     await setStatus(targetId, 'rejected')
   }
 
-  const handleResetRejected = () => {
-    setQuestionStatuses((prev) =>
-      Object.fromEntries(
-        questions.map((q) => [
-          q.id,
-          prev[q.id] === 'rejected' ? ('pending' as QuestionStatus) : (prev[q.id] ?? 'pending'),
-        ]),
-      ),
-    )
+  const handleRegenerateBatch = async () => {
+    const rejectedIds = questions
+      .filter((q) => (questionStatuses[q.id] ?? 'pending') === 'rejected')
+      .map((q) => q.id)
+    if (rejectedIds.length === 0) return
+
+    await Promise.allSettled(rejectedIds.map((id) => handleRegenerateOne(id)))
+
+    const succeeded = rejectedIds.filter((id) => !failedRegenIds.has(id))
+    const failedCount = rejectedIds.length - succeeded.length
+    if (failedCount > 0) {
+      toast({
+        variant: 'error',
+        title: `Berhasil ${succeeded.length} · Gagal ${failedCount}`,
+        description: 'Soal yang gagal perlu dicoba ulang satu per satu.',
+      })
+    } else {
+      toast({
+        variant: 'success',
+        title: `${succeeded.length} soal berhasil diganti`,
+      })
+    }
+  }
+
+  const handleRegenerateOne = async (id: string, hint?: string) => {
+    setRegeneratingIds((prev) => new Set(prev).add(id))
+    try {
+      const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
+      examDraftStore.updateQuestion(id, server)
+      setQuestionStatuses((prev) => ({ ...prev, [id]: 'pending' }))
+      setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+    } catch {
+      setFailedRegenIds((prev) => new Set(prev).add(id))
+    } finally {
+      setRegeneratingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+    }
   }
 
   const handleTerimaSemuaClick = async () => {
@@ -421,13 +479,15 @@ function ReviewPage() {
             >
               Terima Semua
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetRejected}
-            >
-              Ganti ditolak
-            </Button>
+            {rejectedCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRegenBatchDialogOpen(true)}
+              >
+                Ganti semua ditolak ({rejectedCount})
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -447,116 +507,152 @@ function ReviewPage() {
                   className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
-                      {q.difficulty && (
-                        <Badge variant="secondary" className="text-caption">
-                          {q.difficulty}
-                        </Badge>
-                      )}
-                      {q.topic && (
-                        <span className="text-caption text-text-tertiary">{q.topic}</span>
-                      )}
-                      {editedIds.has(q.id) && (
-                        <Badge variant="secondary" className="text-caption">
-                          Diedit
-                        </Badge>
-                      )}
-                      {status === 'rejected' && (
-                        <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
-                      )}
-                      {status === 'accepted' && (
-                        <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Diterima
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
-                    {matchQuestion(q, {
-                      mcq_single: (sq) => (
-                        <div className="grid grid-cols-2 gap-1 mb-4">
-                          {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                            <div
-                              key={letter}
-                              data-testid={`slow-option-${letter}-${sq.id}`}
-                              className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
-                                sq.correct === letter
-                                  ? 'bg-success-bg text-success-fg font-medium'
-                                  : 'text-text-secondary'
-                              }`}
-                            >
-                              <span className="font-mono text-caption shrink-0">
-                                {letter.toUpperCase()}.
-                              </span>
-                              <span>{sq.options[letter]}</span>
-                            </div>
-                          ))}
+                    {regeneratingIds.has(q.id) ? (
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-4 bg-kertas-200 rounded w-3/4" />
+                        <div className="h-4 bg-kertas-200 rounded w-full" />
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                          {[0,1,2,3].map(i => <div key={i} className="h-8 bg-kertas-100 rounded" />)}
                         </div>
-                      ),
-                      mcq_multi: (mq) => (
-                        <div className="grid grid-cols-2 gap-1 mb-4">
-                          {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                            <div
-                              key={letter}
-                              data-testid={`slow-option-${letter}-${mq.id}`}
-                              className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
-                                mq.correct.includes(letter)
-                                  ? 'bg-success-bg text-success-fg font-medium'
-                                  : 'text-text-secondary'
-                              }`}
-                            >
-                              <span className="font-mono text-caption shrink-0">
-                                {letter.toUpperCase()}.
-                              </span>
-                              <span>{mq.options[letter]}</span>
-                            </div>
-                          ))}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="font-mono text-caption text-text-tertiary">{q.number}.</span>
+                          {q.difficulty && (
+                            <Badge variant="secondary" className="text-caption">
+                              {q.difficulty}
+                            </Badge>
+                          )}
+                          {q.topic && (
+                            <span className="text-caption text-text-tertiary">{q.topic}</span>
+                          )}
+                          {editedIds.has(q.id) && (
+                            <Badge variant="secondary" className="text-caption">
+                              Diedit
+                            </Badge>
+                          )}
+                          {status === 'rejected' && (
+                            <span className="ml-auto text-caption text-danger-fg">Perlu diganti</span>
+                          )}
+                          {status === 'accepted' && (
+                            <span className="ml-auto text-caption text-success-fg flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Diterima
+                            </span>
+                          )}
                         </div>
-                      ),
-                      true_false: (tf) => (
-                        <div className="space-y-2 mb-4">
-                          {tf.statements.map((s, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-3 px-3 py-2 rounded-xs border border-border-default"
-                            >
-                              <span className="font-mono text-caption shrink-0 w-5">{idx + 1}.</span>
-                              <span className="flex-1 text-body-sm text-text-primary">{s.text}</span>
-                              <span className={`font-mono font-semibold text-body-sm px-2 py-0.5 rounded-xs ${
-                                s.answer ? 'bg-success-bg text-success-fg' : 'bg-danger-bg text-danger-fg'
-                              }`}>
-                                {s.answer ? 'B' : 'S'}
-                              </span>
+                        <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
+                        {matchQuestion(q, {
+                          mcq_single: (sq) => (
+                            <div className="grid grid-cols-2 gap-1 mb-4">
+                              {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                                <div
+                                  key={letter}
+                                  data-testid={`slow-option-${letter}-${sq.id}`}
+                                  className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
+                                    sq.correct === letter
+                                      ? 'bg-success-bg text-success-fg font-medium'
+                                      : 'text-text-secondary'
+                                  }`}
+                                >
+                                  <span className="font-mono text-caption shrink-0">
+                                    {letter.toUpperCase()}.
+                                  </span>
+                                  <span>{sq.options[letter]}</span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          ),
+                          mcq_multi: (mq) => (
+                            <div className="grid grid-cols-2 gap-1 mb-4">
+                              {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                                <div
+                                  key={letter}
+                                  data-testid={`slow-option-${letter}-${mq.id}`}
+                                  className={`text-body-sm px-3 py-1.5 rounded-xs flex gap-2 ${
+                                    mq.correct.includes(letter)
+                                      ? 'bg-success-bg text-success-fg font-medium'
+                                      : 'text-text-secondary'
+                                  }`}
+                                >
+                                  <span className="font-mono text-caption shrink-0">
+                                    {letter.toUpperCase()}.
+                                  </span>
+                                  <span>{mq.options[letter]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ),
+                          true_false: (tf) => (
+                            <div className="space-y-2 mb-4">
+                              {tf.statements.map((s, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-xs border border-border-default"
+                                >
+                                  <span className="font-mono text-caption shrink-0 w-5">{idx + 1}.</span>
+                                  <span className="flex-1 text-body-sm text-text-primary">{s.text}</span>
+                                  <span className={`font-mono font-semibold text-body-sm px-2 py-0.5 rounded-xs ${
+                                    s.answer ? 'bg-success-bg text-success-fg' : 'bg-danger-bg text-danger-fg'
+                                  }`}>
+                                    {s.answer ? 'B' : 'S'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ),
+                        })}
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-success-fg border-success-border"
+                            onClick={() => { void setStatus(q.id, 'accepted') }}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingId(q.id)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger-fg hover:text-danger-fg"
+                            onClick={() => setRejectingId(q.id)}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
+                          </Button>
+                          {status === 'rejected' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setRegenSingleTargetId(q.id)
+                                setRegenSingleDialogOpen(true)
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Ganti dengan AI
+                            </Button>
+                          )}
+                          {failedRegenIds.has(q.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setRegenSingleTargetId(q.id)
+                                setRegenSingleDialogOpen(true)
+                              }}
+                            >
+                              Coba lagi
+                            </Button>
+                          )}
                         </div>
-                      ),
-                    })}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="text-success-fg border-success-border"
-                        onClick={() => { void setStatus(q.id, 'accepted') }}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingId(q.id)}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger-fg hover:text-danger-fg"
-                        onClick={() => setRejectingId(q.id)}
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
-                      </Button>
-                    </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               )
@@ -689,6 +785,26 @@ function ReviewPage() {
         targetMode={pendingSwitchTo ?? 'fast'}
         onConfirm={handleSwitchConfirm}
         onClose={() => setPendingSwitchTo(null)}
+      />
+      <RegenerateSingleDialog
+        open={regenSingleDialogOpen}
+        onOpenChange={(v) => {
+          setRegenSingleDialogOpen(v)
+          if (!v) setRegenSingleTargetId(null)
+        }}
+        onConfirm={(hint) => {
+          setRegenSingleDialogOpen(false)
+          if (regenSingleTargetId !== null) {
+            void handleRegenerateOne(regenSingleTargetId, hint)
+          }
+          setRegenSingleTargetId(null)
+        }}
+      />
+      <RegenerateBatchDialog
+        open={regenBatchDialogOpen}
+        onOpenChange={setRegenBatchDialogOpen}
+        count={rejectedCount}
+        onConfirm={() => { void handleRegenerateBatch() }}
       />
     </div>
   )

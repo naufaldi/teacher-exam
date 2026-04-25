@@ -93,7 +93,7 @@ export const ExamSchema = Schema.Struct({
   subject:         ExamSubjectSchema,
   grade:           Schema.Int,
   difficulty:      ExamDifficultySchema,
-  topic:           Schema.String,
+  topics:          Schema.Array(Schema.String),
   reviewMode:      ReviewModeSchema,
   status:          ExamStatusSchema,
   schoolName:      Schema.NullOr(Schema.String),

@@ -32,7 +32,7 @@ export function DuplicateConfirmDialog({
     grade: exam.grade,
     examType: exam.examType,
     examDate: exam.examDate,
-    topic: exam.topic,
+    topics: exam.topics,
   })
 
   return (
@@ -48,7 +48,7 @@ export function DuplicateConfirmDialog({
           <p className="text-sm text-text-secondary">
             {subjectLabel} · Kelas {exam.grade}
           </p>
-          <p className="text-sm text-text-tertiary">{exam.topic}</p>
+          <p className="text-sm text-text-tertiary">{exam.topics.join(', ')}</p>
           <Badge variant={exam.status === 'final' ? 'success' : 'warning'}>
             {exam.status === 'final' ? 'Final' : 'Draft'}
           </Badge>

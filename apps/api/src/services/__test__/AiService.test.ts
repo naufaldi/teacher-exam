@@ -88,6 +88,7 @@ describe('AiService.generate', () => {
     )
   })
 
+
   it('throws AiGenerationError on non-JSON output', async () => {
     const { client } = fakeClient('not json')
     const ai = createAiService({ client })

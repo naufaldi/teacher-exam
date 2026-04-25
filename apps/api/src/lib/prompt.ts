@@ -7,17 +7,14 @@ export interface BuildPromptInput {
   difficulty: ExamDifficulty
   subjectLabel: string
   grade: number
-  topic: string
+  /** One or more topics for the paper. AI distributes questions evenly across them when multiple are given. */
+  topics: string[]
   totalSoal: number
-  /**
-   * Full markdown corpus from `apps/api/src/curriculum/md/{subject}-kelas-{n}.md`
-   * loaded via `getCurriculumText`. Becomes the baseline grounding in the
-   * Claude system message — see RFC §9.
-   */
+  /** Full markdown curriculum corpus sent as the system-message baseline. */
   curriculumText: string
   classContext?: string | undefined
   exampleQuestions?: string | undefined
-  composition: Composition
+  composition?: Composition | undefined
 }
 
 export interface BuiltPrompt {
@@ -27,19 +24,11 @@ export interface BuiltPrompt {
   user: string
 }
 
-/**
- * Assemble the two-part prompt for `/api/ai/generate`.
- *
- * - `system` carries the curriculum corpus, role, output rules, and the
- *   authority order (corpus = baseline, optional teacher PDF = additive).
- * - `user` carries only the per-request parameters (kelas, mapel, topik,
- *   jenis lembar, distribusi kesulitan, dst.) — the optional PDF is attached
- *   by the caller as a separate Claude `document` content block.
- *
- * Pure function — no IO. Mirrors RFC §9.
- */
 export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   const profile = EXAM_TYPE_PROFILE[input.examType]
+  if (input.topics.length === 0) {
+    throw new Error('buildExamPrompt: topics must contain at least one item')
+  }
   const dist = resolveDifficultyDist(input.examType, input.difficulty)
 
   const system = [
@@ -73,24 +62,35 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     `- Gaya soal: ${profile.stemHint}`,
   ].join('\n')
 
+  const topicsLabel =
+    input.topics.length === 1
+      ? (input.topics[0] ?? '')
+      : input.topics.map((t, i) => `${i + 1}. ${t}`).join('\n')
+
+  const topicsInstruction =
+    input.topics.length > 1
+      ? `Distribusikan soal secara merata di antara semua topik (sekitar ${Math.round(input.totalSoal / input.topics.length)} soal per topik). Setiap soal harus mencantumkan nama topiknya di field "topic".`
+      : 'Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik.'
+
+  const comp = input.composition ?? { mcqSingle: input.totalSoal, mcqMulti: 0, trueFalse: 0 }
   const typeParts: string[] = []
-  if (input.composition.mcqSingle > 0) typeParts.push(`${input.composition.mcqSingle} soal pilihan ganda`)
-  if (input.composition.mcqMulti > 0) typeParts.push(`${input.composition.mcqMulti} soal pilihan ganda kompleks`)
-  if (input.composition.trueFalse > 0) typeParts.push(`${input.composition.trueFalse} soal benar/salah`)
+  if (comp.mcqSingle > 0) typeParts.push(`${comp.mcqSingle} soal pilihan ganda`)
+  if (comp.mcqMulti > 0) typeParts.push(`${comp.mcqMulti} soal pilihan ganda kompleks`)
+  if (comp.trueFalse > 0) typeParts.push(`${comp.trueFalse} soal benar/salah`)
   const compositionSentence = `Buatkan satu lembar berisi ${typeParts.join(', ')} (total ${input.totalSoal} soal) berdasarkan parameter berikut.`
 
   const params: Record<string, unknown> = {
     kelas: input.grade,
     mata_pelajaran: input.subjectLabel,
-    topik: input.topic,
+    topik: topicsLabel,
     jenis_lembar: input.examType,
     jumlah_soal: input.totalSoal,
     distribusi_kesulitan: dist,
     level_kognitif: profile.cognitiveLevels,
     composition_soal: {
-      mcq_single: input.composition.mcqSingle,
-      mcq_multi: input.composition.mcqMulti,
-      true_false: input.composition.trueFalse,
+      mcq_single: comp.mcqSingle,
+      mcq_multi: comp.mcqMulti,
+      true_false: comp.trueFalse,
     },
   }
   if (input.classContext && input.classContext.trim() !== '') {
@@ -102,7 +102,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
 
   const user = [
     compositionSentence,
-    'Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik.',
+    topicsInstruction,
     'Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk konteks lokal/terkini.',
     '',
     JSON.stringify(params, null, 2),

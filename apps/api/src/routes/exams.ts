@@ -162,7 +162,7 @@ examsRouter.post('/:id/duplicate', async (c) => {
     grade: examRow.grade,
     examType: examRow.examType ?? '',
     examDate: examRow.examDate ?? null,
-    topic: examRow.topic,
+    topics: (examRow.topics as string[]) ?? [],
   })
 
   await db.insert(exams).values({
@@ -172,7 +172,7 @@ examsRouter.post('/:id/duplicate', async (c) => {
     subject:         examRow.subject,
     grade:           examRow.grade,
     difficulty:      examRow.difficulty,
-    topic:           examRow.topic,
+    topics:          (examRow.topics as string[]) ?? [],
     reviewMode:      examRow.reviewMode,
     status:          'draft',
     schoolName:      examRow.schoolName,

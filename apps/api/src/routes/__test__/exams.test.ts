@@ -38,7 +38,7 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   subject: 'bahasa_indonesia',
   grade: 5,
   difficulty: 'mudah',
-  topic: 'topic-a',
+  topics: ['topic-a'],
   reviewMode: 'fast',
   status: 'draft',
   schoolName: null,
@@ -392,7 +392,7 @@ describe('POST /api/exams/:id/duplicate', () => {
       grade: 5,
       examType: 'formatif',
       examDate: null,
-      topic: 'Ide Pokok',
+      topics: ['Ide Pokok'],
     })
     const questionRow = makeQuestionRow()
 

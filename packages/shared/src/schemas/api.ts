@@ -15,7 +15,10 @@ export const GenerateExamInputSchema = Schema.Struct({
   subject:          ExamSubjectSchema,
   grade:            Schema.Int.pipe(Schema.between(5, 6)),
   difficulty:       ExamDifficultySchema,
-  topic:            Schema.NonEmptyString,
+  topics:           Schema.Array(Schema.NonEmptyString).pipe(
+                      Schema.minItems(1),
+                      Schema.maxItems(5),
+                    ),
   reviewMode:       ReviewModeSchema,
   examType:         Schema.optional(ExamTypeSchema),
   classContext:     Schema.optional(Schema.String),
@@ -46,7 +49,7 @@ export type UpdateExamInput = typeof UpdateExamInputSchema.Type
 
 const UpdateQuestionInputBase = {
   text:   Schema.optional(Schema.String),
-  status: Schema.optional(Schema.Literal('accepted', 'rejected')),
+  status: Schema.optional(Schema.Literal('pending', 'accepted', 'rejected')),
 } as const
 
 const UpdateMcqSingleInputSchema = Schema.Struct({
@@ -87,6 +90,11 @@ export const UpdateQuestionInputSchema = Schema.Union(
   UpdateTrueFalseInputSchema,
 )
 export type UpdateQuestionInput = typeof UpdateQuestionInputSchema.Type
+
+export const RegenerateQuestionInputSchema = Schema.Struct({
+  hint: Schema.optional(Schema.String),
+})
+export type RegenerateQuestionInput = typeof RegenerateQuestionInputSchema.Type
 
 // ── User profile API ───────────────────────────────────────
 

@@ -18,7 +18,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
@@ -37,8 +37,8 @@ describe('buildExamPrompt', () => {
       difficulty: 'sulit',
       subjectLabel: 'Pendidikan Pancasila',
       grade: 5,
-      topic: 'Hak dan Kewajiban',
-      totalSoal: 20,
+      topics: ['Hak dan Kewajiban'],
+      totalSoal: 25,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
     })
@@ -56,7 +56,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
@@ -73,7 +73,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
@@ -88,7 +88,7 @@ describe('buildExamPrompt', () => {
       difficulty: 'campuran',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
-      topic: 'Pemahaman Bacaan',
+      topics: ['Pemahaman Bacaan'],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
@@ -99,6 +99,51 @@ describe('buildExamPrompt', () => {
     expect(user).toContain('teks persuasi')
     expect(user).toContain('contoh_soal')
   })
+
+  it('injects all topics in the user message when multiple provided', () => {
+    const { user } = buildExamPrompt({
+      examType: 'sas',
+      difficulty: 'campuran',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 6,
+      topics: ['Teks Narasi', 'Puisi', 'Opini dan Fakta'],
+      totalSoal: 25,
+      curriculumText: FAKE_CURRICULUM,
+    })
+
+    expect(user).toContain('Teks Narasi')
+    expect(user).toContain('Puisi')
+    expect(user).toContain('Opini dan Fakta')
+    expect(user).toMatch(/merata|distribusikan/i)
+  })
+
+  it('works with a single topic (backward-compatible)', () => {
+    const { user } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'mudah',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: ['Kosakata'],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+    })
+
+    expect(user).toContain('Kosakata')
+  })
+
+  it('throws when topics array is empty', () => {
+    expect(() =>
+      buildExamPrompt({
+        examType: 'formatif',
+        difficulty: 'campuran',
+        subjectLabel: 'Bahasa Indonesia',
+        grade: 6,
+        topics: [],
+        totalSoal: 20,
+        curriculumText: FAKE_CURRICULUM,
+      }),
+    ).toThrow('topics must contain at least one item')
+  })
 })
 
 describe('buildExamPrompt — totalSoal', () => {
@@ -107,7 +152,7 @@ describe('buildExamPrompt — totalSoal', () => {
     difficulty: 'campuran' as const,
     subjectLabel: 'Bahasa Indonesia',
     grade: 6,
-    topic: 'Pemahaman Bacaan',
+    topics: ['Pemahaman Bacaan'],
     curriculumText: FAKE_CURRICULUM,
     composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
   }
@@ -130,7 +175,7 @@ describe('buildExamPrompt — composition and multi-type', () => {
     difficulty: 'campuran' as const,
     subjectLabel: 'Bahasa Indonesia',
     grade: 5,
-    topic: 'Teks Narasi',
+    topics: ['Teks Narasi'],
     totalSoal: 25,
     curriculumText: 'Dummy curriculum.',
     composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },

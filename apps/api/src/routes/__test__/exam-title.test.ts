@@ -8,7 +8,7 @@ describe('formatExamTitle', () => {
       grade: 5,
       examType: 'formatif',
       examDate: '2026-04-24',
-      topic: 'Ide Pokok dan Gagasan Pendukung',
+      topics: ['Ide Pokok dan Gagasan Pendukung'],
     })
     expect(result).toBe('Bahasa Indonesia / Kelas 5 / formatif / 24 Apr 2026')
   })
@@ -19,7 +19,7 @@ describe('formatExamTitle', () => {
       grade: 6,
       examType: '',
       examDate: '2026-04-24',
-      topic: 'Nilai-Nilai Pancasila',
+      topics: ['Nilai-Nilai Pancasila'],
     })
     expect(result).toBe('Pendidikan Pancasila / Kelas 6 / Nilai-Nilai Pancasila / 24 Apr 2026')
   })
@@ -30,7 +30,7 @@ describe('formatExamTitle', () => {
       grade: 5,
       examType: 'sas',
       examDate: null,
-      topic: 'Ide Pokok dan Gagasan Pendukung',
+      topics: ['Ide Pokok dan Gagasan Pendukung'],
     })
     expect(result).toBe('Bahasa Indonesia / Kelas 5 / sas')
   })
@@ -41,7 +41,7 @@ describe('formatExamTitle', () => {
       grade: 5,
       examType: '',
       examDate: null,
-      topic: 'Hubungan Antar-Sila',
+      topics: ['Hubungan Antar-Sila'],
     })
     expect(result).toBe('Pendidikan Pancasila / Kelas 5 / Hubungan Antar-Sila')
   })
@@ -52,7 +52,7 @@ describe('formatExamTitle', () => {
       grade: 5,
       examType: 'formatif',
       examDate: '2026-04-24',
-      topic: 'A'.repeat(100),
+      topics: ['A'.repeat(100)],
     })
     expect(result.length).toBeLessThanOrEqual(80)
   })
@@ -63,7 +63,7 @@ describe('formatExamTitle', () => {
       grade: 5,
       examType: 'formatif',
       examDate: '2026-01-05',
-      topic: 'Topik',
+      topics: ['Topik'],
     })
     expect(result).toContain('5 Jan 2026')
   })
