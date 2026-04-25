@@ -1285,3 +1285,121 @@ describe('ReviewPage — switch mode preserves examId in URL', () => {
     patchSpy.mockRestore()
   })
 })
+
+// ── Slow Track: accepted card UX state machine ──────────────────────────────
+
+function makeExamWithOneAccepted(examId = 'exam_accepted_state') {
+  const base = makeExamWithQuestions(examId)
+  return {
+    ...base,
+    reviewMode: 'slow' as const,
+    questions: base.questions.map((q, i) =>
+      i === 0 ? { ...q, status: 'accepted' as const } : q,
+    ),
+  }
+}
+
+describe('ReviewPage — Slow Track accepted card state machine', () => {
+  it('hides Terima and shows Batalkan terima on an accepted card', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_accepted_state' }
+    const exam = makeExamWithOneAccepted()
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_accepted_state' } })
+
+    renderReviewPage()
+
+    await screen.findAllByText('Question 1')
+
+    // accepted card must show "Batalkan terima" instead of "Terima"
+    expect(screen.getByRole('button', { name: /Batalkan terima/i })).toBeInTheDocument()
+
+    // 19 pending questions still have Terima; the accepted card does not
+    const terimaButtons = screen.getAllByRole('button', { name: /^Terima$/i })
+    expect(terimaButtons).toHaveLength(19)
+  })
+
+  it('hides Tolak on an accepted card', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_accepted_tolak' }
+    const exam = makeExamWithOneAccepted('exam_accepted_tolak')
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_accepted_tolak' } })
+
+    renderReviewPage()
+
+    await screen.findAllByText('Question 1')
+
+    // 19 pending → 19 Tolak; accepted card has none
+    const tolakButtons = screen.getAllByRole('button', { name: /^Tolak$/i })
+    expect(tolakButtons).toHaveLength(19)
+  })
+
+  it('clicking Batalkan terima calls PATCH with pending and reverts card to pending state', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_undo_accept' }
+    const exam = makeExamWithOneAccepted('exam_undo_accept')
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_undo_accept' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      ...exam.questions[0]!,
+      status: 'pending' as const,
+    })
+
+    renderReviewPage()
+
+    const batalkanBtn = await screen.findByRole('button', { name: /Batalkan terima/i })
+    await user.click(batalkanBtn)
+
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith('q-1', { status: 'pending' }),
+    )
+
+    // After un-accept all 20 cards show Terima
+    expect(screen.getAllByRole('button', { name: /^Terima$/i })).toHaveLength(20)
+
+    patchSpy.mockRestore()
+  })
+
+  it('does not call PATCH twice when Terima is clicked on a pending card (idempotency: one click = one PATCH)', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'slow', examId: 'exam_idempotent' }
+    const exam = makeExamWithQuestions('exam_idempotent')
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_idempotent' } })
+
+    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+      ...exam.questions[0]!,
+      status: 'accepted' as const,
+    })
+
+    renderReviewPage()
+
+    const terimaButtons = screen.getAllByRole('button', { name: /^Terima$/i })
+    await user.click(terimaButtons[0]!)
+    await waitFor(() => expect(patchSpy).toHaveBeenCalledTimes(1))
+
+    // The Terima button for q-1 is gone → no second PATCH possible via UI
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+
+    patchSpy.mockRestore()
+  })
+
+  it('disables Terima Semua when all questions are already accepted', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_all_accepted' }
+    const base = makeExamWithQuestions('exam_all_accepted')
+    const allAccepted = {
+      ...base,
+      reviewMode: 'slow' as const,
+      questions: base.questions.map((q) => ({ ...q, status: 'accepted' as const })),
+    }
+    mockExamsGet.mockResolvedValueOnce(allAccepted)
+    await getLoader()({ deps: { examId: 'exam_all_accepted' } })
+
+    renderReviewPage()
+
+    await screen.findAllByText('Question 1')
+
+    const terimaSemuaBtn = screen.getByRole('button', { name: /Terima Semua/i })
+    expect(terimaSemuaBtn).toBeDisabled()
+  })
+})

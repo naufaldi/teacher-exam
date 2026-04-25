@@ -6,7 +6,9 @@ import {
   Pencil,
   RefreshCw,
   ChevronRight,
+  Undo2,
 } from 'lucide-react'
+import { Match } from 'effect'
 import {
   Button,
   Badge,
@@ -307,8 +309,9 @@ function ReviewPage() {
     }, 8000)
   }, [])
 
-  const setStatus = async (id: string, status: 'accepted' | 'rejected') => {
+  const setStatus = async (id: string, status: QuestionStatus) => {
     const prev = questionStatuses[id] ?? 'pending'
+    if (prev === status) return
     clearNewBadge(id)
     setQuestionStatuses((p) => ({ ...p, [id]: status }))
     try {
@@ -566,7 +569,7 @@ function ReviewPage() {
             <Button
               variant="secondary"
               size="sm"
-              disabled={isRegenerating}
+              disabled={isRegenerating || questions.every((q) => (questionStatuses[q.id] ?? 'pending') === 'accepted')}
               onClick={() => { void handleTerimaSemuaClick() }}
             >
               Terima Semua
@@ -736,34 +739,55 @@ function ReviewPage() {
                                 Batalkan
                               </Button>
                             </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="text-success-fg border-success-border"
-                                onClick={() => { void setStatus(q.id, 'accepted') }}
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={isRegenerating}
-                                onClick={() => setEditingId(q.id)}
-                              >
-                                <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-danger-fg hover:text-danger-fg"
-                                disabled={isRegenerating}
-                                onClick={() => openTolakDialog(q.id)}
-                              >
-                                <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
-                              </Button>
-                            </>
+                          ) : Match.value(status).pipe(
+                            Match.when('accepted', () => (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => { void setStatus(q.id, 'pending') }}
+                                >
+                                  <Undo2 className="h-3.5 w-3.5 mr-1.5" /> Batalkan terima
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={isRegenerating}
+                                  onClick={() => setEditingId(q.id)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                </Button>
+                              </>
+                            )),
+                            Match.orElse(() => (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="text-success-fg border-success-border"
+                                  onClick={() => { void setStatus(q.id, 'accepted') }}
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={isRegenerating}
+                                  onClick={() => setEditingId(q.id)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-danger-fg hover:text-danger-fg"
+                                  disabled={isRegenerating}
+                                  onClick={() => openTolakDialog(q.id)}
+                                >
+                                  <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
+                                </Button>
+                              </>
+                            )),
                           )}
                         </div>
                       </>
