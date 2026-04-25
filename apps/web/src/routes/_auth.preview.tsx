@@ -11,6 +11,7 @@ import {
 } from '@teacher-exam/ui'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { pointsPerQuestion } from '../lib/points.js'
+import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import type { ExamType, Question } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 
@@ -178,7 +179,7 @@ function PreviewPage() {
       {/* Preview content — all sections always rendered; screen visibility controlled via data-screen-tab */}
       <div data-print-content data-screen-tab={tab} className="space-y-6">
         <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
-        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} count={questions.length} topicsLabel={topicsLabel} />
+        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
         <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} topicsLabel={topicsLabel} />
       </div>
     </div>
@@ -238,6 +239,50 @@ function PaperHeader({
   )
 }
 
+// ── Question renderers for Soal section ──────────────────────────────────────
+
+const OPTION_LETTERS = ['a', 'b', 'c', 'd'] as const
+
+function renderMcqOptions(options: { a: string; b: string; c: string; d: string }) {
+  return (
+    <ol className="space-y-0.5 ml-4">
+      {OPTION_LETTERS.map((letter) => (
+        <li key={letter} className="flex gap-2">
+          <span className="font-semibold">{letter}.</span>
+          <span>{options[letter]}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function renderTrueFalseTable(statements: ReadonlyArray<{ text: string; answer: boolean }>) {
+  return (
+    <table className="w-full mt-1.5 text-[12px] border-collapse">
+      <thead>
+        <tr>
+          <th className="text-left font-semibold border border-black/40 px-2 py-1">Pernyataan</th>
+          <th className="text-center font-semibold border border-black/40 px-2 py-1">B</th>
+          <th className="text-center font-semibold border border-black/40 px-2 py-1">S</th>
+        </tr>
+      </thead>
+      <tbody>
+        {statements.map((stmt, i) => (
+          <tr key={i}>
+            <td className="border border-black/40 px-2 py-1">{stmt.text}</td>
+            <td className="text-center border border-black/40 px-2 py-1">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-black/60 text-[10px]" />
+            </td>
+            <td className="text-center border border-black/40 px-2 py-1">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-black/60 text-[10px]" />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 function SoalSection({
   metadata,
   subjectLabel,
@@ -279,14 +324,11 @@ function SoalSection({
                 <span className="font-bold mr-1">{q.number}.</span>
                 <span className="whitespace-pre-line">{q.text}</span>
               </p>
-              <ol className="space-y-0.5 ml-4">
-                {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                  <li key={letter} className="flex gap-2">
-                    <span className="font-semibold">{letter}.</span>
-                    <span>{q[`option${letter.toUpperCase() as 'A' | 'B' | 'C' | 'D'}`]}</span>
-                  </li>
-                ))}
-              </ol>
+              {matchQuestion(q, {
+                mcq_single: (x) => renderMcqOptions(x.options),
+                mcq_multi: (x) => renderMcqOptions(x.options),
+                true_false: (x) => renderTrueFalseTable(x.statements),
+              })}
             </div>
           ))}
         </div>
@@ -295,22 +337,69 @@ function SoalSection({
   )
 }
 
+// ── Answer sheet renderers for Lembar Jawaban ────────────────────────────────
+
+function renderMcqBubbleRow(number: number) {
+  return (
+    <div key={number} className="flex items-center gap-2">
+      <span className="font-mono font-semibold w-6 text-right">{number}.</span>
+      {(['A', 'B', 'C', 'D'] as const).map((letter) => (
+        <span
+          key={letter}
+          className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-black text-[11px] font-mono"
+        >
+          {letter}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function renderTrueFalseBubbleRow(number: number, statementCount: number) {
+  return (
+    <div key={number} className="mb-1">
+      <span className="font-mono font-semibold mr-2">{number}.</span>
+      <table className="inline-table text-[11px] border-collapse">
+        <thead>
+          <tr>
+            <th className="border border-black/40 px-1 py-0.5 w-20">Pernyataan</th>
+            <th className="border border-black/40 px-1 py-0.5 text-center">B</th>
+            <th className="border border-black/40 px-1 py-0.5 text-center">S</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: statementCount }, (_, i) => (
+            <tr key={i}>
+              <td className="border border-black/40 px-1 py-0.5">{i + 1}</td>
+              <td className="border border-black/40 px-1 py-0.5 text-center">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-black/60" />
+              </td>
+              <td className="border border-black/40 px-1 py-0.5 text-center">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-black/60" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function LembarJawabanSection({
   metadata,
   subjectLabel,
   grade,
-  count,
+  questions,
   topicsLabel,
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number }
   subjectLabel: string
   grade: number
-  count: number
+  questions: Question[]
   topicsLabel: string
 }) {
-  const numbers = Array.from({ length: count }, (_, i) => i + 1)
-  const left = numbers.slice(0, Math.ceil(count / 2))
-  const right = numbers.slice(Math.ceil(count / 2))
+  const left = questions.slice(0, Math.ceil(questions.length / 2))
+  const right = questions.slice(Math.ceil(questions.length / 2))
 
   return (
     <div data-print-section="lj" className="print-break-before">
@@ -335,8 +424,8 @@ function LembarJawabanSection({
         </div>
 
         <div className="grid grid-cols-2 gap-8 text-sm">
-          <AnswerColumn numbers={left} />
-          <AnswerColumn numbers={right} />
+          <AnswerColumn questions={left} />
+          <AnswerColumn questions={right} />
         </div>
 
         <div className="mt-8 grid grid-cols-2 gap-8 text-sm">
@@ -355,22 +444,16 @@ function LembarJawabanSection({
   )
 }
 
-function AnswerColumn({ numbers }: { numbers: number[] }) {
+function AnswerColumn({ questions }: { questions: Question[] }) {
   return (
     <div className="space-y-1.5">
-      {numbers.map((n) => (
-        <div key={n} className="flex items-center gap-2">
-          <span className="font-mono font-semibold w-6 text-right">{n}.</span>
-          {(['A', 'B', 'C', 'D'] as const).map((letter) => (
-            <span
-              key={letter}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-black text-[11px] font-mono"
-            >
-              {letter}
-            </span>
-          ))}
-        </div>
-      ))}
+      {questions.map((q) =>
+        matchQuestion(q, {
+          mcq_single: (x) => renderMcqBubbleRow(x.number),
+          mcq_multi: (x) => renderMcqBubbleRow(x.number),
+          true_false: (x) => renderTrueFalseBubbleRow(x.number, x.statements.length),
+        }),
+      )}
     </div>
   )
 }
@@ -405,7 +488,7 @@ function KunciSection({
               className="flex items-center justify-between px-2 py-1 border border-black/40 rounded-sm"
             >
               <span className="font-mono font-semibold">{q.number}.</span>
-              <span className="font-mono font-bold">{q.correctAnswer.toUpperCase()}</span>
+              <span className="font-mono font-bold">{questionCorrectLabel(q)}</span>
             </div>
           ))}
         </div>

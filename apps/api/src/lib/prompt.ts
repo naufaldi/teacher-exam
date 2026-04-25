@@ -1,4 +1,5 @@
 import type { ExamDifficulty, ExamType } from '@teacher-exam/shared'
+import type { Composition } from './exam-type-profile'
 import { EXAM_TYPE_PROFILE, resolveDifficultyDist } from './exam-type-profile'
 
 export interface BuildPromptInput {
@@ -13,6 +14,7 @@ export interface BuildPromptInput {
   curriculumText: string
   classContext?: string | undefined
   exampleQuestions?: string | undefined
+  composition?: Composition | undefined
 }
 
 export interface BuiltPrompt {
@@ -43,8 +45,20 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     '',
     'Output rules:',
     `- Jawab HANYA dengan JSON array berisi tepat ${input.totalSoal} soal — tanpa prosa, tanpa pembungkus markdown.`,
-    '- Setiap soal punya field: text, option_a, option_b, option_c, option_d, correct_answer (a|b|c|d), topic, difficulty (mudah|sedang|sulit), cognitive_level (C1|C2|C3|C4).',
-    '- Hormati distribusi kesulitan target dan level kognitif yang diizinkan untuk jenis lembar ini.',
+    `- Setiap soal WAJIB memiliki field "_tag" yang menentukan jenisnya. Tiga jenis yang diizinkan:`,
+    ``,
+    `  1. Pilihan Ganda (mcq_single):`,
+    `     { "_tag": "mcq_single", "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit", "cognitive_level": "C1|C2|C3|C4" }`,
+    ``,
+    `  2. Pilihan Ganda Kompleks (mcq_multi) — pilih 2–3 jawaban benar:`,
+    `     { "_tag": "mcq_multi", "text": "...(awali dengan 'Pilih dua/tiga jawaban yang benar!')", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answers": ["a", "c"], "topic": "...", "difficulty": "mudah|sedang|sulit", "cognitive_level": "C1|C2|C3|C4" }`,
+    `     Catatan: correct_answers adalah array 2–3 huruf unik (a/b/c/d).`,
+    ``,
+    `  3. Benar/Salah (true_false) — tabel pernyataan:`,
+    `     { "_tag": "true_false", "text": "Tentukan apakah pernyataan berikut benar (B) atau salah (S):", "statements": [{ "text": "...", "answer": "B" }, { "text": "...", "answer": "S" }], "topic": "...", "difficulty": "mudah|sedang|sulit", "cognitive_level": "C1|C2|C3|C4" }`,
+    `     Catatan: statements berisi 3–4 pernyataan; answer adalah "B" atau "S".`,
+    ``,
+    `- Hormati distribusi kesulitan target dan level kognitif yang diizinkan untuk jenis lembar ini.`,
     `- Gaya soal: ${profile.stemHint}`,
   ].join('\n')
 
@@ -58,6 +72,13 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
       ? `Distribusikan soal secara merata di antara semua topik (sekitar ${Math.round(input.totalSoal / input.topics.length)} soal per topik). Setiap soal harus mencantumkan nama topiknya di field "topic".`
       : 'Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik.'
 
+  const comp = input.composition ?? { mcqSingle: input.totalSoal, mcqMulti: 0, trueFalse: 0 }
+  const typeParts: string[] = []
+  if (comp.mcqSingle > 0) typeParts.push(`${comp.mcqSingle} soal pilihan ganda`)
+  if (comp.mcqMulti > 0) typeParts.push(`${comp.mcqMulti} soal pilihan ganda kompleks`)
+  if (comp.trueFalse > 0) typeParts.push(`${comp.trueFalse} soal benar/salah`)
+  const compositionSentence = `Buatkan satu lembar berisi ${typeParts.join(', ')} (total ${input.totalSoal} soal) berdasarkan parameter berikut.`
+
   const params: Record<string, unknown> = {
     kelas: input.grade,
     mata_pelajaran: input.subjectLabel,
@@ -66,6 +87,11 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     jumlah_soal: input.totalSoal,
     distribusi_kesulitan: dist,
     level_kognitif: profile.cognitiveLevels,
+    composition_soal: {
+      mcq_single: comp.mcqSingle,
+      mcq_multi: comp.mcqMulti,
+      true_false: comp.trueFalse,
+    },
   }
   if (input.classContext && input.classContext.trim() !== '') {
     params['konteks_guru'] = input.classContext.trim()
@@ -75,7 +101,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   }
 
   const user = [
-    `Buatkan satu lembar berisi ${input.totalSoal} soal pilihan ganda berdasarkan parameter berikut.`,
+    compositionSentence,
     topicsInstruction,
     'Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk konteks lokal/terkini.',
     '',

@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { normalizeExamType } from '@teacher-exam/shared'
-import type { Exam, ExamWithQuestions, Question } from '@teacher-exam/shared'
+import type { Exam, ExamWithQuestions } from '@teacher-exam/shared'
 import type { InferSelectModel } from 'drizzle-orm'
+import { rowToQuestion } from './question-mapper'
 
 type ExamRow = InferSelectModel<typeof exams>
-type QuestionRow = InferSelectModel<typeof questions>
 
 export function toExam(row: ExamRow): Exam {
   return {
@@ -31,26 +31,6 @@ export function toExam(row: ExamRow): Exam {
   }
 }
 
-export function toQuestion(row: QuestionRow): Question {
-  return {
-    id:               row.id,
-    examId:           row.examId,
-    number:           row.number,
-    text:             row.text,
-    optionA:          row.optionA,
-    optionB:          row.optionB,
-    optionC:          row.optionC,
-    optionD:          row.optionD,
-    correctAnswer:    row.correctAnswer,
-    topic:            row.topic ?? null,
-    difficulty:       row.difficulty ?? null,
-    status:           row.status,
-    validationStatus: row.validationStatus as Question['validationStatus'] ?? null,
-    validationReason: row.validationReason ?? null,
-    createdAt:        row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-  }
-}
-
 export async function fetchExamWithQuestions(examId: string): Promise<ExamWithQuestions | null> {
   const examRows = await db.select().from(exams).where(eq(exams.id, examId)).limit(1)
   const examRow = examRows[0]
@@ -62,5 +42,5 @@ export async function fetchExamWithQuestions(examId: string): Promise<ExamWithQu
     .where(eq(questions.examId, examId))
     .orderBy(questions.number)
 
-  return { ...toExam(examRow), questions: questionRows.map((q) => toQuestion(q)) }
+  return { ...toExam(examRow), questions: questionRows.map((q) => rowToQuestion(q)) }
 }

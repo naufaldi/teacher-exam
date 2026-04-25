@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { EXAM_TYPE_PROFILE, rescaleDifficultyDist } from '../exam-type-profile'
+import { EXAM_TYPE_PROFILE, rescaleDifficultyDist, resolveComposition } from '../exam-type-profile'
 
 describe('EXAM_TYPE_PROFILE.defaultTotalSoal', () => {
   test('latihan defaults to 20', () => {
@@ -67,5 +67,55 @@ describe('rescaleDifficultyDist', () => {
       const r = rescaleDifficultyDist(type, profile.defaultTotalSoal)
       expect(r).toEqual(profile.difficultyDist)
     }
+  })
+})
+
+describe('EXAM_TYPE_PROFILE composition defaults', () => {
+  test('latihan composition sums to defaultTotalSoal (20)', () => {
+    const p = EXAM_TYPE_PROFILE.latihan
+    const { mcqSingle, mcqMulti, trueFalse } = p.composition
+    expect(mcqSingle + mcqMulti + trueFalse).toBe(p.defaultTotalSoal)
+    expect(mcqSingle).toBe(20)
+    expect(mcqMulti).toBe(0)
+    expect(trueFalse).toBe(0)
+  })
+
+  test('sas composition sums to defaultTotalSoal (25)', () => {
+    const p = EXAM_TYPE_PROFILE.sas
+    const { mcqSingle, mcqMulti, trueFalse } = p.composition
+    expect(mcqSingle + mcqMulti + trueFalse).toBe(p.defaultTotalSoal)
+    expect(mcqSingle).toBe(15)
+    expect(mcqMulti).toBe(5)
+    expect(trueFalse).toBe(5)
+  })
+
+  test('all 5 profiles have composition summing to defaultTotalSoal', () => {
+    for (const [, profile] of Object.entries(EXAM_TYPE_PROFILE)) {
+      const sum = profile.composition.mcqSingle + profile.composition.mcqMulti + profile.composition.trueFalse
+      expect(sum).toBe(profile.defaultTotalSoal)
+    }
+  })
+})
+
+describe('resolveComposition', () => {
+  test('returns profile default when no override', () => {
+    const result = resolveComposition('sas', 25)
+    expect(result).toEqual({ mcqSingle: 15, mcqMulti: 5, trueFalse: 5 })
+  })
+
+  test('rescales proportionally to different total', () => {
+    const result = resolveComposition('sas', 30)
+    expect(result.mcqSingle + result.mcqMulti + result.trueFalse).toBe(30)
+  })
+
+  test('returns override when sum matches totalSoal', () => {
+    const override = { mcqSingle: 10, mcqMulti: 10, trueFalse: 5 }
+    const result = resolveComposition('sas', 25, override)
+    expect(result).toEqual(override)
+  })
+
+  test('throws when override sum !== totalSoal', () => {
+    expect(() => resolveComposition('sas', 25, { mcqSingle: 10, mcqMulti: 10, trueFalse: 10 }))
+      .toThrow(/25/)
   })
 })

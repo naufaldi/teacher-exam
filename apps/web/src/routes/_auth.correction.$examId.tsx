@@ -16,6 +16,7 @@ import {
   EmptyState,
 } from '@teacher-exam/ui'
 import { MOCK_QUESTIONS, MOCK_EXAM_FINAL, MOCK_STUDENTS } from '../lib/mock-data.js'
+import { matchQuestion } from '../lib/question-render.js'
 
 export const Route = createFileRoute('/_auth/correction/$examId')({
   component: CorrectionPage,
@@ -324,7 +325,13 @@ function CorrectionPage() {
 
   const isMockExam = examId === 'exam-001'
   const answerKey: Answer[] = isMockExam
-    ? MOCK_QUESTIONS.map((q) => q.correctAnswer)
+    ? MOCK_QUESTIONS.map((q) =>
+        matchQuestion(q, {
+          mcq_single: (x) => x.correct as Answer,
+          mcq_multi: () => 'a' as Answer,
+          true_false: () => 'a' as Answer,
+        }),
+      )
     : []
 
   const [state, dispatch] = useReducer(correctionReducer, answerKey, makeInitialState)

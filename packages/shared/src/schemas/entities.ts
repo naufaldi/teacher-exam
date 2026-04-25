@@ -4,7 +4,8 @@ import {
   ExamDifficultySchema,
   ReviewModeSchema,
   ExamStatusSchema,
-  AnswerSchema,
+  AnswerLetterSchema,
+  MultiAnswerSchema,
   CognitiveLevelSchema,
   QuestionStatusSchema,
   ValidationStatusSchema,
@@ -31,23 +32,57 @@ export const UserProfileSchema = Schema.Struct({
 export type UserProfile = typeof UserProfileSchema.Type
 
 // ── Question ───────────────────────────────────────────────
-export const QuestionSchema = Schema.Struct({
+
+const Options4Schema = Schema.Struct({
+  a: Schema.NonEmptyString,
+  b: Schema.NonEmptyString,
+  c: Schema.NonEmptyString,
+  d: Schema.NonEmptyString,
+})
+
+const QuestionCommonFields = {
   id:               Schema.String,
   examId:           Schema.String,
   number:           Schema.Int,
-  text:             Schema.String,
-  optionA:          Schema.String,
-  optionB:          Schema.String,
-  optionC:          Schema.String,
-  optionD:          Schema.String,
-  correctAnswer:    AnswerSchema,
+  text:             Schema.NonEmptyString,
   topic:            Schema.NullOr(Schema.String),
   difficulty:       Schema.NullOr(Schema.String),
   status:           QuestionStatusSchema,
   validationStatus: Schema.NullOr(ValidationStatusSchema),
   validationReason: Schema.NullOr(Schema.String),
   createdAt:        Schema.String,
+} as const
+
+export const McqSingleQuestionSchema = Schema.Struct({
+  _tag:    Schema.Literal('mcq_single'),
+  ...QuestionCommonFields,
+  options: Options4Schema,
+  correct: AnswerLetterSchema,
 })
+export type McqSingleQuestion = typeof McqSingleQuestionSchema.Type
+
+export const McqMultiQuestionSchema = Schema.Struct({
+  _tag:    Schema.Literal('mcq_multi'),
+  ...QuestionCommonFields,
+  options: Options4Schema,
+  correct: MultiAnswerSchema,
+})
+export type McqMultiQuestion = typeof McqMultiQuestionSchema.Type
+
+export const TrueFalseQuestionSchema = Schema.Struct({
+  _tag:       Schema.Literal('true_false'),
+  ...QuestionCommonFields,
+  statements: Schema.Array(
+    Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Boolean })
+  ).pipe(Schema.minItems(3), Schema.maxItems(4)),
+})
+export type TrueFalseQuestion = typeof TrueFalseQuestionSchema.Type
+
+export const QuestionSchema = Schema.Union(
+  McqSingleQuestionSchema,
+  McqMultiQuestionSchema,
+  TrueFalseQuestionSchema,
+)
 export type Question = typeof QuestionSchema.Type
 
 // ── Exam (without questions) ───────────────────────────────
@@ -95,18 +130,48 @@ export const PdfUploadSchema = Schema.Struct({
 export type PdfUpload = typeof PdfUploadSchema.Type
 
 // ── AI-generated question (from Claude response) ───────────
-export const GeneratedQuestionSchema = Schema.Struct({
+
+const GeneratedBaseFields = {
   number:          Schema.Int,
   text:            Schema.NonEmptyString,
-  option_a:        Schema.NonEmptyString,
-  option_b:        Schema.NonEmptyString,
-  option_c:        Schema.NonEmptyString,
-  option_d:        Schema.NonEmptyString,
-  correct_answer:  AnswerSchema,
   topic:           Schema.String,
   difficulty:      Schema.String,
   cognitive_level: Schema.optional(CognitiveLevelSchema),
+} as const
+
+const GeneratedMcqCommonFields = {
+  ...GeneratedBaseFields,
+  option_a: Schema.NonEmptyString,
+  option_b: Schema.NonEmptyString,
+  option_c: Schema.NonEmptyString,
+  option_d: Schema.NonEmptyString,
+} as const
+
+const GeneratedMcqSingleSchema = Schema.Struct({
+  _tag:           Schema.Literal('mcq_single'),
+  ...GeneratedMcqCommonFields,
+  correct_answer: AnswerLetterSchema,
 })
+
+const GeneratedMcqMultiSchema = Schema.Struct({
+  _tag:            Schema.Literal('mcq_multi'),
+  ...GeneratedMcqCommonFields,
+  correct_answers: MultiAnswerSchema,
+})
+
+const GeneratedTrueFalseSchema = Schema.Struct({
+  _tag:       Schema.Literal('true_false'),
+  ...GeneratedBaseFields,
+  statements: Schema.Array(
+    Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal('B', 'S') })
+  ).pipe(Schema.minItems(3), Schema.maxItems(4)),
+})
+
+export const GeneratedQuestionSchema = Schema.Union(
+  GeneratedMcqSingleSchema,
+  GeneratedMcqMultiSchema,
+  GeneratedTrueFalseSchema,
+)
 export type GeneratedQuestion = typeof GeneratedQuestionSchema.Type
 
 /**

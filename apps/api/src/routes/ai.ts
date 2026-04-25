@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { Schema } from 'effect'
+import { Schema, Match } from 'effect'
 import { db, exams, questions } from '@teacher-exam/db'
 import {
   GenerateExamInputSchema,
@@ -7,16 +7,56 @@ import {
   formatExamTitle,
   SUBJECT_LABEL,
 } from '@teacher-exam/shared'
+import type { Question, GeneratedQuestion } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
-import { EXAM_TYPE_PROFILE } from '../lib/exam-type-profile'
+import { EXAM_TYPE_PROFILE, resolveComposition } from '../lib/exam-type-profile'
 import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
+import { questionToRow } from '../lib/question-mapper'
 import {
   AiGenerationError,
   createDefaultAiService,
   type AiService,
-  type GeneratedQuestion,
 } from '../services/AiService'
+
+function convertGeneratedToQuestion(
+  q: GeneratedQuestion,
+  meta: { id: string; examId: string; number: number; status: 'accepted' | 'pending'; createdAt: Date },
+): Question {
+  const common = {
+    id: meta.id,
+    examId: meta.examId,
+    number: meta.number,
+    text: q.text,
+    topic: q.topic ?? null,
+    difficulty: q.difficulty ?? null,
+    status: meta.status,
+    validationStatus: null,
+    validationReason: null,
+    createdAt: meta.createdAt.toISOString(),
+  }
+  const result = Match.value(q).pipe(
+    Match.tag('mcq_single', (x) => ({
+      ...common,
+      _tag: 'mcq_single' as const,
+      options: { a: x.option_a, b: x.option_b, c: x.option_c, d: x.option_d },
+      correct: x.correct_answer,
+    })),
+    Match.tag('mcq_multi', (x) => ({
+      ...common,
+      _tag: 'mcq_multi' as const,
+      options: { a: x.option_a, b: x.option_b, c: x.option_c, d: x.option_d },
+      correct: x.correct_answers,
+    })),
+    Match.tag('true_false', (x) => ({
+      ...common,
+      _tag: 'true_false' as const,
+      statements: x.statements.map((s) => ({ text: s.text, answer: s.answer === 'B' })),
+    })),
+    Match.exhaustive,
+  )
+  return result
+}
 
 /**
  * Build the `/api/ai` router. Accepts an injected `AiService` for tests; in
@@ -46,6 +86,14 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     const examType = normalizeExamType(input.examType ?? 'formatif')
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
+
+    let composition: ReturnType<typeof resolveComposition>
+    try {
+      composition = resolveComposition(examType, totalSoal, input.composition)
+    } catch (err) {
+      return c.json({ error: 'Validation failed', details: (err as Error).message }, 400)
+    }
+
     const curriculumText = await getCurriculumText(input.subject, input.grade)
     const { system, user } = buildExamPrompt({
       examType,
@@ -54,6 +102,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       grade: input.grade,
       topics: [...input.topics],
       totalSoal,
+      composition,
       curriculumText,
       classContext: input.classContext,
       exampleQuestions: input.exampleQuestions,
@@ -99,21 +148,33 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       })
 
       await tx.insert(questions).values(
-        generatedQuestions.map((q, i) => ({
-          id:            crypto.randomUUID(),
-          examId,
-          number:        i + 1,
-          text:          q.text,
-          optionA:       q.option_a,
-          optionB:       q.option_b,
-          optionC:       q.option_c,
-          optionD:       q.option_d,
-          correctAnswer: q.correct_answer,
-          topic:         q.topic ?? null,
-          difficulty:    q.difficulty ?? null,
-          status:        (input.reviewMode === 'fast' ? 'accepted' : 'pending') as 'accepted' | 'pending',
-          createdAt:     now,
-        })),
+        generatedQuestions.map((q, i) => {
+          const dbQuestion = convertGeneratedToQuestion(q, {
+            id: crypto.randomUUID(),
+            examId,
+            number: i + 1,
+            status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
+            createdAt: now,
+          })
+          const rowFields = questionToRow(dbQuestion)
+          return {
+            id: dbQuestion.id,
+            examId: dbQuestion.examId,
+            number: dbQuestion.number,
+            text: dbQuestion.text,
+            topic: dbQuestion.topic,
+            difficulty: dbQuestion.difficulty,
+            status: dbQuestion.status,
+            createdAt: now,
+            type: rowFields.type,
+            optionA: rowFields.optionA,
+            optionB: rowFields.optionB,
+            optionC: rowFields.optionC,
+            optionD: rowFields.optionD,
+            correctAnswer: rowFields.correctAnswer,
+            payload: rowFields.payload,
+          }
+        }),
       )
     })
 

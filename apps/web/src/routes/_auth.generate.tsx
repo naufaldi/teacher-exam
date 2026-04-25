@@ -125,6 +125,25 @@ const DEFAULT_TOTAL_SOAL: Record<string, number> = {
   tka:      25,
 }
 
+// ── Default composition per jenis (Task 5 profile defaults) ──────────────────
+
+type Composition = { mcqSingle: number; mcqMulti: number; trueFalse: number }
+
+const DEFAULT_COMPOSITION_BY_JENIS = {
+  latihan:  { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+  formatif: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+  sts:      { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 },
+  sas:      { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+  tka:      { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+} as const satisfies Record<ExamType, Composition>
+
+function rescaleComposition(profileComp: Composition, oldTotal: number, newTotal: number): Composition {
+  const mcqSingle = Math.round(profileComp.mcqSingle / oldTotal * newTotal)
+  const mcqMulti = Math.round(profileComp.mcqMulti / oldTotal * newTotal)
+  const trueFalse = Math.max(0, newTotal - mcqSingle - mcqMulti)
+  return { mcqSingle, mcqMulti, trueFalse }
+}
+
 // Budget for the elapsed-time animation. Real Claude calls run 25–60s;
 // 45s keeps the bar crawling through ~P75 without freezing early.
 const GENERATE_DURATION_MS = 45000
@@ -206,6 +225,8 @@ function GeneratePage() {
   const [reviewMode, setReviewMode] = useState<'fast' | 'slow'>('fast')
   const [fokusGuru, setFokusGuru] = useState<string>('')
   const [contohSoal, setContohSoal] = useState<string>('')
+  const [composition, setComposition] = useState<Composition>(() => DEFAULT_COMPOSITION_BY_JENIS['formatif'])
+  const [compExpanded, setCompExpanded] = useState(false)
 
   const fokusGuruRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -222,6 +243,7 @@ function GeneratePage() {
     setExamType(next)
     setTotalSoal(DEFAULT_TOTAL_SOAL[next] ?? 20)
     setTotalSoalError(null)
+    setComposition(DEFAULT_COMPOSITION_BY_JENIS[next])
   }, [])
 
   const clearTimers = useCallback(() => {
@@ -278,6 +300,7 @@ function GeneratePage() {
       reviewMode,
       examType,
       totalSoal,
+      composition,
       classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
       exampleQuestions: contohSoal.trim() !== '' ? contohSoal.trim() : undefined,
     }).then((result) => {
@@ -305,6 +328,7 @@ function GeneratePage() {
     })
   }, [
     clearTimers,
+    composition,
     contohSoal,
     customTopik,
     examType,
@@ -328,7 +352,9 @@ function GeneratePage() {
     runGenerate()
   }
 
-  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null)
+  const compositionSum = composition.mcqSingle + composition.mcqMulti + composition.trueFalse
+  const isCompositionValid = compositionSum === totalSoal
+  const isFormValid = Boolean(kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null && isCompositionValid)
 
   const topikSummary = effectiveTopiks.join(', ')
 
@@ -585,16 +611,78 @@ function GeneratePage() {
                 value={totalSoal}
                 onChange={(e) => {
                   const n = Number(e.target.value)
+                  const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
                   setTotalSoal(n)
                   if (!Number.isInteger(n) || n < 5) setTotalSoalError('Minimum 5 soal')
                   else if (n > 50) setTotalSoalError('Maksimum 50 soal')
-                  else setTotalSoalError(null)
+                  else {
+                    setTotalSoalError(null)
+                    if (n > 0) {
+                      setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
+                    }
+                  }
                 }}
                 aria-invalid={totalSoalError !== null}
                 aria-describedby={totalSoalError !== null ? 'totalSoal-error' : undefined}
               />
               {totalSoalError !== null ? (
                 <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p>
+              ) : null}
+            </div>
+
+            {/* Atur Komposisi expandable panel */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                aria-expanded={compExpanded}
+                onClick={() => setCompExpanded((prev) => !prev)}
+                className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
+              >
+                Atur komposisi
+                <span className="text-caption text-text-tertiary">{compExpanded ? '▲' : '▼'}</span>
+              </button>
+              {compExpanded ? (
+                <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
+                    <Input
+                      id="comp-mcq-single"
+                      type="number"
+                      min={0}
+                      value={composition.mcqSingle}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
+                    <Input
+                      id="comp-mcq-multi"
+                      type="number"
+                      min={0}
+                      value={composition.mcqMulti}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="comp-true-false">Benar/Salah</Label>
+                    <Input
+                      id="comp-true-false"
+                      type="number"
+                      min={0}
+                      value={composition.trueFalse}
+                      onChange={(e) =>
+                        setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                  {!isCompositionValid ? (
+                    <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 

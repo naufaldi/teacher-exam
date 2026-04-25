@@ -21,8 +21,10 @@ import { db } from '@teacher-exam/db'
 import { createQuestionsRouter } from '../questions'
 import { makeChain, makeQuestionRow, makeExamRow } from './helpers.js'
 
-function makeGeneratedQuestion(overrides: Partial<GeneratedQuestion> = {}): GeneratedQuestion {
+function makeGeneratedQuestion(overrides: Partial<Extract<GeneratedQuestion, { _tag: 'mcq_single' }>> = {}): Extract<GeneratedQuestion, { _tag: 'mcq_single' }> {
   return {
+    _tag:           'mcq_single',
+    number:         1,
     text:           'New question text',
     option_a:       'Option A',
     option_b:       'Option B',
@@ -51,7 +53,9 @@ describe('PATCH /api/questions/:id accepts status: pending', () => {
 
   it('returns 200 when status is pending', async () => {
     const questionRow = makeQuestionRow({ status: 'pending' })
-    ;(db.select as Mock).mockReturnValue(makeChain([{ questionId: 'q-1', examUserId: 'test-user-id' }]))
+    ;(db.select as Mock)
+      .mockReturnValueOnce(makeChain([{ questionId: 'q-1', examUserId: 'test-user-id' }]))
+      .mockReturnValueOnce(makeChain([questionRow]))
     ;(db.update as Mock).mockReturnValue(makeChain([questionRow]))
 
     const app = buildTestApp()

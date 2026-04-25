@@ -70,15 +70,13 @@ function makeExamWithQuestions(id = 'exam_abc'): ExamWithQuestions {
     createdAt: NOW,
     updatedAt: NOW,
     questions: Array.from({ length: 20 }, (_, i) => ({
+      _tag: 'mcq_single' as const,
       id: `q-${i + 1}`,
       examId: id,
       number: i + 1,
       text: `Question ${i + 1}`,
-      optionA: 'A',
-      optionB: 'B',
-      optionC: 'C',
-      optionD: 'D',
-      correctAnswer: 'a' as const,
+      options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+      correct: 'a' as const,
       topic: 'Teks Narasi',
       difficulty: 'sedang',
       status: 'pending' as const,
@@ -200,5 +198,68 @@ describe('GeneratePage — runGenerate flow', () => {
     const call = mockNavigate.mock.calls[0]?.[0] as Record<string, unknown>
     const search = call?.['search'] as Record<string, unknown>
     expect(search?.['examId']).toBe('exam_from_server_42')
+  })
+})
+
+describe('Atur komposisi panel', () => {
+  it('is collapsed by default: the 3 number inputs are not visible', () => {
+    renderGeneratePage()
+    expect(screen.queryByLabelText(/PG Pilihan Tunggal/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/PG Pilihan Jamak/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Benar\/Salah/i)).not.toBeInTheDocument()
+  })
+
+  it('SAS auto-fill: selecting UAS fills {mcqSingle:15, mcqMulti:5, trueFalse:5} when expanded', () => {
+    renderGeneratePage()
+    // Select SAS jenis
+    fireEvent.click(screen.getByText('UAS'))
+    // Expand the panel
+    fireEvent.click(screen.getByRole('button', { name: /atur komposisi/i }))
+    // Inputs should now be visible with correct defaults
+    expect((screen.getByLabelText(/PG Pilihan Tunggal/i) as HTMLInputElement).value).toBe('15')
+    expect((screen.getByLabelText(/PG Pilihan Jamak/i) as HTMLInputElement).value).toBe('5')
+    expect((screen.getByLabelText(/Benar\/Salah/i) as HTMLInputElement).value).toBe('5')
+  })
+
+  it('shows sum validation error when composition does not equal totalSoal', () => {
+    renderGeneratePage()
+    // Expand the panel
+    fireEvent.click(screen.getByRole('button', { name: /atur komposisi/i }))
+    // Break the sum: change mcqSingle to 10 (default total is 20, so 10+0+0=10 !== 20)
+    const mcqSingleInput = screen.getByLabelText(/PG Pilihan Tunggal/i)
+    fireEvent.change(mcqSingleInput, { target: { value: '10' } })
+    expect(screen.getByText('Total harus sama dengan 20')).toBeInTheDocument()
+  })
+
+  it('includes composition in the API payload on submit', async () => {
+    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+
+    renderGeneratePage()
+    // Expand panel; default formatif composition is {20,0,0} which sums to 20 == totalSoal
+    fireEvent.click(screen.getByRole('button', { name: /atur komposisi/i }))
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        composition: expect.objectContaining({ mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }),
+      }),
+    )
+  })
+
+  it('totalSoal rescale: changing totalSoal re-applies profile default composition scaled to new total', () => {
+    renderGeneratePage()
+    // Select SAS: profile {15,5,5} totalSoal=25
+    fireEvent.click(screen.getByText('UAS'))
+    // Expand panel to verify values
+    fireEvent.click(screen.getByRole('button', { name: /atur komposisi/i }))
+    // Verify initial SAS composition
+    expect((screen.getByLabelText(/PG Pilihan Tunggal/i) as HTMLInputElement).value).toBe('15')
+    // Change totalSoal to 50 → should rescale: 15/25*50=30, 5/25*50=10, trueFalse=50-30-10=10
+    const totalSoalInput = screen.getByLabelText('Jumlah Soal')
+    fireEvent.change(totalSoalInput, { target: { value: '50' } })
+    expect((screen.getByLabelText(/PG Pilihan Tunggal/i) as HTMLInputElement).value).toBe('30')
+    expect((screen.getByLabelText(/PG Pilihan Jamak/i) as HTMLInputElement).value).toBe('10')
+    expect((screen.getByLabelText(/Benar\/Salah/i) as HTMLInputElement).value).toBe('10')
   })
 })

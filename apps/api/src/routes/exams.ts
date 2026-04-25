@@ -4,7 +4,8 @@ import { eq, and, desc } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
 import type { ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
-import { toExam, toQuestion, fetchExamWithQuestions } from '../lib/exams-query'
+import { toExam, fetchExamWithQuestions } from '../lib/exams-query'
+import { rowToQuestion } from '../lib/question-mapper'
 
 export const examsRouter = new Hono()
 
@@ -43,7 +44,7 @@ examsRouter.get('/:id', async (c) => {
 
   const result: ExamWithQuestions = {
     ...toExam(examRow),
-    questions: questionRows.map((q) => toQuestion(q)),
+    questions: questionRows.map((q) => rowToQuestion(q)),
   }
 
   return c.json(result)
@@ -106,7 +107,7 @@ examsRouter.patch('/:id', async (c) => {
 
   const result: ExamWithQuestions = {
     ...toExam(updatedRow),
-    questions: questionRows.map((q) => toQuestion(q)),
+    questions: questionRows.map((q) => rowToQuestion(q)),
   }
 
   return c.json(result)
@@ -194,11 +195,13 @@ examsRouter.post('/:id/duplicate', async (c) => {
         examId:           newExamId,
         number:           q.number,
         text:             q.text,
+        type:             q.type,
         optionA:          q.optionA,
         optionB:          q.optionB,
         optionC:          q.optionC,
         optionD:          q.optionD,
         correctAnswer:    q.correctAnswer,
+        payload:          q.payload,
         topic:            q.topic,
         difficulty:       q.difficulty,
         status:           q.status,

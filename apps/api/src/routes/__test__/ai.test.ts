@@ -32,12 +32,14 @@ vi.mock('../../lib/prompt', () => ({
 import { db } from '@teacher-exam/db'
 import { buildExamPrompt } from '../../lib/prompt'
 import { createAiRouter } from '../ai'
-import { makeChain, makeQuestionRow } from './helpers.js'
+import { makeChain, makeQuestionRow } from './helpers'
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
 function makeFakeQuestion(n: number): GeneratedQuestion {
   return {
+    _tag: 'mcq_single',
+    number: n,
     text: `Question ${n}`,
     option_a: 'Option A',
     option_b: 'Option B',
@@ -333,6 +335,184 @@ describe('POST /api/ai/generate', () => {
       expect(fakeAiService.generate as Mock).toHaveBeenCalledWith(
         expect.objectContaining({ expectedCount: 20 }),
       )
+    })
+  })
+
+  describe('POST /api/ai/generate — composition', () => {
+    it('resolves composition from profile default when not provided', async () => {
+      const app = buildTestApp()
+      ;(db.insert as Mock).mockReturnValue(makeChain([]))
+      ;(db.transaction as Mock).mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+
+      const examRow = makeExamRow({ examType: 'latihan' })
+      const questionRows = Array.from({ length: 20 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+
+      // capture what buildExamPrompt was called with
+      const buildMock = buildExamPrompt as Mock
+      buildMock.mockClear()
+      buildMock.mockReturnValue({ system: 'sys', user: 'usr' })
+
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'latihan' }),
+      })
+
+      // latihan default: mcqSingle=20, mcqMulti=0, trueFalse=0
+      const callArg = buildMock.mock.calls[0]?.[0] as { composition: { mcqSingle: number; mcqMulti: number; trueFalse: number } }
+      expect(callArg?.composition).toEqual({ mcqSingle: 20, mcqMulti: 0, trueFalse: 0 })
+    })
+
+    it('resolves sas composition default {15,5,5} when composition not provided', async () => {
+      const app = buildTestApp()
+      ;(db.insert as Mock).mockReturnValue(makeChain([]))
+      ;(db.transaction as Mock).mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+
+      const examRow = makeExamRow({ examType: 'sas' })
+      const questionRows = Array.from({ length: 25 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(
+        Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)),
+      )
+
+      const buildMock = buildExamPrompt as Mock
+      buildMock.mockClear()
+      buildMock.mockReturnValue({ system: 'sys', user: 'usr' })
+
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'sas' }),
+      })
+
+      // sas default: mcqSingle=15, mcqMulti=5, trueFalse=5
+      const callArg = buildMock.mock.calls[0]?.[0] as { composition: { mcqSingle: number; mcqMulti: number; trueFalse: number } }
+      expect(callArg?.composition).toEqual({ mcqSingle: 15, mcqMulti: 5, trueFalse: 5 })
+    })
+
+    it('accepts valid composition override and passes it to buildExamPrompt', async () => {
+      const app = buildTestApp()
+      ;(db.insert as Mock).mockReturnValue(makeChain([]))
+      ;(db.transaction as Mock).mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+
+      const examRow = makeExamRow({ examType: 'sas' })
+      const questionRows = Array.from({ length: 25 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(
+        Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)),
+      )
+
+      const buildMock = buildExamPrompt as Mock
+      buildMock.mockClear()
+      buildMock.mockReturnValue({ system: 'sys', user: 'usr' })
+
+      const res = await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...VALID_BODY,
+          examType: 'sas',
+          totalSoal: 25,
+          composition: { mcqSingle: 10, mcqMulti: 10, trueFalse: 5 },
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const callArg = buildMock.mock.calls[0]?.[0] as { composition: { mcqSingle: number; mcqMulti: number; trueFalse: number } }
+      expect(callArg?.composition).toEqual({ mcqSingle: 10, mcqMulti: 10, trueFalse: 5 })
+    })
+
+    it('returns 400 when composition sum !== totalSoal', async () => {
+      const app = buildTestApp()
+      const res = await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...VALID_BODY,
+          totalSoal: 25,
+          composition: { mcqSingle: 10, mcqMulti: 10, trueFalse: 10 }, // sum=30, not 25
+        }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('persisted mcq_multi row has type=mcq_multi, non-null payload, null legacy columns', async () => {
+      const mcqMultiQuestion: GeneratedQuestion = {
+        _tag: 'mcq_multi' as const,
+        number: 5,
+        text: 'Pilih dua jawaban yang benar!',
+        option_a: 'A',
+        option_b: 'B',
+        option_c: 'C',
+        option_d: 'D',
+        correct_answers: ['a', 'c'],
+        topic: 'Test',
+        difficulty: 'mudah',
+      }
+      // Build a 5-question mixed set: 4 mcq_single + 1 mcq_multi (composition {4,1,0})
+      const mixedQuestions: GeneratedQuestion[] = [
+        makeFakeQuestion(1),
+        makeFakeQuestion(2),
+        makeFakeQuestion(3),
+        makeFakeQuestion(4),
+        mcqMultiQuestion,
+      ]
+      ;(fakeAiService.generate as Mock).mockResolvedValueOnce(mixedQuestions)
+
+      const examRow = makeExamRow({ examType: 'formatif' })
+      const questionRows = Array.from({ length: 5 }, (_, i) =>
+        makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+      )
+      let selectCount = 0
+      ;(db.select as Mock).mockImplementation(() => {
+        selectCount++
+        if (selectCount === 1) return makeChain([examRow])
+        return makeChain(questionRows)
+      })
+
+      const insertChain = makeChain([])
+      ;(db.insert as Mock).mockReturnValue(insertChain)
+      ;(db.transaction as Mock).mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+
+      const app = buildTestApp()
+      await app.request('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_BODY, examType: 'formatif', totalSoal: 5, composition: { mcqSingle: 4, mcqMulti: 1, trueFalse: 0 } }),
+      })
+
+      // Second call to values() is the questions insert (first is the exam insert)
+      const capturedInsertValues = (insertChain['values'] as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as Array<Record<string, unknown>> | undefined
+      expect(capturedInsertValues).toBeDefined()
+      const mcqMultiRow = capturedInsertValues?.find((r) => r['type'] === 'mcq_multi')
+      expect(mcqMultiRow).toBeDefined()
+      expect(mcqMultiRow?.['type']).toBe('mcq_multi')
+      expect(mcqMultiRow?.['payload']).not.toBeNull()
+      expect(mcqMultiRow?.['payload']).toMatchObject({ options: expect.any(Object), correct: expect.any(Array) })
+      expect(mcqMultiRow?.['optionA']).toBeNull()
+      expect(mcqMultiRow?.['correctAnswer']).toBeNull()
     })
   })
 
