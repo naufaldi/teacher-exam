@@ -110,6 +110,7 @@ function ReviewPage() {
   const [regenSingleTargetId, setRegenSingleTargetId] = useState<string | null>(null)
   const [regenSingleDialogOpen, setRegenSingleDialogOpen] = useState(false)
   const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
+  const [batchRegenerating, setBatchRegenerating] = useState(false)
 
   // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
@@ -177,6 +178,7 @@ function ReviewPage() {
   )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
   const canPreview = acceptedCount === questions.length && isMetadataComplete
+  const isRegenerating = regeneratingIds.size > 0 || batchRegenerating
 
   const editingQuestion = editingId !== null
     ? questions.find((q) => q.id === editingId) ?? null
@@ -296,7 +298,9 @@ function ReviewPage() {
     if (rejectingId === null) return
     const targetId = rejectingId
     setRejectingId(null)
-    await setStatus(targetId, 'rejected')
+    setQuestionStatuses((prev) => ({ ...prev, [targetId]: 'rejected' }))
+    setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(targetId); return s })
+    await handleRegenerateOne(targetId)
   }
 
   const handleRegenerateBatch = async () => {
@@ -305,33 +309,44 @@ function ReviewPage() {
       .map((q) => q.id)
     if (rejectedIds.length === 0) return
 
-    await Promise.allSettled(rejectedIds.map((id) => handleRegenerateOne(id)))
-
-    const succeeded = rejectedIds.filter((id) => !failedRegenIds.has(id))
-    const failedCount = rejectedIds.length - succeeded.length
-    if (failedCount > 0) {
-      toast({
-        variant: 'error',
-        title: `Berhasil ${succeeded.length} · Gagal ${failedCount}`,
-        description: 'Soal yang gagal perlu dicoba ulang satu per satu.',
-      })
-    } else {
-      toast({
-        variant: 'success',
-        title: `${succeeded.length} soal berhasil diganti`,
-      })
+    setBatchRegenerating(true)
+    try {
+      const results = await Promise.all(rejectedIds.map((id) => handleRegenerateOne(id)))
+      const succeededCount = results.filter(Boolean).length
+      const failedCount = rejectedIds.length - succeededCount
+      if (failedCount > 0) {
+        toast({
+          variant: 'error',
+          title: `Berhasil ${succeededCount} · Gagal ${failedCount}`,
+          description: 'Soal yang gagal perlu dicoba ulang satu per satu.',
+        })
+      } else {
+        toast({
+          variant: 'success',
+          title: `${succeededCount} soal berhasil diganti`,
+        })
+      }
+    } finally {
+      setBatchRegenerating(false)
     }
   }
 
-  const handleRegenerateOne = async (id: string, hint?: string) => {
+  const handleRegenerateOne = async (id: string, hint?: string): Promise<boolean> => {
     setRegeneratingIds((prev) => new Set(prev).add(id))
     try {
       const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
       examDraftStore.updateQuestion(id, server)
       setQuestionStatuses((prev) => ({ ...prev, [id]: 'pending' }))
       setFailedRegenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
-    } catch {
+      return true
+    } catch (err) {
       setFailedRegenIds((prev) => new Set(prev).add(id))
+      toast({
+        variant: 'error',
+        title: 'Gagal mengganti soal',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+      return false
     } finally {
       setRegeneratingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
     }
@@ -475,6 +490,7 @@ function ReviewPage() {
             <Button
               variant="secondary"
               size="sm"
+              disabled={isRegenerating}
               onClick={() => { void handleTerimaSemuaClick() }}
             >
               Terima Semua
@@ -483,9 +499,17 @@ function ReviewPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={batchRegenerating}
                 onClick={() => setRegenBatchDialogOpen(true)}
               >
-                Ganti semua ditolak ({rejectedCount})
+                {batchRegenerating ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Mengganti...
+                  </>
+                ) : (
+                  `Ganti semua ditolak (${rejectedCount})`
+                )}
               </Button>
             )}
             <Button
@@ -508,9 +532,15 @@ function ReviewPage() {
                 >
                   <CardContent className="p-4">
                     {regeneratingIds.has(q.id) ? (
-                      <div className="animate-pulse space-y-3">
-                        <div className="h-4 bg-kertas-200 rounded w-3/4" />
-                        <div className="h-4 bg-kertas-200 rounded w-full" />
+                      <div className="space-y-3" role="status" aria-live="polite">
+                        <div className="flex items-center gap-2 text-body-sm font-semibold text-text-secondary">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          AI sedang mengganti soal...
+                        </div>
+                        <div className="animate-pulse space-y-3">
+                          <div className="h-4 bg-kertas-200 rounded w-3/4" />
+                          <div className="h-4 bg-kertas-200 rounded w-full" />
+                        </div>
                         <div className="grid grid-cols-2 gap-2 mt-4">
                           {[0,1,2,3].map(i => <div key={i} className="h-8 bg-kertas-100 rounded" />)}
                         </div>
@@ -614,6 +644,7 @@ function ReviewPage() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            disabled={isRegenerating}
                             onClick={() => setEditingId(q.id)}
                           >
                             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
@@ -622,6 +653,7 @@ function ReviewPage() {
                             size="sm"
                             variant="ghost"
                             className="text-danger-fg hover:text-danger-fg"
+                            disabled={isRegenerating}
                             onClick={() => setRejectingId(q.id)}
                           >
                             <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
