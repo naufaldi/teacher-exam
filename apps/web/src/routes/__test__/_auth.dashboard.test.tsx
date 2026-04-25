@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { Exam } from '@teacher-exam/shared'
 
 const { mockNavigate, mockLoaderData, mockRouteContext } = vi.hoisted(() => ({
@@ -154,5 +154,57 @@ describe('DashboardPage', () => {
     renderDashboard()
     // Header + footer both show "3 dari 3"; getAllByText is fine
     expect(screen.getAllByText(/3 dari 3/).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('navigates latest final exam Koreksi to the correction route', () => {
+    mockLoaderData.exams = [
+      makeExam({ id: 'final-latest', status: 'final', title: 'Final Latest Exam' }),
+    ]
+
+    renderDashboard()
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Koreksi' })[0]!)
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/correction/$examId',
+      params: { examId: 'final-latest' },
+    })
+  })
+
+  it('does not offer Koreksi on latest draft exam and routes Edit back to review', () => {
+    mockLoaderData.exams = [
+      makeExam({ id: 'draft-latest', status: 'draft', title: 'Draft Latest Exam' }),
+    ]
+
+    renderDashboard()
+
+    expect(screen.queryByRole('button', { name: 'Koreksi' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]!)
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/review',
+      search: { examId: 'draft-latest', mode: 'fast' },
+    })
+  })
+
+  it('navigates dashboard recent final row Koreksi to the correction route', () => {
+    mockLoaderData.exams = [
+      makeExam({ id: 'draft-latest', status: 'draft', title: 'Draft Latest Exam' }),
+      makeExam({ id: 'final-row', status: 'final', title: 'Final Row Exam' }),
+    ]
+
+    renderDashboard()
+
+    const title = screen.getByText('Final Row Exam')
+    const row = title.parentElement?.parentElement?.parentElement
+    expect(row).toBeTruthy()
+
+    fireEvent.click(within(row!).getByRole('button', { name: 'Koreksi' }))
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/correction/$examId',
+      params: { examId: 'final-row' },
+    })
   })
 })

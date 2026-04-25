@@ -58,7 +58,7 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
   }
 
   function handleCorrect() {
-    void navigate({ to: '/review', search: { examId: exam.id, mode: 'fast' } })
+    void navigate({ to: '/correction/$examId', params: { examId: exam.id } })
   }
 
   function handleDuplicate() {
