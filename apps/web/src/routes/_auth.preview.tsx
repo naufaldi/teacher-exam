@@ -529,16 +529,18 @@ function KunciSection({
   )
 }
 
-// ── Pembahasan section ───────────────────────────────────────────────────────
-
 function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
-  const [md, setMd] = useState<string | null>(exam.discussionMd ?? null)
+  const [md, setMd] = useState<string | null>(exam.discussionMd)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
 
   const handleGenerate = () => {
     setIsGenerating(true)
+    setGenerateError(null)
     void api.exams.generateDiscussion(exam.id).then((updated) => {
-      setMd(updated.discussionMd ?? null)
+      setMd(updated.discussionMd)
+    }).catch((err: unknown) => {
+      setGenerateError(err instanceof Error ? err.message : 'Gagal membuat pembahasan. Coba lagi.')
     }).finally(() => {
       setIsGenerating(false)
     })
@@ -553,6 +555,9 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
         {md === null ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">
             <p className="text-sm text-kertas-600">Pembahasan belum dibuat untuk ujian ini.</p>
+            {generateError ? (
+              <p className="text-sm text-danger-600">{generateError}</p>
+            ) : null}
             <Button onClick={handleGenerate} disabled={isGenerating}>
               <BookOpen className="h-4 w-4 mr-2" />
               {isGenerating ? 'Membuat Pembahasan...' : 'Generate Pembahasan'}

@@ -1,3 +1,5 @@
+import type { BuiltPrompt } from './prompt'
+
 export interface PembahasanQuestion {
   number: number
   text: string
@@ -19,10 +21,7 @@ export interface BuildPembahasanInput {
   questions: ReadonlyArray<PembahasanQuestion>
 }
 
-export interface BuiltPrompt {
-  system: string
-  user: string
-}
+export type { BuiltPrompt }
 
 export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt {
   if (input.questions.length === 0) {
@@ -64,8 +63,6 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
       topic: q.topic,
       difficulty: q.difficulty,
     })),
-    null,
-    2,
   )
 
   return { system, user }

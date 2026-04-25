@@ -273,15 +273,15 @@ router.post('/:id/finalize', async (c) => {
   return c.json(result)
 })
 
-// POST /:id/discussion — generate and persist per-question explanations (one-shot)
 router.post('/:id/discussion', async (c) => {
   const userId = c.get('userId')
   const { id } = c.req.param()
 
-  const [examRows, questionRows] = await Promise.all([
-    db.select().from(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))).limit(1),
-    db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
-  ])
+  const examRows = await db
+    .select()
+    .from(exams)
+    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+    .limit(1)
 
   if (!examRows[0]) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
 
@@ -294,6 +294,12 @@ router.post('/:id/discussion', async (c) => {
   if (exam.discussionMd !== null) {
     return c.json({ error: 'Discussion already exists for this exam', code: 'DISCUSSION_ALREADY_EXISTS' }, 409)
   }
+
+  const questionRows = await db
+    .select()
+    .from(questions)
+    .where(eq(questions.examId, id))
+    .orderBy(questions.number)
 
   const { system, user } = buildPembahasanPrompt({
     exam: {
