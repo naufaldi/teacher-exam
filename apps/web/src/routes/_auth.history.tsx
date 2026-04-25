@@ -5,6 +5,7 @@ import { Button, LoadingSpinner, useToast } from '@teacher-exam/ui'
 import {
   HistoryEmpty,
   HistoryHeader,
+  HistoryPagination,
   HistoryTable,
   HistoryToolbar,
   type GradeFilter,
@@ -67,7 +68,8 @@ function HistoryPage() {
   const [period, setPeriod] = useState<PeriodFilter>('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortOrder>('terbaru')
-  const [visibleCount, setVisibleCount] = useState(8)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(8)
 
   function loadExams() {
     setLoading(true)
@@ -142,10 +144,16 @@ function HistoryPage() {
     setPeriod('all')
     setQuery('')
     setSort('terbaru')
+    setPage(1)
   }
 
-  const visibleExams = filtered.slice(0, visibleCount)
-  const hasMore = filtered.length > visibleExams.length
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  useEffect(() => {
+    if (safePage !== page) setPage(safePage)
+  }, [safePage, page])
+  const start = (safePage - 1) * pageSize
+  const visibleExams = filtered.slice(start, start + pageSize)
 
   if (loading) {
     return <LoadingSpinner message="Memuat riwayat lembar ujian..." />
@@ -192,12 +200,12 @@ function HistoryPage() {
           isFiltered={isFiltered}
           matchCount={filtered.length}
           totalCount={exams.length}
-          onStatusChange={setStatus}
-          onSubjectChange={setSubject}
-          onGradeChange={setGrade}
-          onPeriodChange={setPeriod}
-          onSortChange={setSort}
-          onQueryChange={setQuery}
+          onStatusChange={(v) => { setStatus(v); setPage(1) }}
+          onSubjectChange={(v) => { setSubject(v); setPage(1) }}
+          onGradeChange={(v) => { setGrade(v); setPage(1) }}
+          onPeriodChange={(v) => { setPeriod(v); setPage(1) }}
+          onSortChange={(v) => { setSort(v); setPage(1) }}
+          onQueryChange={(v) => { setQuery(v); setPage(1) }}
           onReset={handleReset}
         />
 
@@ -215,7 +223,7 @@ function HistoryPage() {
               onDuplicate={duplicate.openFor}
             />
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
               <span className="text-body-sm text-text-tertiary">
                 Menampilkan{' '}
                 <span className="text-text-primary font-semibold tabular-nums">
@@ -224,15 +232,13 @@ function HistoryPage() {
                 dari{' '}
                 <span className="tabular-nums">{filtered.length}</span> lembar yang cocok
               </span>
-              {hasMore ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setVisibleCount((c) => c + 8)}
-                >
-                  Muat lebih banyak
-                </Button>
-              ) : null}
+              <HistoryPagination
+                page={safePage}
+                pageSize={pageSize}
+                totalItems={filtered.length}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+              />
             </div>
           </>
         )}
