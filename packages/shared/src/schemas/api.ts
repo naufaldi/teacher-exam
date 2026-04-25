@@ -26,9 +26,9 @@ export const GenerateExamInputSchema = Schema.Struct({
   exampleQuestions: Schema.optional(Schema.String),
   totalSoal:        Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
   composition:      Schema.optional(Schema.Struct({
-    mcqSingle: Schema.Int,
-    mcqMulti:  Schema.Int,
-    trueFalse: Schema.Int,
+    mcqSingle: Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
+    mcqMulti:  Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
+    trueFalse: Schema.Int.pipe(Schema.greaterThanOrEqualTo(0)),
   })),
 })
 export type GenerateExamInput = typeof GenerateExamInputSchema.Type

@@ -101,3 +101,34 @@ describe('GenerateExamInputSchema — totalSoal', () => {
     expect(Either.isLeft(result)).toBe(true)
   })
 })
+
+describe('GenerateExamInputSchema — composition', () => {
+  test('accepts valid composition', () => {
+    const result = Schema.decodeUnknownEither(GenerateExamInputSchema)({
+      ...VALID_BASE,
+      composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+    })
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test('accepts input without composition', () => {
+    const result = Schema.decodeUnknownEither(GenerateExamInputSchema)(VALID_BASE)
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test('rejects negative mcqSingle', () => {
+    const result = Schema.decodeUnknownEither(GenerateExamInputSchema)({
+      ...VALID_BASE,
+      composition: { mcqSingle: -1, mcqMulti: 5, trueFalse: 5 },
+    })
+    expect(Either.isLeft(result)).toBe(true)
+  })
+
+  test('rejects composition with string values', () => {
+    const result = Schema.decodeUnknownEither(GenerateExamInputSchema)({
+      ...VALID_BASE,
+      composition: { mcqSingle: 'fifteen', mcqMulti: 5, trueFalse: 5 },
+    })
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})

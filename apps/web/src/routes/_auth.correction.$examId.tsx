@@ -15,10 +15,12 @@ import {
   Input,
   EmptyState,
 } from '@teacher-exam/ui'
-import { MOCK_QUESTIONS, MOCK_EXAM_FINAL, MOCK_STUDENTS } from '../lib/mock-data.js'
+import { MOCK_STUDENTS } from '../lib/mock-data.js'
+import { api } from '../lib/api.js'
 import { matchQuestion } from '../lib/question-render.js'
 
 export const Route = createFileRoute('/_auth/correction/$examId')({
+  loader: async ({ params }) => api.exams.get(params.examId),
   component: CorrectionPage,
 })
 
@@ -321,18 +323,20 @@ function RekapTable({ rekapList, activeStudentNumber }: RekapTableProps) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function CorrectionPage() {
-  const { examId } = Route.useParams()
-
-  const isMockExam = examId === 'exam-001'
-  const answerKey: Answer[] = isMockExam
-    ? MOCK_QUESTIONS.map((q) =>
-        matchQuestion(q, {
-          mcq_single: (x) => x.correct as Answer,
-          mcq_multi: () => 'a' as Answer,
-          true_false: () => 'a' as Answer,
-        }),
-      )
-    : []
+  const exam = Route.useLoaderData()
+  const answerKey: Answer[] = useMemo(
+    () =>
+      [...exam.questions]
+        .sort((a, b) => a.number - b.number)
+        .map((q) =>
+          matchQuestion(q, {
+            mcq_single: (x) => x.correct as Answer,
+            mcq_multi: (x) => x.correct[0] ?? 'a',
+            true_false: () => 'a' as Answer,
+          }),
+        ),
+    [exam.questions],
+  )
 
   const [state, dispatch] = useReducer(correctionReducer, answerKey, makeInitialState)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -429,17 +433,6 @@ function CorrectionPage() {
   }, [])
 
   const suggestedPlaceholder = MOCK_STUDENTS[state.studentNumber - 1] ?? `Murid ${state.studentNumber}`
-
-  if (!isMockExam) {
-    // For non-mock exams: show loading state
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <p className="text-text-tertiary text-body">Memuat kunci jawaban...</p>
-      </div>
-    )
-  }
-
-  const exam = MOCK_EXAM_FINAL
 
   return (
     <div className="space-y-4">

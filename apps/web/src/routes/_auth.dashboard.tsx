@@ -7,6 +7,7 @@ import {
   PrinterIcon,
   Copy,
   CalendarDays,
+  Pencil,
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Button, Badge } from '@teacher-exam/ui'
@@ -363,22 +364,45 @@ function DashboardPage() {
                 </p>
 
                 <div className="flex gap-2 flex-wrap mt-4">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => void navigate({ to: '/preview', search: { examId: lastExam.id } })}
-                  >
-                    <PrinterIcon size={13} />
-                    Cetak lembar
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => void navigate({ to: '/review', search: { mode: 'fast' } })}
-                  >
-                    <CheckSquare size={13} />
-                    Koreksi
-                  </Button>
+                  {lastExam.status === 'final' ? (
+                    <>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void navigate({ to: '/preview', search: { examId: lastExam.id } })}
+                      >
+                        <PrinterIcon size={13} />
+                        Cetak lembar
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          void navigate({
+                            to: '/correction/$examId',
+                            params: { examId: lastExam.id },
+                          })
+                        }
+                      >
+                        <CheckSquare size={13} />
+                        Koreksi
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() =>
+                        void navigate({
+                          to: '/review',
+                          search: { examId: lastExam.id, mode: lastExam.reviewMode },
+                        })
+                      }
+                    >
+                      <Pencil size={13} />
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
