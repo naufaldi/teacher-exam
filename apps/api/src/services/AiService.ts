@@ -46,7 +46,7 @@ export interface AiServiceConfig {
 const DEFAULT_MODEL = 'claude-opus-4-5'
 const DEFAULT_DISCUSSION_MODEL = 'claude-haiku-4-5'
 const DEFAULT_MAX_TOKENS = 32000
-const DEFAULT_DISCUSSION_MAX_TOKENS = 4096
+const DEFAULT_DISCUSSION_MAX_TOKENS = 16000
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 
 /**
@@ -107,7 +107,11 @@ export function createAiService(config: AiServiceConfig): AiService {
 
     async *streamDiscussion(input) {
       const result = await Effect.runPromise(Effect.either(getDiscussionText(input)))
-      if (Either.isLeft(result)) throw result.left
+      if (Either.isLeft(result)) {
+        const err = result.left
+        const message = typeof err.cause === 'string' ? err.cause : String(err.cause)
+        throw new Error(message, { cause: err })
+      }
       yield result.right
     },
   }

@@ -94,7 +94,7 @@ describe('POST /api/exams/:id/discussion', () => {
     expect(body['code']).toBe('DISCUSSION_ALREADY_EXISTS')
   })
 
-  it('sends SSE error event when AI service fails', async () => {
+  it('sends SSE error event with non-empty message describing the cause when AI service fails', async () => {
     const finalExam = makeExamRow({ status: 'final' })
     const q = makeQuestionRow({ status: 'accepted' })
     let selectCount = 0
@@ -110,6 +110,12 @@ describe('POST /api/exams/:id/discussion', () => {
     expect(res.headers.get('content-type')).toContain('text/event-stream')
     const text = await res.text()
     expect(text).toContain('event: error')
+
+    const errMatch = text.match(/event: error\ndata: (.+)/)
+    expect(errMatch).not.toBeNull()
+    const errPayload = JSON.parse(errMatch![1]!) as { message: string }
+    expect(errPayload.message).not.toBe('')
+    expect(errPayload.message).toContain('AI error')
   })
 
   it('streams discussion, persists it, and sends SSE done event with discussionMd', async () => {

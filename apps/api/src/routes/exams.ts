@@ -338,7 +338,20 @@ router.post('/:id/discussion', async (c) => {
       })
     } catch (err) {
       clearInterval(heartbeat)
-      const message = err instanceof Error ? err.message : 'Internal error'
+      console.error('[discussion] AI generation failed', err)
+      const fromCause = (e: unknown): string => {
+        if (e && typeof e === 'object' && 'cause' in e) {
+          const c = (e as { cause: unknown }).cause
+          if (typeof c === 'string' && c.length > 0) return c
+          if (c && typeof c === 'object' && 'cause' in c) {
+            const inner = (c as { cause: unknown }).cause
+            if (typeof inner === 'string' && inner.length > 0) return inner
+          }
+        }
+        return ''
+      }
+      const baseMessage = err instanceof Error && err.message ? err.message : fromCause(err)
+      const message = baseMessage || 'AI generation failed'
       await stream.writeSSE({ event: 'error', data: JSON.stringify({ message }) })
     }
   })

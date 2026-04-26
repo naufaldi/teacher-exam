@@ -303,11 +303,26 @@ describe('AiService.streamDiscussion', () => {
     expect(params.model).toBe('claude-haiku-4-5')
   })
 
-  it('throws AiGenerationError when Claude fails during stream', async () => {
+  it('uses 16000 as default discussionMaxTokens (fits a 40-question exam)', async () => {
+    const { client, create } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
+    const params = create.mock.calls[0]![0] as { max_tokens: number }
+    expect(params.max_tokens).toBe(16000)
+  })
+
+  it('throws an Error with a non-empty .message describing the cause when Claude fails', async () => {
     const { client } = fakeClient(FAKE_MARKDOWN, { stopReason: 'max_tokens' })
     const ai = createAiService({ client })
-    await expect(async () => {
+    let caught: unknown = null
+    try {
       for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
-    }).rejects.toBeInstanceOf(AiGenerationError)
+    } catch (e) {
+      caught = e
+    }
+    expect(caught).toBeInstanceOf(Error)
+    expect((caught as Error).message).toContain('max_tokens')
+    // preserves the tagged AiGenerationError on .cause for upstream consumers
+    expect((caught as Error).cause).toBeInstanceOf(AiGenerationError)
   })
 })
