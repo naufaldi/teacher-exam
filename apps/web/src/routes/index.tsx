@@ -64,7 +64,7 @@ function LoginPage() {
   const { reason } = Route.useSearch()
 
   const handleGoogleSignIn = () => {
-    void signIn.social({ provider: 'google', callbackURL: '/dashboard' })
+    void signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/dashboard` })
   }
 
   return (
