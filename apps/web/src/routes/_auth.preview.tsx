@@ -576,7 +576,11 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
             ) : null}
             <Button onClick={handleGenerate} disabled={isGenerating}>
               <BookOpen className="h-4 w-4 mr-2" />
-              {isGenerating ? 'Membuat Pembahasan...' : 'Generate Pembahasan'}
+              {isGenerating
+                ? 'Membuat Pembahasan...'
+                : generateError
+                  ? 'Coba Lagi'
+                  : 'Generate Pembahasan'}
             </Button>
           </div>
         ) : (
