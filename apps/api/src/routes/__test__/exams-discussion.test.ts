@@ -172,4 +172,87 @@ describe('POST /api/exams/:id/discussion', () => {
     expect(callArg.system.length).toBeGreaterThan(0)
     expect(callArg.user).toContain('Soal tentang paragraf')
   })
+
+  it('passes mixed question rows to discussion prompt with complete type-specific data', async () => {
+    const finalExam = makeExamRow({ status: 'final', grade: 6, subject: 'bahasa_indonesia' })
+    const mcqSingle = makeQuestionRow({
+      id: 'q-1',
+      number: 1,
+      type: 'mcq_single',
+      text: 'Apa ide pokok paragraf tersebut?',
+      optionA: 'Pilihan A',
+      optionB: 'Pilihan B',
+      optionC: 'Pilihan C',
+      optionD: 'Pilihan D',
+      correctAnswer: 'b',
+    })
+    const mcqMulti = makeQuestionRow({
+      id: 'q-2',
+      number: 2,
+      type: 'mcq_multi',
+      text: 'Pilih dua jawaban yang benar.',
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+      payload: {
+        options: { a: 'Data', b: 'Cerita utama', c: 'Contoh', d: 'Judul' },
+        correct: ['a', 'c'],
+      },
+    })
+    const trueFalse = makeQuestionRow({
+      id: 'q-3',
+      number: 3,
+      type: 'true_false',
+      text: 'Tentukan apakah pernyataan berikut benar (B) atau salah (S):',
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
+      correctAnswer: null,
+      payload: {
+        statements: [
+          { text: 'Teks eksplanasi menjelaskan fenomena.', answer: true },
+          { text: 'Deret penjelas berisi kesimpulan.', answer: false },
+          { text: 'Interpretasi adalah bagian akhir.', answer: true },
+        ],
+      },
+    })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([finalExam])
+      return makeChain([mcqSingle, mcqMulti, trueFalse])
+    })
+
+    ;(db.update as Mock).mockReturnValue(makeChain([]))
+    ;(fetchExamWithQuestions as Mock).mockResolvedValue({ ...finalExam, questions: [mcqSingle, mcqMulti, trueFalse] })
+
+    const fakeAiService = makeFakeAiService()
+    const streamSpy = vi.spyOn(fakeAiService, 'streamDiscussion')
+    const app = buildTestApp(fakeAiService)
+    await app.request('/api/exams/exam-1/discussion', { method: 'POST' })
+
+    const callArg = streamSpy.mock.calls[0]![0] as { user: string }
+    const promptQuestions = JSON.parse(callArg.user) as Array<Record<string, unknown>>
+
+    expect(promptQuestions[1]).toMatchObject({
+      type: 'mcq_multi',
+      options: { a: 'Data', c: 'Contoh' },
+      correct: ['a', 'c'],
+    })
+    expect(promptQuestions[2]).toMatchObject({
+      type: 'true_false',
+      statements: [
+        'Teks eksplanasi menjelaskan fenomena.',
+        'Deret penjelas berisi kesimpulan.',
+        'Interpretasi adalah bagian akhir.',
+      ],
+      answers: ['B', 'S', 'B'],
+    })
+    expect(promptQuestions[2]).not.toHaveProperty('optionA')
+    expect(promptQuestions[2]).not.toHaveProperty('correctAnswer')
+  })
 })

@@ -308,17 +308,7 @@ router.post('/:id/discussion', async (c) => {
       grade: exam.grade,
       examType: exam.examType ?? 'formatif',
     },
-    questions: questionRows.map((q) => ({
-      number: q.number,
-      text: q.text,
-      optionA: q.optionA ?? '',
-      optionB: q.optionB ?? '',
-      optionC: q.optionC ?? '',
-      optionD: q.optionD ?? '',
-      correctAnswer: q.correctAnswer ?? '',
-      topic: q.topic ?? '',
-      difficulty: q.difficulty ?? '',
-    })),
+    questions: questionRows.map((q) => rowToQuestion(q)),
   })
 
   aiService ??= createDefaultAiService()

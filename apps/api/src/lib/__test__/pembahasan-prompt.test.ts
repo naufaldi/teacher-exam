@@ -19,6 +19,39 @@ const FAKE_EXAM = {
   examType: 'tka' as const,
 }
 
+const MIXED_QUESTIONS = [
+  {
+    _tag: 'mcq_single' as const,
+    number: 1,
+    text: 'Apa ide pokok paragraf tersebut?',
+    options: { a: 'Jawaban A', b: 'Jawaban B', c: 'Jawaban C', d: 'Jawaban D' },
+    correct: 'b' as const,
+    topic: 'Ide Pokok',
+    difficulty: 'sedang',
+  },
+  {
+    _tag: 'mcq_multi' as const,
+    number: 2,
+    text: 'Pilih dua jawaban yang benar tentang gagasan pendukung.',
+    options: { a: 'Data', b: 'Cerita utama', c: 'Contoh', d: 'Judul' },
+    correct: ['a', 'c'] as const,
+    topic: 'Gagasan Pendukung',
+    difficulty: 'sedang',
+  },
+  {
+    _tag: 'true_false' as const,
+    number: 3,
+    text: 'Tentukan apakah pernyataan berikut benar (B) atau salah (S):',
+    statements: [
+      { text: 'Teks eksplanasi menjelaskan proses terjadinya fenomena.', answer: true },
+      { text: 'Deret penjelas berisi kesimpulan dari fenomena.', answer: false },
+      { text: 'Interpretasi merupakan bagian akhir teks eksplanasi.', answer: true },
+    ],
+    topic: 'Teks Eksplanasi',
+    difficulty: 'sedang',
+  },
+]
+
 describe('buildPembahasanPrompt', () => {
   it('returns { system, user } shape', () => {
     const result = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
@@ -103,5 +136,37 @@ describe('buildPembahasanPrompt', () => {
   it('system provides replacement words for banned terms', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
     expect(system).toContain('tersembunyi')
+  })
+
+  it('serializes mixed question types without empty legacy option placeholders', () => {
+    const { user } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: MIXED_QUESTIONS })
+    const parsed = JSON.parse(user) as Array<Record<string, unknown>>
+
+    expect(parsed[1]).toMatchObject({
+      type: 'mcq_multi',
+      correct: ['a', 'c'],
+      options: { a: 'Data', c: 'Contoh' },
+    })
+    expect(parsed[2]).toMatchObject({
+      type: 'true_false',
+      answers: ['B', 'S', 'B'],
+      statements: [
+        'Teks eksplanasi menjelaskan proses terjadinya fenomena.',
+        'Deret penjelas berisi kesimpulan dari fenomena.',
+        'Interpretasi merupakan bagian akhir teks eksplanasi.',
+      ],
+    })
+    expect(parsed[2]).not.toHaveProperty('optionA')
+    expect(parsed[2]).not.toHaveProperty('correctAnswer')
+  })
+
+  it('instructs Claude how to format answers for all supported question types', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: MIXED_QUESTIONS })
+
+    expect(system).toContain('Pilihan ganda biasa')
+    expect(system).toContain('Pilihan ganda kompleks')
+    expect(system).toContain('Benar/Salah')
+    expect(system).toContain('A, C')
+    expect(system).toContain('B, S, B')
   })
 })
