@@ -6,6 +6,7 @@
 [![API](https://img.shields.io/badge/api-api--ujian--sekolah.faldi.xyz-555?logo=hono)](https://api-ujian-sekolah.faldi.xyz/api/health)
 [![Built with Opus 4.7](https://img.shields.io/badge/built%20with-Claude%20Opus%204.7-d97706)](https://www.anthropic.com/)
 [![Stack](https://img.shields.io/badge/stack-React%2019%20·%20Hono%20·%20Effect--TS-3178c6)](#stack)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Ujian SD** turns one sentence ("PPKn kelas 5, sumatif tengah semester, sila ke-3, 20 soal")
 into an A4-ready exam sheet — mixed item types, answer key, and a teacher-facing
@@ -114,4 +115,4 @@ Submission for the **Cerebral Valley · Built with Opus 4.7** hackathon.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE) (TBD).
+[MIT](LICENSE) © 2026 Naufaldi Rafif
