@@ -136,6 +136,44 @@ Required loop per finished task:
 
 A task is **not done** until: tests are green, the browser flow completes without console errors/warnings, and there are no leftover `console.log` calls in the diff.
 
+## Production
+
+**Live URLs** (no secrets here — this file is public):
+
+| Service | URL |
+|---|---|
+| Web | https://ujian-sekolah.faldi.xyz |
+| API | https://api-ujian-sekolah.faldi.xyz |
+| API health | https://api-ujian-sekolah.faldi.xyz/api/health |
+
+Full operational reference (architecture decisions, deploy commands, bug history, gotchas) → **`docs/ops/PRODUCTION.md`**
+
+### Secret hygiene (open-source repo — mandatory)
+
+- **NEVER** write secrets, passwords, API keys, or VPS credentials into any committed file (`AGENTS.md`, `CLAUDE.md`, `DEPLOY.md`, source code, Dockerfiles, compose files).
+- Production secrets live in `.env.production` on the VPS only — that file is gitignored and never committed.
+- Use `.env.production.example` (committed) as the public template — it lists variable **names** with placeholder values only.
+- If you need to inspect or update a secret: `ssh vps-faldi 'cat ~/projects/teacher-exam/.env.production'` — read it on the server, do not paste values into conversation or files.
+
+### Key deployment facts (no secrets)
+
+- **Infrastructure:** Caddy reverse-proxy (`edge-proxy-caddy`) on VPS `103.59.160.70`, reads Docker labels, auto-issues Let's Encrypt certs.
+- **Domains:** Cloudflare subdomains of `faldi.xyz` — DNS-only or Proxied, both work.
+- **Runtime:** API runs via `node --import tsx/esm src/index.ts` (no tsc build). WORKDIR must be `/app/apps/api` so pnpm-scoped `tsx` resolves.
+- **Vite bake:** `VITE_API_URL` is baked into the JS bundle at Docker build time. Domain changes require `--build web`.
+- **Auth redirect:** `callbackURL` in `signIn.social()` must be an **absolute URL** (`window.location.origin + '/dashboard'`), not relative — or better-auth resolves it against the API host.
+- Compose file: `docker-compose.prod.yml`. Env file: `.env.production` (on VPS, not in repo).
+
+### Update flow
+
+```bash
+# After git push to main:
+ssh vps-faldi 'cd ~/projects/teacher-exam && git pull && \
+  docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build'
+```
+
+---
+
 ## Effect-TS Code Style (Mandatory)
 
 These rules are enforceable across `apps/api`, `apps/web`, `packages/shared`, and any future Effect-using package. Reference: https://effect.website/docs/code-style/guidelines/
