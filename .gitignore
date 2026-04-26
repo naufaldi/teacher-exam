@@ -10,3 +10,6 @@ apps/api/src/curriculum/cache/
 .cursor/
 .tmp-auth.json
 .mcp.json
+
+# Personal hackathon submission notes — not for the public repo
+docs/hackathon-submission.md
