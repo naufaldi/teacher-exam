@@ -55,6 +55,11 @@ services:
     labels:
       caddy: ${API_DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3001}}"
+      caddy.reverse_proxy.transport: http
+      caddy.reverse_proxy.transport.read_timeout: 5m
+      caddy.reverse_proxy.transport.write_timeout: 5m
+      caddy.reverse_proxy.transport.dial_timeout: 30s
+      caddy.reverse_proxy.flush_interval: "-1"
     depends_on:
       db:
         condition: service_healthy

@@ -210,6 +210,30 @@ describe('AiService.generate — multi-type schema validation', () => {
 describe('AiService.generateDiscussion', () => {
   const FAKE_MARKDOWN = `## 1. Soal tentang ide pokok\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.\n\n---`
 
+  it('uses discussionModel (claude-haiku-4-5) by default, not the main model', async () => {
+    const { client, create } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
+    const params = create.mock.calls[0]![0] as { model: string }
+    expect(params.model).toBe('claude-haiku-4-5')
+  })
+
+  it('respects custom discussionModel when provided', async () => {
+    const { client, create } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client, discussionModel: 'claude-opus-4-5' })
+    await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
+    const params = create.mock.calls[0]![0] as { model: string }
+    expect(params.model).toBe('claude-opus-4-5')
+  })
+
+  it('generate() still uses the main model not discussionModel', async () => {
+    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
+    const ai = createAiService({ client })
+    await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
+    const params = create.mock.calls[0]![0] as { model: string }
+    expect(params.model).toBe('claude-opus-4-5')
+  })
+
   it('returns the raw markdown string from Claude', async () => {
     const { client } = fakeClient(FAKE_MARKDOWN)
     const ai = createAiService({ client })
@@ -254,5 +278,36 @@ describe('AiService.generateDiscussion', () => {
     const client: AnthropicLike = { messages: { create } }
     const ai = createAiService({ client })
     await expectAiGenerationError(ai.generateDiscussion({ system: 's', user: 'u' }))
+  })
+})
+
+describe('AiService.streamDiscussion', () => {
+  const FAKE_MARKDOWN = `## 1. Soal tentang ide pokok\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.\n\n---`
+
+  it('yields the full discussion text from Claude', async () => {
+    const { client } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    const chunks: string[] = []
+    for await (const chunk of ai.streamDiscussion({ system: 's', user: 'u' })) {
+      chunks.push(chunk)
+    }
+    expect(chunks.join('')).toBe(FAKE_MARKDOWN)
+  })
+
+  it('uses discussionModel (claude-haiku-4-5) by default', async () => {
+    const { client, create } = fakeClient(FAKE_MARKDOWN)
+    const ai = createAiService({ client })
+    // consume the generator
+    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
+    const params = create.mock.calls[0]![0] as { model: string }
+    expect(params.model).toBe('claude-haiku-4-5')
+  })
+
+  it('throws AiGenerationError when Claude fails during stream', async () => {
+    const { client } = fakeClient(FAKE_MARKDOWN, { stopReason: 'max_tokens' })
+    const ai = createAiService({ client })
+    await expect(async () => {
+      for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
+    }).rejects.toBeInstanceOf(AiGenerationError)
   })
 })

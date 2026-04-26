@@ -22,6 +22,7 @@ export interface DiscussionInput {
 export interface AiService {
   generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
   generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
+  streamDiscussion: (input: DiscussionInput) => AsyncGenerator<string>
 }
 
 /**
@@ -38,10 +39,12 @@ export interface AiServiceConfig {
   client: AnthropicLike
   model?: string
   maxTokens?: number
+  discussionModel?: string
   discussionMaxTokens?: number
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5'
+const DEFAULT_DISCUSSION_MODEL = 'claude-haiku-4-5'
 const DEFAULT_MAX_TOKENS = 32000
 const DEFAULT_DISCUSSION_MAX_TOKENS = 4096
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
@@ -56,8 +59,18 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
  */
 export function createAiService(config: AiServiceConfig): AiService {
   const model = config.model ?? DEFAULT_MODEL
+  const discussionModel = config.discussionModel ?? DEFAULT_DISCUSSION_MODEL
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
   const discussionMaxTokens = config.discussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
+
+  const getDiscussionText = (input: DiscussionInput): Effect.Effect<string, AiGenerationError> =>
+    callAnthropicText({
+      config,
+      model: discussionModel,
+      max_tokens: discussionMaxTokens,
+      system: input.system,
+      content: [{ type: 'text', text: input.user }],
+    }).pipe(Effect.map((text) => stripCodeFence(text)))
 
   return {
     generate({ system, user, pdfBytes, expectedCount }) {
@@ -88,14 +101,14 @@ export function createAiService(config: AiServiceConfig): AiService {
       })
     },
 
-    generateDiscussion({ system, user }) {
-      return callAnthropicText({
-        config,
-        model,
-        max_tokens: discussionMaxTokens,
-        system,
-        content: [{ type: 'text', text: user }],
-      }).pipe(Effect.map((text) => stripCodeFence(text)))
+    generateDiscussion(input) {
+      return getDiscussionText(input)
+    },
+
+    async *streamDiscussion(input) {
+      const result = await Effect.runPromise(Effect.either(getDiscussionText(input)))
+      if (Either.isLeft(result)) throw result.left
+      yield result.right
     },
   }
 }

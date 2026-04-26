@@ -37,7 +37,7 @@ describe('buildPembahasanPrompt', () => {
   it('system specifies the per-question markdown structure from PRD §10.4', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
     expect(system).toContain('Jawaban Benar')
-    expect(system).toContain('penjelasan')
+    expect(system).toContain('menjelaskan')
     expect(system).toContain('Tip')
   })
 
@@ -74,5 +74,20 @@ describe('buildPembahasanPrompt', () => {
     expect(() =>
       buildPembahasanPrompt({ exam: FAKE_EXAM, questions: [] }),
     ).toThrow('buildPembahasanPrompt: questions must not be empty')
+  })
+
+  it('system contains kakak persona for student-friendly tone', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
+    expect(system).toContain('kakak')
+  })
+
+  it('system contains 12 kata sentence-length constraint', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
+    expect(system).toContain('12 kata')
+  })
+
+  it('system contains sehari-hari vocabulary instruction', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
+    expect(system).toContain('sehari-hari')
   })
 })

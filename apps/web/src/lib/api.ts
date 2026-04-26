@@ -130,6 +130,62 @@ export const api = {
       apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
     generateDiscussion: (id: string) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}/discussion`, { method: 'POST' }),
+    streamDiscussion: async (
+      id: string,
+      onDone: (exam: ExamDetailResponse) => void,
+      onError: (message: string) => void,
+    ): Promise<void> => {
+      let response: Response
+      try {
+        response = await fetch(`${API_BASE}/exams/${id}/discussion`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Length': '0' },
+        })
+      } catch {
+        onError('Failed to fetch')
+        return
+      }
+
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({})) as { message?: string; error?: string }
+        onError(body.message ?? body.error ?? `Request failed (${response.status})`)
+        return
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const parts = buffer.split('\n\n')
+          buffer = parts.pop() ?? ''
+          for (const part of parts) {
+            if (!part.trim()) continue
+            let eventType = ''
+            let data = ''
+            for (const line of part.split('\n')) {
+              if (line.startsWith('event: ')) eventType = line.slice(7)
+              else if (line.startsWith('data: ')) data = line.slice(6)
+            }
+            if (eventType === 'done') {
+              onDone(JSON.parse(data) as ExamDetailResponse)
+              return
+            } else if (eventType === 'error') {
+              const err = JSON.parse(data) as { message: string }
+              onError(err.message)
+              return
+            }
+          }
+        }
+      } catch {
+        onError('Failed to fetch')
+      }
+    },
   },
   ai: {
     generate: async (input: GenerateExamInput): Promise<ExamWithQuestions> => {

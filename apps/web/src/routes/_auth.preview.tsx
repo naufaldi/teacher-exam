@@ -537,13 +537,22 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
   const handleGenerate = () => {
     setIsGenerating(true)
     setGenerateError(null)
-    void api.exams.generateDiscussion(exam.id).then((updated) => {
-      setMd(updated.discussionMd)
-    }).catch((err: unknown) => {
-      setGenerateError(err instanceof Error ? err.message : 'Gagal membuat pembahasan. Coba lagi.')
-    }).finally(() => {
-      setIsGenerating(false)
-    })
+    void api.exams.streamDiscussion(
+      exam.id,
+      (updated) => {
+        setMd(updated.discussionMd)
+        setIsGenerating(false)
+      },
+      (message) => {
+        const isFetchError = message === 'Failed to fetch' || message.toLowerCase().includes('failed to fetch')
+        setGenerateError(
+          isFetchError
+            ? 'Koneksi terputus saat membuat pembahasan. Coba lagi sebentar.'
+            : message || 'Gagal membuat pembahasan. Coba lagi.',
+        )
+        setIsGenerating(false)
+      },
+    )
   }
 
   return (

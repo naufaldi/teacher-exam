@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { Schema, Effect, Either } from 'effect'
+import { streamSSE } from 'hono/streaming'
+import { Schema, Effect } from 'effect'
 import { eq, and, desc } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
@@ -322,25 +323,35 @@ router.post('/:id/discussion', async (c) => {
 
   aiService ??= createDefaultAiService()
 
-  const discussionResult = await Effect.runPromise(
-    Effect.either(aiService.generateDiscussion({ system, user })),
-  )
+  return streamSSE(c, async (stream) => {
+    const heartbeat = setInterval(() => {
+      void stream.writeSSE({ event: 'ping', data: '' })
+    }, 25_000)
 
-  if (Either.isLeft(discussionResult)) {
-    const err = discussionResult.left
-    return c.json({ error: 'AI discussion generation failed', message: String(err.cause) }, 502)
-  }
+    try {
+      let discussionMd = ''
+      for await (const chunk of aiService!.streamDiscussion({ system, user })) {
+        discussionMd += chunk
+      }
 
-  const discussionMd = discussionResult.right
+      clearInterval(heartbeat)
 
-  await db
-    .update(exams)
-    .set({ discussionMd, updatedAt: new Date() })
-    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+      await db
+        .update(exams)
+        .set({ discussionMd, updatedAt: new Date() })
+        .where(and(eq(exams.id, id), eq(exams.userId, userId)))
 
-  const updated = await fetchExamWithQuestions(id)
-  if (!updated) return c.json({ error: 'Failed to retrieve updated exam', code: 'DATABASE_ERROR' }, 500)
-  return c.json(updated)
+      const updated = await fetchExamWithQuestions(id)
+      await stream.writeSSE({
+        event: 'done',
+        data: JSON.stringify(updated ?? { error: 'Failed to retrieve updated exam' }),
+      })
+    } catch (err) {
+      clearInterval(heartbeat)
+      const message = err instanceof Error ? err.message : 'Internal error'
+      await stream.writeSSE({ event: 'error', data: JSON.stringify({ message }) })
+    }
+  })
 })
 
   return router

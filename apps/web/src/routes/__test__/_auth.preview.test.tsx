@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentType } from 'react'
-import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, ExamWithQuestions, Question } from '@teacher-exam/shared'
+import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, ExamWithQuestions, Question, ExamDetailResponse } from '@teacher-exam/shared'
 
-const { mockNavigate, mockGenerateDiscussion } = vi.hoisted(() => ({
+const { mockNavigate, mockGenerateDiscussion, mockStreamDiscussion } = vi.hoisted(() => ({
   mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
   mockGenerateDiscussion: vi.fn(),
+  mockStreamDiscussion: vi.fn(),
 }))
 
 // Mutable so individual tests can override loader data (e.g. topics array)
@@ -35,6 +36,7 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
         ...orig.api.exams,
         get: vi.fn(),
         generateDiscussion: mockGenerateDiscussion,
+        streamDiscussion: mockStreamDiscussion,
       },
     },
   }
@@ -402,11 +404,17 @@ describe('Pembahasan tab', () => {
     expect(within(pembahasanSection as HTMLElement).queryByRole('button', { name: /generate pembahasan/i })).not.toBeInTheDocument()
   })
 
-  it('clicking Generate calls api.exams.generateDiscussion and renders returned markdown', async () => {
+  it('clicking Generate calls api.exams.streamDiscussion and renders returned markdown', async () => {
     mockLoaderData = { ...makeExamWithQuestions(['Teks Narasi']), discussionMd: null }
-    mockGenerateDiscussion.mockResolvedValueOnce({
-      ...makeExamWithQuestions(['Teks Narasi']),
-      discussionMd: '## 1. Hasil\n\n**Jawaban Benar: A**\n\nOke.',
+    mockStreamDiscussion.mockImplementationOnce(async (
+      _id: string,
+      onDone: (exam: ExamDetailResponse) => void,
+      _onError: (message: string) => void,
+    ) => {
+      onDone({
+        ...makeExamWithQuestions(['Teks Narasi']),
+        discussionMd: '## 1. Hasil\n\n**Jawaban Benar: A**\n\nOke.',
+      })
     })
 
     renderPreviewPage()
@@ -415,8 +423,26 @@ describe('Pembahasan tab', () => {
     const generateBtn = within(pembahasanSection as HTMLElement).getByRole('button', { name: /generate pembahasan/i })
     fireEvent.click(generateBtn)
 
-    expect(mockGenerateDiscussion).toHaveBeenCalledWith('exam-preview')
+    expect(mockStreamDiscussion).toHaveBeenCalledWith('exam-preview', expect.any(Function), expect.any(Function))
     expect(await screen.findByText(/Jawaban Benar/)).toBeInTheDocument()
+  })
+
+  it('shows Koneksi terputus error when stream fails with network error', async () => {
+    mockLoaderData = { ...makeExamWithQuestions(['Teks Narasi']), discussionMd: null }
+    mockStreamDiscussion.mockImplementationOnce(async (
+      _id: string,
+      _onDone: (exam: ExamDetailResponse) => void,
+      onError: (message: string) => void,
+    ) => {
+      onError('Failed to fetch')
+    })
+
+    renderPreviewPage()
+
+    const pembahasanSection = document.querySelector('[data-print-section="pembahasan"]')
+    fireEvent.click(within(pembahasanSection as HTMLElement).getByRole('button', { name: /generate pembahasan/i }))
+
+    expect(await screen.findByText(/Koneksi terputus/i)).toBeInTheDocument()
   })
 
   it('Cetak Pembahasan button calls triggerPrint with pembahasan scope', () => {

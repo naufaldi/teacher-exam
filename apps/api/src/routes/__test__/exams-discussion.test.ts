@@ -35,13 +35,17 @@ function makeFakeAiService(opts: {
   discussion?: string
   fail?: boolean
 } = {}): AiService {
+  const md = opts.discussion ?? FAKE_DISCUSSION_MD
   return {
     generate: vi.fn(),
     generateDiscussion: vi.fn(() =>
       opts.fail
         ? Effect.fail(new AiGenerationError({ cause: 'AI error' }))
-        : Effect.succeed(opts.discussion ?? FAKE_DISCUSSION_MD),
+        : Effect.succeed(md),
     ),
+    streamDiscussion: opts.fail
+      ? async function* () { throw new AiGenerationError({ cause: 'AI error' }) }
+      : async function* () { yield md },
   } as unknown as AiService
 }
 
@@ -90,7 +94,7 @@ describe('POST /api/exams/:id/discussion', () => {
     expect(body['code']).toBe('DISCUSSION_ALREADY_EXISTS')
   })
 
-  it('returns 502 when AI service fails', async () => {
+  it('sends SSE error event when AI service fails', async () => {
     const finalExam = makeExamRow({ status: 'final' })
     const q = makeQuestionRow({ status: 'accepted' })
     let selectCount = 0
@@ -102,10 +106,13 @@ describe('POST /api/exams/:id/discussion', () => {
 
     const app = buildTestApp(makeFakeAiService({ fail: true }))
     const res = await app.request('/api/exams/exam-1/discussion', { method: 'POST' })
-    expect(res.status).toBe(502)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/event-stream')
+    const text = await res.text()
+    expect(text).toContain('event: error')
   })
 
-  it('generates discussion, persists it, and returns ExamWithQuestions with discussionMd', async () => {
+  it('streams discussion, persists it, and sends SSE done event with discussionMd', async () => {
     const finalExam = makeExamRow({ status: 'final' })
     const updatedExam = makeExamRow({ status: 'final', discussionMd: FAKE_DISCUSSION_MD })
     const q = makeQuestionRow({ status: 'accepted' })
@@ -113,8 +120,8 @@ describe('POST /api/exams/:id/discussion', () => {
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
-      if (selectCount === 1) return makeChain([finalExam])  // ownership + status check
-      return makeChain([q])                                  // questions for AI prompt
+      if (selectCount === 1) return makeChain([finalExam])
+      return makeChain([q])
     })
 
     const updateChain = makeChain([])
@@ -127,15 +134,19 @@ describe('POST /api/exams/:id/discussion', () => {
     const app = buildTestApp(makeFakeAiService())
     const res = await app.request('/api/exams/exam-1/discussion', { method: 'POST' })
     expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/event-stream')
 
-    const body = await res.json() as Record<string, unknown>
-    expect(body['discussionMd']).toBe(FAKE_DISCUSSION_MD)
+    const text = await res.text()
+    expect(text).toContain('event: done')
 
-    // Verify update was called with the markdown
+    const doneMatch = text.match(/event: done\ndata: (.+)/)
+    expect(doneMatch).not.toBeNull()
+    const done = JSON.parse(doneMatch![1]!) as Record<string, unknown>
+    expect(done['discussionMd']).toBe(FAKE_DISCUSSION_MD)
     expect(db.update).toHaveBeenCalledOnce()
   })
 
-  it('calls generateDiscussion with system+user built from exam and questions', async () => {
+  it('calls streamDiscussion with system+user built from exam and questions', async () => {
     const finalExam = makeExamRow({ status: 'final', grade: 6, subject: 'bahasa_indonesia' })
     const q = makeQuestionRow({ status: 'accepted', text: 'Soal tentang paragraf' })
 
@@ -151,14 +162,12 @@ describe('POST /api/exams/:id/discussion', () => {
     ;(fetchExamWithQuestions as Mock).mockResolvedValue({ ...finalExam, questions: [q] })
 
     const fakeAiService = makeFakeAiService()
+    const streamSpy = vi.spyOn(fakeAiService, 'streamDiscussion')
     const app = buildTestApp(fakeAiService)
     await app.request('/api/exams/exam-1/discussion', { method: 'POST' })
 
-    expect(fakeAiService.generateDiscussion).toHaveBeenCalledOnce()
-    const callArg = (fakeAiService.generateDiscussion as Mock).mock.calls[0]![0] as {
-      system: string
-      user: string
-    }
+    expect(streamSpy).toHaveBeenCalledOnce()
+    const callArg = streamSpy.mock.calls[0]![0] as { system: string; user: string }
     expect(typeof callArg.system).toBe('string')
     expect(callArg.system.length).toBeGreaterThan(0)
     expect(callArg.user).toContain('Soal tentang paragraf')
