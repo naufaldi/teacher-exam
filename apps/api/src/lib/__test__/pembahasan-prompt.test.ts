@@ -90,4 +90,18 @@ describe('buildPembahasanPrompt', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
     expect(system).toContain('sehari-hari')
   })
+
+  it('system explicitly bans formal/academic words that are too hard for SD students', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
+    expect(system).toContain('implisit')
+    expect(system).toContain('eksplisit')
+    expect(system).toContain('rincian')
+    expect(system).toContain('mendalam')
+    expect(system).toContain('JANGAN')
+  })
+
+  it('system provides replacement words for banned terms', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
+    expect(system).toContain('tersembunyi')
+  })
 })

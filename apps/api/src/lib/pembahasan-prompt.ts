@@ -46,6 +46,8 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
     `- Tulis untuk anak kelas ${input.exam.grade} SD. Bayangkan kamu menjelaskan ke adikmu sendiri.`,
     '- Setiap kalimat maksimal 12 kata.',
     '- Pakai kata sehari-hari. Hindari istilah teknis. Kalau terpaksa pakai, jelaskan dalam tanda kurung.',
+    '- JANGAN gunakan kata-kata ini (terlalu sulit untuk SD): implisit, eksplisit, rincian, mendalam, konsep, konkret, abstrak, analisis, komprehensif.',
+    '- Ganti dengan kata sederhana: tersembunyi (bukan implisit), jelas/terang-terangan (bukan eksplisit), isi/bagian (bukan rincian), dalam-dalam (bukan mendalam).',
     '- Boleh memakai contoh sederhana dari kehidupan sehari-hari (uang jajan, mainan, makanan, sekolah).',
     '- Tidak boleh menyalin soal kata per kata. Ringkas dengan kalimatmu sendiri.',
     '- Tidak boleh ada paragraf pembuka atau penutup di luar blok per-soal.',
