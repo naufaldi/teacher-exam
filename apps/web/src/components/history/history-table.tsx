@@ -11,6 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Table,
   TableBody,
   TableCell,
@@ -246,20 +249,26 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
                 </Button>
               </>
             )}
-            <details className="relative">
-              <summary
-                className="list-none h-8 w-8 inline-flex items-center justify-center rounded-sm text-text-tertiary hover:bg-kertas-100 hover:text-text-primary cursor-pointer transition-colors duration-[120ms] [&::-webkit-details-marker]:hidden"
-                aria-label="Aksi lain"
-                role="button"
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Aksi lain"
+                  className="h-8 w-8 inline-flex items-center justify-center rounded-sm text-text-tertiary hover:bg-kertas-100 hover:text-text-primary cursor-pointer transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                sideOffset={6}
+                className="w-auto min-w-[180px] p-1"
               >
-                <MoreHorizontal size={14} />
-              </summary>
-              <div className="absolute right-0 top-9 z-10 min-w-[180px] rounded-sm border border-border-default bg-bg-surface shadow-md py-1">
                 {isFinal ? (
                   <button
                     type="button"
                     onClick={handleDuplicate}
-                    className="w-full text-left px-3 py-2 text-body-sm text-text-primary hover:bg-kertas-50 inline-flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-body-sm text-text-primary hover:bg-kertas-50 rounded-xs inline-flex items-center gap-2 cursor-pointer"
                   >
                     <Copy size={13} className="text-text-tertiary" />
                     Duplikat sebagai draft
@@ -268,13 +277,13 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
                 <button
                   type="button"
                   onClick={() => setConfirmOpen(true)}
-                  className="w-full text-left px-3 py-2 text-body-sm text-danger-fg hover:bg-danger-bg inline-flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-body-sm text-danger-fg hover:bg-danger-bg rounded-xs inline-flex items-center gap-2 cursor-pointer"
                 >
                   <Trash2 size={13} />
                   Hapus lembar
                 </button>
-              </div>
-            </details>
+              </PopoverContent>
+            </Popover>
           </div>
         </TableCell>
       </TableRow>

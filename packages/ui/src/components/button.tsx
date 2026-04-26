@@ -10,7 +10,7 @@ const buttonVariants = cva(
     'focus-visible:outline-none focus-visible:ring-3',
     'focus-visible:ring-[color:var(--color-border-focus)]/40',
     'focus-visible:ring-offset-2',
-    'disabled:opacity-45 disabled:cursor-not-allowed',
+    'cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed',
     'active:scale-[0.98]',
   ],
   {
