@@ -28,6 +28,13 @@ export const Route = createFileRoute('/_auth/preview')({
     const exam = await api.exams.get(deps.examId)
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
+    examDraftStore.setConfig({
+      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      grade: exam.grade,
+      topic: exam.topics.join(', '),
+      examType: exam.examType as ExamType,
+      classContext: exam.classContext ?? '',
+    })
     examDraftStore.setMetadata({
       schoolName: exam.schoolName ?? '',
       academicYear: exam.academicYear ?? '',

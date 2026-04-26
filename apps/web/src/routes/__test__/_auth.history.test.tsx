@@ -131,17 +131,18 @@ describe('HistoryPage', () => {
     })
   })
 
-  it('shows print/correction actions for final exams', async () => {
+  it('shows preview/correction actions for final exams', async () => {
     mockApi.exams.list.mockResolvedValueOnce([
       makeExam({ id: 'exam-final', status: 'final' }),
     ])
     renderHistoryPage()
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /cetak/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /koreksi/i })).toBeInTheDocument()
     })
 
+    expect(screen.queryByRole('button', { name: /cetak/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^duplikat$/i })).not.toBeInTheDocument()
   })
@@ -173,6 +174,36 @@ describe('HistoryPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/review',
       search: { examId: 'exam-draft-slow', mode: 'slow' },
+    })
+  })
+
+  it('final exam title opens preview with examId', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-final-title', status: 'final', title: 'Final Bahasa Indonesia' }),
+    ])
+    renderHistoryPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Final Bahasa Indonesia' }))
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/preview',
+      search: { examId: 'exam-final-title' },
+    })
+  })
+
+  it('draft exam title opens review with examId and mode', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-draft-title', status: 'draft', title: 'Draft Pancasila', reviewMode: 'slow' }),
+    ])
+    renderHistoryPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Draft Pancasila' }))
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/review',
+      search: { examId: 'exam-draft-title', mode: 'slow' },
     })
   })
 

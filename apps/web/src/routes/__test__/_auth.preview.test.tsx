@@ -43,10 +43,18 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
 })
 
 import { examDraftStore } from '../../lib/exam-draft-store.js'
+import { api } from '../../lib/api.js'
 import { Route } from '../_auth.preview.js'
 
 type RouteOptions = {
   component: ComponentType
+  loader?: (ctx: { deps: { examId?: string } }) => Promise<unknown>
+}
+
+const mockExamsGet = (api as unknown as { exams: { get: ReturnType<typeof vi.fn> } }).exams.get
+
+function getLoader() {
+  return (Route as unknown as { options: RouteOptions }).options.loader!
 }
 
 const NOW = '2026-04-23T00:00:00.000Z'
@@ -216,6 +224,33 @@ describe('variable points per question', () => {
     renderPreviewPage()
     expect(screen.getByText('10 poin')).toBeInTheDocument()
     expect(screen.getByText('Total: 100 poin')).toBeInTheDocument()
+  })
+})
+
+describe('PreviewPage loader', () => {
+  it('seeds draft config from the loaded exam', async () => {
+    const exam: ExamWithQuestions = {
+      ...makeExamWithQuestions(['Nilai Pancasila', 'Gotong Royong']),
+      id: 'exam-loaded',
+      subject: 'pendidikan_pancasila',
+      grade: 5,
+      examType: 'sas',
+      classContext: 'Siswa perlu contoh konkret.',
+    }
+    mockExamsGet.mockResolvedValueOnce(exam)
+
+    await getLoader()({ deps: { examId: 'exam-loaded' } })
+
+    expect(mockExamsGet).toHaveBeenCalledWith('exam-loaded')
+    expect(examDraftStore.getSnapshot()).toMatchObject({
+      subject: 'pendidikan_pancasila',
+      grade: 5,
+      topic: 'Nilai Pancasila, Gotong Royong',
+      classContext: 'Siswa perlu contoh konkret.',
+      metadata: {
+        examType: 'sas',
+      },
+    })
   })
 })
 

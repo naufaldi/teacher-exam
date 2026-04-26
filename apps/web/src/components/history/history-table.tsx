@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Exam } from '@teacher-exam/shared'
-import { Copy, MoreHorizontal, Pencil, PrinterIcon, Trash2, CheckSquare } from 'lucide-react'
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Badge,
@@ -112,7 +112,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
   const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
   const isFinal = exam.status === 'final'
 
-  function handlePrint() {
+  function handlePreview() {
     void navigate({ to: '/preview', search: { examId: exam.id } })
   }
 
@@ -122,6 +122,14 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
 
   function handleEdit() {
     void navigate({ to: '/review', search: { examId: exam.id, mode: exam.reviewMode } })
+  }
+
+  function handleOpenExam() {
+    if (isFinal) {
+      handlePreview()
+      return
+    }
+    handleEdit()
   }
 
   function handleDuplicate() {
@@ -148,9 +156,13 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
             <div className="min-w-0">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="font-semibold text-body-sm text-text-primary leading-snug truncate cursor-default">
+                  <button
+                    type="button"
+                    onClick={handleOpenExam}
+                    className="block w-full text-left font-semibold text-body-sm text-text-primary leading-snug truncate hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-xs"
+                  >
                     {exam.title}
-                  </div>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="start" className="max-w-[420px] whitespace-normal">
                   {exam.title}
@@ -207,9 +219,9 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
           <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
             {isFinal ? (
               <>
-                <Button variant="secondary" size="sm" onClick={handlePrint}>
-                  <PrinterIcon size={13} />
-                  Cetak
+                <Button variant="secondary" size="sm" onClick={handlePreview}>
+                  <Eye size={13} />
+                  Preview
                 </Button>
                 <Button
                   variant="secondary"
