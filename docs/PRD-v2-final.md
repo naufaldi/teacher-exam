@@ -760,7 +760,7 @@ State `regenerating`, `new-replacement`, dan `regenerate-failed` adalah **state 
 | --------------------------------------------------- | ------------------------------------------- |
 | Online exam (murid mengerjakan di browser)          | Fokus MVP adalah **lembar cetak**           |
 | Scoring otomatis batch (upload foto lembar jawaban) | Koreksi cepat manual sudah cukup untuk MVP  |
-| Penyimpanan data murid di database                  | Koreksi berjalan client-side; privasi murid |
+| Penyimpanan data murid di database                  | Koreksi berjalan client-side; privasi murid. _**Catatan 2026-04-29 (v5):** stance ini direvisi oleh PRD v5 §2.2 (Student Identity Capture) dan §2.2bis (Students Data Model), tercatat sebagai Decision **D-1** di `docs/ROADMAP.md`. Ringkasan: nama murid disimpan di tabel `students` per akun guru karena lembar jawaban kertas sudah memuatnya; tidak ada PII tambahan dikumpulkan; data terkurung per tenant (`user_id`)._ |
 | Analisis butir soal (item analysis)                 | Phase 2 setelah data koreksi bisa disimpan  |
 | Soal acak (multiple variants)                       | Kompleksitas tambahan, bisa di v2           |
 | Essay / isian singkat                               | Fokus pada pilihan ganda                    |

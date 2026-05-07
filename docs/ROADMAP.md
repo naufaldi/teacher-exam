@@ -19,6 +19,16 @@ Teachers generate exam questions across all 5 academic subjects, correct student
 **Current state:** 2 subjects (BI + PPKN), all core features working in production.
 **Target by Nov 2026:** 5 subjects, Bank Soal, deep correction analytics, weakness analysis with re-teach suggestions.
 
+## Decisions
+
+Append-only record of cross-PRD product/technical decisions. Never edit a past decision; supersede with a new one.
+
+| ID | Date | Decision | Supersedes | Rationale |
+|----|------|----------|------------|-----------|
+| D-1 | 2026-04-29 | Koreksi memperkenalkan tabel `students` (per-teacher, scoped by `user_id` + `class_label` + `subject`). `student_answers.student_id` adalah FK ke `students.id`. Identitas murid dimasukkan via form Nama+Absen sebelum mark jawaban. | PRD v2 §"Privasi murid" baris 763 (koreksi client-side, non-persisten) | Lembar jawaban kertas sudah memuat nama murid; aplikasi hanya mendigitalisasi rekap manual. Tidak ada PII tambahan. Data terisolasi per akun guru. Lihat PRD v5 §2.2 (alur) dan §2.2bis (model data). |
+
+---
+
 ## PRD Alignment
 
 Each milestone maps to a PRD:
@@ -28,7 +38,7 @@ Each milestone maps to a PRD:
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented | Baseline MVP (BI + PPKN, generate, review, preview, correction, history) |
 | [PRD v3](PRD-v3-multi-subject.md) | ⬜ Not started | M1, M2, M3 (IPAS, B. Inggris, Matematika) |
 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started | M4 (Bank Soal + Exam Builder) |
-| [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started | M5 (Correction Depth) |
+| [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started | M5 (Correction Depth) — includes `students` table + identity capture (D-1) |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
 
 ---
@@ -185,18 +195,19 @@ _(Record issues here as they're discovered)_
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 5.1 | DB schema: correction_sessions, student_answers | Tables created, migration clean | `pnpm db:migrate` success | ⬜ |
-| 5.2 | Migrate correction from React state to server | Save/load correction data via API | API test passes | ⬜ |
-| 5.3 | Batch import: CSV/spreadsheet upload | Upload CSV → bulk score all students | Browser verify | ⬜ |
+| 5.0 | Students table + identity capture flow (PRD v5 §2.2 / §2.2bis) | `students` migration applied; form Nama+Absen gates panel jawaban; dedup dialog working; autocomplete from scope; merge dialog on edit-name conflict | Browser verify: form → submit → panel; reload retains; merge resolver works | ⬜ |
+| 5.1 | DB schema: correction_sessions, student_answers (with student_id FK) | Tables created, migration clean, cascade constraints verified | `pnpm db:migrate` success | ⬜ |
+| 5.2 | Migrate correction from React state to server | Save/load correction data via API, keyed by student_id | API test passes | ⬜ |
+| 5.3 | Batch import: CSV/spreadsheet upload | Upload CSV → upsert students (dedup) → bulk score | Browser verify | ⬜ |
 | 5.4 | Item analysis: per-question stats | % correct, % wrong per option (distractor) | UI renders correctly | ⬜ |
 | 5.5 | Class comparison | Compare scores across classes for same exam | UI renders correctly | ⬜ |
 | 5.6 | Export rekap to CSV | Download button works | File downloads, opens in Excel | ⬜ |
-| 5.7 | Historical trends | Track student scores across multiple exams | UI renders correctly | ⬜ |
-| 5.8 | Browser verification | Full flow: correct → save → analyze → export | No console errors | ⬜ |
+| 5.7 | Historical trends | Track student scores across multiple exams, keyed by students.id | UI renders correctly | ⬜ |
+| 5.8 | Browser verification | Full flow: capture name → correct → save → analyze → export | No console errors | ⬜ |
 
 ### Done when
 
-Teacher corrects exam, saves to DB, sees item analysis, exports to CSV.
+Teacher captures student name from paper sheet via Nama+Absen form (with autocomplete + dedup), data persists across sessions, item analysis surfaces weak questions, rekap exports to CSV — all keyed off the per-teacher `students` table.
 
 ### Decisions
 
