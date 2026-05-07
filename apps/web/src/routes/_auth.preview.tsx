@@ -13,6 +13,7 @@ import {
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
+import { FigureSvg } from '../components/figure-svg.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 
@@ -351,6 +352,7 @@ function SoalSection({
                 <span className="font-bold mr-1">{q.number}.</span>
                 <span className="whitespace-pre-line">{q.text}</span>
               </p>
+              {q.figure ? <FigureSvg figure={q.figure} /> : null}
               {matchQuestion(q, {
                 mcq_single: (x) => renderMcqOptions(x.options),
                 mcq_multi: (x) => renderMcqOptions(x.options),

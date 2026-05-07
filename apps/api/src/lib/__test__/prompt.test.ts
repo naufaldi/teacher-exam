@@ -276,3 +276,27 @@ describe('buildExamPrompt — composition and multi-type', () => {
     expect(user).not.toContain('benar/salah')
   })
 })
+
+describe('buildExamPrompt — geometry figure spec', () => {
+  test('system message describes optional figure JSON for diagram geometry topics', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      subjectLabel: 'Matematika',
+      grade: 5,
+      topics: ['Bangun Datar'],
+      totalSoal: 20,
+      curriculumText: 'Dummy matematika curriculum.',
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('"figure"')
+    expect(system).toContain('circle')
+    expect(system).toContain('square')
+    expect(system).toContain('rectangle')
+    expect(system).toContain('triangle')
+    expect(system).toContain('trapezoid')
+    expect(system).toContain('coordinate_plane')
+    expect(system).toContain('opsional')
+  })
+})
