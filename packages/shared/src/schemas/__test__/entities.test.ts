@@ -16,7 +16,19 @@ describe('QuestionSchema — mcq_single', () => {
     const result = Schema.decodeUnknownEither(QuestionSchema)({
       ...baseQuestion,
       _tag: 'mcq_single',
+      figure: null,
       options: { a: 'Jakarta', b: 'Bandung', c: 'Surabaya', d: 'Medan' },
+      correct: 'a',
+    })
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test('decodes valid mcq_single with a geometry figure', () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion,
+      _tag: 'mcq_single',
+      figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+      options: { a: '154 cm²', b: '44 cm²', c: '22 cm²', d: '49 cm²' },
       correct: 'a',
     })
     expect(Either.isRight(result)).toBe(true)
@@ -95,6 +107,19 @@ describe('GeneratedQuestionSchema — mcq_single', () => {
       correct_answer: 'b', topic: 'Geografi', difficulty: 'mudah',
     })
     expect(Either.isRight(result)).toBe(true)
+  })
+
+  test('keeps raw invalid ai figure for route-level downgrade', () => {
+    const result = Schema.decodeUnknownEither(GeneratedQuestionSchema)({
+      _tag: 'mcq_single', number: 1,
+      text: 'Soal?', option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D',
+      correct_answer: 'b', topic: 'Bangun Datar', difficulty: 'mudah',
+      figure: { type: 'pentagon', side: 5 },
+    })
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right.figure).toEqual({ type: 'pentagon', side: 5 })
+    }
   })
 })
 

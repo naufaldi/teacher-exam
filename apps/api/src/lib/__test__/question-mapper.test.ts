@@ -24,10 +24,22 @@ describe('rowToQuestion', () => {
       payload: null,
     })
     expect(result._tag).toBe('mcq_single')
+    expect(result.figure).toBeNull()
     if (result._tag === 'mcq_single') {
       expect(result.options.a).toBe('Jakarta')
       expect(result.correct).toBe('a')
     }
+  })
+
+  test('maps figure from payload for a persisted mcq_single row', () => {
+    const result = rowToQuestion({
+      ...baseRow,
+      type: 'mcq_single',
+      optionA: '154 cm²', optionB: '44 cm²', optionC: '22 cm²', optionD: '49 cm²',
+      correctAnswer: 'a',
+      payload: { figure: { type: 'circle', radius: 7, label: 'r = 7 cm' } },
+    })
+    expect(result.figure).toEqual({ type: 'circle', radius: 7, label: 'r = 7 cm' })
   })
 
   test('maps mcq_multi row (payload present, legacy cols null)', () => {
@@ -74,6 +86,7 @@ describe('questionToRow', () => {
     const result = questionToRow({
       _tag: 'mcq_single',
       ...baseRow,
+      figure: null,
       options: { a: 'Jakarta', b: 'Bandung', c: 'Surabaya', d: 'Medan' },
       correct: 'a',
     })
@@ -81,6 +94,19 @@ describe('questionToRow', () => {
     expect(result.optionA).toBe('Jakarta')
     expect(result.correctAnswer).toBe('a')
     expect(result.payload).toBeNull()
+  })
+
+  test('mcq_single writes figure into payload without moving legacy option columns', () => {
+    const result = questionToRow({
+      _tag: 'mcq_single',
+      ...baseRow,
+      figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+      options: { a: '154 cm²', b: '44 cm²', c: '22 cm²', d: '49 cm²' },
+      correct: 'a',
+    })
+    expect(result.optionA).toBe('154 cm²')
+    expect(result.correctAnswer).toBe('a')
+    expect(result.payload).toEqual({ figure: { type: 'circle', radius: 7, label: 'r = 7 cm' } })
   })
 
   test('mcq_multi writes payload, legacy cols null', () => {

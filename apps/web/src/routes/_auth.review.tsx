@@ -31,6 +31,7 @@ import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dia
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
+import { FigureSvg } from '../components/figure-svg.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
 import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
@@ -659,6 +660,7 @@ function ReviewPage() {
                           )}
                         </div>
                         <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
+                        {q.figure ? <FigureSvg figure={q.figure} /> : null}
                         {matchQuestion(q, {
                           mcq_single: (sq) => (
                             <div className="grid grid-cols-2 gap-1 mb-4">

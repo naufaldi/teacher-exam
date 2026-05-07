@@ -1,5 +1,12 @@
-import { Match } from 'effect'
-import type { Question, McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion } from '@teacher-exam/shared'
+import { Either, Match, Schema } from 'effect'
+import {
+  FigureSpecSchema,
+  type FigureSpec,
+  type Question,
+  type McqSingleQuestion,
+  type McqMultiQuestion,
+  type TrueFalseQuestion,
+} from '@teacher-exam/shared'
 
 // Type representing a DB row from the questions table
 type QuestionRow = {
@@ -22,18 +29,45 @@ type QuestionRow = {
   createdAt: Date | string
 }
 
-const commonFields = (row: QuestionRow) => ({
-  id: row.id,
-  examId: row.examId,
-  number: row.number,
-  text: row.text,
-  topic: row.topic,
-  difficulty: row.difficulty,
-  status: row.status as McqSingleQuestion['status'],
-  validationStatus: row.validationStatus as McqSingleQuestion['validationStatus'],
-  validationReason: row.validationReason,
-  createdAt: typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString(),
-})
+type QuestionRowPayload = Record<string, unknown>
+
+function payloadObject(payload: unknown): Record<string, unknown> {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return {}
+  return payload as QuestionRowPayload
+}
+
+function decodePayloadFigure(payload: unknown): FigureSpec | null {
+  const figure = payloadObject(payload)['figure']
+  if (figure === undefined || figure === null) return null
+  const decoded = Schema.decodeUnknownEither(FigureSpecSchema)(figure)
+  return Either.isRight(decoded) ? decoded.right : null
+}
+
+function commonFields(row: QuestionRow): Omit<McqSingleQuestion, '_tag' | 'options' | 'correct'> {
+  return {
+    id: row.id,
+    examId: row.examId,
+    number: row.number,
+    text: row.text,
+    topic: row.topic,
+    difficulty: row.difficulty,
+    status: row.status as McqSingleQuestion['status'],
+    validationStatus: row.validationStatus as McqSingleQuestion['validationStatus'],
+    validationReason: row.validationReason,
+    figure: decodePayloadFigure(row.payload),
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString(),
+  }
+}
+
+type QuestionRowWrite = {
+  type: string
+  optionA: string | null
+  optionB: string | null
+  optionC: string | null
+  optionD: string | null
+  correctAnswer: 'a' | 'b' | 'c' | 'd' | null
+  payload: unknown
+}
 
 export function rowToQuestion(row: QuestionRow): Question {
   return Match.value(row.type).pipe(
@@ -52,7 +86,7 @@ export function rowToQuestion(row: QuestionRow): Question {
       return q
     }),
     Match.when('mcq_multi', () => {
-      const p = row.payload as { options: { a: string; b: string; c: string; d: string }; correct: string[] }
+      const p = payloadObject(row.payload) as { options: { a: string; b: string; c: string; d: string }; correct: string[] }
       const q: McqMultiQuestion = {
         ...commonFields(row),
         _tag: 'mcq_multi',
@@ -62,7 +96,7 @@ export function rowToQuestion(row: QuestionRow): Question {
       return q
     }),
     Match.when('true_false', () => {
-      const p = row.payload as { statements: Array<{ text: string; answer: boolean }> }
+      const p = payloadObject(row.payload) as { statements: Array<{ text: string; answer: boolean }> }
       const q: TrueFalseQuestion = {
         ...commonFields(row),
         _tag: 'true_false',
@@ -83,15 +117,12 @@ export function rowToQuestion(row: QuestionRow): Question {
   )
 }
 
-export function questionToRow(q: Question): {
-  type: string
-  optionA: string | null
-  optionB: string | null
-  optionC: string | null
-  optionD: string | null
-  correctAnswer: 'a' | 'b' | 'c' | 'd' | null
-  payload: unknown
-} {
+function payloadWithFigure(payload: QuestionRowPayload | null, figure: FigureSpec | null | undefined): QuestionRowPayload | null {
+  if (!figure) return payload
+  return { ...(payload ?? {}), figure }
+}
+
+export function questionToRow(q: Question): QuestionRowWrite {
   return Match.value(q).pipe(
     Match.tag('mcq_single', (x) => ({
       type: 'mcq_single' as const,
@@ -100,7 +131,7 @@ export function questionToRow(q: Question): {
       optionC: x.options.c,
       optionD: x.options.d,
       correctAnswer: x.correct,
-      payload: null,
+      payload: payloadWithFigure(null, x.figure),
     })),
     Match.tag('mcq_multi', (x) => ({
       type: 'mcq_multi' as const,
@@ -109,7 +140,7 @@ export function questionToRow(q: Question): {
       optionC: null,
       optionD: null,
       correctAnswer: null,
-      payload: { options: x.options, correct: x.correct },
+      payload: payloadWithFigure({ options: x.options, correct: x.correct }, x.figure),
     })),
     Match.tag('true_false', (x) => ({
       type: 'true_false' as const,
@@ -118,7 +149,7 @@ export function questionToRow(q: Question): {
       optionC: null,
       optionD: null,
       correctAnswer: null,
-      payload: { statements: x.statements },
+      payload: payloadWithFigure({ statements: x.statements }, x.figure),
     })),
     Match.exhaustive,
   )

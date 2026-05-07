@@ -11,6 +11,7 @@ import {
   ValidationStatusSchema,
   type ExamType,
 } from './primitives.js'
+import { FigureSpecSchema } from './figures.js'
 
 // ── User profile ───────────────────────────────────────────
 export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
@@ -50,6 +51,7 @@ const QuestionCommonFields = {
   status:           QuestionStatusSchema,
   validationStatus: Schema.NullOr(ValidationStatusSchema),
   validationReason: Schema.NullOr(Schema.String),
+  figure:           Schema.optional(Schema.NullOr(FigureSpecSchema)),
   createdAt:        Schema.String,
 } as const
 
@@ -137,6 +139,7 @@ const GeneratedBaseFields = {
   topic:           Schema.String,
   difficulty:      Schema.String,
   cognitive_level: Schema.optional(CognitiveLevelSchema),
+  figure:          Schema.optional(Schema.Unknown),
 } as const
 
 const GeneratedMcqCommonFields = {
