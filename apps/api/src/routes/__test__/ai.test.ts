@@ -255,6 +255,44 @@ describe('POST /api/ai/generate', () => {
     expect(insertedQuestions?.every((q) => q.status === 'pending')).toBe(true)
   })
 
+  it('strips invalid generated figure and persists a needs_review validation marker', async () => {
+    const generatedWithBadFigure: GeneratedQuestion[] = Array.from({ length: 20 }, (_, i) => ({
+      ...makeFakeQuestion(i + 1),
+      ...(i === 0 ? { figure: { type: 'pentagon', side: 5 } } : {}),
+    }))
+    ;(fakeAiService.generate as Mock).mockReturnValueOnce(Effect.succeed(generatedWithBadFigure))
+
+    const examRow = makeExamRow()
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_BODY),
+    })
+
+    expect(res.status).toBe(201)
+    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as Array<Record<string, unknown>> | undefined
+    const firstQuestion = insertedQuestions?.[0]
+    expect(firstQuestion?.['payload']).toBeNull()
+    expect(firstQuestion?.['validationStatus']).toBe('needs_review')
+    expect(firstQuestion?.['validationReason']).toContain('FigureSpec')
+  })
+
   it('returns 502 and skips DB insert when AiService fails', async () => {
     ;(fakeAiService.generate as Mock).mockReturnValueOnce(
       Effect.fail(new AiGenerationError({ cause: 'Claude failed' })),

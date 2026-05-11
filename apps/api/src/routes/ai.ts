@@ -6,8 +6,9 @@ import {
   normalizeExamType,
   formatExamTitle,
   SUBJECT_LABEL,
+  FigureSpecSchema,
 } from '@teacher-exam/shared'
-import type { Question, GeneratedQuestion } from '@teacher-exam/shared'
+import type { FigureSpec, GeneratedQuestion, Question } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
 import { EXAM_TYPE_PROFILE, resolveComposition } from '../lib/exam-type-profile'
 import { buildExamPrompt } from '../lib/prompt'
@@ -22,6 +23,7 @@ function convertGeneratedToQuestion(
   q: GeneratedQuestion,
   meta: { id: string; examId: string; number: number; status: 'accepted' | 'pending'; createdAt: Date },
 ): Question {
+  const figureResult = decodeGeneratedFigure(q.figure)
   const common = {
     id: meta.id,
     examId: meta.examId,
@@ -30,8 +32,9 @@ function convertGeneratedToQuestion(
     topic: q.topic ?? null,
     difficulty: q.difficulty ?? null,
     status: meta.status,
-    validationStatus: null,
-    validationReason: null,
+    validationStatus: figureResult.status,
+    validationReason: figureResult.reason,
+    figure: figureResult.figure,
     createdAt: meta.createdAt.toISOString(),
   }
   const result = Match.value(q).pipe(
@@ -55,6 +58,27 @@ function convertGeneratedToQuestion(
     Match.exhaustive,
   )
   return result
+}
+
+function decodeGeneratedFigure(raw: unknown): {
+  figure: FigureSpec | null
+  status: 'needs_review' | null
+  reason: string | null
+} {
+  if (raw === undefined || raw === null) {
+    return { figure: null, status: null, reason: null }
+  }
+
+  const decoded = Schema.decodeUnknownEither(FigureSpecSchema)(raw)
+  if (Either.isRight(decoded)) {
+    return { figure: decoded.right, status: null, reason: null }
+  }
+
+  return {
+    figure: null,
+    status: 'needs_review',
+    reason: `FigureSpec validation failed; diagram was removed: ${String(decoded.left)}`,
+  }
 }
 
 /**
@@ -163,6 +187,8 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
             topic: dbQuestion.topic,
             difficulty: dbQuestion.difficulty,
             status: dbQuestion.status,
+            validationStatus: dbQuestion.validationStatus,
+            validationReason: dbQuestion.validationReason,
             createdAt: now,
             type: rowFields.type,
             optionA: rowFields.optionA,

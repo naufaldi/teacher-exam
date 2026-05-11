@@ -205,6 +205,26 @@ describe('AiService.generate — multi-type schema validation', () => {
     const ai = createAiService({ client })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
+
+  it('preserves malformed figure JSON for route-level downgrade', async () => {
+    const withInvalidFigure = [{
+      _tag: 'mcq_single',
+      number: 1,
+      text: 'Soal bangun datar',
+      option_a: 'A',
+      option_b: 'B',
+      option_c: 'C',
+      option_d: 'D',
+      correct_answer: 'a',
+      topic: 'Bangun Datar',
+      difficulty: 'mudah',
+      figure: { type: 'pentagon', side: 5 },
+    }]
+    const { client } = fakeClient(JSON.stringify(withInvalidFigure))
+    const ai = createAiService({ client })
+    const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
+    expect(result[0]?.figure).toEqual({ type: 'pentagon', side: 5 })
+  })
 })
 
 describe('AiService.generateDiscussion', () => {
