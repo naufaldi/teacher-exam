@@ -72,8 +72,8 @@ jobs:
           platforms: linux/amd64
           push: true
           build-args: |
-            VITE_API_URL=https://api.ujiansd.com/api
-            VITE_APP_ORIGIN=https://ujiansd.com
+            VITE_API_URL=https://api-ujian-sekolah.faldi.xyz/api
+            VITE_APP_ORIGIN=https://ujian-sekolah.faldi.xyz
           tags: |
             ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
             ${{ env.WEB_IMAGE }}:latest
@@ -126,7 +126,7 @@ jobs:
             # Health check
             echo "Waiting for API to be healthy..."
             for i in $(seq 1 30); do
-              if curl -sf https://api.ujiansd.com/api/health > /dev/null 2>&1; then
+              if curl -sf https://api-ujian-sekolah.faldi.xyz/api/health > /dev/null 2>&1; then
                 echo "API is healthy"
                 break
               fi
