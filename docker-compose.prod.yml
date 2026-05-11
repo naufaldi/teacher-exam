@@ -17,9 +17,7 @@ services:
       retries: 5
 
   migrate:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY}/teacher-exam-api:${IMAGE_TAG:-latest}
     command: ["pnpm", "--filter", "@teacher-exam/db", "db:migrate"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -32,9 +30,7 @@ services:
       - migrate
 
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY}/teacher-exam-api:${IMAGE_TAG:-latest}
     restart: always
     environment:
       NODE_ENV: production
@@ -71,14 +67,7 @@ services:
       start_period: 60s
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        VITE_API_URL: https://${API_DOMAIN}/api
-        VITE_APP_ORIGIN: https://${DOMAIN}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-prod}
-        VITE_BUILD_ID: ${VITE_BUILD_ID:-prod}
+    image: ghcr.io/${GITHUB_REPOSITORY}/teacher-exam-web:${IMAGE_TAG:-latest}
     restart: always
     networks:
       - edge

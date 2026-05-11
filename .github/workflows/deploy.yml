@@ -1,0 +1,145 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository }}/teacher-exam-api
+  WEB_IMAGE: ghcr.io/${{ github.repository }}/teacher-exam-web
+
+jobs:
+  commit-hash:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_hash: ${{ steps.get_commit.outputs.commit_hash }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get commit hash
+        id: get_commit
+        run: echo "commit_hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+  build-and-push-api:
+    needs: commit-hash
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+            ${{ env.API_IMAGE }}:latest
+
+  build-and-push-web:
+    needs: commit-hash
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VITE_API_URL=https://api.ujiansd.com/api
+            VITE_APP_ORIGIN=https://ujiansd.com
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+            ${{ env.WEB_IMAGE }}:latest
+
+  deploy:
+    needs: [build-and-push-api, build-and-push-web, commit-hash]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 300s
+          script: |
+            set -e
+
+            cd ~/projects/teacher-exam
+
+            # Pull latest code (for compose file changes)
+            git pull origin main
+
+            # Login to GHCR
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull new images
+            echo "Pulling API image..."
+            docker pull ${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+            echo "Pulling Web image..."
+            docker pull ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+
+            # Update IMAGE_TAG and GITHUB_REPOSITORY in .env.production
+            grep -v "^IMAGE_TAG=" .env.production > .env.production.tmp || true
+            grep -v "^GITHUB_REPOSITORY=" .env.production.tmp > .env.production
+            rm -f .env.production.tmp
+            echo "IMAGE_TAG=${{ needs.commit-hash.outputs.commit_hash }}" >> .env.production
+            echo "GITHUB_REPOSITORY=${{ github.repository }}" >> .env.production
+
+            # Run DB migration
+            echo "Running database migration..."
+            docker compose -f docker-compose.prod.yml --env-file .env.production \
+              run --rm migrate
+
+            # Restart services with new images
+            echo "Restarting services..."
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+            # Health check
+            echo "Waiting for API to be healthy..."
+            for i in $(seq 1 30); do
+              if curl -sf https://api.ujiansd.com/api/health > /dev/null 2>&1; then
+                echo "API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Health check failed after 30 attempts"
+                docker compose -f docker-compose.prod.yml logs --tail=20 api
+                exit 1
+              fi
+              echo "Attempt $i/30 - waiting 5s..."
+              sleep 5
+            done
+
+            # Cleanup old images
+            docker image prune -f
+
+            echo "Deployed ${{ needs.commit-hash.outputs.commit_hash }}"
