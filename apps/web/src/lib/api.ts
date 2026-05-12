@@ -1,9 +1,11 @@
 import { Schema } from 'effect'
 import type {
   Exam,
+  ExamShareResponse,
   HealthResponse,
   ExamListResponse,
   ExamDetailResponse,
+  PublicExamDetailResponse,
   UserProfile,
   UpdateProfileInput,
   ExamWithQuestions,
@@ -13,7 +15,11 @@ import type {
   QuestionResponse,
   RegenerateQuestionInput,
 } from '@teacher-exam/shared'
-import { ExamWithQuestionsSchema } from '@teacher-exam/shared'
+import {
+  ExamShareResponseSchema,
+  ExamWithQuestionsSchema,
+  PublicExamWithQuestionsSchema,
+} from '@teacher-exam/shared'
 
 // Prod: VITE_API_URL=https://api.ujiansd.com/api (baked at build time)
 // Dev: unset → relative path, proxied by Vite to :3001
@@ -112,6 +118,19 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return res.json() as Promise<T>
 }
 
+function decodeResponse<T>(schema: Schema.Schema<T>, raw: unknown): T {
+  const decoded = Schema.decodeUnknownEither(schema)(raw)
+  if (decoded._tag === 'Left') {
+    throw new ApiError({
+      message: 'Invalid response from server',
+      code: 'DECODE_ERROR',
+      status: 0,
+    })
+  }
+
+  return decoded.right as T
+}
+
 export const api = {
   health: {
     get: () => apiFetch<HealthResponse>('/health'),
@@ -126,6 +145,10 @@ export const api = {
       }),
     remove: (id: string) => apiFetch<void>(`/exams/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => apiFetch<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
+    share: async (id: string): Promise<ExamShareResponse> => {
+      const raw = await apiFetch<unknown>(`/exams/${id}/share`, { method: 'POST' })
+      return decodeResponse<ExamShareResponse>(ExamShareResponseSchema, raw)
+    },
     finalize: (id: string) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
     generateDiscussion: (id: string) =>
@@ -223,5 +246,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
+  },
+  publicExams: {
+    get: async (slug: string): Promise<PublicExamDetailResponse> => {
+      const raw = await apiFetch<unknown>(`/public/exams/${slug}`)
+      return decodeResponse<PublicExamDetailResponse>(PublicExamWithQuestionsSchema, raw)
+    },
   },
 }

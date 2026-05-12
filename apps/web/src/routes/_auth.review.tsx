@@ -36,8 +36,15 @@ import { QuestionEditDialog } from '../components/review/question-edit-dialog.js
 import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
 import { SwitchModeDialog } from '../components/review/switch-mode-dialog.js'
+
+const ACADEMIC_YEARS = Array.from({ length: 11 }, (_, i) => {
+  const start = new Date().getFullYear() - 5 + i
+  return `${start}/${start + 1}`
+})
+
 export const Route = createFileRoute('/_auth/review')({
   component: ReviewPage,
+  pendingComponent: ReviewSkeleton,
   validateSearch: (search): { mode: 'fast' | 'slow'; from?: 'generate'; examId?: string } => {
     const result: { mode: 'fast' | 'slow'; from?: 'generate'; examId?: string } = {
       mode: (search['mode'] as 'fast' | 'slow') ?? 'fast',
@@ -54,7 +61,7 @@ export const Route = createFileRoute('/_auth/review')({
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({
-      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      subject: exam.subject,
       grade: exam.grade,
       topic: exam.topics.join(', '),
       examType: exam.examType as ExamType,
@@ -817,13 +824,22 @@ function ReviewPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tahun">Tahun Pelajaran</Label>
-            <Input
-              id="tahun"
+            <Select
               value={academicYear}
-              onChange={(e) => examDraftStore.setMetadata({ academicYear: e.target.value })}
-              onBlur={(e) => { void persistMetaField({ academicYear: e.target.value }) }}
-              placeholder="2025/2026"
-            />
+              onValueChange={(v) => {
+                examDraftStore.setMetadata({ academicYear: v })
+                void persistMetaField({ academicYear: v })
+              }}
+            >
+              <SelectTrigger id="tahun">
+                <SelectValue placeholder="Pilih tahun pelajaran" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACADEMIC_YEARS.map((y) => (
+                  <SelectItem key={y} value={y}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {/* PRD §8.6 */}
           <div className="space-y-1.5">
@@ -938,6 +954,35 @@ function ReviewPage() {
         count={failedRegenIds.size}
         onConfirm={() => { void handleRetryAllFailed() }}
       />
+    </div>
+  )
+}
+
+function ReviewSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header skeleton */}
+      <div className="flex items-center gap-4">
+        <div className="h-8 w-8 rounded bg-kertas-100" />
+        <div className="space-y-2">
+          <div className="h-6 w-48 rounded bg-kertas-100" />
+          <div className="h-4 w-32 rounded bg-kertas-100" />
+        </div>
+      </div>
+      {/* Action bar skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-40 rounded bg-kertas-100" />
+        <div className="flex gap-2">
+          <div className="h-8 w-24 rounded bg-kertas-100" />
+          <div className="h-8 w-32 rounded bg-kertas-100" />
+        </div>
+      </div>
+      {/* Question cards skeleton */}
+      <div className="space-y-3">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="h-28 rounded-md bg-kertas-100" />
+        ))}
+      </div>
     </div>
   )
 }

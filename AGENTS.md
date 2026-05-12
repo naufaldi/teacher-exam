@@ -39,7 +39,12 @@ pnpm 10.15 + Turborepo monorepo. Node >= 22 required.
 
 Single `.env` at repo root (gitignored). API loads it via `--env-file-if-exists=../../.env` (Node flag).
 
-Required: `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ANTHROPIC_API_KEY`
+Required — core: `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+
+AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
+
+- **`AI_PROVIDER=anthropic`** (Anthropic Claude on `api.anthropic.com`): `ANTHROPIC_API_KEY`
+- **`AI_PROVIDER=minimax`** (MiniMax M2.7 via the same `@anthropic-ai/sdk`; [Anthropic-compatible API](https://platform.minimax.io/docs/api-reference/text-anthropic-api)): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
 
 Optional with defaults: `API_PORT` (3001), `WEB_PORT` (3000)
 

@@ -79,6 +79,36 @@ const TOPIK_PPKN = [
   'Musyawarah dan Pengambilan Keputusan',
 ] as const
 
+const TOPIK_IPAS = [
+  'Cahaya dan Sifat-sifatnya',
+  'Bunyi dan Sumber Bunyi',
+  'Ekosistem dan Keseimbangan Alam',
+  'Air dan Siklus Air',
+  'Perubahan Wujud Benda',
+  'Energi dan Perubahannya',
+  'Tata Surya dan Planet',
+  'Sistem Pencernaan Manusia',
+  'Keanekaragaman Hayati Indonesia',
+  'Pelestarian Lingkungan Hidup',
+  'Geografi Indonesia dan Wilayah NKRI',
+  'Sejarah dan Keberagaman Budaya Daerah',
+] as const
+
+const TOPIK_BINGGRIS = [
+  'Reading Comprehension',
+  'Vocabulary — Daily Activities',
+  'Vocabulary — Food and Health',
+  'Descriptive Text',
+  'Narrative Text',
+  'Functional Text (Labels, Signs, Instructions)',
+  'Grammar — Simple Present Tense',
+  'Grammar — Simple Past Tense',
+  'Listening Comprehension',
+  'Speaking — Greetings and Introductions',
+  'Writing — Short Messages and Letters',
+  'Procedures and Instructions',
+] as const
+
 // ── Display label maps ────────────────────────────────────────────────────────
 
 const KESULITAN_LABELS: Record<string, string> = {
@@ -263,7 +293,10 @@ function GeneratePage() {
     return clearTimers
   }, [clearTimers])
 
-  const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI : TOPIK_PPKN
+  const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI
+    : mapel === 'pendidikan_pancasila' ? TOPIK_PPKN
+    : mapel === 'ipas' ? TOPIK_IPAS
+    : TOPIK_BINGGRIS
 
   // Effective topics array for submission
   const effectiveTopiks: string[] = showCustomInput && customTopik.trim() !== ''
@@ -295,7 +328,7 @@ function GeneratePage() {
     }, 120)
 
     void api.ai.generate({
-      subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila' | 'ipas' | 'bahasa_inggris',
       grade: Number(kelas) as 5 | 6,
       difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
       topics,
@@ -308,14 +341,10 @@ function GeneratePage() {
     }).then((result) => {
       clearTimers()
       setProgress(100)
-
-      completionTimerRef.current = setTimeout(() => {
-        setIsGenerating(false)
-        void navigate({
-          to: '/review',
-          search: { examId: result.id, mode: reviewMode, from: 'generate' },
-        })
-      }, 450)
+      void navigate({
+        to: '/review',
+        search: { examId: result.id, mode: reviewMode, from: 'generate' },
+      })
     }).catch((err: unknown) => {
       clearTimers()
       setIsGenerating(false)
@@ -420,8 +449,12 @@ function GeneratePage() {
                 </Badge>
                 {mapel === 'bahasa_indonesia' ? (
                   <Badge variant="subject-bi">Bahasa Indonesia</Badge>
-                ) : (
+                ) : mapel === 'pendidikan_pancasila' ? (
                   <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
+                ) : mapel === 'ipas' ? (
+                  <Badge variant="subject-ipas">IPAS</Badge>
+                ) : (
+                  <Badge variant="subject-binggris">Bahasa Inggris</Badge>
                 )}
                 <Badge variant="secondary">{EXAM_TYPE_LABEL_MAP[examType]}</Badge>
               </div>
@@ -495,6 +528,8 @@ function GeneratePage() {
                 <SelectContent>
                   <SelectItem value="bahasa_indonesia">Bahasa Indonesia</SelectItem>
                   <SelectItem value="pendidikan_pancasila">Pendidikan Pancasila</SelectItem>
+                  <SelectItem value="ipas">IPAS</SelectItem>
+                  <SelectItem value="bahasa_inggris">Bahasa Inggris</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -897,8 +932,14 @@ function GeneratePage() {
                     <Badge variant="subject-ppkn" className="text-caption">
                       Pend. Pancasila
                     </Badge>
+                  ) : mapel === 'ipas' ? (
+                    <Badge variant="subject-ipas" className="text-caption">
+                      IPAS
+                    </Badge>
                   ) : (
-                    <span className="text-text-primary">—</span>
+                    <Badge variant="subject-binggris" className="text-caption">
+                      B. Inggris
+                    </Badge>
                   )}
                 </span>
               </div>

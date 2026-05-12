@@ -36,6 +36,20 @@
       "when": 1777095074508,
       "tag": "0004_drop_legacy_exam_topic",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777519624492,
+      "tag": "0005_brown_chronomancer",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778232903826,
+      "tag": "0006_cheerful_piledriver",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,8 @@ function formatTopicsDisplay(topics: readonly string[]): string {
 const SUBJECT_SHORT: Record<string, string> = {
   bahasa_indonesia: 'BI',
   pendidikan_pancasila: 'PPKN',
+  ipas: 'IPAS',
+  bahasa_inggris: 'B. Ing',
 }
 
 const QUESTION_SKELETONS = [

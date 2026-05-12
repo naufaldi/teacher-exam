@@ -1403,3 +1403,9 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
     expect(terimaSemuaBtn).toBeDisabled()
   })
 })
+
+describe('ReviewRoute — pendingComponent', () => {
+  it('route has pendingComponent for loading state during navigation', () => {
+    expect(Route.options.pendingComponent).toBeDefined()
+  })
+})

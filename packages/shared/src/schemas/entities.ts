@@ -118,6 +118,35 @@ export const ExamWithQuestionsSchema = Schema.Struct({
 })
 export type ExamWithQuestions = typeof ExamWithQuestionsSchema.Type
 
+export const PublicExamSchema = Schema.Struct({
+  id:              Schema.String,
+  title:           Schema.String,
+  subject:         ExamSubjectSchema,
+  grade:           Schema.Int,
+  difficulty:      ExamDifficultySchema,
+  topics:          Schema.Array(Schema.String),
+  reviewMode:      ReviewModeSchema,
+  status:          ExamStatusSchema,
+  schoolName:      Schema.NullOr(Schema.String),
+  academicYear:    Schema.NullOr(Schema.String),
+  examType:        Schema.String,
+  examDate:        Schema.NullOr(Schema.String),
+  durationMinutes: Schema.NullOr(Schema.Int),
+  instructions:    Schema.NullOr(Schema.String),
+  classContext:    Schema.NullOr(Schema.String),
+  discussionMd:    Schema.NullOr(Schema.String),
+  publishedAt:     Schema.String,
+  createdAt:       Schema.String,
+  updatedAt:       Schema.String,
+})
+export type PublicExam = typeof PublicExamSchema.Type
+
+export const PublicExamWithQuestionsSchema = Schema.Struct({
+  ...PublicExamSchema.fields,
+  questions: Schema.Array(QuestionSchema),
+})
+export type PublicExamWithQuestions = typeof PublicExamWithQuestionsSchema.Type
+
 // ── PDF Upload ─────────────────────────────────────────────
 export const PdfUploadSchema = Schema.Struct({
   id:            Schema.String,

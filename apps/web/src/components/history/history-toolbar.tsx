@@ -1,7 +1,7 @@
 import { Search, X, ArrowUpDown } from 'lucide-react'
 
 export type StatusFilter = 'all' | 'final' | 'draft'
-export type SubjectFilter = 'all' | 'bahasa_indonesia' | 'pendidikan_pancasila'
+export type SubjectFilter = 'all' | 'bahasa_indonesia' | 'pendidikan_pancasila' | 'ipas' | 'bahasa_inggris'
 export type GradeFilter = 'all' | '5' | '6'
 export type PeriodFilter = 'all' | '7d' | '30d' | 'this_semester'
 export type SortOrder = 'terbaru' | 'terlama' | 'judul'
@@ -35,6 +35,8 @@ const SUBJECT_OPTIONS: Array<{ value: SubjectFilter; label: string }> = [
   { value: 'all', label: 'Semua mapel' },
   { value: 'bahasa_indonesia', label: 'Bahasa Indonesia' },
   { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
+  { value: 'ipas', label: 'IPAS' },
+  { value: 'bahasa_inggris', label: 'Bahasa Inggris' },
 ]
 
 const GRADE_OPTIONS: Array<{ value: GradeFilter; label: string }> = [

@@ -3,6 +3,8 @@ import { pgEnum } from 'drizzle-orm/pg-core'
 export const examSubjectEnum = pgEnum('exam_subject', [
   'bahasa_indonesia',
   'pendidikan_pancasila',
+  'ipas',
+  'bahasa_inggris',
 ])
 export const examDifficultyEnum = pgEnum('exam_difficulty', [
   'mudah', 'sedang', 'sulit', 'campuran',

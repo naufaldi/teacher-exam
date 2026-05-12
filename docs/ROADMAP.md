@@ -16,7 +16,7 @@
 
 Teachers generate exam questions across all 5 academic subjects, correct student answers, identify what students lack, and get re-teaching suggestions — closing the learning loop.
 
-**Current state:** 2 subjects (BI + PPKN), all core features working in production.
+**Current state:** 4 subjects (BI + PPKN + IPAS + B. Inggris), all core features working in production. Koreksi built but disabled (client-side only, no persistence — targeted for PRD v5). Penjaga Kurikulum DB columns exist, service not built.
 **Target by Nov 2026:** 5 subjects, Bank Soal, deep correction analytics, weakness analysis with re-teach suggestions.
 
 ## Decisions
@@ -35,8 +35,8 @@ Each milestone maps to a PRD:
 
 | PRD | Status | Milestones |
 |-----|--------|------------|
-| [PRD v2](PRD-v2-final.md) | ✅ Implemented | Baseline MVP (BI + PPKN, generate, review, preview, correction, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | ⬜ Not started | M1, M2, M3 (IPAS, B. Inggris, Matematika) |
+| [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
+| [PRD v3](PRD-v3-multi-subject.md) | 🔄 In progress | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started | M4 (Bank Soal + Exam Builder) |
 | [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started | M5 (Correction Depth) — includes `students` table + identity capture (D-1) |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
@@ -47,7 +47,7 @@ Each milestone maps to a PRD:
 
 | # | Milestone | Target | PRD | Status |
 |---|-----------|--------|-----|--------|
-| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ⬜ Not started |
+| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | 🔄 In progress |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ⬜ Not started |
 | 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started |
@@ -60,27 +60,30 @@ Each milestone maps to a PRD:
 
 **Target:** May 15, 2026
 **Goal:** 4/5 academic subjects available in Generate
-**Status:** ⬜ Not started
+**Status:** 🔄 In progress
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 1.1 | Extract IPAS K5/K6 corpus | 2 markdown files in `curriculum/md/`, reviewed by ≥1 guru | File exists, guru sign-off | ⬜ |
-| 1.2 | Extract B. Inggris K5/K6 corpus | 2 markdown files, stem+options in English | File exists, guru sign-off | ⬜ |
-| 1.3 | Add `ipas`, `bahasa_inggris` to DB enum | Drizzle migration, `pnpm type-check` passes | Migration runs clean | ⬜ |
-| 1.4 | Update shared schema + UI option arrays | Generate form shows 4 subjects | Browser verify: form renders | ⬜ |
-| 1.5 | Add topics per subject (≥6 each) | Topics array populated in prompt config | `pnpm test` passes | ⬜ |
+| 1.1 | Extract IPAS K5/K6 corpus | 2 markdown files in `curriculum/md/` | File exists | ✅ |
+| 1.2 | Extract B. Inggris K5/K6 corpus | 2 markdown files, stem+options in English | File exists | ✅ |
+| 1.3 | Add `ipas`, `bahasa_inggris` to DB enum | Drizzle migration, `pnpm type-check` passes | Migration runs clean | ✅ |
+| 1.4 | Update shared schema + UI option arrays | Generate form shows 4 subjects | Browser verify: form renders | ✅ |
+| 1.5 | Add topics per subject (≥6 each) | Topics array populated in prompt config | `pnpm test` passes | ✅ |
 | 1.6 | Generate 50 soal per subject×grade | ≥90% pass guru review (no heavy edits) | Review sheet signed | ⬜ |
-| 1.7 | Browser verification | Generate → preview → cetak → koreksi for IPAS + B.Inggris | No console errors/warnings | ⬜ |
+| 1.7 | Browser verification | Generate → preview → cetak for IPAS + B.Inggris | No console errors/warnings | ⬜ |
 
 ### Done when
 
-Teacher can generate IPAS and B. Inggris exams end-to-end, print, and correct.
+Teacher can generate IPAS and B. Inggris exams end-to-end and print.
 
 ### Decisions
 
-_(Record decisions here as they're made)_
+- 2026-04-30: PDFs sourced from SIBI (buku.kemendikdasmen.go.id). Extraction pipeline reused from existing BI/PPKN workflow.
+- 2026-04-30: PRD v2 updated to match code (jumlah soal 5-50, 3 question types, composition editor, pembahasan as MVP).
+- 2026-04-30: Koreksi stays disabled until PRD v5 (persistent storage + student identity).
+- 2026-04-30: Removed leftover migration file `0001_sour_lake.sql` that was causing snapshot collision.
 
 ### Known Issues
 

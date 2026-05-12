@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Exam } from '@teacher-exam/shared'
-import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare, Share2 } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Badge,
@@ -44,6 +44,16 @@ const SUBJECT_MAP: Record<string, SubjectMeta> = {
     label: 'Pendidikan Pancasila',
     dotClass: 'text-subject-ppkn',
   },
+  ipas: {
+    short: 'IPAS',
+    label: 'IPAS',
+    dotClass: 'text-subject-ipas',
+  },
+  bahasa_inggris: {
+    short: 'BING',
+    label: 'Bahasa Inggris',
+    dotClass: 'text-subject-binggris',
+  },
 }
 
 const FALLBACK_SUBJECT: SubjectMeta = {
@@ -66,9 +76,10 @@ interface HistoryTableProps {
   exams: ReadonlyArray<Exam>
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
+  onShare: (exam: Exam) => Promise<void>
 }
 
-function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
+function HistoryTable({ exams, onDelete, onDuplicate, onShare }: HistoryTableProps) {
   return (
     <TooltipProvider delayDuration={250}>
       <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden [&>div]:overflow-hidden">
@@ -94,6 +105,7 @@ function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
                 exam={exam}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
+                onShare={onShare}
               />
             ))}
           </TableBody>
@@ -107,9 +119,10 @@ interface HistoryTableRowProps {
   exam: Exam
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
+  onShare: (exam: Exam) => Promise<void>
 }
 
-function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) {
+function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableRowProps) {
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
@@ -137,6 +150,10 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
 
   function handleDuplicate() {
     onDuplicate(exam)
+  }
+
+  function handleShare() {
+    void onShare(exam)
   }
 
   function handleDeleteConfirm() {
@@ -225,6 +242,10 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
                 <Button variant="secondary" size="sm" onClick={handlePreview}>
                   <Eye size={13} />
                   Preview
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleShare} aria-label="Bagikan">
+                  <Share2 size={13} />
+                  Bagikan
                 </Button>
                 <Button
                   variant="secondary"

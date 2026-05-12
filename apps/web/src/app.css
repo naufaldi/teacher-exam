@@ -16,6 +16,10 @@
     box-sizing: border-box;
   }
 
+  a[href], button, [role="button"], input[type="submit"], select, summary {
+    cursor: pointer;
+  }
+
   :focus-visible {
     outline: 3px solid color-mix(in srgb, var(--color-border-focus) 40%, transparent);
     outline-offset: 2px;

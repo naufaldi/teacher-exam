@@ -8,9 +8,11 @@ const cache = new Map<string, Promise<string>>()
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
 const MD_DIR = join(MODULE_DIR, '..', 'curriculum', 'md')
 
-const SUBJECT_SLUG: Record<ExamSubject, 'bahasa-indonesia' | 'pendidikan-pancasila'> = {
+const SUBJECT_SLUG: Record<ExamSubject, string> = {
   bahasa_indonesia: 'bahasa-indonesia',
   pendidikan_pancasila: 'pendidikan-pancasila',
+  ipas: 'ipas',
+  bahasa_inggris: 'bahasa-inggris',
 }
 
 /**
@@ -52,7 +54,7 @@ async function loadCurriculumText(subject: ExamSubject, grade: number): Promise<
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
     console.warn(`[curriculum] missing ${path} — using PRD §8 fallback`)
-    return FALLBACK[SUBJECT_SLUG[subject]]
+    return FALLBACK[SUBJECT_SLUG[subject]] ?? ''
   }
 }
 
@@ -62,7 +64,7 @@ export function __resetCurriculumCache(): void {
 }
 
 // Keyed by subject only — Fase C CP is identical for K5 and K6 (PRD §1.4).
-const FALLBACK: Record<'bahasa-indonesia' | 'pendidikan-pancasila', string> = {
+const FALLBACK: Record<string, string> = {
   'bahasa-indonesia': `# Bahasa Indonesia — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
@@ -80,6 +82,26 @@ const FALLBACK: Record<'bahasa-indonesia' | 'pendidikan-pancasila', string> = {
 - UUD NRI 1945: Menganalisis bentuk sederhana norma, aturan, hak, dan kewajiban sebagai anggota keluarga, warga sekolah, dan bagian masyarakat.
 - Bhinneka Tunggal Ika: Menghargai keberagaman budaya dan agama; menunjukkan sikap toleran terhadap perbedaan.
 - NKRI: Mengenal wilayah kabupaten/kota/provinsi sebagai bagian NKRI; membangun kebersamaan, persatuan, dan berkontribusi di lingkungan.
+
+> Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
+`,
+  'ipas': `# IPAS — Fase C (Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- Memahami konsep IPA: Peserta didik mampu memahami konsep sains melalui eksplorasi dan eksperimen sederhana.
+- Memahami konsep IPS: Peserta didik mampu memahami fenomena sosial dan lingkungan sekitar.
+- Mengaplikasikan konsep IPA dan IPS: Peserta didik mampu mengaplikasikan konsep sains dan sosial dalam kehidupan sehari-hari.
+- Mengomunikasikan hasil penyelidikan: Peserta didik mampu menyampaikan hasil pengamatan dan eksperimen secara lisan dan tulisan.
+
+> Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
+`,
+  'bahasa-inggris': `# Bahasa Inggris — Fase C (Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- Listening: Memahami percakapan sederhana dan instruksi lisan dalam Bahasa Inggris.
+- Reading: Membaca teks pendek (narasi, deskripsi, instruksi) dan memahami ide pokok serta informasi detail.
+- Speaking: Menyampaikan gagasan sederhana secara lisan dalam Bahasa Inggris untuk berbagai tujuan (deskripsi, narasi, permintaan).
+- Writing: Menulis teks pendek (deskripsi, narasi, surat, pesan) dengan tata bahasa dan kosakata yang sesuai.
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
 `,

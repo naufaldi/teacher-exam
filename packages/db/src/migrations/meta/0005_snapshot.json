@@ -1,6 +1,6 @@
 {
-  "id": "ea427997-a0e2-45ec-930d-22d7bf92bfd8",
-  "prevId": "981e2cec-8a95-4c8c-b34a-b892d48ddf73",
+  "id": "d8f62cfb-95c2-4923-9734-b6e3d6df0881",
+  "prevId": "29df2cf7-7802-4d9e-9706-25f2e342a0c8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -605,32 +605,45 @@
           "name": "option_a",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "option_b": {
           "name": "option_b",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "option_c": {
           "name": "option_c",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "option_d": {
           "name": "option_d",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "correct_answer": {
           "name": "correct_answer",
           "type": "answer",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'mcq_single'"
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "topic": {
           "name": "topic",
@@ -819,7 +832,9 @@
       "schema": "public",
       "values": [
         "bahasa_indonesia",
-        "pendidikan_pancasila"
+        "pendidikan_pancasila",
+        "ipas",
+        "bahasa_inggris"
       ]
     },
     "public.question_status": {

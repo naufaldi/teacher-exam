@@ -9,6 +9,7 @@ import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
 import { healthRouter } from './routes/health'
 import { meRouter } from './routes/me'
 import { examsRouter } from './routes/exams'
+import { publicExamsRouter } from './routes/public-exams'
 import { questionsRouter } from './routes/questions'
 import { createAiRouter } from './routes/ai'
 
@@ -26,6 +27,7 @@ app.use(
 app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 
 app.route('/api/health', healthRouter)
+app.route('/api/public/exams', publicExamsRouter)
 
 app.use('/api/*', requireAuth)
 app.use('/api/*', globalLimiter)

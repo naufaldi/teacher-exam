@@ -148,7 +148,7 @@ git clone https://github.com/naufaldi/teacher-exam.git
 cd teacher-exam
 
 cp .env.production.example .env.production
-# Fill in all values — SESSION_SECRET, GOOGLE_*, ANTHROPIC_API_KEY, POSTGRES_* DATABASE_URL
+# Fill in all values — SESSION_SECRET, GOOGLE_*, AI keys (see env table), POSTGRES_* DATABASE_URL
 chmod 600 .env.production
 
 # Start DB first
@@ -222,7 +222,12 @@ ssh vps-faldi 'docker exec teacher-exam-api-1 wget -qO- http://localhost:3001/ap
 | `BETTER_AUTH_URL` | docker-compose (from API_DOMAIN) | `https://api-ujian-sekolah.faldi.xyz` | better-auth `baseURL` — must be the **API** host |
 | `GOOGLE_CLIENT_ID` | `.env.production` | (secret) | |
 | `GOOGLE_CLIENT_SECRET` | `.env.production` | (secret) | |
-| `ANTHROPIC_API_KEY` | `.env.production` | (secret) | |
+| `AI_PROVIDER` | `.env.production` | `anthropic` \| `minimax` | Default `anthropic` if unset — match key block below |
+| `ANTHROPIC_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=anthropic`; keep it set even with `AI_PROVIDER=minimax` if you want PDF generation to continue working |
+| `MINIMAX_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=minimax` |
+| `MINIMAX_ANTHROPIC_BASE_URL` | `.env.production` | `https://api.minimax.io/anthropic` | MiniMax API root for Anthropic-compatible requests |
+| `AI_MODEL` | `.env.production` | `MiniMax-M2.7` | Text generation/discussion default when `AI_PROVIDER=minimax` |
+| `AI_DISCUSSION_MODEL` | `.env.production` | `MiniMax-M2.7-highspeed` | Discussion/pembahasan override when `AI_PROVIDER=minimax` |
 | `VITE_API_URL` | docker-compose build arg | `https://api-ujian-sekolah.faldi.xyz/api` | Baked into JS bundle at build time; changes require `--build web` |
 
 ---
