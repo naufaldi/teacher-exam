@@ -12,7 +12,13 @@ vi.mock('@teacher-exam/db', () => {
       delete: vi.fn(),
       insert: vi.fn(),
     },
-    exams: { id: 'exams.id', userId: 'exams.userId', createdAt: 'exams.createdAt' },
+    exams: {
+      id: 'exams.id',
+      userId: 'exams.userId',
+      createdAt: 'exams.createdAt',
+      isPublic: 'exams.isPublic',
+      publicShareSlug: 'exams.publicShareSlug',
+    },
     questions: { examId: 'questions.examId', number: 'questions.number' },
   }
 })
@@ -49,6 +55,9 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   instructions: null,
   classContext: null,
   discussionMd: null,
+  isPublic: false,
+  publicShareSlug: null,
+  publishedAt: null,
   createdAt: new Date(NOW),
   updatedAt: new Date(NOW),
   ...overrides,
@@ -528,5 +537,33 @@ describe('POST /api/exams/:id/finalize', () => {
     const body = await res.json() as Record<string, unknown>
     expect(body['status']).toBe('final')
     expect(Array.isArray(body['questions'])).toBe(true)
+  })
+})
+
+describe('POST /api/exams/:id/share', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 404 when exam not found', async () => {
+    ;(db.select as Mock).mockReturnValue(makeChain([]))
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/no-exam/share', { method: 'POST' })
+    expect(res.status).toBe(404)
+  })
+
+  it('creates or returns a public share slug for an owned exam', async () => {
+    const examRow = makeExamRow()
+    ;(db.select as Mock).mockReturnValue(makeChain([examRow]))
+    ;(db.update as Mock).mockReturnValue(makeChain([]))
+
+    const app = buildTestApp()
+    const res = await app.request('/api/exams/exam-1/share', { method: 'POST' })
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['publicUrlPath']).toMatch(/^\/share\//)
+    expect(body['slug']).toEqual(expect.any(String))
+    expect(body['publishedAt']).toEqual(expect.any(String))
   })
 })

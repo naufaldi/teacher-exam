@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShareSlugRouteImport } from './routes/share.$slug'
 import { Route as AuthReviewRouteImport } from './routes/_auth.review'
 import { Route as AuthProfileRouteImport } from './routes/_auth.profile'
 import { Route as AuthPreviewRouteImport } from './routes/_auth.preview'
@@ -27,6 +28,11 @@ const AuthRoute = AuthRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareSlugRoute = ShareSlugRouteImport.update({
+  id: '/share/$slug',
+  path: '/share/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthReviewRoute = AuthReviewRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/preview': typeof AuthPreviewRoute
   '/profile': typeof AuthProfileRoute
   '/review': typeof AuthReviewRoute
+  '/share/$slug': typeof ShareSlugRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesByTo {
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/preview': typeof AuthPreviewRoute
   '/profile': typeof AuthProfileRoute
   '/review': typeof AuthReviewRoute
+  '/share/$slug': typeof ShareSlugRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRoutesById {
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_auth/preview': typeof AuthPreviewRoute
   '/_auth/profile': typeof AuthProfileRoute
   '/_auth/review': typeof AuthReviewRoute
+  '/share/$slug': typeof ShareSlugRoute
   '/_auth/correction/$examId': typeof AuthCorrectionExamIdRoute
 }
 export interface FileRouteTypes {
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/profile'
     | '/review'
+    | '/share/$slug'
     | '/correction/$examId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/profile'
     | '/review'
+    | '/share/$slug'
     | '/correction/$examId'
   id:
     | '__root__'
@@ -139,12 +150,14 @@ export interface FileRouteTypes {
     | '/_auth/preview'
     | '/_auth/profile'
     | '/_auth/review'
+    | '/share/$slug'
     | '/_auth/correction/$examId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  ShareSlugRoute: typeof ShareSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/$slug': {
+      id: '/share/$slug'
+      path: '/share/$slug'
+      fullPath: '/share/$slug'
+      preLoaderRoute: typeof ShareSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/review': {
@@ -249,6 +269,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  ShareSlugRoute: ShareSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

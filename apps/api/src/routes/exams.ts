@@ -4,7 +4,7 @@ import { Schema, Effect } from 'effect'
 import { eq, and, desc } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
-import type { ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
+import type { ExamShareResponse, ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
 import { toExam, fetchExamWithQuestions } from '../lib/exams-query'
 import { rowToQuestion } from '../lib/question-mapper'
 import type { AiService } from '../services/AiService'
@@ -226,6 +226,41 @@ router.post('/:id/duplicate', async (c) => {
   }
 
   return c.json(newExamWithQuestions, 201)
+})
+
+router.post('/:id/share', async (c) => {
+  const userId = c.get('userId')
+  const { id } = c.req.param()
+
+  const examRows = await db
+    .select()
+    .from(exams)
+    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+    .limit(1)
+
+  const examRow = examRows[0]
+  if (!examRow) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
+
+  const slug = examRow.publicShareSlug ?? crypto.randomUUID()
+  const publishedAt = examRow.publishedAt ?? new Date()
+
+  await db
+    .update(exams)
+    .set({
+      isPublic: true,
+      publicShareSlug: slug,
+      publishedAt,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+
+  const result: ExamShareResponse = {
+    slug,
+    publicUrlPath: `/share/${slug}`,
+    publishedAt: publishedAt.toISOString(),
+  }
+
+  return c.json(result)
 })
 
 // POST /:id/finalize — transition exam to status=final only if every question is accepted

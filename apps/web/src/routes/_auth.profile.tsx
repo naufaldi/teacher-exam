@@ -13,6 +13,8 @@ const ALL_GRADES: readonly Grade[] = [1, 2, 3, 4, 5, 6] as const
 const SUBJECT_OPTIONS = [
   { value: 'bahasa_indonesia',     label: 'Bahasa Indonesia' },
   { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
+  { value: 'ipas',                 label: 'IPAS' },
+  { value: 'bahasa_inggris',       label: 'Bahasa Inggris' },
 ] as const
 type SubjectValue = typeof SUBJECT_OPTIONS[number]['value']
 

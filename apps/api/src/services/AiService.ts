@@ -1,7 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic, { APIError } from '@anthropic-ai/sdk'
 import { Effect, Schema, Either } from 'effect'
 import { GeneratedQuestionSchema, type GeneratedQuestion } from '@teacher-exam/shared'
 import { AiGenerationError } from '../errors'
+import { logAiEvent } from '../lib/ai-log'
 
 export interface GenerateInput {
   /** Sent verbatim as the Anthropic `system` field. Carries curriculum corpus. */
@@ -38,16 +39,31 @@ export interface AnthropicLike {
 export interface AiServiceConfig {
   client: AnthropicLike
   model?: string
+  /** Overrides `model` for `generate()` when `pdfBytes` is provided. */
+  pdfModel?: string
   maxTokens?: number
   discussionModel?: string
   discussionMaxTokens?: number
+  provider?: 'anthropic' | 'minimax'
+  baseURL?: string
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5'
 const DEFAULT_DISCUSSION_MODEL = 'claude-haiku-4-5'
+const DEFAULT_MINIMAX_MODEL = 'MiniMax-M2.7'
+const DEFAULT_MINIMAX_DISCUSSION_MODEL = 'MiniMax-M2.7-highspeed'
 const DEFAULT_MAX_TOKENS = 32000
 const DEFAULT_DISCUSSION_MAX_TOKENS = 16000
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
+const DEFAULT_MINIMAX_ANTHROPIC_BASE_URL = 'https://api.minimax.io/anthropic'
+
+function createMinimaxAnthropicClient(apiKey: string, baseURL: string): Anthropic {
+  return new Anthropic({
+    apiKey,
+    baseURL,
+    timeout: DEFAULT_TIMEOUT_MS,
+  })
+}
 
 /**
  * Create an `AiService` bound to a given Anthropic client.
@@ -59,6 +75,7 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
  */
 export function createAiService(config: AiServiceConfig): AiService {
   const model = config.model ?? DEFAULT_MODEL
+  const pdfModel = config.pdfModel ?? model
   const discussionModel = config.discussionModel ?? DEFAULT_DISCUSSION_MODEL
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
   const discussionMaxTokens = config.discussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
@@ -87,10 +104,32 @@ export function createAiService(config: AiServiceConfig): AiService {
       }
       content.push({ type: 'text', text: user })
 
+      const generateModel = pdfBytes ? pdfModel : model
+
       return Effect.gen(function* () {
-        const text = yield* callAnthropicText({ config, model, max_tokens: maxTokens, system, content })
-        const questions = yield* parseAndValidate(text)
+        const text = yield* callAnthropicText({
+          config,
+          model: generateModel,
+          max_tokens: maxTokens,
+          system,
+          content,
+        })
+        const questions = yield* parseAndValidate(text).pipe(
+          Effect.tapError((e) =>
+            Effect.sync(() =>
+              logAiEvent('ai.generate.parse', 'warn', {
+                model: generateModel,
+                cause: String(e.cause),
+              }),
+            ),
+          ),
+        )
         if (questions.length !== expectedCount) {
+          logAiEvent('ai.generate.count', 'warn', {
+            model: generateModel,
+            expected: expectedCount,
+            actual: questions.length,
+          })
           return yield* Effect.fail(
             new AiGenerationError({
               cause: `Expected ${expectedCount} questions, got ${questions.length}`,
@@ -118,15 +157,136 @@ export function createAiService(config: AiServiceConfig): AiService {
 }
 
 /**
- * Build the production `AiService` using `ANTHROPIC_API_KEY` from env.
- * Throws fast at startup if the key is missing.
+ * Builds the production `AiService` from env.
+ * Uses Anthropic Claude when `AI_PROVIDER=anthropic` (default); MiniMax when
+ * `AI_PROVIDER=minimax` (`MINIMAX_API_KEY` +
+ * {@link DEFAULT_MINIMAX_ANTHROPIC_BASE_URL}).
  */
 export function createDefaultAiService(): AiService {
+  const provider = (process.env['AI_PROVIDER'] ?? 'anthropic').toLowerCase()
+
+  if (provider === 'minimax') {
+    const apiKey = process.env['MINIMAX_API_KEY']
+    if (!apiKey) {
+      throw new Error('MINIMAX_API_KEY is required when AI_PROVIDER=minimax')
+    }
+    const baseURL =
+      process.env['MINIMAX_ANTHROPIC_BASE_URL']?.trim() || DEFAULT_MINIMAX_ANTHROPIC_BASE_URL
+    const model = process.env['AI_MODEL']?.trim() || DEFAULT_MINIMAX_MODEL
+    const discussionModel =
+      process.env['AI_DISCUSSION_MODEL']?.trim() || DEFAULT_MINIMAX_DISCUSSION_MODEL
+
+    const minimaxService = createAiService({
+      client: createMinimaxAnthropicClient(apiKey, baseURL),
+      model,
+      discussionModel,
+      provider: 'minimax',
+      baseURL,
+    })
+    let anthropicPdfService: AiService | undefined
+
+    const getAnthropicPdfService = (): AiService => {
+      if (anthropicPdfService) {
+        return anthropicPdfService
+      }
+      const anthropicApiKey = process.env['ANTHROPIC_API_KEY']
+      if (!anthropicApiKey) {
+        throw new Error(
+          'ANTHROPIC_API_KEY is required when AI_PROVIDER=minimax and a PDF generation request is made',
+        )
+      }
+      anthropicPdfService = createAiService({
+        client: new Anthropic({ apiKey: anthropicApiKey, timeout: DEFAULT_TIMEOUT_MS }),
+        provider: 'anthropic',
+      })
+      return anthropicPdfService
+    }
+
+    return {
+      generate(input) {
+        if (input.pdfBytes) {
+          return getAnthropicPdfService().generate(input)
+        }
+        return minimaxService.generate(input)
+      },
+      generateDiscussion(input) {
+        return minimaxService.generateDiscussion(input)
+      },
+      streamDiscussion(input) {
+        return minimaxService.streamDiscussion(input)
+      },
+    }
+  }
+
+  if (provider !== 'anthropic') {
+    throw new Error(`AI_PROVIDER must be "anthropic" or "minimax", got "${provider}"`)
+  }
+
   const apiKey = process.env['ANTHROPIC_API_KEY']
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is required to use AiService')
+    throw new Error('ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic')
   }
-  return createAiService({ client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }) })
+  return createAiService({
+    client: new Anthropic({ apiKey, timeout: DEFAULT_TIMEOUT_MS }),
+    provider: 'anthropic',
+  })
+}
+
+function appendConnectionContext(message: string, config: AiServiceConfig): string {
+  if (!/connection|fetch failed|timed? ?out|enotfound|econn/i.test(message)) {
+    return message
+  }
+  const details: Array<string> = []
+  if (config.provider) {
+    details.push(`provider=${config.provider}`)
+  }
+  if (config.baseURL) {
+    try {
+      const url = new URL(config.baseURL)
+      if (url.host) {
+        details.push(`host=${url.host}`)
+      }
+    } catch {
+      // ignore invalid URL values; keep original error message
+    }
+  }
+  if (details.length === 0) {
+    return message
+  }
+  return `${message} (${details.join(', ')})`
+}
+
+function summarizeAnthropicSdkFailure(cause: unknown, config: AiServiceConfig): string {
+  if (cause instanceof APIError) {
+    return appendConnectionContext(`[HTTP ${cause.status}] ${cause.message}`, config)
+  }
+  if (cause instanceof Error) {
+    return appendConnectionContext(cause.message, config)
+  }
+  return String(cause)
+}
+
+function extractFirstTextContent(message: Anthropic.Message): string | undefined {
+  for (const block of message.content) {
+    if (block.type === 'text') {
+      return block.text
+    }
+  }
+  return undefined
+}
+
+/** Accepts normal completion and some provider variants (MiniMax / extended models). */
+function isSuccessfulStopReason(
+  stopReason: Anthropic.Message['stop_reason'],
+  hasText: boolean,
+): boolean {
+  if (stopReason === 'end_turn' || stopReason === 'stop_sequence') {
+    return true
+  }
+  if ((stopReason === null || stopReason === undefined) && hasText) {
+    return true
+  }
+  return false
 }
 
 function callAnthropicText({
@@ -143,6 +303,7 @@ function callAnthropicText({
   content: Anthropic.ContentBlockParam[]
 }): Effect.Effect<string, AiGenerationError> {
   return Effect.gen(function* () {
+    const t0 = Date.now()
     const response = yield* Effect.tryPromise({
       try: () =>
         config.client.messages.create({
@@ -151,25 +312,57 @@ function callAnthropicText({
           system,
           messages: [{ role: 'user', content }],
         }),
-      catch: (cause) => new AiGenerationError({ cause }),
+      catch: (cause) => {
+        const msg = summarizeAnthropicSdkFailure(cause, config)
+        logAiEvent('ai.messages.create', 'warn', {
+          model,
+          durationMs: Date.now() - t0,
+          status: cause instanceof APIError ? cause.status : undefined,
+          message: msg,
+        })
+        return new AiGenerationError({ cause: msg })
+      },
     })
 
-    if (response.stop_reason !== 'end_turn') {
+    const contentTypes = response.content.map((b) => b.type)
+    const durationMs = Date.now() - t0
+    logAiEvent('ai.messages.create', 'info', {
+      model,
+      durationMs,
+      stopReason: response.stop_reason,
+      contentTypes,
+      usage: response.usage,
+    })
+
+    const assistantText = extractFirstTextContent(response)
+    const hasAssistantText =
+      assistantText !== undefined && assistantText.length > 0
+    if (!isSuccessfulStopReason(response.stop_reason, hasAssistantText)) {
+      logAiEvent('ai.messages.create', 'warn', {
+        model,
+        durationMs,
+        stopReason: response.stop_reason,
+        contentTypes,
+        message: 'stop_reason not accepted',
+      })
       return yield* Effect.fail(
         new AiGenerationError({
-          cause: `Claude returned incomplete output (stop_reason: ${response.stop_reason})`,
+          cause: `AI returned incomplete output (stop_reason: ${String(response.stop_reason)})`,
         }),
       )
     }
-
-    const firstBlock = response.content[0]
-    if (!firstBlock || firstBlock.type !== 'text') {
-      return yield* Effect.fail(
-        new AiGenerationError({ cause: 'Anthropic returned no text block' }),
-      )
+    if (assistantText === undefined) {
+      logAiEvent('ai.messages.create', 'warn', {
+        model,
+        durationMs,
+        stopReason: response.stop_reason,
+        contentTypes,
+        message: 'no assistant text block',
+      })
+      return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned no text block' }))
     }
 
-    return firstBlock.text
+    return assistantText
   })
 }
 
@@ -179,12 +372,12 @@ function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, 
       try: () => JSON.parse(stripCodeFence(raw)) as unknown,
       catch: (cause) =>
         new AiGenerationError({
-          cause: `Claude returned non-JSON output: ${(cause as Error).message}`,
+          cause: `AI returned non-JSON output: ${(cause as Error).message}`,
         }),
     })
 
     if (!Array.isArray(parsed)) {
-      return yield* Effect.fail(new AiGenerationError({ cause: 'Claude returned non-array JSON' }))
+      return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned non-array JSON' }))
     }
 
     const decoded = Schema.decodeUnknownEither(Schema.Array(GeneratedQuestionSchema))(parsed)

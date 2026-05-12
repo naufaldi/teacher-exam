@@ -9,6 +9,12 @@ import { extractPageRange, loadPdfDocument, planChunks } from './lib/pdf-split'
 import { mergeBab, MergeValidationError } from './lib/merge-bab'
 import { curriculumMdFilename } from '../src/lib/curriculum'
 
+/**
+ * One-off extraction of Kemendikdasmen textbook PDFs to curriculum markdown (`pnpm curriculum:extract`).
+ * Still calls **Anthropic Claude** (`ANTHROPIC_API_KEY`) on api.anthropic.com, not the runtime `AiService`.
+ * This path stays Anthropic-only because it uploads PDF documents directly.
+ */
+
 const MODEL = 'claude-opus-4-7'
 const MAX_TOKENS = 8192
 const MIN_RETRY_PAGES = 5
@@ -56,6 +62,30 @@ const BOOKS: BookSpec[] = [
     subject: 'Pendidikan Pancasila',
     grade: 6,
     pdfFilename: 'Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf',
+  }),
+  defineBook({
+    subjectKey: 'ipas',
+    subject: 'IPAS',
+    grade: 5,
+    pdfFilename: 'IPAS_BS_KLS_V_Rev.pdf',
+  }),
+  defineBook({
+    subjectKey: 'ipas',
+    subject: 'IPAS',
+    grade: 6,
+    pdfFilename: 'IPAS_BS_KLS_VI_Rev.pdf',
+  }),
+  defineBook({
+    subjectKey: 'bahasa_inggris',
+    subject: 'Bahasa Inggris',
+    grade: 5,
+    pdfFilename: 'Inggris_FN_BS_KLS_V.pdf',
+  }),
+  defineBook({
+    subjectKey: 'bahasa_inggris',
+    subject: 'Bahasa Inggris',
+    grade: 6,
+    pdfFilename: 'Inggris_FN_BS_KLS_VI.pdf',
   }),
 ]
 

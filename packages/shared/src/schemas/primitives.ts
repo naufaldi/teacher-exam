@@ -4,12 +4,16 @@ import { Schema } from 'effect'
 export const ExamSubjectSchema = Schema.Literal(
   'bahasa_indonesia',
   'pendidikan_pancasila',
+  'ipas',
+  'bahasa_inggris',
 )
 export type ExamSubject = typeof ExamSubjectSchema.Type
 
 export const SUBJECT_LABEL: Record<ExamSubject, string> = {
   bahasa_indonesia: 'Bahasa Indonesia',
   pendidikan_pancasila: 'Pendidikan Pancasila',
+  ipas: 'IPAS',
+  bahasa_inggris: 'Bahasa Inggris',
 }
 
 export const ExamDifficultySchema = Schema.Literal(

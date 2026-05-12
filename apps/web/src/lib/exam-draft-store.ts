@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { ExamType, Question } from '@teacher-exam/shared'
+import type { ExamSubject, ExamType, Question } from '@teacher-exam/shared'
 
 /**
  * In-memory draft of the exam currently being created/reviewed.
@@ -20,7 +20,7 @@ export interface ExamDraft {
   questions: Question[]
   metadata: ExamDraftMetadata
   reviewMode: 'fast' | 'slow'
-  subject: 'bahasa_indonesia' | 'pendidikan_pancasila'
+  subject: ExamSubject
   grade: number
   topic: string
   /** Optional teacher-provided steering context (PRD §8.7). */

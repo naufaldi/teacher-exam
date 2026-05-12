@@ -7,7 +7,14 @@ import {
   AnswerSchema,
 } from './primitives.js'
 import { GradeSchema } from './entities.js'
-import type { Exam, ExamWithQuestions, Question, PdfUpload, UserProfile } from './entities.js'
+import type {
+  Exam,
+  ExamWithQuestions,
+  PublicExamWithQuestions,
+  Question,
+  PdfUpload,
+  UserProfile,
+} from './entities.js'
 
 // ── Exam API ───────────────────────────────────────────────
 
@@ -96,6 +103,13 @@ export const RegenerateQuestionInputSchema = Schema.Struct({
 })
 export type RegenerateQuestionInput = typeof RegenerateQuestionInputSchema.Type
 
+export const ExamShareResponseSchema = Schema.Struct({
+  slug: Schema.String,
+  publicUrlPath: Schema.String,
+  publishedAt: Schema.String,
+})
+export type ExamShareResponse = typeof ExamShareResponseSchema.Type
+
 // ── User profile API ───────────────────────────────────────
 
 export const UpdateProfileInputSchema = Schema.Struct({
@@ -112,6 +126,7 @@ export type UpdateProfileInput = typeof UpdateProfileInputSchema.Type
 // ── API Response type aliases ──────────────────────────────
 export type ExamListResponse = Exam[]
 export type ExamDetailResponse = ExamWithQuestions
+export type PublicExamDetailResponse = PublicExamWithQuestions
 export type QuestionResponse = Question
 export type HealthResponse = { status: string; service: string; timestamp: string }
 export type UserProfileResponse = UserProfile

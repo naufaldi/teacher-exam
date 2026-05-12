@@ -15,6 +15,8 @@ const DEFAULT_GRADES: Grade[] = [5, 6]
 const SUBJECT_OPTIONS = [
   { value: 'bahasa_indonesia',     label: 'Bahasa Indonesia' },
   { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
+  { value: 'ipas',                 label: 'IPAS' },
+  { value: 'bahasa_inggris',       label: 'Bahasa Inggris' },
 ] as const
 type SubjectValue = typeof SUBJECT_OPTIONS[number]['value']
 

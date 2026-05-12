@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core'
 import { user } from './users'
 import {
   examSubjectEnum,
@@ -26,6 +26,9 @@ export const exams = pgTable('exams', {
   instructions:    text('instructions'),
   classContext:    text('class_context'),
   discussionMd:    text('discussion_md'),
+  isPublic:        boolean('is_public').default(false).notNull(),
+  publicShareSlug: text('public_share_slug').unique(),
+  publishedAt:     timestamp('published_at', { withTimezone: true }),
   createdAt:       timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt:       timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

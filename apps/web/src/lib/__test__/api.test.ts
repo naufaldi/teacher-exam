@@ -133,6 +133,29 @@ const VALID_EXAM_WITH_QUESTIONS = {
   questions: [],
 }
 
+const VALID_PUBLIC_EXAM_WITH_QUESTIONS = {
+  id: 'exam_public_1',
+  title: 'Bahasa Indonesia · Kelas 6 · Teks Narasi',
+  subject: 'bahasa_indonesia',
+  grade: 6,
+  difficulty: 'sedang',
+  topics: ['Teks Narasi'],
+  reviewMode: 'fast',
+  status: 'final',
+  schoolName: null,
+  academicYear: null,
+  examType: 'formatif',
+  examDate: null,
+  durationMinutes: null,
+  instructions: null,
+  classContext: null,
+  discussionMd: null,
+  publishedAt: '2024-01-01T00:00:00.000Z',
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+  questions: [],
+}
+
 describe('api.ai.generate', () => {
   it('POSTs to /api/ai/generate and returns decoded ExamWithQuestions', async () => {
     mockFetch.mockResolvedValueOnce({
@@ -319,5 +342,45 @@ describe('api.exams.generateDiscussion', () => {
       if (!(err instanceof ApiError)) return false
       return err.status === 409 && err.code === 'DISCUSSION_ALREADY_EXISTS'
     })
+  })
+})
+
+describe('api.exams.share', () => {
+  it('POSTs to /api/exams/:id/share and returns share metadata', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          slug: 'share-abc123',
+          publicUrlPath: '/share/share-abc123',
+          publishedAt: '2024-01-01T00:00:00.000Z',
+        }),
+    })
+
+    const result = await api.exams.share('exam_1')
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/exams/exam_1/share',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    )
+    expect(result.publicUrlPath).toBe('/share/share-abc123')
+  })
+})
+
+describe('api.publicExams.get', () => {
+  it('GETs /api/public/exams/:slug and decodes the public exam payload', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(VALID_PUBLIC_EXAM_WITH_QUESTIONS),
+    })
+
+    const result = await api.publicExams.get('share-abc123')
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/public/exams/share-abc123',
+      expect.objectContaining({ credentials: 'include' }),
+    )
+    expect(result.publishedAt).toBe('2024-01-01T00:00:00.000Z')
+    expect(result.questions).toEqual([])
   })
 })

@@ -48,7 +48,8 @@ export function GenerateProgressDialog({
   totalSoal,
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
-  const isOvertime = progress >= 99
+  const isOvertime = progress >= 99 && progress < 100
+  const isComplete = progress >= 100
   const overtimeSeconds = useElapsedSeconds(open && isOvertime)
 
   useEffect(() => {
@@ -106,7 +107,12 @@ export function GenerateProgressDialog({
             />
             <div className="flex items-center justify-between text-caption text-text-tertiary tabular-nums">
               <span>
-                {isOvertime ? (
+                {isComplete ? (
+                  <span className="flex items-center gap-1.5 text-success-700">
+                    <Loader2 size={11} className="animate-spin shrink-0" />
+                    Menyiapkan halaman review...
+                  </span>
+                ) : isOvertime ? (
                   <span className="flex items-center gap-1.5 text-text-secondary">
                     <Loader2 size={11} className="animate-spin shrink-0" />
                     Menunggu AI… {overtimeSeconds > 0 ? `${overtimeSeconds}dtk` : ''}

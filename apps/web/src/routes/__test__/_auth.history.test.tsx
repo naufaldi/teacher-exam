@@ -5,8 +5,9 @@ import { ToastProvider } from '@teacher-exam/ui'
 import type { Exam } from '@teacher-exam/shared'
 import { ApiError } from '../../lib/api.js'
 
-const { mockNavigate } = vi.hoisted(() => ({
+const { mockNavigate, mockClipboardWriteText } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
+  mockClipboardWriteText: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Mock TanStack Router
@@ -31,6 +32,7 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
         list: vi.fn(),
         remove: vi.fn(),
         duplicate: vi.fn(),
+        share: vi.fn(),
       },
     },
   }
@@ -44,6 +46,7 @@ const mockApi = api as unknown as {
     list: ReturnType<typeof vi.fn>
     remove: ReturnType<typeof vi.fn>
     duplicate: ReturnType<typeof vi.fn>
+    share: ReturnType<typeof vi.fn>
   }
 }
 
@@ -81,6 +84,12 @@ function renderHistoryPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  Object.defineProperty(window.navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText: mockClipboardWriteText,
+    },
+  })
 })
 
 describe('HistoryPage', () => {
@@ -261,5 +270,27 @@ describe('HistoryPage', () => {
     await waitFor(() => {
       expect(mockApi.exams.remove).toHaveBeenCalledWith('exam-1')
     })
+  })
+
+  it('copies a public share link for final exams', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'exam-share', status: 'final', title: 'Final untuk Dibagikan' }),
+    ])
+    mockApi.exams.share.mockResolvedValueOnce({
+      slug: 'share-abc123',
+      publicUrlPath: '/share/share-abc123',
+      publishedAt: '2026-05-08T00:00:00.000Z',
+    })
+
+    renderHistoryPage()
+
+    await user.click(await screen.findByRole('button', { name: /^Bagikan$/i }))
+
+    await waitFor(() => {
+      expect(mockApi.exams.share).toHaveBeenCalledWith('exam-share')
+    })
+
+    expect(await screen.findByText('Link publik berhasil disalin')).toBeInTheDocument()
   })
 })

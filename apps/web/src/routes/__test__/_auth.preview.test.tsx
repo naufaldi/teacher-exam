@@ -254,13 +254,57 @@ describe('PreviewPage loader', () => {
   })
 })
 
+describe('PreviewPage — multi-subject labels', () => {
+  it('renders "IPAS" label in subtitle when draft subject is ipas', () => {
+    // Seed store with ipas — force-cast to satisfy current narrow type (this cast
+    // is what we are about to remove from production code)
+    examDraftStore.setConfig({
+      subject: 'ipas',
+      grade: 5,
+      topic: 'Ekosistem',
+      examType: 'formatif',
+    })
+    renderPreviewPage()
+    // subtitle = "<examType> · <subjectLabel> — Kelas 5 SD"
+    // Before fix: SUBJECT_LABELS['ipas'] is undefined → fallback is raw 'ipas' (lowercase)
+    // After fix:  SUBJECT_LABEL['ipas'] = 'IPAS'
+    expect(screen.queryAllByText(/\bipas\b/).length).toBe(0)
+    expect(screen.getAllByText(/IPAS/).length).toBeGreaterThan(0)
+  })
+
+  it('renders "Bahasa Inggris" label when draft subject is bahasa_inggris', () => {
+    examDraftStore.setConfig({
+      subject: 'bahasa_inggris',
+      grade: 6,
+      topic: 'Reading Comprehension',
+      examType: 'formatif',
+    })
+    renderPreviewPage()
+    expect(screen.queryAllByText(/\bbahasa_inggris\b/).length).toBe(0)
+    expect(screen.getAllByText(/Bahasa Inggris/).length).toBeGreaterThan(0)
+  })
+
+  it('loader stores ipas subject in draft store without casting it away', async () => {
+    const exam: ExamWithQuestions = {
+      ...makeExamWithQuestions(['Ekosistem']),
+      subject: 'ipas',
+      grade: 5,
+    }
+    mockExamsGet.mockResolvedValueOnce(exam)
+
+    await getLoader()({ deps: { examId: exam.id } })
+
+    expect(examDraftStore.getSnapshot().subject).toBe('ipas')
+  })
+})
+
 describe('PreviewPage print flow', () => {
   it('keeps print scope active until afterprint fires', () => {
     vi.useFakeTimers()
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
 
     renderPreviewPage()
-    fireEvent.click(screen.getByRole('button', { name: /cetak soal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Soal$/i }))
 
     expect(document.body.dataset['printScope']).toBe('soal')
 
@@ -489,7 +533,7 @@ describe('Pembahasan tab', () => {
     }
     renderPreviewPage()
 
-    fireEvent.click(screen.getByRole('button', { name: /cetak pembahasan/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Pembahasan$/i }))
 
     expect(document.body.dataset['printScope']).toBe('pembahasan')
     act(() => { vi.advanceTimersByTime(50) })

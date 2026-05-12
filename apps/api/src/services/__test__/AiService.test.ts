@@ -89,9 +89,57 @@ describe('AiService.generate', () => {
     expect(blocks[0]!.type).toBe('document')
   })
 
+  it('uses pdfModel for generate when pdfBytes is provided', async () => {
+    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
+    const ai = createAiService({
+      client,
+      model: 'MiniMax-M2.7',
+      pdfModel: 'claude-opus-4-5',
+    })
+
+    await Effect.runPromise(
+      ai.generate({ system: 's', user: 'u', pdfBytes: Buffer.from('%PDF'), expectedCount: 20 }),
+    )
+    expect((create.mock.calls[0]![0] as { model: string }).model).toBe('claude-opus-4-5')
+  })
+
+  it('uses main model for generate when pdfBytes absent even when pdfModel is configured', async () => {
+    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
+    const ai = createAiService({
+      client,
+      model: 'MiniMax-M2.7',
+      pdfModel: 'claude-opus-4-5',
+    })
+
+    await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
+    expect((create.mock.calls[0]![0] as { model: string }).model).toBe('MiniMax-M2.7')
+  })
+
   it('strips ```json fenced output before parsing', async () => {
     const fenced = '```json\n' + JSON.stringify(VALID_QUESTIONS) + '\n```'
     const { client } = fakeClient(fenced)
+    const ai = createAiService({ client })
+    const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
+    expect(out).toHaveLength(20)
+  })
+
+  it('reads the first text block when earlier content blocks are non-text', async () => {
+    const create = vi.fn().mockResolvedValue({
+      content: [
+        { type: 'thinking', thinking: 'reasoning stub' },
+        { type: 'text', text: JSON.stringify(VALID_QUESTIONS) },
+      ],
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+    })
+    const client: AnthropicLike = { messages: { create } }
+    const ai = createAiService({ client })
+    const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
+    expect(out).toHaveLength(20)
+  })
+
+  it('accepts stop_reason stop_sequence as a normal completion', async () => {
+    const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS), { stopReason: 'stop_sequence' })
     const ai = createAiService({ client })
     const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
     expect(out).toHaveLength(20)
@@ -113,6 +161,22 @@ describe('AiService.generate', () => {
 
     expect(String(err.cause)).toContain('max_tokens')
     expect(String(err.cause)).toContain('incomplete')
+  })
+
+  it('includes provider and host diagnostics on connection errors', async () => {
+    const create = vi.fn().mockRejectedValue(new Error('Connection error.'))
+    const client: AnthropicLike = { messages: { create } }
+    const ai = createAiService({
+      client,
+      provider: 'minimax',
+      baseURL: 'https://api.minimax.io/anthropic',
+    })
+
+    const err = await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
+
+    expect(String(err.cause)).toContain('Connection error.')
+    expect(String(err.cause)).toContain('provider=minimax')
+    expect(String(err.cause)).toContain('host=api.minimax.io')
   })
 
 

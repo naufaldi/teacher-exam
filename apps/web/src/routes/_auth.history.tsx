@@ -102,6 +102,18 @@ function HistoryPage() {
     }
   }
 
+  async function handleShare(exam: Exam) {
+    try {
+      const share = await api.exams.share(exam.id)
+      const publicUrl = `${window.location.origin}${share.publicUrlPath}`
+      await window.navigator.clipboard.writeText(publicUrl)
+      toast({ variant: 'success', title: 'Link publik berhasil disalin' })
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : 'Gagal membuat link publik'
+      toast({ variant: 'error', title: message })
+    }
+  }
+
   const stats = useMemo(() => {
     const finalCount = exams.filter((e) => e.status === 'final').length
     const draftCount = exams.filter((e) => e.status === 'draft').length
@@ -221,6 +233,7 @@ function HistoryPage() {
               exams={visibleExams}
               onDelete={handleDelete}
               onDuplicate={duplicate.openFor}
+              onShare={handleShare}
             />
 
             <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">

@@ -10,6 +10,7 @@ import {
 } from '@teacher-exam/shared'
 import type { FigureSpec, GeneratedQuestion, Question } from '@teacher-exam/shared'
 import { getCurriculumText } from '../lib/curriculum'
+import { logAiEvent } from '../lib/ai-log'
 import { EXAM_TYPE_PROFILE, resolveComposition } from '../lib/exam-type-profile'
 import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
@@ -83,8 +84,7 @@ function decodeGeneratedFigure(raw: unknown): {
 
 /**
  * Build the `/api/ai` router. Accepts an injected `AiService` for tests; in
- * production the default service (using ANTHROPIC_API_KEY) is created lazily
- * so requests don't fail at import time when the key is missing.
+ * production the default service (`createDefaultAiService`, from `AI_PROVIDER` + keys) is created lazily.
  */
 export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
   const router = new Hono()
@@ -138,6 +138,10 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     )
     if (Either.isLeft(generated)) {
       const err = generated.left
+      logAiEvent('api.ai.generate', 'warn', {
+        path: '/api/ai/generate',
+        message: String(err.cause),
+      })
       return c.json({ error: 'AI generation failed', message: String(err.cause) }, 502)
     }
     const generatedQuestions = generated.right

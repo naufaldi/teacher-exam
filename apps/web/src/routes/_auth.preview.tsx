@@ -15,6 +15,7 @@ import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
+import { SUBJECT_LABEL } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/preview')({
@@ -30,7 +31,7 @@ export const Route = createFileRoute('/_auth/preview')({
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({
-      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      subject: exam.subject,
       grade: exam.grade,
       topic: exam.topics.join(', '),
       examType: exam.examType as ExamType,
@@ -47,10 +48,6 @@ export const Route = createFileRoute('/_auth/preview')({
   },
 })
 
-const SUBJECT_LABELS: Record<string, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-}
 
 /**
  * Uppercase title printed in the kop of the printed sheet. See PRD §8.6.
@@ -99,7 +96,7 @@ function PreviewPage() {
   const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua' | 'pembahasan'>('semua')
 
   const { questions, metadata, subject, grade } = draft
-  const subjectLabel = SUBJECT_LABELS[subject] ?? subject
+  const subjectLabel = SUBJECT_LABEL[subject] ?? subject
   const topicsLabel = exam?.topics?.join(' · ') ?? ''
 
   return (
@@ -121,8 +118,9 @@ function PreviewPage() {
       <div
         data-screen-only
         data-no-print
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="space-y-3"
       >
+        {/* Tab navigation */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="semua">
@@ -142,22 +140,32 @@ function PreviewPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('soal')}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Soal
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('lj')}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak LJ
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('kunci')}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Kunci
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('pembahasan')}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
-          </Button>
-          <Button onClick={() => triggerPrint('all')}>
-            <Printer className="h-4 w-4 mr-2" /> Cetak Semua
-          </Button>
+
+        {/* Print controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-secondary">
+            Pilih tab untuk preview, atau cetak langsung:
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              <Button variant="secondary" size="sm" onClick={() => triggerPrint('soal')}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Soal
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => triggerPrint('lj')}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> LJ
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => triggerPrint('kunci')}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Kunci
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => triggerPrint('pembahasan')}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Pembahasan
+              </Button>
+            </div>
+            <div className="h-4 w-px bg-border-default hidden sm:block" />
+            <Button size="sm" onClick={() => triggerPrint('all')}>
+              <Printer className="h-4 w-4 mr-1.5" /> Cetak Semua
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -200,6 +208,11 @@ function PreviewPage() {
             padding: 0 !important;
             background: white !important;
           }
+          /* Hide section labels in print */
+          [data-preview-frame] ~ [data-preview-frame],
+          [data-preview-frame] + div {
+            margin-top: 0 !important;
+          }
         }
       `}</style>
 
@@ -216,19 +229,26 @@ function PreviewPage() {
 
 // ── A4-styled paper sections ─────────────────────────────────────────────────
 
-function PaperFrame({ children }: { children: React.ReactNode }) {
+function PaperFrame({ children, label }: { children: React.ReactNode; label?: string }) {
   return (
-    <div
-      data-preview-frame
-      className="mx-auto bg-white border border-border-default rounded-md shadow-sm"
-      style={{
-        width: 'min(100%, 794px)', // ~A4 width @ 96dpi
-        padding: '40px 48px',
-        fontFamily: 'var(--font-serif)',
-        color: '#000',
-      }}
-    >
-      {children}
+    <div className="mx-auto" style={{ width: 'min(100%, 794px)' }}>
+      {label ? (
+        <div data-no-print className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">{label}</span>
+          <div className="flex-1 h-px bg-border-default" />
+        </div>
+      ) : null}
+      <div
+        data-preview-frame
+        className="bg-white border border-border-default rounded-md shadow-sm"
+        style={{
+          padding: '40px 48px',
+          fontFamily: 'var(--font-serif)',
+          color: '#000',
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
@@ -326,7 +346,7 @@ function SoalSection({
 }) {
   return (
     <div data-print-section="soal">
-      <PaperFrame>
+      <PaperFrame label="Soal Ujian">
         <PaperHeader metadata={metadata} subjectLabel={subjectLabel} grade={grade} topicsLabel={topicsLabel} />
 
         {/* Petunjuk */}
@@ -432,7 +452,7 @@ function LembarJawabanSection({
 
   return (
     <div data-print-section="lj" className="print-break-before">
-      <PaperFrame>
+      <PaperFrame label="Lembar Jawaban">
         <div className="text-center border-b-2 border-black pb-3 mb-4">
           <p className="text-sm font-bold uppercase tracking-wide">
             {metadata.schoolName || 'SD Negeri ___________'}
@@ -502,7 +522,7 @@ function KunciSection({
 }) {
   return (
     <div data-print-section="kunci" className="print-break-before">
-      <PaperFrame>
+      <PaperFrame label="Kunci Jawaban">
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">KUNCI JAWABAN</p>
           <p className="text-sm mt-1">
@@ -566,7 +586,7 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
 
   return (
     <div data-print-section="pembahasan" className="print-break-before">
-      <PaperFrame>
+      <PaperFrame label="Pembahasan">
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">PEMBAHASAN</p>
         </div>

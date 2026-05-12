@@ -14,6 +14,13 @@ vi.mock('@teacher-exam/db', () => ({
     select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }),
     update: () => ({ set: () => ({ where: async () => undefined }) }),
   },
+  exams: {
+    publicShareSlug: 'exams.publicShareSlug',
+  },
+  questions: {
+    examId: 'questions.examId',
+    number: 'questions.number',
+  },
   user: {},
 }))
 
@@ -21,10 +28,12 @@ const { requireAuth } = await import('../middleware/auth')
 const { meRouter } = await import('../routes/me')
 const { createAiRouter } = await import('../routes/ai')
 const { healthRouter } = await import('../routes/health')
+const { publicExamsRouter } = await import('../routes/public-exams')
 
 function buildApp() {
   const app = new Hono()
   app.route('/api/health', healthRouter)
+  app.route('/api/public/exams', publicExamsRouter)
   app.use('/api/*', requireAuth)
   app.route('/api/me', meRouter)
   app.route('/api/ai', createAiRouter())
@@ -43,6 +52,12 @@ describe('auth protection on protected API routes', () => {
     const res = await app.request('/api/me')
     expect(res.status).toBe(401)
     expect(await res.json()).toEqual({ error: 'Unauthorized' })
+  })
+
+  it('GET /api/public/exams/:slug is reachable without a session', async () => {
+    const app = buildApp()
+    const res = await app.request('/api/public/exams/missing-share')
+    expect(res.status).toBe(404)
   })
 
   it('POST /api/ai/generate returns 401 without a session and never invokes the AI service', async () => {

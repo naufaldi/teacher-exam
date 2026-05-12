@@ -21,6 +21,16 @@ const SUBJECT_MAP: Record<string, SubjectMeta> = {
     label: 'Pendidikan Pancasila',
     dotClass: 'text-subject-ppkn',
   },
+  ipas: {
+    short: 'IPAS',
+    label: 'IPAS',
+    dotClass: 'text-subject-ipas',
+  },
+  bahasa_inggris: {
+    short: 'BING',
+    label: 'Bahasa Inggris',
+    dotClass: 'text-subject-binggris',
+  },
 }
 
 const FALLBACK_SUBJECT: SubjectMeta = {

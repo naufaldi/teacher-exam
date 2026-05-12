@@ -180,6 +180,18 @@ describe('GeneratePage — runGenerate flow', () => {
     )
   })
 
+  it('keeps progress dialog open until navigation (no premature close)', async () => {
+    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+
+    renderGeneratePage()
+    await clickGenerateAndFlush()
+
+    // navigate should have been called
+    expect(mockNavigate).toHaveBeenCalledOnce()
+    // dialog should still be open (isGenerating=true) — no 450ms gap where modal closes before route changes
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   it('does NOT navigate when api.ai.generate rejects', async () => {
     mockApi.ai.generate.mockRejectedValueOnce(new Error('AI generation failed'))
 

@@ -30,7 +30,7 @@ Guru SD Kelas 5 dan 6 di Indonesia menghadapi tantangan dalam pembuatan soal uji
 
 ### 1.2 Solution
 
-**Unit utama produk pada MVP adalah lembar soal (format TKA):** satu dokumen cetak yang memuat **20 soal** pilihan ganda (a, b, c, d) dalam **tata letak dua kolom**, dengan kop sekolah, identitas siswa, dan petunjuk pengerjaan. Satu **mata pelajaran** per lembar: **Bahasa Indonesia** atau **Pendidikan Pancasila (PPKN)** (ditentukan saat generate).
+**Unit utama produk pada MVP adalah lembar soal (format TKA):** satu dokumen cetak yang memuat **5–50 soal** (default tergantung jenis lembar: 20 untuk latihan/formatif, 25 untuk STS/SAS/TKA) dalam **tata letak dua kolom**, dengan kop sekolah, identitas siswa, dan petunjuk pengerjaan. Tiga jenis soal didukung: **pilihan ganda tunggal** (a, b, c, d), **pilihan ganda kompleks** (pilih 2–3 jawaban benar), dan **benar/salah**. Satu **mata pelajaran** per lembar: **Bahasa Indonesia**, **Pendidikan Pancasila (PPKN)**, **IPAS**, atau **Bahasa Inggris** (ditentukan saat generate).
 
 **Konteks kurikulum otomatis:** Sistem menggunakan **Kurikulum Merdeka Fase C (Kelas 5–6)** secara bawaan. Setiap permintaan AI selalu menerima **korpus Buku Siswa Kurikulum Merdeka** (markdown terstruktur hasil ekstraksi satu kali dari PDF resmi Kemendikdasmen) untuk mata pelajaran + kelas yang dipilih. Korpus mencakup CP Fase C, daftar bab, sub-konsep, sample teks bacaan, dan kosakata kunci — sehingga guru **tidak perlu menginput data kurikulum** dan soal yang dihasilkan benar-benar berakar pada materi buku resmi. Cukup pilih kelas, mapel, dan topik. Field kurikulum ditampilkan di form sebagai **dropdown disabled** bertuliskan "Kurikulum Merdeka" dengan label "Fase C (Kelas 5–6)" agar guru tahu sistem mengacu kurikulum yang benar. Guru tetap dapat mengupload **PDF materi/buku** sebagai konteks tambahan opsional di atas korpus baseline. Korpus tersebut dikirim sebagai Claude **system message** (baseline grounding); PDF guru opsional dikirim sebagai **user document block** yang bersifat menambah (additive), bukan menggantikan — urutan otoritas ini ditegaskan eksplisit di prompt.
 
@@ -53,8 +53,8 @@ Guru SD Kelas 5 dan 6 di Indonesia menghadapi tantangan dalam pembuatan soal uji
 - **Kelas**: SD Kelas 5 dan Kelas 6
 - **Fase Kurikulum**: Fase C (Kelas 5–6) — Kurikulum Merdeka
 - **Mata Pelajaran**: Bahasa Indonesia, Pendidikan Pancasila / PPKN (satu mapel aktif per lembar)
-- **Format Soal**: Pilihan ganda (a, b, c, d)
-- **Isi per lembar (MVP)**: **20 soal** per generate / per lembar cetak utama
+- **Format Soal**: Pilihan ganda tunggal (a, b, c, d), pilihan ganda kompleks (pilih 2–3), benar/salah
+- **Isi per lembar (MVP)**: **5–50 soal** per generate (default: 20 untuk latihan/formatif, 25 untuk STS/SAS/TKA)
 
 ### 1.4 Curriculum Design Decision
 
@@ -78,13 +78,15 @@ Implikasi desain:
 
 | Lingkup       | MVP (hackathon)                                                                          | Phase 2 (post-hackathon)                                      |
 | ------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Artefak utama | **Lembar soal** siap cetak (20 PG) + **lembar jawaban siswa** + **kunci jawaban**        | Penyusunan dari **bank soal** + wizard                        |
-| AI            | Satu aksi generate → **satu lembar** (20 soal), CP Fase C otomatis + PDF materi opsional | Variasi jumlah, template, multi-fase                          |
+| Artefak utama | **Lembar soal** siap cetak (5–50 soal, 3 tipe) + **lembar jawaban siswa** + **kunci jawaban** + **pembahasan** | Penyusunan dari **bank soal** + wizard                        |
+| AI            | Satu aksi generate → **satu lembar** (5–50 soal, default per jenis), CP Fase C otomatis + PDF materi opsional | Variasi template, multi-fase                          |
 | Mode review   | **Fast Track** (default) **& Slow Track** (per-soal)                                     | Confidence-driven auto-routing                                |
-| Evaluasi      | **Dibangun (US-19/20) tapi tidak pada jalur demo** — entry dashboard sengaja dinonaktifkan untuk fokus alur generate; akses tetap via Riwayat | Scoring batch, rekap persisten, analisis butir soal |
-| **Hackathon AI** *(baru)* | **Pembahasan Generator (§10.4) WAJIB demo**; Adaptive Difficulty chips (§8.7) WAJIB demo; Penjaga Kurikulum (§10.2) opsional/stretch | Confidence-driven auto-routing, soal acak, item analysis |
+| Evaluasi      | **Dibangun (US-19/20) tapi dinonaktifkan** — `KOREKSI_ENABLED = false`. Tool koreksi client-side ada, tapi data hilang saat halaman ditutup. **Akan diaktifkan di PRD v5** dengan penyimpanan persisten, identitas murid, dan analisis butir soal. | Scoring batch, rekap persisten, analisis butir soal |
+| Pembahasan    | **Pembahasan Generator (§10.4)** — implemented, SSE streaming, disimpan di `exams.discussion_md` | — |
+| Adaptive      | **Adaptive Difficulty chips (§8.7)** — implemented, class_context field + chip suggestions | — |
+| Penjaga Kurikulum | **§10.2** — DB columns (`validation_status`, `validation_reason`) exist, service + UI not built | Full implementation |
 | Bank soal     | Tidak menjadi pintu masuk utama                                                          | Browse, tambah manual, filter per mapel                       |
-| Kelas & mapel | Kelas 5–6, BI + PPKN                                                                     | Tambah kelas (1–4), tambah mapel (Matematika, IPAS)           |
+| Kelas & mapel | Kelas 5–6, BI + PPKN + IPAS + B. Inggris                                                | Tambah kelas (1–4), tambah mapel (Matematika)                 |
 | Kurikulum     | Merdeka only (Fase C, disabled di form)                                                  | Tambah K13, enable dropdown kurikulum                         |
 
 
@@ -99,9 +101,9 @@ Implikasi desain:
 | Curriculum di form        | Manual input                   | **Auto-hardcoded** — guru tidak perlu input CP                    |
 | Upload                    | 1 slot (materi)                | **1 slot** (materi) — upload kurikulum dihapus karena CP otomatis |
 | Lembar Jawaban Siswa      | Tidak ada                      | **Baru: US-18**                                                   |
-| Koreksi/Evaluasi          | Out of scope                   | **Baru: US-19, US-20** (koreksi manual dipercepat)                |
+| Koreksi/Evaluasi          | Out of scope                   | **Baru: US-19, US-20** — dibangun, dinonaktifkan (`KOREKSI_ENABLED = false`). Client-side only, data tidak persisten. **Akan diaktifkan di PRD v5** dengan penyimpanan persisten + identitas murid. |
 | Curriculum reference (§8) | Kelas 1–2, Merdeka + K13       | **Kelas 5–6 Fase C, Merdeka only**                                |
-| Demo storyline            | (tidak ada)                    | **Generate-first**: Login → Generate (chips §8.7) → Review → Preview/Cetak (Pembahasan §10.4). Koreksi tetap fungsional via Riwayat tapi entry dashboard dinonaktifkan untuk fokus visual demo. |
+| Demo storyline            | (tidak ada)                    | **Generate-first**: Login → Generate (chips §8.7) → Review → Preview/Cetak (Pembahasan §10.4). Koreksi dinonaktifkan sampai PRD v5. |
 
 
 ---
@@ -202,7 +204,7 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 
 #### US-8: Konfigurasi AI — satu lembar = 20 soal
 
-> **Sebagai** guru, **saya ingin** mengisi form konfigurasi **agar** AI menghasilkan **satu lembar penuh** (20 soal) sesuai mapel, topik, dan Capaian Pembelajaran Fase C.
+> **Sebagai** guru, **saya ingin** mengisi form konfigurasi **agar** AI menghasilkan **satu lembar penuh** sesuai mapel, topik, dan Capaian Pembelajaran Fase C.
 
 **Acceptance Criteria:**
 
@@ -212,7 +214,8 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
   - **Mata Pelajaran**: dropdown aktif (**Bahasa Indonesia** / **Pendidikan Pancasila**)
   - **Topik/Materi**: dropdown dinamis berdasarkan mapel yang dipilih (lihat §8.3 daftar topik per mapel), dengan opsi teks bebas untuk topik custom
   - **Tingkat Kesulitan**: dropdown (Mudah / Sedang / Sulit / Campuran)
-  - **Jumlah soal**: **20** (fixed, label info — bukan input)
+  - **Jumlah soal**: angka default per jenis lembar (20 untuk latihan/formatif, 25 untuk STS/SAS/TKA), dapat diubah (5–50)
+  - **Atur Komposisi** (opsional): panel ekspandabel untuk mengatur jumlah per tipe soal (PG tunggal, PG kompleks, benar/salah)
   - **Mode Review**: toggle dua opsi — **Cepat (Fast Track, default)** atau **Detail (Slow Track)**. Mode dapat diubah lagi setelah generate
   - **Contoh Soal** (opsional): textarea untuk paste contoh soal yang diinginkan gaya-nya
   - **PDF Materi**: file yang sudah diupload di US-7 (opsional, tampil jika ada)
@@ -222,9 +225,9 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 - Loading state: progress indicator selama AI memproses (estimasi 10–30 detik)
 - Error handling: tampilkan pesan jika AI gagal (timeout, rate limit)
 
-#### US-9: Review paket 20 soal (Slow Track / mode Detail)
+#### US-9: Review paket soal (Slow Track / mode Detail)
 
-> **Sebagai** guru, **saya ingin** mereview **20 soal** hasil AI satu per satu **agar** hanya set yang layak yang menjadi **satu lembar soal** siap cetak.
+> **Sebagai** guru, **saya ingin** mereview **soal** hasil AI satu per satu **agar** hanya set yang layak yang menjadi **satu lembar soal** siap cetak.
 
 > **Aktif jika** Mode Review = **Detail** di US-8, atau guru **switch** dari Fast Track (US-9b).
 
@@ -237,8 +240,8 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 - Jika regenerate gagal (network/rate-limit/AI tidak valid), kartu masuk state **error** dengan tombol **Coba lagi** (gunakan ulang petunjuk yang tersimpan) dan **Batalkan** (kembalikan ke konten & status sebelum Tolak). Tanpa auto-retry.
 - **Edit mempertahankan status** soal — perubahan teks/jawaban oleh guru tidak mereset approval state.
 - Bulk: **Terima Semua** (selalu tampil) dan **Coba lagi yang gagal (N)** (hanya tampil saat ada kegagalan regenerate, N > 0). Tombol "Tolak Semua" / "Ganti semua ditolak" dihapus — tidak ada lagi state `rejected` permanen di UI.
-- Counter utama: **"X dari 20 siap lembar"**
-- Tombol **Preview Lembar** tetap nonaktif sampai **20 dari 20** soal sudah siap
+- Counter utama: **"X dari Y siap lembar"** (Y = jumlah soal yang dikonfigurasi)
+- Tombol **Preview Lembar** tetap nonaktif sampai **semua** soal sudah siap
 - Sebelum masuk preview, guru melengkapi metadata lembar wajib: **nama sekolah, tahun pelajaran, jenis ujian (default: TKA), tanggal/hari, durasi**, dan **petunjuk** (opsional, default 3 poin standar)
 - Setelah review, alur utama: **Lanjut ke Preview lembar (US-14)**
 - Tombol **Switch ke Mode Cepat** tersedia di header tanpa kehilangan state
@@ -251,14 +254,14 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 
 **Acceptance Criteria:**
 
-- Setelah generate sukses, sistem **auto-accept** semua 20 soal → guru ke **satu layar gabungan**: ringkasan paket + form metadata + tombol **Preview Lembar**
-- Ringkasan paket: **list compact 20 soal** (nomor, ringkas teks soal, jawaban benar, topik/kesulitan) — read-only, scrollable
+- Setelah generate sukses, sistem **auto-accept** semua soal → guru ke **satu layar gabungan**: ringkasan paket + form metadata + tombol **Preview Lembar**
+- Ringkasan paket: **list compact soal** (nomor, ringkas teks soal, jawaban benar, topik/kesulitan) — read-only, scrollable
 - Form **metadata wajib** sama dengan US-9
 - Tombol **Preview Lembar** aktif segera setelah metadata wajib lengkap
 - Tombol **"Switch ke Review Detail"** → buka US-9 dengan pre-marked state
 - Tombol per-item **"Edit cepat"** tetap tersedia di tiap baris (modal edit)
 - Tombol **"Regenerate paket"** (kembali ke US-8 dengan config yang sama)
-- **Safety net**: jika AI gagal validasi (jumlah ≠ 20, field kosong, jawaban invalid), fallback ke US-9 hanya untuk item yang invalid
+- **Safety net**: jika AI gagal validasi (jumlah ≠ target, field kosong, jawaban invalid), fallback ke US-9 hanya untuk item yang invalid
 
 ---
 
@@ -270,7 +273,7 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 
 **Acceptance Criteria:**
 
-- Preview hanya dapat dibuka jika metadata lengkap dan paket berisi **tepat 20 soal**
+- Preview hanya dapat dibuka jika metadata lengkap dan paket berisi **soal sesuai jumlah yang dikonfigurasi**
 - Preview menampilkan format TKA standar:
   - **KOP Sekolah**: nama sekolah, centered, bold, uppercase
   - **Title**: jenis ujian + tahun pelajaran, centered, underlined
@@ -309,7 +312,7 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 - Kunci jawaban muncul di halaman terpisah (page break sebelumnya)
 - Format: grid/tabel — "1. A  |  2. B  |  3. C  |  4. D  |  ..."
 - Header: "KUNCI JAWABAN" + nama ujian + mata pelajaran + kelas
-- **Skor per nomor ditampilkan**: "Setiap jawaban benar bernilai 5 poin. Total: 100 poin" (20 soal × 5 = 100)
+- **Skor per nomor ditampilkan**: "Setiap jawaban benar bernilai (100 / jumlah_soal) poin. Total: 100 poin"
 - Tercetak otomatis setelah halaman lembar jawaban
 
 #### US-17: Riwayat Ujian
@@ -458,12 +461,12 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 └─────────────────────────────────────┘
 ```
 
-### 4.3 AI — Generate satu lembar (20 soal)
+### 4.3 AI — Generate satu lembar (5–50 soal)
 
 ```
 ┌─────────────────────────────────────┐
 │ ← Dashboard  Generate Lembar (AI)   │
-│     1 lembar = 20 soal PG           │
+│     1 lembar = 5–50 soal            │
 ├─────────────────────────────────────┤
 │                                     │
 │ 📄 Upload Materi/Buku (opsional)    │
@@ -493,8 +496,8 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 
 ```
 ┌─────────────────────────────────────┐
-│ ← Generate    Review (20 soal)      │
-│ Paket lembar — 17 dari 20 siap      │
+│ ← Generate    Review (soal)         │
+│ Paket lembar — X dari Y siap        │
 │ [✅ Terima Semua]                    │
 │ [♻ Coba lagi yang gagal (N)]        │  ← muncul hanya jika N > 0
 │ [⇄ Switch ke Mode Cepat]            │
@@ -518,7 +521,7 @@ Urutan: login → dashboard → generate → review → preview/cetak → koreks
 │ TP: [2025/2026__] Jenis: [Ulangan ▾]│  ← lihat §8.6 (5 opsi)
 │ Tgl: [22 Apr 2026] Waktu: [60 mnt]  │
 │                                     │
-│ [Preview nonaktif: 17/20 siap]      │
+│ [Preview nonaktif: X/Y siap]        │
 └─────────────────────────────────────┘
 ```
 
@@ -771,7 +774,7 @@ State `regenerating`, `new-replacement`, dan `regenerate-failed` adalah **state 
 | Export ke DOCX/PDF file                             | Browser print sudah cukup                   |
 | **Tambah Matematika / IPAS pada hackathon window**  | Korpus Buku Siswa belum terekstrak; PRD §5.4 mensyaratkan grounding pada buku resmi — shipping mapel tanpa korpus melanggar pillar akurasi kurikulum |
 | **Tambah kelas 1–4 pada hackathon window**          | Sama — korpus per `(mapel, kelas)` harus eksis lebih dulu; kode ~6 touchpoints tapi korpus adalah real cost |
-| **Re-enable Koreksi entry di dashboard**            | Sengaja dinonaktifkan (commit `b4d58b3`) untuk fokus alur Generate di demo; akses tetap tersedia via halaman Riwayat |
+| **Re-enable Koreksi**            | Dinonaktifkan sampai PRD v5 (persistent storage + student identity). Koreksi client-side saja, data tidak persisten. Alasan: mengaktifkan koreksi tanpa persistensi menciptakan UX yang menyesatkan — guru mengharapkan data tersimpan, padahal hilang saat halaman ditutup. |
 
 
 ---
@@ -939,17 +942,19 @@ Setiap lembar yang di-generate diasosiasikan dengan **Jenis Lembar** yang menent
 
 **Terminologi:** Kurikulum Merdeka resmi menggunakan istilah **"Asesmen"** (Formatif / Sumatif), bukan "Ulangan/Penilaian". Praktiknya guru SD masih familiar dengan istilah lama (UTS/UAS/Ulangan Harian), jadi UI memakai *dual-label*: label primer = istilah colloquial, sub-label/tooltip = istilah Kurmer resmi.
 
-| value (DB)  | Label UI            | Sublabel (Kurmer)              | Default distribusi (mudah/sedang/sulit dari 20) | Bloom diizinkan |
-| ----------- | ------------------- | ------------------------------ | ----------------------------------------------- | --------------- |
-| `latihan`   | Latihan Soal        | Asesmen mandiri / drill        | 8 / 8 / 4                                       | C1, C2, C3      |
-| `formatif`  | Ulangan Harian      | Asesmen Formatif (Kurmer)      | 6 / 10 / 4                                      | C1, C2, C3      |
-| `sts`       | UTS                 | Sumatif Tengah Semester        | 6 / 10 / 4                                      | C1, C2, C3      |
-| `sas`       | UAS                 | Sumatif Akhir Semester         | 4 / 10 / 6                                      | C2, C3, C4      |
-| `tka`       | TKA                 | Tes Kemampuan Akademik         | 3 / 9 / 8                                       | C2, C3, C4      |
+| value (DB)  | Label UI            | Sublabel (Kurmer)              | Default jumlah soal | Default distribusi (mudah/sedang/sulit) | Bloom diizinkan |
+| ----------- | ------------------- | ------------------------------ | ------------------- | --------------------------------------- | --------------- |
+| `latihan`   | Latihan Soal        | Asesmen mandiri / drill        | 20                  | 8 / 8 / 4                              | C1, C2, C3      |
+| `formatif`  | Ulangan Harian      | Asesmen Formatif (Kurmer)      | 20                  | 6 / 10 / 4                             | C1, C2, C3      |
+| `sts`       | UTS                 | Sumatif Tengah Semester        | 25                  | 8 / 13 / 4                             | C1, C2, C3      |
+| `sas`       | UAS                 | Sumatif Akhir Semester         | 25                  | 5 / 13 / 7                             | C2, C3, C4      |
+| `tka`       | TKA                 | Tes Kemampuan Akademik         | 25                  | 4 / 11 / 10                            | C2, C3, C4      |
 
 **Default UI:** `formatif` (kasus paling umum guru SD). Backward-compat: row eksisting dengan nilai `'TKA'` (uppercase) dianggap setara `'tka'`.
 
 **Override manual:** Field "Tingkat Kesulitan" eksisting (§8.5) tetap berlaku. Jika guru pilih kesulitan eksplisit (mudah/sedang/sulit), distribusi default dari Jenis Lembar di-skip; jika pilih `campuran` (default), distribusi mengikuti profil di atas.
+
+**Jumlah soal:** Default per jenis lembar (lihat tabel), dapat diubah guru (5–50). Jumlah soal mempengaruhi poin per soal: 100 / jumlah_soal.
 
 **Mengapa structured (bukan tone-only)?** Hasil AI lebih *konsisten* dan *terukur* — tiap lembar bisa di-audit ("UTS ini punya 6 soal C1, 10 soal C2, 4 soal C3 sesuai standar"), defensible ke kepala sekolah/pengawas, dan maintainable dari satu mapping table.
 
