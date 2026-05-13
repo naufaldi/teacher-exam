@@ -182,6 +182,30 @@ describe('api.ai.generate', () => {
     )
   })
 
+  it('serializes matematika subject in generate request body', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...VALID_EXAM_WITH_QUESTIONS, subject: 'matematika' }),
+    })
+
+    await api.ai.generate({
+      subject: 'matematika',
+      grade: 5,
+      difficulty: 'sedang',
+      topics: ['Pecahan, Desimal, dan Persen'],
+      reviewMode: 'fast',
+    })
+
+    const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined
+    expect(init?.body).toBe(JSON.stringify({
+      subject: 'matematika',
+      grade: 5,
+      difficulty: 'sedang',
+      topics: ['Pecahan, Desimal, dan Persen'],
+      reviewMode: 'fast',
+    }))
+  })
+
   it('throws ApiError when server response fails schema decode', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

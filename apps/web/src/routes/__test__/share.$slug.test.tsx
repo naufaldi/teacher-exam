@@ -124,4 +124,25 @@ describe('share/$slug route', () => {
 
     expect(printSpy).toHaveBeenCalledTimes(2)
   })
+
+  it('renders LaTeX in public question text and options', () => {
+    const exam = makePublicExam()
+    const question = exam.questions[0]
+    if (question?._tag !== 'mcq_single') throw new Error('Expected mcq_single fixture')
+
+    mockLoaderData = {
+      ...exam,
+      subject: 'matematika',
+      questions: [{
+        ...question,
+        text: 'Hitung $\\frac{3}{4}$ dari 20.',
+        options: { a: '$15$', b: '$10$', c: '$5$', d: '$20$' },
+      }],
+    }
+
+    const { container } = renderPage()
+
+    expect(container.querySelectorAll('.katex').length).toBeGreaterThan(1)
+    expect(container.textContent).not.toContain('$')
+  })
 })

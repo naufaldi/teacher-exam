@@ -300,3 +300,41 @@ describe('buildExamPrompt — geometry figure spec', () => {
     expect(system).toContain('opsional')
   })
 })
+
+describe('buildExamPrompt — Matematika LaTeX rules', () => {
+  test('adds LaTeX delimiter rules for Matematika', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      subjectLabel: 'Matematika',
+      grade: 5,
+      topics: ['Pecahan'],
+      totalSoal: 20,
+      curriculumText: 'Dummy matematika curriculum.',
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('$inline$')
+    expect(system).toContain('$$display$$')
+    expect(system).toContain('\\frac{3}{4}')
+    expect(system).toContain('x^2')
+    expect(system).toContain('\\sqrt{16}')
+  })
+
+  test('does not add Matematika-only LaTeX rules for non-Matematika', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
+      curriculumText: 'Dummy bahasa curriculum.',
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).not.toContain('$inline$')
+    expect(system).not.toContain('$$display$$')
+    expect(system).not.toContain('\\frac{3}{4}')
+  })
+})

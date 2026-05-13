@@ -453,6 +453,42 @@ describe('PreviewPage topics display', () => {
   })
 })
 
+describe('PreviewPage math rendering', () => {
+  it('renders LaTeX in question text and options', () => {
+    seedPreviewDraft([{
+      ...makeMcqSingle(1),
+      text: 'Hitung $\\frac{3}{4}$ dari 20.',
+      options: {
+        a: '$15$',
+        b: '$10$',
+        c: '$5$',
+        d: '$20$',
+      },
+    }])
+
+    const { container } = renderPreviewPage()
+
+    const soalSection = container.querySelector('[data-print-section="soal"]')
+    expect(soalSection?.querySelectorAll('.katex').length).toBeGreaterThan(1)
+    expect(soalSection?.textContent).not.toContain('$')
+  })
+})
+
+describe('PreviewPage figure rendering', () => {
+  it('renders generated figure specs in the preview paper', () => {
+    seedPreviewDraft([{
+      ...makeMcqSingle(1),
+      topic: 'Bangun Datar',
+      text: 'Perhatikan lingkaran berikut.',
+      figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+    } as Question])
+
+    const { container } = renderPreviewPage()
+
+    expect(container.querySelector('[data-figure-svg]')).not.toBeNull()
+  })
+})
+
 describe('Pembahasan tab', () => {
   it('renders Pembahasan tab trigger in the tab list', () => {
     mockLoaderData = makeExamWithQuestions(['Teks Narasi'])

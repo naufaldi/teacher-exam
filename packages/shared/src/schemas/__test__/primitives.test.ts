@@ -2,8 +2,10 @@ import { describe, test, expect } from 'vitest'
 import { Schema, Either } from 'effect'
 import {
   AnswerLetterSchema,
+  ExamSubjectSchema,
   MultiAnswerSchema,
   QuestionTypeSchema,
+  SUBJECT_LABEL,
 } from '../primitives.js'
 
 describe('AnswerLetterSchema', () => {
@@ -99,5 +101,16 @@ describe('QuestionTypeSchema', () => {
   test("rejects 'mcq_Single' (case-sensitive)", () => {
     const result = Schema.decodeUnknownEither(QuestionTypeSchema)('mcq_Single')
     expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe('ExamSubjectSchema', () => {
+  test("accepts 'matematika'", () => {
+    const result = Schema.decodeUnknownEither(ExamSubjectSchema)('matematika')
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test('labels matematika as Matematika', () => {
+    expect((SUBJECT_LABEL as Record<string, string>)['matematika']).toBe('Matematika')
   })
 })

@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { auth } from './lib/auth'
+import { resolveAllowedCorsOrigins, resolveApiPort } from './lib/auth-origins'
 import { requireAuth } from './middleware/auth'
 import { errorHandler } from './middleware/error-handler'
 import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
@@ -14,12 +15,13 @@ import { questionsRouter } from './routes/questions'
 import { createAiRouter } from './routes/ai'
 
 const app = new Hono()
+const allowedCorsOrigins = new Set(resolveAllowedCorsOrigins())
 
 app.use('*', logger())
 app.use(
   '/api/*',
   cors({
-    origin: process.env['APP_URL'] ?? 'http://localhost:3000',
+    origin: (origin) => allowedCorsOrigins.has(origin) ? origin : null,
     credentials: true,
   }),
 )
@@ -41,7 +43,7 @@ app.route('/api/ai', createAiRouter())
 app.onError(errorHandler)
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
-const port = Number(process.env['API_PORT'] ?? 3001)
+const port = resolveApiPort()
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`API server running on http://localhost:${port}`)

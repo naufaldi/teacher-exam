@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@teacher-exam/ui/tailwind.css";
+@import "katex/dist/katex.min.css";
 
 @layer base {
   html, body, #root {

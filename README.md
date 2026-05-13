@@ -74,7 +74,7 @@ Requires **Node ≥ 22** and **pnpm 10.15+**.
 pnpm install
 cp .env.example .env          # then fill in DATABASE_URL, GOOGLE_*, set AI_PROVIDER, and paste your AI key(s)
 pnpm db:migrate
-pnpm dev                      # web :3000  ·  api :3001
+pnpm dev                      # web :5173  ·  api :3000
 ```
 
 | Task              | Command            |

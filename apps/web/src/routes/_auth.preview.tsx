@@ -14,6 +14,7 @@ import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
+import { MathText } from '../components/math-text.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
 import { SUBJECT_LABEL } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
@@ -297,7 +298,7 @@ function renderMcqOptions(options: { a: string; b: string; c: string; d: string 
       {OPTION_LETTERS.map((letter) => (
         <li key={letter} className="flex gap-2">
           <span className="font-semibold">{letter}.</span>
-          <span>{options[letter]}</span>
+          <span><MathText text={options[letter]} /></span>
         </li>
       ))}
     </ol>
@@ -317,7 +318,7 @@ function renderTrueFalseTable(statements: ReadonlyArray<{ text: string; answer: 
       <tbody>
         {statements.map((stmt, i) => (
           <tr key={i}>
-            <td className="border border-black/40 px-2 py-1">{stmt.text}</td>
+            <td className="border border-black/40 px-2 py-1"><MathText text={stmt.text} /></td>
             <td className="text-center border border-black/40 px-2 py-1">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-black/60 text-[10px]" />
             </td>
@@ -370,7 +371,7 @@ function SoalSection({
             <div key={q.id} className="break-inside-avoid mb-4">
               <p className="mb-1.5">
                 <span className="font-bold mr-1">{q.number}.</span>
-                <span className="whitespace-pre-line">{q.text}</span>
+                <span className="whitespace-pre-line"><MathText text={q.text} /></span>
               </p>
               {q.figure ? <FigureSvg figure={q.figure} /> : null}
               {matchQuestion(q, {

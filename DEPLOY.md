@@ -33,7 +33,7 @@ Reverse proxy: `edge-proxy-caddy` (shared, already running on VPS).
 In [Google Cloud Console](https://console.cloud.google.com) → OAuth 2.0 Client → Authorized redirect URIs:
 
 ```
-http://localhost:3001/api/auth/callback/google
+http://localhost:3000/api/auth/callback/google
 https://api-ujian-sekolah.faldi.xyz/api/auth/callback/google
 ```
 

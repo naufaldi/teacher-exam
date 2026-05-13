@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { eq } from 'drizzle-orm'
 import { db, user, session, account, verification } from '@teacher-exam/db'
 import { deriveUniqueUsername } from './username'
+import { resolveAuthBaseURL, resolveTrustedOrigins } from './auth-origins'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -13,15 +14,12 @@ function requireEnv(name: string): string {
 const SESSION_SECRET       = requireEnv('SESSION_SECRET')
 const GOOGLE_CLIENT_ID     = requireEnv('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = requireEnv('GOOGLE_CLIENT_SECRET')
-const APP_URL              = process.env['APP_URL'] ?? 'http://localhost:3000'
-// Prod: BETTER_AUTH_URL=https://api.ujiansd.com (API host, not web host)
-// Dev: falls back to APP_URL — Vite proxies /api → :3001 so callbacks resolve
-const BETTER_AUTH_URL      = process.env['BETTER_AUTH_URL'] ?? APP_URL
+const BETTER_AUTH_URL      = resolveAuthBaseURL()
 
 export const auth = betterAuth({
   secret: SESSION_SECRET,
   baseURL: BETTER_AUTH_URL,
-  trustedOrigins: [APP_URL],
+  trustedOrigins: resolveTrustedOrigins(),
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: { user, session, account, verification },

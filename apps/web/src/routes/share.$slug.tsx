@@ -7,6 +7,7 @@ import type { PublicExamDetailResponse } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { pointsPerQuestion } from '../lib/points.js'
+import { MathText } from '../components/math-text.js'
 
 export const Route = createFileRoute('/share/$slug')({
   loader: async ({ params }) => api.publicExams.get(params.slug),
@@ -77,27 +78,27 @@ function PublicExamSection({ exam }: { exam: PublicExamDetailResponse }) {
         {exam.questions.map((question) => (
           <article key={question.id} className="space-y-2">
             <p className="text-body font-medium text-text-primary">
-              {question.number}. {question.text}
+              {question.number}. <MathText text={question.text} />
             </p>
             {matchQuestion(question, {
               mcq_single: (item) => (
                 <ol className="space-y-1 pl-5 text-body-sm text-text-secondary" type="a">
                   {Object.entries(item.options).map(([key, value]) => (
-                    <li key={key}>{value}</li>
+                    <li key={key}><MathText text={value} /></li>
                   ))}
                 </ol>
               ),
               mcq_multi: (item) => (
                 <ol className="space-y-1 pl-5 text-body-sm text-text-secondary" type="a">
                   {Object.entries(item.options).map(([key, value]) => (
-                    <li key={key}>{value}</li>
+                    <li key={key}><MathText text={value} /></li>
                   ))}
                 </ol>
               ),
               true_false: (item) => (
                 <ul className="space-y-1 text-body-sm text-text-secondary">
                   {item.statements.map((statement, index) => (
-                    <li key={`${question.id}-${index}`}>{statement.text}</li>
+                    <li key={`${question.id}-${index}`}><MathText text={statement.text} /></li>
                   ))}
                 </ul>
               ),
