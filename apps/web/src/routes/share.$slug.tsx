@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Badge, Button, PageHeader } from '@teacher-exam/ui'
 import { BookOpen, Download, Key, Printer } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import { SUBJECT_LABEL } from '@teacher-exam/shared'
 import type { PublicExamDetailResponse } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { pointsPerQuestion } from '../lib/points.js'
 import { MathText } from '../components/math-text.js'
+import { MarkdownMath } from '../components/markdown-math.js'
+import { FigureSvg } from '../components/figure-svg.js'
 
 export const Route = createFileRoute('/share/$slug')({
   loader: async ({ params }) => api.publicExams.get(params.slug),
@@ -80,6 +81,7 @@ function PublicExamSection({ exam }: { exam: PublicExamDetailResponse }) {
             <p className="text-body font-medium text-text-primary">
               {question.number}. <MathText text={question.text} />
             </p>
+            {question.figure ? <FigureSvg figure={question.figure} /> : null}
             {matchQuestion(question, {
               mcq_single: (item) => (
                 <ol className="space-y-1 pl-5 text-body-sm text-text-secondary" type="a">
@@ -149,7 +151,7 @@ function PublicDiscussionSection({ markdown }: { markdown: string }) {
       </div>
 
       <div className="px-6 py-6 prose prose-sm max-w-none">
-        <ReactMarkdown>{markdown}</ReactMarkdown>
+        <MarkdownMath markdown={markdown} />
       </div>
     </section>
   )

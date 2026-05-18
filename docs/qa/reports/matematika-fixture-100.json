@@ -1,0 +1,708 @@
+{
+  "subject": "matematika",
+  "count": 100,
+  "generatedAt": "2026-05-18T04:32:46.071Z",
+  "failures": 0,
+  "results": [
+    {
+      "number": 1,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 2,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 3,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 4,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 5,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 6,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 7,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 8,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 9,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 10,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 11,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 12,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 13,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 14,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 15,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 16,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 17,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 18,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 19,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 20,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 21,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 22,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 23,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 24,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 25,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 26,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 27,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 28,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 29,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 30,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 31,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 32,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 33,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 34,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 35,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 36,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 37,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 38,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 39,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 40,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 41,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 42,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 43,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 44,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 45,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 46,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 47,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 48,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 49,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 50,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 51,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 52,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 53,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 54,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 55,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 56,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 57,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 58,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 59,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 60,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 61,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 62,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 63,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 64,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 65,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 66,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 67,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 68,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 69,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 70,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 71,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 72,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 73,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 74,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 75,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 76,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 77,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 78,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 79,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 80,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 81,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 82,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 83,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 84,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 85,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 86,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 87,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 88,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 89,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 90,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 91,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 92,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 93,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 94,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 95,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 96,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 97,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 98,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    },
+    {
+      "number": 99,
+      "topic": "Pecahan, Desimal, dan Persen",
+      "latexStatus": "valid",
+      "figureStatus": "none",
+      "reason": null
+    },
+    {
+      "number": 100,
+      "topic": "Bangun Datar",
+      "latexStatus": "valid",
+      "figureStatus": "valid",
+      "reason": null
+    }
+  ]
+}

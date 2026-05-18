@@ -145,4 +145,39 @@ describe('share/$slug route', () => {
     expect(container.querySelectorAll('.katex').length).toBeGreaterThan(1)
     expect(container.textContent).not.toContain('$')
   })
+
+  it('renders LaTeX in public pembahasan markdown', () => {
+    mockLoaderData = {
+      ...makePublicExam(),
+      subject: 'matematika',
+      discussionMd: '## 1. Pecahan\n**Jawaban Benar: A**\n\nGunakan $\\frac{1}{2}$ bagian.',
+    }
+
+    const { container } = renderPage()
+
+    expect(container.querySelector('.katex')).not.toBeNull()
+    expect(container.textContent).not.toContain('$')
+  })
+
+  it('renders generated figure specs in public questions', () => {
+    const exam = makePublicExam()
+    const question = exam.questions[0]
+    if (question?._tag !== 'mcq_single') throw new Error('Expected mcq_single fixture')
+
+    mockLoaderData = {
+      ...exam,
+      subject: 'matematika',
+      topics: ['Bangun Datar'],
+      questions: [{
+        ...question,
+        topic: 'Bangun Datar',
+        text: 'Perhatikan lingkaran berikut.',
+        figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+      }],
+    }
+
+    const { container } = renderPage()
+
+    expect(container.querySelector('[data-figure-svg]')).not.toBeNull()
+  })
 })

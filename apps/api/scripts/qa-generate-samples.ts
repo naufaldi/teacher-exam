@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { Either, Schema } from 'effect'
 import { FigureSpecSchema, type GeneratedQuestion } from '@teacher-exam/shared'
 import { validateGeneratedQuestionLatex } from '../src/lib/latex-validator'
@@ -50,9 +50,13 @@ await writeFile(mdPath, [
   '',
   `- Count: ${args.count}`,
   `- Failures: ${failures.length}`,
-  `- JSON: ${jsonPath}`,
+  `- JSON: ${basename(jsonPath)}`,
   '',
-  failures.length === 0 ? 'All fixture samples passed automated LaTeX and figure validation.' : 'Failures require review before sign-off.',
+  failures.length === 0
+    ? 'All deterministic fixture samples passed automated LaTeX and figure validation.'
+    : 'Fixture failures require review before sign-off.',
+  '',
+  'This report validates parser/schema/rendering safety for synthetic fixtures; real AI output still needs human pedagogy review before release sign-off.',
   '',
 ].join('\n'))
 

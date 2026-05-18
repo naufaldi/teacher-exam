@@ -19,6 +19,12 @@ const FAKE_EXAM = {
   examType: 'tka' as const,
 }
 
+const MATEMATIKA_EXAM = {
+  subject: 'Matematika',
+  grade: 6,
+  examType: 'formatif' as const,
+}
+
 const MIXED_QUESTIONS = [
   {
     _tag: 'mcq_single' as const,
@@ -168,5 +174,13 @@ describe('buildPembahasanPrompt', () => {
     expect(system).toContain('Benar/Salah')
     expect(system).toContain('A, C')
     expect(system).toContain('B, S, B')
+  })
+
+  it('requires LaTeX delimiters for Matematika pembahasan', () => {
+    const { system } = buildPembahasanPrompt({ exam: MATEMATIKA_EXAM, questions: MIXED_QUESTIONS })
+
+    expect(system).toContain('$...$')
+    expect(system).toContain('$$...$$')
+    expect(system).toContain('Jangan tulis pecahan, akar, pangkat, atau rumus matematika sebagai teks biasa')
   })
 })

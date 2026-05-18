@@ -106,10 +106,26 @@ function serializeQuestion(q: PembahasanQuestion) {
   )
 }
 
+function isMatematikaSubject(subject: string): boolean {
+  return subject.toLowerCase() === 'matematika'
+}
+
 export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt {
   if (input.questions.length === 0) {
     throw new Error('buildPembahasanPrompt: questions must not be empty')
   }
+
+  const matematikaRules = isMatematikaSubject(input.exam.subject)
+    ? [
+        '',
+        'Aturan Matematika (WAJIB):',
+        '- Tulis semua ekspresi matematika dengan delimiter LaTeX.',
+        '- Gunakan $...$ untuk matematika inline.',
+        '- Gunakan $$...$$ untuk rumus atau langkah hitung yang berdiri sendiri.',
+        '- Jangan tulis pecahan, akar, pangkat, atau rumus matematika sebagai teks biasa.',
+        '- Contoh benar: $\\frac{3}{4}$, $2^3$, $\\sqrt{16}$, $$12 \\times 5 = 60$$.',
+      ]
+    : []
 
   const system = [
     `Kamu adalah kakak yang sabar membantu adik kelas ${input.exam.grade} SD memahami soal ${input.exam.subject} (${input.exam.examType.toUpperCase()}).`,
@@ -142,6 +158,7 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
     '- Tidak boleh ada paragraf pembuka atau penutup di luar blok per-soal.',
     '- Jawaban Benar wajib mengikuti format label jawaban sesuai jenis soal.',
     '- Ikuti urutan nomor soal dari kecil ke besar. Jangan lewati nomor.',
+    ...matematikaRules,
   ].join('\n')
 
   const user = JSON.stringify(
