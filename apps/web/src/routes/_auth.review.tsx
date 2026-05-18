@@ -547,9 +547,12 @@ function ReviewPage() {
                 <span className="text-caption text-text-tertiary font-mono w-6 shrink-0">
                   {q.number}.
                 </span>
-                <p className="flex-1 text-body-sm text-text-primary truncate">
-                  {q.text.split('\n')[0]}
-                </p>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <p className="text-body-sm text-text-primary truncate">
+                    {q.text.split('\n')[0]}
+                  </p>
+                  {q.figure ? <FigureSvg figure={q.figure} /> : null}
+                </div>
                 <span className="font-mono text-caption bg-bg-muted px-1.5 py-0.5 rounded-xs shrink-0">
                   {questionCorrectLabel(q)}
                 </span>

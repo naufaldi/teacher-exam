@@ -1,8 +1,8 @@
 # QA Fixture Report: matematika
 
-- Count: 50
+- Count: 100
 - Failures: 0
-- JSON: matematika-fixture-50.json
+- JSON: matematika-fixture-100.json
 
 All deterministic fixture samples passed automated LaTeX and figure validation.
 

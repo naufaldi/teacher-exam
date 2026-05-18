@@ -519,6 +519,20 @@ describe('Pembahasan tab', () => {
     expect(within(pembahasanSection as HTMLElement).queryByRole('button', { name: /generate pembahasan/i })).not.toBeInTheDocument()
   })
 
+  it('renders LaTeX inside pembahasan markdown', () => {
+    mockLoaderData = {
+      ...makeExamWithQuestions(['Matematika']),
+      subject: 'matematika',
+      discussionMd: '## 1. Pecahan\n**Jawaban Benar: A**\n\nNilainya adalah $\\frac{3}{4}$.',
+    }
+
+    const { container } = renderPreviewPage()
+
+    const pembahasanSection = container.querySelector('[data-print-section="pembahasan"]')
+    expect(pembahasanSection?.querySelector('.katex')).not.toBeNull()
+    expect(pembahasanSection?.textContent).not.toContain('$')
+  })
+
   it('clicking Generate calls api.exams.streamDiscussion and renders returned markdown', async () => {
     mockLoaderData = { ...makeExamWithQuestions(['Teks Narasi']), discussionMd: null }
     mockStreamDiscussion.mockImplementationOnce(async (

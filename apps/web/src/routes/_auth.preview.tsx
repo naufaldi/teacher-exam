@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Printer, FileText, ClipboardList, Key, Layers, BookOpen } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import {
   Button,
   Badge,
@@ -15,6 +14,7 @@ import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
+import { MarkdownMath } from '../components/markdown-math.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
 import { SUBJECT_LABEL } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
@@ -608,7 +608,7 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
           </div>
         ) : (
           <div className="prose prose-sm max-w-none text-[13px] leading-relaxed">
-            <ReactMarkdown>{md}</ReactMarkdown>
+            <MarkdownMath markdown={md} />
           </div>
         )}
       </PaperFrame>

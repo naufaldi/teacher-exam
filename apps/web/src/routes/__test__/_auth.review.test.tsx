@@ -792,6 +792,26 @@ describe('ReviewPage — figure rendering', () => {
 
     expect(container.querySelector('[data-figure-svg]')).not.toBeNull()
   })
+
+  it('renders generated figure specs in fast review cards', async () => {
+    mockSearchParams = { mode: 'fast', examId: 'exam_figure_fast' }
+    const exam = makeExamWithQuestions('exam_figure_fast')
+    mockExamsGet.mockResolvedValueOnce({
+      ...exam,
+      subject: 'matematika',
+      questions: [{
+        ...exam.questions[0]!,
+        topic: 'Bangun Datar',
+        text: 'Perhatikan lingkaran berikut.',
+        figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+      }],
+    })
+    await getLoader()({ deps: { examId: 'exam_figure_fast' } })
+
+    const { container } = renderReviewPage()
+
+    expect(container.querySelector('[data-figure-svg]')).not.toBeNull()
+  })
 })
 
 describe('ReviewPage — Task 13: Edit dialog save fires api.questions.patch with typed payload', () => {
