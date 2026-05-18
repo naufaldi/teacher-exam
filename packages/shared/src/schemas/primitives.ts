@@ -6,6 +6,7 @@ export const ExamSubjectSchema = Schema.Literal(
   'pendidikan_pancasila',
   'ipas',
   'bahasa_inggris',
+  'matematika',
 )
 export type ExamSubject = typeof ExamSubjectSchema.Type
 
@@ -14,6 +15,7 @@ export const SUBJECT_LABEL: Record<ExamSubject, string> = {
   pendidikan_pancasila: 'Pendidikan Pancasila',
   ipas: 'IPAS',
   bahasa_inggris: 'Bahasa Inggris',
+  matematika: 'Matematika',
 }
 
 export const ExamDifficultySchema = Schema.Literal(

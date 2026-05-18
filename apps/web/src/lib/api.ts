@@ -22,7 +22,7 @@ import {
 } from '@teacher-exam/shared'
 
 // Prod: VITE_API_URL=https://api.ujiansd.com/api (baked at build time)
-// Dev: unset → relative path, proxied by Vite to :3001
+// Dev: unset → relative path, proxied by Vite to :3000
 const API_BASE = import.meta.env['VITE_API_URL'] ?? '/api'
 
 /**

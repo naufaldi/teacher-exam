@@ -238,7 +238,7 @@ In [Google Cloud Console](https://console.cloud.google.com) → APIs & Services 
 
 **Authorized redirect URIs** (both required):
 ```
-http://localhost:3001/api/auth/callback/google     ← local dev
+http://localhost:3000/api/auth/callback/google     ← local dev
 https://api-ujian-sekolah.faldi.xyz/api/auth/callback/google  ← production
 ```
 

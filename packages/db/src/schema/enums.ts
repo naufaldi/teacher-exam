@@ -5,6 +5,7 @@ export const examSubjectEnum = pgEnum('exam_subject', [
   'pendidikan_pancasila',
   'ipas',
   'bahasa_inggris',
+  'matematika',
 ])
 export const examDifficultyEnum = pgEnum('exam_difficulty', [
   'mudah', 'sedang', 'sulit', 'campuran',

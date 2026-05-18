@@ -32,6 +32,7 @@ import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
+import { MathText } from '../components/math-text.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
 import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
@@ -666,7 +667,7 @@ function ReviewPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-body text-text-primary mb-3 whitespace-pre-line">{q.text}</p>
+                        <p className="text-body text-text-primary mb-3 whitespace-pre-line"><MathText text={q.text} /></p>
                         {q.figure ? <FigureSvg figure={q.figure} /> : null}
                         {matchQuestion(q, {
                           mcq_single: (sq) => (
@@ -684,7 +685,7 @@ function ReviewPage() {
                                   <span className="font-mono text-caption shrink-0">
                                     {letter.toUpperCase()}.
                                   </span>
-                                  <span>{sq.options[letter]}</span>
+                                  <span><MathText text={sq.options[letter]} /></span>
                                 </div>
                               ))}
                             </div>
@@ -704,7 +705,7 @@ function ReviewPage() {
                                   <span className="font-mono text-caption shrink-0">
                                     {letter.toUpperCase()}.
                                   </span>
-                                  <span>{mq.options[letter]}</span>
+                                  <span><MathText text={mq.options[letter]} /></span>
                                 </div>
                               ))}
                             </div>
@@ -717,7 +718,7 @@ function ReviewPage() {
                                   className="flex items-center gap-3 px-3 py-2 rounded-xs border border-border-default"
                                 >
                                   <span className="font-mono text-caption shrink-0 w-5">{idx + 1}.</span>
-                                  <span className="flex-1 text-body-sm text-text-primary">{s.text}</span>
+                                  <span className="flex-1 text-body-sm text-text-primary"><MathText text={s.text} /></span>
                                   <span className={`font-mono font-semibold text-body-sm px-2 py-0.5 rounded-xs ${
                                     s.answer ? 'bg-success-bg text-success-fg' : 'bg-danger-bg text-danger-fg'
                                   }`}>

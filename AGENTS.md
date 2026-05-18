@@ -46,7 +46,7 @@ AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
 - **`AI_PROVIDER=anthropic`** (Anthropic Claude on `api.anthropic.com`): `ANTHROPIC_API_KEY`
 - **`AI_PROVIDER=minimax`** (MiniMax M2.7 via the same `@anthropic-ai/sdk`; [Anthropic-compatible API](https://platform.minimax.io/docs/api-reference/text-anthropic-api)): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
 
-Optional with defaults: `API_PORT` (3001), `WEB_PORT` (3000)
+Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
 
 ## Critical Rules
 
@@ -111,10 +111,10 @@ After finishing any task that touches the running app (route, component, form, A
 
 Required loop per finished task:
 
-1. Make sure the dev servers are up (`pnpm dev`, web on `:3000`, api on `:3001`).
+1. Make sure the dev servers are up (`pnpm dev`, web on `:5173`, api on `:3000`).
 2. Drive the affected flow:
    ```bash
-   agent-browser open http://localhost:3000/<route> && agent-browser wait --load networkidle && agent-browser snapshot -i
+   agent-browser open http://localhost:5173/<route> && agent-browser wait --load networkidle && agent-browser snapshot -i
    ```
 3. Capture console errors and warnings — they fail the task:
    ```bash

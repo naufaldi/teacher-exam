@@ -20,7 +20,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@teacher-exam/ui'
-import type { ExamType } from '@teacher-exam/shared'
+import type { ExamSubject, ExamType } from '@teacher-exam/shared'
 import { GenerateProgressDialog } from '../components/generate/generate-progress-dialog.js'
 import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
@@ -107,6 +107,17 @@ const TOPIK_BINGGRIS = [
   'Speaking — Greetings and Introductions',
   'Writing — Short Messages and Letters',
   'Procedures and Instructions',
+] as const
+
+const TOPIK_MATEMATIKA_NON_DIAGRAM = [
+  'Bilangan Cacah dan Operasi Hitung',
+  'Pecahan, Desimal, dan Persen',
+  'Pola dan Kalimat Matematika',
+  'Pengukuran',
+  'Data dan Peluang Awal',
+  'Bangun Datar',
+  'Bangun Ruang',
+  'Bidang Koordinat',
 ] as const
 
 // ── Display label maps ────────────────────────────────────────────────────────
@@ -244,7 +255,7 @@ function GeneratePage() {
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [kelas, setKelas] = useState<string>('')
-  const [mapel, setMapel] = useState<string>('bahasa_indonesia')
+  const [mapel, setMapel] = useState<ExamSubject>('bahasa_indonesia')
   const [topiks, setTopiks] = useState<string[]>([])
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customTopik, setCustomTopik] = useState<string>('')
@@ -296,7 +307,8 @@ function GeneratePage() {
   const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI
     : mapel === 'pendidikan_pancasila' ? TOPIK_PPKN
     : mapel === 'ipas' ? TOPIK_IPAS
-    : TOPIK_BINGGRIS
+    : mapel === 'bahasa_inggris' ? TOPIK_BINGGRIS
+    : TOPIK_MATEMATIKA_NON_DIAGRAM
 
   // Effective topics array for submission
   const effectiveTopiks: string[] = showCustomInput && customTopik.trim() !== ''
@@ -328,7 +340,7 @@ function GeneratePage() {
     }, 120)
 
     void api.ai.generate({
-      subject: mapel as 'bahasa_indonesia' | 'pendidikan_pancasila' | 'ipas' | 'bahasa_inggris',
+      subject: mapel,
       grade: Number(kelas) as 5 | 6,
       difficulty: kesulitan as 'mudah' | 'sedang' | 'sulit' | 'campuran',
       topics,
@@ -453,8 +465,10 @@ function GeneratePage() {
                   <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
                 ) : mapel === 'ipas' ? (
                   <Badge variant="subject-ipas">IPAS</Badge>
-                ) : (
+                ) : mapel === 'bahasa_inggris' ? (
                   <Badge variant="subject-binggris">Bahasa Inggris</Badge>
+                ) : (
+                  <Badge>Matematika</Badge>
                 )}
                 <Badge variant="secondary">{EXAM_TYPE_LABEL_MAP[examType]}</Badge>
               </div>
@@ -516,7 +530,7 @@ function GeneratePage() {
               <Select
                 value={mapel}
                 onValueChange={(v) => {
-                  setMapel(v)
+                  setMapel(v as ExamSubject)
                   setTopiks([])
                   setCustomTopik('')
                   setShowCustomInput(false)
@@ -530,6 +544,7 @@ function GeneratePage() {
                   <SelectItem value="pendidikan_pancasila">Pendidikan Pancasila</SelectItem>
                   <SelectItem value="ipas">IPAS</SelectItem>
                   <SelectItem value="bahasa_inggris">Bahasa Inggris</SelectItem>
+                  <SelectItem value="matematika">Matematika</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -936,9 +951,13 @@ function GeneratePage() {
                     <Badge variant="subject-ipas" className="text-caption">
                       IPAS
                     </Badge>
-                  ) : (
+                  ) : mapel === 'bahasa_inggris' ? (
                     <Badge variant="subject-binggris" className="text-caption">
                       B. Inggris
+                    </Badge>
+                  ) : (
+                    <Badge className="text-caption">
+                      Matematika
                     </Badge>
                   )}
                 </span>

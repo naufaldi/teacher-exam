@@ -13,6 +13,7 @@ const SUBJECT_SLUG: Record<ExamSubject, string> = {
   pendidikan_pancasila: 'pendidikan-pancasila',
   ipas: 'ipas',
   bahasa_inggris: 'bahasa-inggris',
+  matematika: 'matematika',
 }
 
 /**
@@ -104,5 +105,15 @@ const FALLBACK: Record<string, string> = {
 - Writing: Menulis teks pendek (deskripsi, narasi, surat, pesan) dengan tata bahasa dan kosakata yang sesuai.
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
+`,
+  'matematika': `# Matematika - Fase C (Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- Bilangan: Memahami bilangan cacah besar, faktor, kelipatan, pecahan, desimal, persen, dan operasi hitungnya dalam konteks sehari-hari.
+- Aljabar: Mengenali pola, relasi, kalimat matematika, dan menyelesaikan masalah sederhana dengan simbol.
+- Pengukuran: Menggunakan satuan baku untuk panjang, massa, waktu, luas, dan volume pada masalah kontekstual.
+- Analisis data: Membaca, menyajikan, dan menafsirkan data sederhana dalam tabel dan diagram.
+
+> Catatan: korpus Buku Siswa belum diekstrak. Soal diagram geometri dibuka pada fase D/M3 setelah verifikasi figure renderer.
 `,
 }

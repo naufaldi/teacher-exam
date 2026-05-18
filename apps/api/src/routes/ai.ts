@@ -15,16 +15,28 @@ import { EXAM_TYPE_PROFILE, resolveComposition } from '../lib/exam-type-profile'
 import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
 import { questionToRow } from '../lib/question-mapper'
+import { validateGeneratedQuestionLatex, type LatexValidationResult } from '../lib/latex-validator'
 import {
   createDefaultAiService,
   type AiService,
 } from '../services/AiService'
+import type { AiGenerationError } from '../errors'
+
+type GenerationValidationResult = {
+  questions: ReadonlyArray<GeneratedQuestion>
+  latexResults: ReadonlyArray<LatexValidationResult>
+}
 
 function convertGeneratedToQuestion(
   q: GeneratedQuestion,
   meta: { id: string; examId: string; number: number; status: 'accepted' | 'pending'; createdAt: Date },
+  latexResult: LatexValidationResult = { _tag: 'valid' },
 ): Question {
   const figureResult = decodeGeneratedFigure(q.figure)
+  const latexReason = latexResult._tag === 'invalid'
+    ? `LaTeX validation failed: ${latexResult.reason}`
+    : null
+  const validationReasons = [figureResult.reason, latexReason].filter((reason): reason is string => reason !== null)
   const common = {
     id: meta.id,
     examId: meta.examId,
@@ -33,8 +45,8 @@ function convertGeneratedToQuestion(
     topic: q.topic ?? null,
     difficulty: q.difficulty ?? null,
     status: meta.status,
-    validationStatus: figureResult.status,
-    validationReason: figureResult.reason,
+    validationStatus: validationReasons.length > 0 ? 'needs_review' as const : null,
+    validationReason: validationReasons.length > 0 ? validationReasons.join('\n') : null,
     figure: figureResult.figure,
     createdAt: meta.createdAt.toISOString(),
   }
@@ -59,6 +71,41 @@ function convertGeneratedToQuestion(
     Match.exhaustive,
   )
   return result
+}
+
+async function generateWithLatexValidation(
+  aiService: AiService,
+  request: { system: string; user: string; expectedCount: number; shouldValidateLatex: boolean },
+): Promise<Either.Either<GenerationValidationResult, AiGenerationError>> {
+  const maxAttempts = request.shouldValidateLatex ? 3 : 1
+  let lastInvalid:
+    | {
+      questions: ReadonlyArray<GeneratedQuestion>
+      latexResults: ReadonlyArray<LatexValidationResult>
+    }
+    | null = null
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const generated = await Effect.runPromise(
+      Effect.either(aiService.generate({
+        system: request.system,
+        user: request.user,
+        expectedCount: request.expectedCount,
+      })),
+    )
+    if (Either.isLeft(generated)) return Either.left(generated.left)
+
+    const latexResults = request.shouldValidateLatex
+      ? generated.right.map((question) => validateGeneratedQuestionLatex(question))
+      : generated.right.map((): LatexValidationResult => ({ _tag: 'valid' }))
+
+    const hasInvalidLatex = latexResults.some((result) => result._tag === 'invalid')
+    if (!hasInvalidLatex) return Either.right({ questions: generated.right, latexResults })
+
+    lastInvalid = { questions: generated.right, latexResults }
+  }
+
+  return Either.right(lastInvalid ?? { questions: [], latexResults: [] })
 }
 
 function decodeGeneratedFigure(raw: unknown): {
@@ -133,18 +180,22 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     aiService ??= createDefaultAiService()
 
-    const generated = await Effect.runPromise(
-      Effect.either(aiService.generate({ system, user, expectedCount: totalSoal })),
-    )
+    const generated = await generateWithLatexValidation(aiService, {
+      system,
+      user,
+      expectedCount: totalSoal,
+      shouldValidateLatex: input.subject === 'matematika',
+    })
     if (Either.isLeft(generated)) {
       const err = generated.left
       logAiEvent('api.ai.generate', 'warn', {
         path: '/api/ai/generate',
-        message: String(err.cause),
+        message: String((err as { cause?: unknown }).cause),
       })
-      return c.json({ error: 'AI generation failed', message: String(err.cause) }, 502)
+      return c.json({ error: 'AI generation failed', message: String((err as { cause?: unknown }).cause) }, 502)
     }
-    const generatedQuestions = generated.right
+    const generatedQuestions = generated.right.questions
+    const latexResults = generated.right.latexResults
 
     const title = formatExamTitle({
       subjectLabel: SUBJECT_LABEL[input.subject],
@@ -175,13 +226,17 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
       await tx.insert(questions).values(
         generatedQuestions.map((q, i) => {
-          const dbQuestion = convertGeneratedToQuestion(q, {
-            id: crypto.randomUUID(),
-            examId,
-            number: i + 1,
-            status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
-            createdAt: now,
-          })
+          const dbQuestion = convertGeneratedToQuestion(
+            q,
+            {
+              id: crypto.randomUUID(),
+              examId,
+              number: i + 1,
+              status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
+              createdAt: now,
+            },
+            latexResults[i],
+          )
           const rowFields = questionToRow(dbQuestion)
           return {
             id: dbQuestion.id,

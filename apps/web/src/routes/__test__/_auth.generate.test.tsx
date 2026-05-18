@@ -228,6 +228,22 @@ describe('GeneratePage — runGenerate flow', () => {
   })
 })
 
+describe('GeneratePage — Matematika subject', () => {
+  it('offers Matematika diagram topics for D phase', () => {
+    renderGeneratePage()
+
+    fireEvent.click(screen.getByLabelText('Mata Pelajaran'))
+    fireEvent.click(screen.getByText('Matematika'))
+
+    fireEvent.keyDown(screen.getByRole('combobox', { name: /pilih topik/i }), { key: 'Enter' })
+
+    expect(screen.getByText('Pecahan, Desimal, dan Persen')).toBeInTheDocument()
+    expect(screen.getByText('Bangun Datar')).toBeInTheDocument()
+    expect(screen.getByText('Bangun Ruang')).toBeInTheDocument()
+    expect(screen.getByText('Bidang Koordinat')).toBeInTheDocument()
+  })
+})
+
 describe('Atur komposisi panel', () => {
   it('is collapsed by default: the 3 number inputs are not visible', () => {
     renderGeneratePage()

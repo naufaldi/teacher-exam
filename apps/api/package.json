@@ -8,7 +8,8 @@
     "build": "tsc",
     "test": "vitest run",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
-    "curriculum:extract": "node --env-file-if-exists=../../.env --import tsx/esm scripts/extract-curriculum.ts"
+    "curriculum:extract": "node --env-file-if-exists=../../.env --import tsx/esm scripts/extract-curriculum.ts",
+    "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
@@ -19,6 +20,7 @@
     "drizzle-orm": "^0.45.2",
     "effect": "^3.11.0",
     "hono": "^4.6.16",
+    "katex": "^0.16.45",
     "openai": "^6.37.0",
     "pdf-lib": "^1.17.1"
   },

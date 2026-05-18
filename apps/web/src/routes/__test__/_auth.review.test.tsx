@@ -750,6 +750,50 @@ describe('ReviewPage — Task 13: Slow mode card highlights correctly', () => {
   })
 })
 
+describe('ReviewPage — math rendering', () => {
+  it('renders LaTeX in slow review cards', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_math_review' }
+    const exam = makeExamWithQuestions('exam_math_review')
+    mockExamsGet.mockResolvedValueOnce({
+      ...exam,
+      subject: 'matematika',
+      questions: [{
+        ...exam.questions[0]!,
+        text: 'Hitung $\\frac{3}{4}$ dari 20.',
+        options: { a: '$15$', b: '$10$', c: '$5$', d: '$20$' },
+      }],
+    })
+    await getLoader()({ deps: { examId: 'exam_math_review' } })
+
+    const { container } = renderReviewPage()
+
+    expect(container.querySelectorAll('.katex').length).toBeGreaterThan(1)
+    expect(container.textContent).not.toContain('$')
+  })
+})
+
+describe('ReviewPage — figure rendering', () => {
+  it('renders generated figure specs in slow review cards', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_figure_review' }
+    const exam = makeExamWithQuestions('exam_figure_review')
+    mockExamsGet.mockResolvedValueOnce({
+      ...exam,
+      subject: 'matematika',
+      questions: [{
+        ...exam.questions[0]!,
+        topic: 'Bangun Datar',
+        text: 'Perhatikan lingkaran berikut.',
+        figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
+      }],
+    })
+    await getLoader()({ deps: { examId: 'exam_figure_review' } })
+
+    const { container } = renderReviewPage()
+
+    expect(container.querySelector('[data-figure-svg]')).not.toBeNull()
+  })
+})
+
 describe('ReviewPage — Task 13: Edit dialog save fires api.questions.patch with typed payload', () => {
   it('mcq_multi edit save sends {_tag:"mcq_multi", correct:[...]} to patch', async () => {
     const user = userEvent.setup()

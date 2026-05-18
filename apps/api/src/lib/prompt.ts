@@ -30,6 +30,15 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     throw new Error('buildExamPrompt: topics must contain at least one item')
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
+  const matematikaRules = input.subjectLabel === 'Matematika'
+    ? [
+        '',
+        '- Khusus Matematika: semua notasi matematika WAJIB memakai delimiter LaTeX.',
+        '  Gunakan `$inline$` untuk ekspresi pendek di dalam kalimat dan `$$display$$` untuk ekspresi panjang.',
+        '  Contoh benar: `$\\frac{3}{4}$`, `$x^2$`, `$\\sqrt{16}$`.',
+        '  Jangan tulis notasi matematika ambigu seperti 3/4, x^2, atau akar 16 tanpa delimiter LaTeX.',
+      ]
+    : []
 
   const system = [
     profile.promptPreamble,
@@ -58,6 +67,8 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     `  3. Benar/Salah (true_false) — tabel pernyataan:`,
     `     { "_tag": "true_false", "number": 3, "text": "Tentukan apakah pernyataan berikut benar (B) atau salah (S):", "statements": [{ "text": "...", "answer": "B" }, { "text": "...", "answer": "S" }], "topic": "...", "difficulty": "mudah|sedang|sulit", "cognitive_level": "C1|C2|C3|C4" }`,
     `     Catatan: statements berisi 3–4 pernyataan; answer adalah "B" atau "S".`,
+    ``,
+    ...matematikaRules,
     ``,
     `- Untuk topik geometri/diagram (misalnya Bangun Datar, Bangun Ruang, Bidang Koordinat), setiap soal BOLEH memiliki field opsional "figure".`,
     `  Jangan isi "figure" untuk soal non-diagram.`,
