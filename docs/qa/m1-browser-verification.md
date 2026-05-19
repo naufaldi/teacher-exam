@@ -2,24 +2,61 @@
 
 Date: 2026-05-19  
 Tool: `agent-browser`  
-Web: `http://localhost:3000`  
-API: `http://localhost:3001`
+Web: `http://localhost:5173`  
+API: `http://localhost:3000`
 
 ## Preconditions
 
-- [x] `pnpm dev` — web `:5173`, API `:3001` (set `API_PORT=3001` if `.env` conflicts with port 3000)
+- [x] `pnpm dev` — web `:5173`, API `:3000` (`API_PORT` in `.env`, default 3000)
 - [ ] `pnpm db:migrate` applied on target DB
 - [ ] Authenticated guru session (required for F0–F8)
+
+### Dev login (local QA — no Google OAuth)
+
+Add to root `.env` (see `.env.example`):
+
+```bash
+DEV_AUTH_ENABLED=true
+DEV_AUTH_EMAIL=dev@guru.local
+DEV_AUTH_PASSWORD=change-me-dev-only
+VITE_DEV_AUTH=true
+API_PORT=3000
+APP_URL=http://localhost:5173
+```
+
+One-time seed:
+
+```bash
+pnpm db:seed:dev
+```
+
+Login page shows **Masuk Guru Dev (lokal)** when `VITE_DEV_AUTH=true` and Vite is in dev mode.
+
+Headless shortcut (same origin — Vite proxies `/api` to API):
+
+```bash
+agent-browser open http://localhost:5173/ \
+  && agent-browser eval "fetch('/api/dev/login',{method:'POST',credentials:'include'}).then(r=>r.status)" \
+  && agent-browser open http://localhost:5173/dashboard \
+  && agent-browser wait --load networkidle \
+  && agent-browser snapshot -i
+```
+
+Or click **Masuk Guru Dev (lokal)** on `/` after `agent-browser open http://localhost:5173/`.
+
+`POST /api/dev/login` returns **403** when dev auth is disabled, `NODE_ENV=production`, or `Host` is not localhost.
 
 ## Automated smoke (unauthenticated)
 
 | Check | Result |
 |-------|--------|
-| `GET /` (login) | Pass — zero console errors/warnings |
+| `GET /` (login) | Pass — Google button visible; dev button hidden without `VITE_DEV_AUTH=true` |
 | `GET /bank-soal` | Redirects to login (expected without session) |
-| Screenshots | `.agent-browser/f0-login.png`, `f1-bank-soal-unauth.png` |
+| Screenshots | `.agent-browser/dev-login-page.png` (2026-05-19) |
 
-## Flow matrix (authenticated — run after Google login)
+Restart `pnpm dev` after enabling `DEV_AUTH_*` / `VITE_DEV_AUTH` so API and Vite pick up env changes.
+
+## Flow matrix (authenticated — dev login or Google)
 
 | ID | Route | Status | Console | Screenshot |
 |----|-------|--------|---------|------------|
@@ -43,5 +80,6 @@ API: `http://localhost:3001`
 
 ## Notes
 
-- Full matrix requires `agent-browser --session-name teacher-exam` after manual Google login once.
-- Vitest: 204 API + 224 web tests passing after Phase 1 changes.
+- Prefer dev login for agent-browser F0–F8; Google OAuth still works when `DEV_AUTH_ENABLED` is unset.
+- API-only smoke: after dev login, copy session `Cookie` into `QA_SESSION_COOKIE` for `apps/api/scripts/qa-phase1-smoke.ts`.
+- Vitest: run `pnpm test` in `apps/api` and `apps/web` after dev-auth changes.

@@ -4,10 +4,12 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { auth } from './lib/auth'
 import { resolveAllowedCorsOrigins, resolveApiPort } from './lib/auth-origins'
+import { assertDevAuthNotEnabledInProduction } from './lib/dev-auth'
 import { logError, logInfo } from './lib/server-log'
 import { requireAuth } from './middleware/auth'
 import { errorHandler } from './middleware/error-handler'
 import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
+import { devAuthRouter } from './routes/dev-auth'
 import { healthRouter } from './routes/health'
 import { meRouter } from './routes/me'
 import { examsRouter } from './routes/exams'
@@ -22,6 +24,8 @@ process.on('uncaughtException', (err) => {
   })
   process.exit(1)
 })
+
+assertDevAuthNotEnabledInProduction()
 
 process.on('unhandledRejection', (reason) => {
   if (reason instanceof Error) {
@@ -49,6 +53,7 @@ app.use(
 app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw))
 
 app.route('/api/health', healthRouter)
+app.route('/api/dev', devAuthRouter)
 app.route('/api/public/exams', publicExamsRouter)
 
 app.use('/api/*', requireAuth)

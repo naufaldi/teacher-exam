@@ -9,7 +9,7 @@ function isLocalhostOrigin(url: string): boolean {
 
 /**
  * OAuth redirect_uri is `{baseURL}/api/auth/callback/google`. Google Cloud Console must list that exact URL.
- * In local dev, the web app is often :5173 but Google is usually registered for the API port (:3001).
+ * In local dev, the web app is often :5173 but Google is usually registered for the API port (:3000).
  */
 export function defaultBetterAuthBaseURL(input: {
   explicit: string | undefined

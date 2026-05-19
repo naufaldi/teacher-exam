@@ -1,7 +1,9 @@
-import { createFileRoute, isRedirect, redirect } from '@tanstack/react-router'
+import { useState } from 'react'
+import { createFileRoute, isRedirect, redirect, useNavigate } from '@tanstack/react-router'
 import { PaperCard } from '@teacher-exam/ui'
 import { BookOpen, Check, Printer, AlertCircle } from 'lucide-react'
 import { signIn, getSession } from '../lib/auth-client'
+import { devLogin, isDevLoginEnabled } from '../lib/dev-login.js'
 
 type LoginSearch = { reason?: 'session_expired' }
 
@@ -62,9 +64,26 @@ const TRUST_POINTS = [
 
 function LoginPage() {
   const { reason } = Route.useSearch()
+  const navigate = useNavigate()
+  const [devError, setDevError] = useState<string | null>(null)
+  const [devLoading, setDevLoading] = useState(false)
+  const showDevLogin = isDevLoginEnabled()
 
   const handleGoogleSignIn = () => {
     void signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/dashboard` })
+  }
+
+  const handleDevLogin = () => {
+    setDevError(null)
+    setDevLoading(true)
+    void devLogin().then((result) => {
+      setDevLoading(false)
+      if (!result.ok) {
+        setDevError(result.message)
+        return
+      }
+      void navigate({ to: '/dashboard' })
+    })
   }
 
   return (
@@ -119,6 +138,26 @@ function LoginPage() {
               <GoogleIcon />
               Masuk dengan Google
             </button>
+
+            {showDevLogin ? (
+              <div className='flex flex-col gap-2 self-start'>
+                <button
+                  type='button'
+                  onClick={handleDevLogin}
+                  disabled={devLoading}
+                  aria-label='Masuk Guru Dev (lokal)'
+                  className='inline-flex items-center justify-center self-start rounded-sm border border-dashed border-info-fg/40 bg-info-bg px-6 py-3 text-body font-medium text-info-fg transition-colors duration-[var(--duration-fast)] hover:bg-info-bg/80 disabled:opacity-50'
+                >
+                  {devLoading ? 'Memuat…' : 'Masuk Guru Dev (lokal)'}
+                </button>
+                <p className='text-caption text-text-tertiary'>Hanya untuk pengembangan lokal.</p>
+                {devError !== null ? (
+                  <p role='alert' className='text-body-sm text-danger-600'>
+                    {devError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             {reason === 'session_expired' ? (
               <div
