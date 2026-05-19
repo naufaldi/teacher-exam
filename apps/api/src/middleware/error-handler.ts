@@ -1,5 +1,6 @@
 import type { ErrorHandler } from 'hono'
 import { Match } from 'effect'
+import { logError } from '../lib/server-log'
 import {
   DatabaseError,
   NotFoundError,
@@ -81,7 +82,7 @@ function logApiError(
   status: number,
   code: string,
 ): void {
-  console.error('[api:error]', {
+  logError('request_failed', {
     method,
     path,
     status,

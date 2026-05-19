@@ -1,7 +1,9 @@
 import { Search, X, ArrowUpDown } from 'lucide-react'
+import type { ExamSubject } from '@teacher-exam/shared'
+import { SUBJECT_OPTIONS } from '../../lib/subjects'
 
 export type StatusFilter = 'all' | 'final' | 'draft'
-export type SubjectFilter = 'all' | 'bahasa_indonesia' | 'pendidikan_pancasila'
+export type SubjectFilter = 'all' | ExamSubject
 export type GradeFilter = 'all' | '5' | '6'
 export type PeriodFilter = 'all' | '7d' | '30d' | 'this_semester'
 export type SortOrder = 'terbaru' | 'terlama' | 'judul'
@@ -31,10 +33,9 @@ const STATUS_TABS: Array<{ id: StatusFilter; label: string }> = [
   { id: 'draft', label: 'Draft' },
 ]
 
-const SUBJECT_OPTIONS: Array<{ value: SubjectFilter; label: string }> = [
+const SUBJECT_FILTER_OPTIONS: Array<{ value: SubjectFilter; label: string }> = [
   { value: 'all', label: 'Semua mapel' },
-  { value: 'bahasa_indonesia', label: 'Bahasa Indonesia' },
-  { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
+  ...SUBJECT_OPTIONS.map((subject) => ({ value: subject.value, label: subject.label })),
 ]
 
 const GRADE_OPTIONS: Array<{ value: GradeFilter; label: string }> = [
@@ -113,7 +114,7 @@ function HistoryToolbar({
             style={{ backgroundImage: SELECT_CHEVRON }}
             aria-label="Filter mata pelajaran"
           >
-            {SUBJECT_OPTIONS.map((opt) => (
+            {SUBJECT_FILTER_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

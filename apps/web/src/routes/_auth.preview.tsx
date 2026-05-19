@@ -16,6 +16,7 @@ import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
+import { subjectMetaFor } from '../lib/subjects.js'
 
 export const Route = createFileRoute('/_auth/preview')({
   component: PreviewPage,
@@ -30,7 +31,7 @@ export const Route = createFileRoute('/_auth/preview')({
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({
-      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      subject: exam.subject,
       grade: exam.grade,
       topic: exam.topics.join(', '),
       examType: exam.examType as ExamType,
@@ -46,11 +47,6 @@ export const Route = createFileRoute('/_auth/preview')({
     return exam
   },
 })
-
-const SUBJECT_LABELS: Record<string, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-}
 
 /**
  * Uppercase title printed in the kop of the printed sheet. See PRD §8.6.
@@ -99,7 +95,7 @@ function PreviewPage() {
   const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua' | 'pembahasan'>('semua')
 
   const { questions, metadata, subject, grade } = draft
-  const subjectLabel = SUBJECT_LABELS[subject] ?? subject
+  const subjectLabel = subjectMetaFor(subject).label
   const topicsLabel = exam?.topics?.join(' · ') ?? ''
 
   return (

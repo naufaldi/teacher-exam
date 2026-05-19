@@ -36,6 +36,13 @@
       "when": 1777095074508,
       "tag": "0004_drop_legacy_exam_topic",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779098400000,
+      "tag": "0005_add_ipas_bahasa_inggris_subjects",
+      "breakpoints": true
     }
   ]
 }

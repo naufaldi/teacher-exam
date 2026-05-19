@@ -131,6 +131,38 @@ describe('HistoryPage', () => {
     })
   })
 
+  it('filters history by IPAS subject', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'ipas-exam', title: 'Ujian IPAS', subject: 'ipas' }),
+      makeExam({ id: 'bi-exam', title: 'Ujian BI', subject: 'bahasa_indonesia' }),
+    ])
+
+    renderHistoryPage()
+
+    await screen.findByText('Ujian IPAS')
+    await user.selectOptions(screen.getByLabelText('Filter mata pelajaran'), 'ipas')
+
+    expect(screen.getByText('Ujian IPAS')).toBeInTheDocument()
+    expect(screen.queryByText('Ujian BI')).not.toBeInTheDocument()
+  })
+
+  it('filters history by Bahasa Inggris subject', async () => {
+    const user = userEvent.setup()
+    mockApi.exams.list.mockResolvedValueOnce([
+      makeExam({ id: 'bing-exam', title: 'Ujian B.Inggris', subject: 'bahasa_inggris' }),
+      makeExam({ id: 'ppkn-exam', title: 'Ujian PPKN', subject: 'pendidikan_pancasila' }),
+    ])
+
+    renderHistoryPage()
+
+    await screen.findByText('Ujian B.Inggris')
+    await user.selectOptions(screen.getByLabelText('Filter mata pelajaran'), 'bahasa_inggris')
+
+    expect(screen.getByText('Ujian B.Inggris')).toBeInTheDocument()
+    expect(screen.queryByText('Ujian PPKN')).not.toBeInTheDocument()
+  })
+
   it('shows preview/correction actions for final exams', async () => {
     mockApi.exams.list.mockResolvedValueOnce([
       makeExam({ id: 'exam-final', status: 'final' }),

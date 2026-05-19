@@ -18,6 +18,7 @@ import { Route as AuthOnboardingRouteImport } from './routes/_auth.onboarding'
 import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
 import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
+import { Route as AuthBankSoalRouteImport } from './routes/_auth.bank-soal'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -64,6 +65,11 @@ const AuthDashboardRoute = AuthDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthBankSoalRoute = AuthBankSoalRouteImport.update({
+  id: '/bank-soal',
+  path: '/bank-soal',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
   id: '/correction/$examId',
   path: '/correction/$examId',
@@ -72,6 +78,7 @@ const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
   '/history': typeof AuthHistoryRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
   '/history': typeof AuthHistoryRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/_auth/bank-soal': typeof AuthBankSoalRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/generate': typeof AuthGenerateRoute
   '/_auth/history': typeof AuthHistoryRoute
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/bank-soal'
     | '/dashboard'
     | '/generate'
     | '/history'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/bank-soal'
     | '/dashboard'
     | '/generate'
     | '/history'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_auth'
+    | '/_auth/bank-soal'
     | '/_auth/dashboard'
     | '/_auth/generate'
     | '/_auth/history'
@@ -212,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/bank-soal': {
+      id: '/_auth/bank-soal'
+      path: '/bank-soal'
+      fullPath: '/bank-soal'
+      preLoaderRoute: typeof AuthBankSoalRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/correction/$examId': {
       id: '/_auth/correction/$examId'
       path: '/correction/$examId'
@@ -223,6 +242,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteChildren {
+  AuthBankSoalRoute: typeof AuthBankSoalRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthGenerateRoute: typeof AuthGenerateRoute
   AuthHistoryRoute: typeof AuthHistoryRoute
@@ -234,6 +254,7 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthBankSoalRoute: AuthBankSoalRoute,
   AuthDashboardRoute: AuthDashboardRoute,
   AuthGenerateRoute: AuthGenerateRoute,
   AuthHistoryRoute: AuthHistoryRoute,

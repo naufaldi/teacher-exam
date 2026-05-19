@@ -596,6 +596,80 @@ describe('POST /api/ai/generate', () => {
   })
 })
 
+describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
+  function setupPhase1Mocks(total = 20) {
+    const examRow = makeExamRow()
+    const questionRows = Array.from({ length: total }, (_, i) =>
+      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+    return insertChain
+  }
+
+  it('calls buildExamPrompt with ipas and getCurriculumText subject', async () => {
+    setupPhase1Mocks()
+    const buildMock = buildExamPrompt as Mock
+    buildMock.mockClear()
+    const { getCurriculumText } = await import('../../lib/curriculum')
+    const curriculumMock = getCurriculumText as Mock
+    curriculumMock.mockClear()
+
+    const app = buildTestApp()
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...VALID_BODY,
+        subject: 'ipas',
+        grade: 5,
+        topics: ['Cahaya dan Bunyi'],
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    expect(curriculumMock).toHaveBeenCalledWith('ipas', 5)
+    expect(buildMock).toHaveBeenCalledWith(
+      expect.objectContaining({ examSubject: 'ipas', subjectLabel: 'IPAS' }),
+    )
+  })
+
+  it('calls buildExamPrompt with bahasa_inggris', async () => {
+    setupPhase1Mocks()
+    const buildMock = buildExamPrompt as Mock
+    buildMock.mockClear()
+
+    const app = buildTestApp()
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...VALID_BODY,
+        subject: 'bahasa_inggris',
+        grade: 6,
+        topics: ['Daily Activities'],
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    expect(buildMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        examSubject: 'bahasa_inggris',
+        subjectLabel: 'Bahasa Inggris',
+      }),
+    )
+  })
+})
+
 describe('POST /api/ai/generate — multi-topic', () => {
   it('accepts topics array and returns 201', async () => {
     const insertChain = makeChain([])

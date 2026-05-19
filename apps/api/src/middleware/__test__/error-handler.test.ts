@@ -113,26 +113,17 @@ describe('errorHandler middleware', () => {
 
     await app.request('/test')
 
-    expect(console.error).toHaveBeenCalledWith(
-      '[api:error]',
-      expect.objectContaining({
-        method: 'GET',
-        path: '/test',
-        status: 500,
-        code: 'INTERNAL_ERROR',
-        error: expect.objectContaining({
-          name: 'Error',
-          message: 'Failed query: insert into "exams"',
-          cause: expect.objectContaining({
-            name: 'Error',
-            code: '23502',
-            table: 'exams',
-            column: 'topic',
-          }),
-        }),
-      }),
-    )
-    expect(JSON.stringify((console.error as unknown as { mock: { calls: unknown[][] } }).mock.calls)).not.toContain('sensitive')
+    const errArg = (console.error as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]
+    expect(typeof errArg).toBe('string')
+    expect(errArg).toContain('request_failed')
+    expect(errArg).toContain('"method":"GET"')
+    expect(errArg).toContain('500')
+    expect(errArg).toContain('INTERNAL_ERROR')
+    expect(errArg).toContain('Failed query: insert into \\"exams\\"')
+    expect(errArg).toContain('"code":"23502"')
+    expect(errArg).toContain('"table":"exams"')
+    expect(errArg).toContain('"column":"topic"')
+    expect(errArg).not.toContain('sensitive')
   })
 
   it('logs tagged errors with their public response code', async () => {
@@ -142,17 +133,13 @@ describe('errorHandler middleware', () => {
 
     await app.request('/test')
 
-    expect(console.error).toHaveBeenCalledWith(
-      '[api:error]',
-      expect.objectContaining({
-        status: 502,
-        code: 'AI_GENERATION_ERROR',
-        error: expect.objectContaining({
-          tag: 'AiGenerationError',
-          cause: 'Claude returned incomplete output (stop_reason: max_tokens)',
-        }),
-      }),
-    )
+    const errArg = (console.error as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]
+    expect(typeof errArg).toBe('string')
+    expect(errArg).toContain('request_failed')
+    expect(errArg).toContain('502')
+    expect(errArg).toContain('AI_GENERATION_ERROR')
+    expect(errArg).toContain('AiGenerationError')
+    expect(errArg).toContain('Claude returned incomplete output (stop_reason: max_tokens)')
   })
 
   it('response has error string and code string in body', async () => {

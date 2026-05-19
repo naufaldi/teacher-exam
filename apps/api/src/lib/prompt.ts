@@ -1,10 +1,11 @@
-import type { ExamDifficulty, ExamType } from '@teacher-exam/shared'
+import type { ExamDifficulty, ExamSubject, ExamType } from '@teacher-exam/shared'
 import type { Composition } from './exam-type-profile'
 import { EXAM_TYPE_PROFILE, resolveDifficultyDist } from './exam-type-profile'
 
 export interface BuildPromptInput {
   examType: ExamType
   difficulty: ExamDifficulty
+  examSubject: ExamSubject
   subjectLabel: string
   grade: number
   /** One or more topics for the paper. AI distributes questions evenly across them when multiple are given. */
@@ -31,6 +32,17 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
 
+  const bahasaInggrisRules =
+    input.examSubject === 'bahasa_inggris'
+      ? [
+          '',
+          'Bahasa Inggris language rules:',
+          '- Tulis field "text" (stem soal) dan semua "option_*" dalam Bahasa Inggris sederhana (SD kelas 5–6).',
+          '- Field "topic" boleh mengikuti topik yang dipilih guru (Bahasa Indonesia atau Inggris).',
+          '- Jangan menulis stem atau opsi dalam Bahasa Indonesia, kecuali nama diri atau kutipan singkat dari bacaan.',
+        ]
+      : []
+
   const system = [
     profile.promptPreamble,
     'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka Fase C (Kelas 5–6).',
@@ -42,6 +54,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     '--- KORPUS BUKU SISWA (Kurikulum Merdeka, Fase C) ---',
     input.curriculumText,
     '--- AKHIR KORPUS ---',
+    ...bahasaInggrisRules,
     '',
     'Output rules:',
     `- Jawab HANYA dengan JSON array berisi tepat ${input.totalSoal} soal — tanpa prosa, tanpa pembungkus markdown.`,

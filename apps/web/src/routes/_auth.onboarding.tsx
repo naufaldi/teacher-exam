@@ -4,7 +4,8 @@ import { Button, Input, Label, PaperCard } from '@teacher-exam/ui'
 import { GraduationCap, BookOpen } from 'lucide-react'
 import { api } from '../lib/api'
 import { authClient } from '../lib/auth-client'
-import type { Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
+import type { ExamSubject, Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
+import { SUBJECT_OPTIONS } from '../lib/subjects'
 
 export const Route = createFileRoute('/_auth/onboarding')({
   component: OnboardingPage,
@@ -12,11 +13,6 @@ export const Route = createFileRoute('/_auth/onboarding')({
 
 const ALL_GRADES: readonly Grade[] = [1, 2, 3, 4, 5, 6] as const
 const DEFAULT_GRADES: Grade[] = [5, 6]
-const SUBJECT_OPTIONS = [
-  { value: 'bahasa_indonesia',     label: 'Bahasa Indonesia' },
-  { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
-] as const
-type SubjectValue = typeof SUBJECT_OPTIONS[number]['value']
 
 function OnboardingPage() {
   const navigate = useNavigate()
@@ -25,7 +21,7 @@ function OnboardingPage() {
   const [school, setSchool]           = useState('')
   const [username, setUsername]       = useState('')
   const [grades, setGrades]           = useState<Grade[]>(DEFAULT_GRADES)
-  const [subjects, setSubjects]       = useState<SubjectValue[]>(['bahasa_indonesia'])
+  const [subjects, setSubjects]       = useState<ExamSubject[]>(['bahasa_indonesia'])
   const [submitting, setSubmitting]   = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -35,7 +31,7 @@ function OnboardingPage() {
       setSchool(p.school ?? '')
       setUsername(p.username)
       if (p.gradesTaught?.length) setGrades([...p.gradesTaught])
-      if (p.subjectsTaught?.length) setSubjects([...p.subjectsTaught] as SubjectValue[])
+      if (p.subjectsTaught?.length) setSubjects([...p.subjectsTaught])
     }).catch((e: unknown) => {
       setError(e instanceof Error ? e.message : 'Gagal memuat profil')
     })
@@ -44,7 +40,7 @@ function OnboardingPage() {
   const toggleGrade = (g: Grade) => {
     setGrades((cur) => (cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].sort()))
   }
-  const toggleSubject = (s: SubjectValue) => {
+  const toggleSubject = (s: ExamSubject) => {
     setSubjects((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
   }
 

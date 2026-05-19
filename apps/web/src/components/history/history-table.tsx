@@ -26,31 +26,7 @@ import {
   TooltipTrigger,
 } from '@teacher-exam/ui'
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
-
-interface SubjectMeta {
-  short: string
-  label: string
-  dotClass: string
-}
-
-const SUBJECT_MAP: Record<string, SubjectMeta> = {
-  bahasa_indonesia: {
-    short: 'BI',
-    label: 'Bahasa Indonesia',
-    dotClass: 'text-subject-bi',
-  },
-  pendidikan_pancasila: {
-    short: 'PP',
-    label: 'Pendidikan Pancasila',
-    dotClass: 'text-subject-ppkn',
-  },
-}
-
-const FALLBACK_SUBJECT: SubjectMeta = {
-  short: '?',
-  label: 'Mata Pelajaran',
-  dotClass: 'text-text-tertiary',
-}
+import { subjectMetaFor } from '../../lib/subjects'
 
 const HEAD_CLS = 'text-caption font-semibold tracking-wider uppercase text-text-tertiary px-5 py-3 h-auto'
 
@@ -112,7 +88,7 @@ interface HistoryTableRowProps {
 function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) {
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
+  const subj = subjectMetaFor(exam.subject)
   const isFinal = exam.status === 'final'
 
   function handlePreview() {

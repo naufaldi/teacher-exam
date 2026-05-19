@@ -21,6 +21,8 @@ const badgeVariants = cva(
         info:       'rounded-xs bg-info-bg text-info-fg border-info-border',
         'subject-bi':   'rounded-xs bg-subject-bi-bg text-subject-bi border-[color:var(--color-subject-bi)]/30',
         'subject-ppkn': 'rounded-xs bg-subject-ppkn-bg text-subject-ppkn border-[color:var(--color-subject-ppkn)]/30',
+        'subject-ipas': 'rounded-xs bg-subject-ipas-bg text-subject-ipas border-[color:var(--color-subject-ipas)]/30',
+        'subject-bing': 'rounded-xs bg-subject-bing-bg text-subject-bing border-[color:var(--color-subject-bing)]/30',
         pill:       'rounded-pill bg-kertas-100 text-text-secondary border-border-default',
       },
     },

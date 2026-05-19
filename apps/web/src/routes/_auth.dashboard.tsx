@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-r
 import {
   Sparkles,
   FolderOpen,
+  BookOpen,
   CheckSquare,
   ArrowRight,
   PrinterIcon,
@@ -68,7 +69,7 @@ const ACTION_CARDS = [
     icon: Sparkles,
     title: 'Generate Lembar (AI)',
     description:
-      'Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C. Bahasa Indonesia atau Pendidikan Pancasila — 10 sampai 30 detik.',
+      'Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C — BI, PPKN, IPAS, dan Bahasa Inggris (kelas 5–6).',
     cta: 'Mulai generate',
     kbd: 'G',
     cardBg: 'bg-gradient-to-b from-white to-primary-50 border-primary-100',
@@ -86,6 +87,22 @@ const ACTION_CARDS = [
     description:
       'Lihat lembar tersimpan. Cetak ulang, duplikat, atau buka koreksi cepat untuk ujian yang sudah final.',
     cta: 'Buka riwayat',
+    kbd: null,
+    cardBg: 'bg-bg-surface border-border-default',
+    disabled: false,
+  },
+  {
+    id: 'bank-soal',
+    to: '/bank-soal' as const,
+    variant: 'secondary' as const,
+    iconBg: 'bg-info-bg',
+    iconColor: 'text-info-fg',
+    ctaColor: 'text-info-fg',
+    icon: BookOpen,
+    title: 'Bank Soal',
+    description:
+      'Pratinjau halaman Bank Soal — simpan dan susun ulang soal dari koleksi pribadi (fitur penuh menyusul).',
+    cta: 'Lihat pratinjau',
     kbd: null,
     cardBg: 'bg-bg-surface border-border-default',
     disabled: false,
@@ -186,7 +203,7 @@ function DashboardPage() {
 
             <p className="text-body text-text-secondary max-w-[560px]">
               Siap menyiapkan lembar ujian hari ini? Kurikulum Merdeka Fase C sudah terpasang
-              otomatis — Anda cukup pilih kelas, mata pelajaran, dan topik.
+              otomatis untuk Bahasa Indonesia, Pendidikan Pancasila, IPAS, dan Bahasa Inggris.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -196,6 +213,8 @@ function DashboardPage() {
               </Badge>
               <Badge variant="subject-bi">Bahasa Indonesia</Badge>
               <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
+              <Badge variant="subject-ipas">IPAS</Badge>
+              <Badge variant="subject-bing">Bahasa Inggris</Badge>
               <Badge variant="pill">
                 <CalendarDays size={11} />
                 {formatTodayLong()}
@@ -225,7 +244,7 @@ function DashboardPage() {
           <span className="text-body-sm text-text-tertiary hidden sm:block">Tiga alur inti</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {ACTION_CARDS.map((card) => {
             const Icon = card.icon
             const cardContent = (

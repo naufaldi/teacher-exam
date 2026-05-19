@@ -121,6 +121,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     const { system, user } = buildExamPrompt({
       examType,
       difficulty: input.difficulty,
+      examSubject: input.subject,
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
       topics: [...input.topics],

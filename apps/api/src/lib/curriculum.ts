@@ -8,9 +8,11 @@ const cache = new Map<string, Promise<string>>()
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
 const MD_DIR = join(MODULE_DIR, '..', 'curriculum', 'md')
 
-const SUBJECT_SLUG: Record<ExamSubject, 'bahasa-indonesia' | 'pendidikan-pancasila'> = {
+const SUBJECT_SLUG: Record<ExamSubject, 'bahasa-indonesia' | 'pendidikan-pancasila' | 'ipas' | 'bahasa-inggris'> = {
   bahasa_indonesia: 'bahasa-indonesia',
   pendidikan_pancasila: 'pendidikan-pancasila',
+  ipas: 'ipas',
+  bahasa_inggris: 'bahasa-inggris',
 }
 
 /**
@@ -62,7 +64,7 @@ export function __resetCurriculumCache(): void {
 }
 
 // Keyed by subject only — Fase C CP is identical for K5 and K6 (PRD §1.4).
-const FALLBACK: Record<'bahasa-indonesia' | 'pendidikan-pancasila', string> = {
+const FALLBACK: Record<'bahasa-indonesia' | 'pendidikan-pancasila' | 'ipas' | 'bahasa-inggris', string> = {
   'bahasa-indonesia': `# Bahasa Indonesia — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
@@ -82,5 +84,25 @@ const FALLBACK: Record<'bahasa-indonesia' | 'pendidikan-pancasila', string> = {
 - NKRI: Mengenal wilayah kabupaten/kota/provinsi sebagai bagian NKRI; membangun kebersamaan, persatuan, dan berkontribusi di lingkungan.
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
+`,
+  ipas: `# IPAS — Fase C (Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- Peserta didik menyelidiki makhluk hidup, benda, energi, dan perubahannya melalui pengamatan sederhana serta bukti yang dapat dijelaskan.
+- Peserta didik memahami hubungan antara manusia, lingkungan, ekosistem, dan pemanfaatan sumber daya secara bertanggung jawab.
+- Peserta didik mengenal gejala alam, tata surya, dan perubahan permukaan bumi dalam konteks kehidupan sehari-hari.
+- Peserta didik mengomunikasikan hasil penyelidikan IPAS dengan bahasa ilmiah sederhana, data, tabel, dan alasan yang runtut.
+
+> Catatan: korpus Buku Siswa belum tersedia. Soal akan didasarkan pada CP Fase C dan topik umum IPAS kelas 5-6.
+`,
+  'bahasa-inggris': `# Bahasa Inggris — Fase C (Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- Learners understand short spoken and written texts about familiar school, home, and community contexts.
+- Learners use simple English expressions to ask, answer, describe, compare, and give opinions with support.
+- Learners read short functional, descriptive, narrative, and procedural texts for main ideas and details.
+- Learners write short guided sentences or paragraphs with appropriate vocabulary, punctuation, and structure.
+
+> Catatan: korpus Buku Siswa belum tersedia. Stems and options should use English, while explanations may use Indonesian.
 `,
 }

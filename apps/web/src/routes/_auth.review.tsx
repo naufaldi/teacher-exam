@@ -54,7 +54,7 @@ export const Route = createFileRoute('/_auth/review')({
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({
-      subject: exam.subject as 'bahasa_indonesia' | 'pendidikan_pancasila',
+      subject: exam.subject,
       grade: exam.grade,
       topic: exam.topics.join(', '),
       examType: exam.examType as ExamType,
