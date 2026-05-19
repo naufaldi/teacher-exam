@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { Effect, Either, Schema, Match } from 'effect'
 import { db, exams, questions } from '@teacher-exam/db'
+import { eq } from 'drizzle-orm'
 import {
   GenerateExamInputSchema,
   normalizeExamType,
@@ -16,6 +17,7 @@ import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
 import { questionToRow } from '../lib/question-mapper'
 import { validateGeneratedQuestionLatex, type LatexValidationResult } from '../lib/latex-validator'
+import { validateQuestionBatch } from '../services/ValidatorService'
 import {
   createDefaultAiService,
   type AiService,
@@ -208,6 +210,20 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     const examId = crypto.randomUUID()
     const now = new Date()
 
+    const insertedQuestions: Question[] = generatedQuestions.map((q, i) =>
+      convertGeneratedToQuestion(
+        q,
+        {
+          id: crypto.randomUUID(),
+          examId,
+          number: i + 1,
+          status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
+          createdAt: now,
+        },
+        latexResults[i],
+      ),
+    )
+
     await db.transaction(async (tx) => {
       await tx.insert(exams).values({
         id:          examId,
@@ -226,18 +242,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       })
 
       await tx.insert(questions).values(
-        generatedQuestions.map((q, i) => {
-          const dbQuestion = convertGeneratedToQuestion(
-            q,
-            {
-              id: crypto.randomUUID(),
-              examId,
-              number: i + 1,
-              status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
-              createdAt: now,
-            },
-            latexResults[i],
-          )
+        insertedQuestions.map((dbQuestion) => {
           const rowFields = questionToRow(dbQuestion)
           return {
             id: dbQuestion.id,
@@ -261,6 +266,27 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
         }),
       )
     })
+
+    const validationUpdates = await validateQuestionBatch({
+      aiService,
+      exam: {
+        subject: input.subject,
+        grade: input.grade,
+        examType,
+      },
+      curriculumText,
+      questions: insertedQuestions,
+    })
+
+    for (const update of validationUpdates) {
+      await db
+        .update(questions)
+        .set({
+          validationStatus: update.validationStatus,
+          validationReason: update.validationReason,
+        })
+        .where(eq(questions.id, update.id))
+    }
 
     const result = await fetchExamWithQuestions(examId)
     if (!result) {

@@ -1,6 +1,6 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk'
 import { Effect, Schema, Either } from 'effect'
-import { GeneratedQuestionSchema, type GeneratedQuestion } from '@teacher-exam/shared'
+import { GeneratedQuestionSchema, CurriculumValidationItemSchema, type GeneratedQuestion, type CurriculumValidationItem } from '@teacher-exam/shared'
 import { AiGenerationError } from '../errors'
 import { logAiEvent } from '../lib/ai-log'
 
@@ -20,8 +20,15 @@ export interface DiscussionInput {
   user: string
 }
 
+export interface ValidateCurriculumInput {
+  system: string
+  user: string
+  expectedCount: number
+}
+
 export interface AiService {
   generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
+  validateCurriculum: (input: ValidateCurriculumInput) => Effect.Effect<ReadonlyArray<CurriculumValidationItem>, AiGenerationError>
   generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
   streamDiscussion: (input: DiscussionInput) => AsyncGenerator<string>
 }
@@ -44,6 +51,8 @@ export interface AiServiceConfig {
   maxTokens?: number
   discussionModel?: string
   discussionMaxTokens?: number
+  validationModel?: string
+  validationMaxTokens?: number
   provider?: 'anthropic' | 'minimax'
   baseURL?: string
 }
@@ -54,6 +63,7 @@ const DEFAULT_MINIMAX_MODEL = 'MiniMax-M2.7'
 const DEFAULT_MINIMAX_DISCUSSION_MODEL = 'MiniMax-M2.7-highspeed'
 const DEFAULT_MAX_TOKENS = 32000
 const DEFAULT_DISCUSSION_MAX_TOKENS = 16000
+const DEFAULT_VALIDATION_MAX_TOKENS = 8000
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 const DEFAULT_MINIMAX_ANTHROPIC_BASE_URL = 'https://api.minimax.io/anthropic'
 
@@ -79,6 +89,8 @@ export function createAiService(config: AiServiceConfig): AiService {
   const discussionModel = config.discussionModel ?? DEFAULT_DISCUSSION_MODEL
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
   const discussionMaxTokens = config.discussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
+  const validationModel = config.validationModel ?? discussionModel
+  const validationMaxTokens = config.validationMaxTokens ?? DEFAULT_VALIDATION_MAX_TOKENS
 
   const getDiscussionText = (input: DiscussionInput): Effect.Effect<string, AiGenerationError> =>
     callAnthropicText({
@@ -137,6 +149,27 @@ export function createAiService(config: AiServiceConfig): AiService {
           )
         }
         return questions
+      })
+    },
+
+    validateCurriculum({ system, user, expectedCount }) {
+      return Effect.gen(function* () {
+        const text = yield* callAnthropicText({
+          config,
+          model: validationModel,
+          max_tokens: validationMaxTokens,
+          system,
+          content: [{ type: 'text', text: user }],
+        })
+        const items = yield* parseCurriculumValidation(text)
+        if (items.length !== expectedCount) {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Expected ${expectedCount} validation items, got ${items.length}`,
+            }),
+          )
+        }
+        return items
       })
     },
 
@@ -211,6 +244,9 @@ export function createDefaultAiService(): AiService {
       },
       generateDiscussion(input) {
         return minimaxService.generateDiscussion(input)
+      },
+      validateCurriculum(input) {
+        return minimaxService.validateCurriculum(input)
       },
       streamDiscussion(input) {
         return minimaxService.streamDiscussion(input)
@@ -385,6 +421,34 @@ function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, 
       return yield* Effect.fail(
         new AiGenerationError({
           cause: `AI output failed schema validation: ${String(decoded.left)}`,
+        }),
+      )
+    }
+    return Array.from(decoded.right)
+  })
+}
+
+function parseCurriculumValidation(
+  raw: string,
+): Effect.Effect<Array<CurriculumValidationItem>, AiGenerationError> {
+  return Effect.gen(function* () {
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(stripCodeFence(raw)) as unknown,
+      catch: (cause) =>
+        new AiGenerationError({
+          cause: `AI returned non-JSON output: ${(cause as Error).message}`,
+        }),
+    })
+
+    if (!Array.isArray(parsed)) {
+      return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned non-array JSON' }))
+    }
+
+    const decoded = Schema.decodeUnknownEither(Schema.Array(CurriculumValidationItemSchema))(parsed)
+    if (Either.isLeft(decoded)) {
+      return yield* Effect.fail(
+        new AiGenerationError({
+          cause: `AI validation output failed schema validation: ${String(decoded.left)}`,
         }),
       )
     }

@@ -38,6 +38,7 @@ function makeFakeAiService(opts: {
   const md = opts.discussion ?? FAKE_DISCUSSION_MD
   return {
     generate: vi.fn(),
+    validateCurriculum: vi.fn(),
     generateDiscussion: vi.fn(() =>
       opts.fail
         ? Effect.fail(new AiGenerationError({ cause: 'AI error' }))

@@ -37,6 +37,10 @@ import { QuestionEditDialog } from '../components/review/question-edit-dialog.js
 import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
 import { SwitchModeDialog } from '../components/review/switch-mode-dialog.js'
+import {
+  CurriculumValidationBadge,
+  needsCurriculumReview,
+} from '../components/review/curriculum-validation-badge.js'
 
 const ACADEMIC_YEARS = Array.from({ length: 11 }, (_, i) => {
   const start = new Date().getFullYear() - 5 + i
@@ -118,6 +122,7 @@ function ReviewPage() {
   const [failedRegenIds, setFailedRegenIds] = useState<Set<string>>(new Set())
   const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
   const [batchRegenerating, setBatchRegenerating] = useState(false)
+  const [reviewOnlyFilter, setReviewOnlyFilter] = useState(false)
   const [newReplacementIds, setNewReplacementIds] = useState<Set<string>>(new Set())
   type TolakDialogState =
     | { kind: 'closed' }
@@ -193,6 +198,17 @@ function ReviewPage() {
   }, [examId, toast])
 
   const questions = draft.questions
+  const reviewFlaggedCount = useMemo(
+    () => questions.filter((q) => needsCurriculumReview(q.validationStatus)).length,
+    [questions],
+  )
+  const visibleQuestions = useMemo(
+    () =>
+      reviewOnlyFilter
+        ? questions.filter((q) => needsCurriculumReview(q.validationStatus))
+        : questions,
+    [questions, reviewOnlyFilter],
+  )
   const acceptedCount = useMemo(
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
@@ -523,6 +539,27 @@ function ReviewPage() {
         </PageHeader>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="inline-flex items-center gap-2 text-body-sm text-text-secondary cursor-pointer">
+          <input
+            type="checkbox"
+            className="rounded-xs border-border-default"
+            checked={reviewOnlyFilter}
+            onChange={(e) => setReviewOnlyFilter(e.target.checked)}
+            data-testid="review-only-filter"
+          />
+          Perlu review only
+        </label>
+        {reviewFlaggedCount > 0 ? (
+          <Badge variant="warning" className="text-caption">
+            {reviewFlaggedCount} perlu review
+          </Badge>
+        ) : null}
+        {reviewOnlyFilter && visibleQuestions.length === 0 ? (
+          <span className="text-caption text-text-tertiary">Semua soal sesuai kurikulum.</span>
+        ) : null}
+      </div>
+
       {mode === 'fast' && (
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -539,7 +576,7 @@ function ReviewPage() {
           </div>
 
           <div className="max-h-[480px] overflow-y-auto rounded-sm border border-border-default divide-y divide-border-default">
-            {questions.map((q) => (
+            {visibleQuestions.map((q) => (
               <div
                 key={q.id}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-kertas-50 transition-colors"
@@ -553,6 +590,13 @@ function ReviewPage() {
                   </p>
                   {q.figure ? <FigureSvg figure={q.figure} /> : null}
                 </div>
+                {q.validationStatus ? (
+                  <CurriculumValidationBadge
+                    status={q.validationStatus}
+                    reason={q.validationReason}
+                    compact
+                  />
+                ) : null}
                 <span className="font-mono text-caption bg-bg-muted px-1.5 py-0.5 rounded-xs shrink-0">
                   {questionCorrectLabel(q)}
                 </span>
@@ -614,7 +658,7 @@ function ReviewPage() {
           </div>
 
           <div className="space-y-4">
-            {questions.map((q) => {
+            {visibleQuestions.map((q) => {
               const status = questionStatuses[q.id] ?? 'pending'
               return (
                 <Card
@@ -622,6 +666,14 @@ function ReviewPage() {
                   className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
                 >
                   <CardContent className="p-4">
+                    {q.validationStatus ? (
+                      <div className="absolute top-3 right-3">
+                        <CurriculumValidationBadge
+                          status={q.validationStatus}
+                          reason={q.validationReason}
+                        />
+                      </div>
+                    ) : null}
                     {regeneratingIds.has(q.id) ? (
                       <div className="space-y-3" role="status" aria-live="polite">
                         <div className="flex items-center gap-2 text-body-sm font-semibold text-text-secondary">

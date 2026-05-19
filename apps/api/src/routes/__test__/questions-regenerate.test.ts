@@ -20,6 +20,10 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ op: 'and', args })),
 }))
 
+vi.mock('../../lib/curriculum', () => ({
+  getCurriculumText: vi.fn(async () => 'mock curriculum text'),
+}))
+
 import { db } from '@teacher-exam/db'
 import { createQuestionsRouter } from '../questions'
 import { makeChain, makeQuestionRow, makeExamRow } from './helpers.js'
@@ -38,6 +42,38 @@ function makeGeneratedQuestion(overrides: Partial<Extract<GeneratedQuestion, { _
     difficulty:     'sedang',
     ...overrides,
   }
+}
+
+function makeFakeAiService(overrides: Partial<AiService> = {}): AiService {
+  return {
+    generate: vi.fn(),
+    validateCurriculum: vi.fn(({ expectedCount }: { expectedCount: number }) =>
+      Effect.succeed(
+        Array.from({ length: expectedCount }, () => ({
+          number: 1,
+          status: 'valid' as const,
+          reason: 'Sesuai CP.',
+        })),
+      ),
+    ),
+    generateDiscussion: vi.fn(),
+    streamDiscussion: vi.fn(),
+    ...overrides,
+  }
+}
+
+function mockRegenerateUpdates(
+  contentRow: ReturnType<typeof makeQuestionRow>,
+  validatedRow?: ReturnType<typeof makeQuestionRow>,
+) {
+  let updateCount = 0
+  ;(db.update as Mock).mockImplementation(() => {
+    updateCount++
+    const row = updateCount === 1
+      ? contentRow
+      : (validatedRow ?? { ...contentRow, validationStatus: 'valid', validationReason: 'Sesuai CP.' })
+    return makeChain([row])
+  })
 }
 
 function buildTestApp(aiService?: AiService) {
@@ -78,7 +114,7 @@ describe('POST /api/questions/:id/regenerate', () => {
 
   it('returns 404 when question belongs to another user', async () => {
     ;(db.select as Mock).mockReturnValue(makeChain([]))  // ownership check returns nothing
-    const fakeAi: AiService = { generate: vi.fn() }
+    const fakeAi = makeFakeAiService()
     const app = buildTestApp(fakeAi)
 
     const res = await app.request('/api/questions/q-1/regenerate', {
@@ -100,10 +136,12 @@ describe('POST /api/questions/:id/regenerate', () => {
       if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])  // ownership + question
       return makeChain([])  // sibling questions (no others)
     })
-    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+    mockRegenerateUpdates(updatedRow)
 
     const generated = makeGeneratedQuestion()
-    const fakeAi: AiService = { generate: vi.fn(() => Effect.succeed([generated])) }
+    const fakeAi = makeFakeAiService({
+      generate: vi.fn(() => Effect.succeed([generated])),
+    })
     const app = buildTestApp(fakeAi)
 
     const res = await app.request('/api/questions/q-1/regenerate', {
@@ -128,10 +166,12 @@ describe('POST /api/questions/:id/regenerate', () => {
       if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])
       return makeChain([])
     })
-    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+    mockRegenerateUpdates(updatedRow)
 
     const generated = makeGeneratedQuestion()
-    const fakeAi: AiService = { generate: vi.fn(() => Effect.succeed([generated])) }
+    const fakeAi = makeFakeAiService({
+      generate: vi.fn(() => Effect.succeed([generated])),
+    })
     const app = buildTestApp(fakeAi)
 
     await app.request('/api/questions/q-1/regenerate', {
@@ -161,10 +201,12 @@ describe('POST /api/questions/:id/regenerate', () => {
       if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])
       return makeChain([])
     })
-    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+    mockRegenerateUpdates(updatedRow)
 
     const generated = makeGeneratedQuestion()
-    const fakeAi: AiService = { generate: vi.fn(() => Effect.succeed([generated])) }
+    const fakeAi = makeFakeAiService({
+      generate: vi.fn(() => Effect.succeed([generated])),
+    })
     const app = buildTestApp(fakeAi)
 
     await app.request('/api/questions/q-1/regenerate', {
@@ -196,7 +238,7 @@ describe('POST /api/questions/:id/regenerate', () => {
       if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])
       return makeChain([])
     })
-    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+    mockRegenerateUpdates(updatedRow)
 
     const aiPayload = [{
       _tag:           'mcq_single',
@@ -212,11 +254,17 @@ describe('POST /api/questions/:id/regenerate', () => {
     }]
     const fakeAnthropic: AnthropicLike = {
       messages: {
-        create: vi.fn().mockResolvedValue({
-          content: [{ type: 'text', text: JSON.stringify(aiPayload) }],
-          stop_reason: 'end_turn',
-          stop_sequence: null,
-        }),
+        create: vi.fn()
+          .mockResolvedValueOnce({
+            content: [{ type: 'text', text: JSON.stringify(aiPayload) }],
+            stop_reason: 'end_turn',
+            stop_sequence: null,
+          })
+          .mockResolvedValueOnce({
+            content: [{ type: 'text', text: JSON.stringify([{ number: 1, status: 'valid', reason: 'Sesuai CP.' }]) }],
+            stop_reason: 'end_turn',
+            stop_sequence: null,
+          }),
       },
     }
     const aiService = createAiService({ client: fakeAnthropic })
@@ -285,11 +333,11 @@ describe('POST /api/questions/:id/regenerate', () => {
       return makeChain([])
     })
 
-    const fakeAi: AiService = {
+    const fakeAi = makeFakeAiService({
       generate: vi.fn(() =>
         Effect.fail(new AiGenerationError({ cause: 'Claude quota exceeded' })),
       ),
-    }
+    })
     const app = buildTestApp(fakeAi)
 
     const res = await app.request('/api/questions/q-1/regenerate', {

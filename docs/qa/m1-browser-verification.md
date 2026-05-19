@@ -30,6 +30,8 @@ One-time seed:
 pnpm db:seed:dev
 ```
 
+Runs via `@teacher-exam/api` so `tsx` resolves (see [penjaga-kurikulum-e2e.md](./penjaga-kurikulum-e2e.md) if it fails).
+
 Login page shows **Masuk Guru Dev (lokal)** when `VITE_DEV_AUTH=true` and Vite is in dev mode.
 
 Headless shortcut (same origin — Vite proxies `/api` to API):
@@ -66,7 +68,7 @@ Restart `pnpm dev` after enabling `DEV_AUTH_*` / `VITE_DEV_AUTH` so API and Vite
 | F3 | `/generate` IPAS K6 | Pending auth | | `f3-generate-ipas-k6.png` |
 | F4 | `/generate` B.Inggris K5 | Pending auth | | `f4-generate-bing-k5.png` |
 | F5 | `/generate` B.Inggris K6 | Pending auth | | `f5-generate-bing-k6.png` |
-| F6 | Generate → review → preview → cetak | Pending auth | | `f6-*.png` |
+| F6 | Generate → review → preview → cetak | Partial — Penjaga Kurikulum E2E pass (2026-05-19) | Clean | `penjaga-kurikulum-e2e.png`; full F6 preview/cetak pending |
 | F7 | `/history` filters | Pending auth | | `f7-history-filters.png` |
 | F8 | `/profile` subjects | Pending auth | | `f8-profile-subjects.png` |
 
