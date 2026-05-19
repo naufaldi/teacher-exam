@@ -52,7 +52,7 @@ Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
 
 - **Validation**: always use Effect Schema (never Zod — it is not installed)
 - **Styling**: use project design tokens directly — never shadcn CSS variable conventions (`--background`, `--primary`, `--foreground`, etc.)
-- **Auth**: better-auth with Google OAuth only — no username/password auth
+- **Auth**: better-auth with Google OAuth in production. Local dev may enable `DEV_AUTH_ENABLED` + `pnpm db:seed:dev` for one-click **Masuk Guru Dev** (`POST /api/dev/login`) — never enable in production.
 - **Token usage (RTK)**: RTK hooks are active for Claude Code and Cursor — Bash calls are auto-rewritten, do not wrap them manually. Built-in `Read` / `Grep` / `Glob` bypass the hook; for large outputs use shell equivalents or `rtk read` / `rtk grep` / `rtk find`.
 
   Preferred command map (let the hook rewrite — do not prefix `rtk` yourself):

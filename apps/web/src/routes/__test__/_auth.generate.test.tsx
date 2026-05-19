@@ -38,6 +38,10 @@ vi.mock('@teacher-exam/ui', async (importOriginal) => {
     Button: ({ onClick, children, type }: { onClick?: () => void; children: React.ReactNode; type?: 'button' | 'submit' | 'reset' }) => (
       <button type={type ?? 'button'} onClick={onClick}>{children}</button>
     ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+      <div data-value={value}>{children}</div>
+    ),
   }
 })
 
@@ -117,6 +121,13 @@ async function clickGenerateAndFlush() {
 }
 
 describe('Jumlah Soal input', () => {
+  it('offers IPAS and Bahasa Inggris in the subject selector', () => {
+    renderGeneratePage()
+
+    expect(screen.getByText('IPAS')).toBeInTheDocument()
+    expect(screen.getByText('Bahasa Inggris')).toBeInTheDocument()
+  })
+
   it('defaults to 20 for default jenis (formatif)', () => {
     renderGeneratePage()
     const input = screen.getByLabelText('Jumlah Soal') as HTMLInputElement

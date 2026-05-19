@@ -1,4 +1,5 @@
 import type { Exam } from '@teacher-exam/shared'
+import { subjectMetaFor } from '../../lib/subjects'
 
 interface MiniPaperPreviewProps {
   exam: Exam
@@ -13,13 +14,6 @@ function formatTopicsDisplay(topics: readonly string[]): string {
   return `${visible} +${remaining}`
 }
 
-const SUBJECT_SHORT: Record<string, string> = {
-  bahasa_indonesia: 'BI',
-  pendidikan_pancasila: 'PPKN',
-  ipas: 'IPAS',
-  bahasa_inggris: 'B. Ing',
-}
-
 const QUESTION_SKELETONS = [
   { num: '1.', widths: ['100%', '70%', '50%'] },
   { num: '11.', widths: ['100%', '60%', '45%'] },
@@ -32,7 +26,7 @@ const QUESTION_SKELETONS = [
 ] as const
 
 function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
-  const subjectShort = SUBJECT_SHORT[exam.subject] ?? exam.subject
+  const subjectShort = subjectMetaFor(exam.subject).short
   const topicsDisplay = formatTopicsDisplay(exam.topics)
 
   return (

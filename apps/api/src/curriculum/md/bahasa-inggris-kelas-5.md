@@ -1,127 +1,73 @@
-# Bahasa Inggris — Kelas 5 (Fase C, Kurikulum Merdeka)
+# Bahasa Inggris — Kelas 5 (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
-- Menyimak: Peserta didik mampu menyimak dialog, lagu, dan cerita pendek dalam bahasa Inggris tentang topik kehidupan sehari-hari (membeli buah dan sayur, kegiatan di dapur, resep masakan) dan merespons dengan tindakan atau jawaban yang sesuai.
-- Membaca dan Memirsa: Peserta didik mampu membaca dan memahami teks pendek berupa komik strip, cerita adaptasi, dan dialog sederhana tentang aktivitas membeli, memasak, dan menggunakan peralatan dapur.
-- Berbicara dan Mempresentasikan: Peserta didik mampu membuat percakapan pendek tentang buah-buahan, mengajukan pertanyaan menggunakan *how much* dan *how many*, membuat dan menanggapi permintaan, serta mendeskripsikan posisi benda.
-- Menulis: Peserta didik mampu menulis kalimat sederhana tentang sayur-sayuran, bahan belanjaan, kategori benda (countable/uncountable), serta langkah-langkah memasak.
+- Learners understand short spoken and written texts about familiar people, places, objects, routines, and school activities.
+- Learners ask and answer simple questions using high-frequency vocabulary, polite expressions, and basic sentence patterns.
+- Learners read short descriptive, procedural, and functional texts to find main ideas, details, and word meanings from context.
+- Learners write guided sentences and short paragraphs with correct capitalization, punctuation, and simple grammar.
 
-## Bab 1: Buying Some Mangoes and Spinach (Membeli Beberapa Mangga dan Bayam)
-**Topik utama:** Berbelanja buah-buahan, sayur-sayuran, dan bahan belanjaan di pasar.
-**Sub-konsep:**
-- A. Two Kilos of Mangoes — kosakata buah-buahan, satuan kilo, harga
-- B. A Bunch of Spinach — kosakata sayur-sayuran dan grocery products, satuan ukuran (bunch, bag, bottle, spoonful)
-- Pertanyaan *How much...?* dan *How many...?*
-- Ungkapan *I want... / I don't want...*
-- Countable nouns dan uncountable nouns
-**Sample teks bacaan:** "Good morning, Mita. Look at my fresh fruits. Do you want to buy some? Yes, I want to buy some apples. How many apples do you want? A kilo, please."
-**Kosakata kunci:** mango, apple, orange, banana, avocado, grape, pineapple, rambutan, durian, jackfruit, spinach, celery, garlic, carrot, cabbage, lettuce, tofu, sugar, salt, milk, kilo, bunch, bag, bottle, spoonful
-**Kompetensi yang diuji:** Membuat percakapan pendek tentang buah-buahan; menulis kalimat sederhana tentang sayur-sayuran dan bahan belanjaan; mengidentifikasi countable dan uncountable nouns; bertanya menggunakan *how much* dan *how many*.
+## Bab 1: My Daily Activities
+**Topik utama:** Daily routines, time expressions, and simple present tense.
 
-## Bab 2: In the Kitchen (Di Dapur)
-**Topik utama:** Aktivitas membantu di dapur, peralatan dapur, dan langkah-langkah memasak.
-**Sub-konsep:**
-- A. Helping in the Kitchen — kosakata peralatan dapur (kitchen utensils) dan posisinya (preposisi tempat: in, on, under, above)
-- B. A Special Recipe — kata kerja memasak (cooking verbs) dan urutan langkah memasak
-- Membuat dan menanggapi permintaan (*Can you get me...?*, *Can you pass me...?*)
-- Menyatakan letak benda (*It's on the shelf*, *It's in the drawer*)
-**Sample teks bacaan:** "Hmm, I smell something delicious. What are you cooking, Mak? It's banana fritters. Can you get me a plate, please? Where is it? It's on the kitchen shelf."
-**Kosakata kunci:** plate, glass, bowl, saucepan, knife, sink, wok, spoon, fork, grater, strainer spoon, tongs, spatula, stove, shelf, drawer, toast, spread, heat, place, cut, recipe
-**Kompetensi yang diuji:** Membuat dan menanggapi permintaan; menyebutkan posisi peralatan dapur menggunakan preposisi; membuat urutan langkah-langkah memasak.
+**Sub-konsep:** Wake up, take a shower, have breakfast, go to school, study, play, help parents, pray, sleep; adverbs of frequency; telling time; subject-verb agreement for simple routines.
 
-## Bab 2 (lanjutan): In the Kitchen — B. A Special Recipe
-**Topik utama:** Mengenali bahan-bahan resep dan langkah-langkah memasak makanan sederhana
-**Sub-konsep:**
-- Kata kerja memasak: cut, heat, spread, toast, place, put, add, mix, stir, peel, dip, fry, beat
-- Membaca resep: ingredients dan steps
-- Mengurutkan langkah memasak (sequencing)
-- Menulis resep sederhana (banana hot dog, sandwich)
-- Peralatan dapur untuk memasak
-**Sample teks bacaan:** "Spread margarine on the bread. Heat some margarine in a pan. Toast the bread until golden brown. Place a slice of bread on a plate. Put tempeh, tomato, and cucumber on the bread. Add the ketchup. Now, the special sandwich is ready to eat."
-**Kosakata kunci:** cut, heat, spread, toast, place, put, add, mix, stir, peel, dip, fry, beat, scramble, ingredients, steps, recipe, sandwich, tempeh, margarine, ketchup, banana fritter, sprinkles, chocolate jam, hot dog bun, scrambled egg, mayonnaise
-**Kompetensi yang diuji:** Siswa dapat mengidentifikasi bahan-bahan dari sebuah resep, mengidentifikasi langkah-langkah memasak, membuat urutan langkah memasak, serta menulis dan mempresentasikan resep sederhana mereka sendiri.
+**Sample teks bacaan:** I wake up at five o'clock every morning. After that, I take a shower and have breakfast with my family. I go to school at six thirty. In the afternoon, I do my homework and help my mother water the plants.
 
-## Bab 3: Visiting Bara's House
-**Topik utama:** Menyebutkan dan mengikuti petunjuk arah serta mendeskripsikan lingkungan sekitar
-**Sub-konsep:**
-- Petunjuk arah: turn right, turn left, go straight, cross
-- Posisi tempat: in front of, beside, behind, between, next to, under, near
-- Tempat umum: mosque, church, school, market, soccer field, playground, grocery store, beach
-- Membaca dan membuat peta lingkungan
-- Mendeskripsikan lokasi rumah dan tempat-tempat di lingkungan
-**Sample teks bacaan:** "From the market, you go straight on Garuda Street. Then, you turn right on Merpati Street. You go straight on Merpati Street. At the end of Merpati Street, you turn left. Bara's house is on the left side of the street. It is in front of the beach."
-**Kosakata kunci:** turn right, turn left, go straight, cross, in front of, beside, behind, between, next to, under, neighborhood, directions, market, mosque, church, soccer field, playground, grocery store, school, beach, street
-**Kompetensi yang diuji:** Siswa dapat menanyakan dan memberikan petunjuk arah ke suatu tempat, menyebutkan nama-nama tempat di lingkungan, serta mendeskripsikan lokasi tempat menggunakan preposisi yang tepat (in front of, beside, behind, between).
+**Kosakata kunci:** wake up, breakfast, homework, afternoon, evening, always, usually, sometimes, never, o'clock, half past, daily activity.
 
-## Bab 4: A Market Day (lanjutan) — Bagian B: An Expensive Book
-**Topik utama:** Mendeskripsikan barang berdasarkan harga (mahal/murah), ukuran (besar/kecil, tebal/tipis, panjang/pendek), dan warna dalam konteks market day.
+**Kompetensi yang diuji:** Identify routine verbs, choose correct time expressions, answer detail questions from a short routine text, and complete simple present sentences about daily activities.
 
-**Sub-konsep:**
-- Kosakata sifat: cheap, expensive, thick, thin, big, small, long, short
-- Mendeskripsikan benda berdasarkan harga, ukuran, dan warna
-- Memahami cerita naratif sederhana (recount) tentang berbelanja
-- Menghitung total harga dan kembalian (change)
-- Menyusun kalimat past tense sederhana (bought, went, got, chose, paid)
-- Menjawab pertanyaan True/False berdasarkan teks
+## Bab 2: At School
+**Topik utama:** School subjects, classroom objects, instructions, and school places.
 
-**Sample teks bacaan:** "It was Ferdinand's birthday last week. Pipit, Mita, and Bara wanted to give a birthday gift for Ferdinand. They went to class 6A's booth at the market day. Pipit bought a small ruler. It was 2,000 rupiah. Bara got a big pencil case. It was 12,000 rupiah."
+**Sub-konsep:** Names of subjects, days of the week, classroom items, prepositions of place, classroom commands, asking permission, describing a class schedule.
 
-**Kosakata kunci:** cheap, expensive, thick, thin, big, small, long, short, ruler, pencil case, book, eraser, bought, paid, change, total
+**Sample teks bacaan:** On Monday, we have English, Math, and Art. My English book is on the desk, and my pencil case is beside the bag. Before the lesson starts, our teacher says, "Open your book and listen carefully."
 
-**Kompetensi yang diuji:**
-- Siswa dapat mengatakan benda mahal atau murah berdasarkan harga
-- Siswa dapat mendeskripsikan benda berdasarkan warna dan ukuran
-- Siswa dapat memahami cerita naratif sederhana tentang berbelanja
-- Siswa dapat menghitung kembalian uang
-- Siswa dapat menyusun kalimat past tense sederhana
+**Kosakata kunci:** subject, schedule, English, Math, Art, Science, desk, board, pencil case, beside, between, behind, open, listen, write.
 
-## Bab 5: At the Library
-**Topik utama:** Aturan dan kegiatan di perpustakaan, meminjam buku, serta mengungkapkan keinginan secara sopan menggunakan "I'd like to..." dan "Can I...?"
+**Kompetensi yang diuji:** Match school subjects with schedule information, locate objects using prepositions, understand classroom instructions, and choose polite expressions for asking permission.
 
-### Bagian A: Borrowing a Book
+## Bab 3: Food and Drinks
+**Topik utama:** Food vocabulary, countable and uncountable nouns, preferences, and healthy choices.
 
-**Sub-konsep:**
-- Tanda-tanda peraturan perpustakaan: No talking, No food, No drinks, Be quiet, Keep clean
-- Ungkapan modal "can/can't" untuk menyatakan apa yang boleh/tidak boleh dilakukan
-- Ungkapan sopan "I'd like to..." (kependekan dari "I would like to...") yang sama artinya dengan "I want to..."
-- Mengisi formulir peminjaman buku (Borrowing Form): Name, Class, Book Title, Return Date
-- Kategori/jenis buku: science, story, biology, history, mathematics
+**Sub-konsep:** Fruits, vegetables, rice, noodles, chicken, fish, milk, water, juice; like/dislike; some/any; a/an; healthy and unhealthy food; ordering food politely.
 
-**Sample teks bacaan:** "Bara, Pipit, Mita and Ferdinand are at the library. They want to borrow some books. 'What books do you want to read?' 'I want to read a story.' 'I want to get a book about animals.' 'Let's go find a good book.' 'I want to learn to play chess. So, I'd like to borrow this book.'"
+**Sample teks bacaan:** Rani likes apples and carrots because they are healthy. She does not drink soda every day. At the canteen, she says, "May I have a glass of milk and a banana, please?" The seller smiles and gives her the food.
 
-**Kosakata kunci:** library, book, borrow, return, shelves, story, comic, science, culture, fairy tales, chess, dinosaur, I'd like to, can, can't
+**Kosakata kunci:** apple, banana, carrot, rice, noodle, chicken, fish, milk, water, juice, healthy, canteen, like, dislike, please.
 
-### Bagian B: My Favorite Book
+**Kompetensi yang diuji:** Identify food and drink vocabulary, infer preferences from a short text, choose suitable quantifiers, and recognize polite ordering expressions.
 
-**Sub-konsep:**
-- Kategori buku: Story books, Science, Game
-- Judul-judul buku: Cinderella, Beauty and the Beast, The Culture of India, Dinosaur Adventure, How to Play Chess, Life Under the Sea, Mousedeer and The Farmer, Fun Math, Stacko, Trees, Goldilocks, The Legend of Tangkuban Perahu
-- Ungkapan sopan "Can I...?" untuk meminta sesuatu (contoh: Can I borrow this comic?)
-- Memberi rating bintang (1-5 stars) dan ulasan buku
-- Menulis book review: title, author, what the book is about, favorite part, recommendation
+## Bab 4: My House and My Room
+**Topik utama:** Rooms, furniture, household objects, and describing location.
 
-**Sample teks bacaan:** "'I really like the story in Beauty and the Beast,' said Mita. 'The princess character in the story likes reading, and the Beast character has a big library. I will give it five stars.' 'The comic is very funny! I love it! I will give it five stars,' said Bara."
+**Sub-konsep:** Bedroom, bathroom, kitchen, living room, dining room, chair, table, cupboard, bed, lamp, mirror; there is/there are; prepositions in/on/under/next to; describing a room.
 
-**Kosakata kunci:** favorite, story, character, princess, beast, comic, funny, boring, stars, review, recommend, author, title
+**Sample teks bacaan:** My bedroom is small but clean. There is a bed near the window. There are two books on the table and a blue bag under the chair. I clean my room every Saturday morning.
 
-**Kompetensi yang diuji:**
-- Siswa dapat menjelaskan apa yang boleh dan tidak boleh dilakukan di perpustakaan
-- Siswa dapat meminta sesuatu dengan sopan menggunakan "I'd like to..." dan "Can I...?"
-- Siswa dapat berbicara tentang isi buku dan memberikan ulasan
-- Siswa dapat memahami cerita naratif
-- Siswa dapat mengisi formulir peminjaman buku
+**Kosakata kunci:** house, bedroom, kitchen, bathroom, living room, bed, table, chair, window, near, under, next to, clean, tidy.
 
-## Bab 6: Reading a Lot of Stories
-**Topik utama:** Membaca, menyimak, dan menampilkan cerita imajinatif (cerita rakyat dan fabel) dalam bahasa Inggris menggunakan past tense.
-**Sub-konsep:**
-- Cerita "The Mouse Deer and the Crocodiles" (Kancil dan Buaya)
-- Cerita "The Boy Who Cried Wolf"
-- Penggunaan past tense verbs (regular dan irregular): saw, went, ran, jumped, arrived, called, counted, ate, slept
-- Memprediksi dan mengurutkan jalan cerita berdasarkan gambar
-- Mengidentifikasi karakter, latar, alur, dan perasaan tokoh
-- Menulis ulang cerita dengan mengganti karakter, hewan, dan predator
-- Memerankan (act out) cerita imajinatif
-- Membuat akhir cerita alternatif
-**Sample teks bacaan:** "Once upon a time, a hungry mouse deer was in the forest. He went to the river looking for food. When he arrived there, he saw a lot of fruit across the river. But, he also saw so many crocodiles in the river. He came up with a brilliant idea! He called up the crocodiles, 'Hi, crocodiles!'"
-**Kosakata kunci:** mouse deer, crocodile, river, fruit, forest, jumped, counted, shepherd, wolves, sheep, villagers, prank, shouted, worried, scared, disappointed, hungry, brilliant idea
-**Kompetensi yang diuji:** Siswa dapat berpartisipasi dalam cerita imajinatif, menggunakan past verbs yang tepat dalam cerita imajinatif, memerankan cerita imajinatif, mengurutkan gambar berdasarkan cerita, dan menulis ulang cerita imajinatif dengan adaptasi karakter.
+**Kompetensi yang diuji:** Understand descriptions of rooms, choose correct there is/there are forms, identify object locations, and write simple sentences about a room.
+
+## Bab 5: Animals Around Us
+**Topik utama:** Animal names, body parts, habitats, and simple descriptions.
+
+**Sub-konsep:** Pets, farm animals, wild animals, body parts such as wings, tail, beak, fur, scales; can/cannot; habitats; comparing simple animal features.
+
+**Sample teks bacaan:** A duck has wings and a beak. It can swim, but it cannot climb a tree. A cat has fur, whiskers, and a tail. It likes to sleep near people and can run quickly.
+
+**Kosakata kunci:** animal, pet, farm, wild, duck, cat, bird, fish, wings, tail, beak, fur, scales, swim, climb, run, habitat.
+
+**Kompetensi yang diuji:** Match animals with body parts and abilities, answer detail questions from descriptions, use can/cannot correctly, and compare two animals with simple adjectives.
+
+## Bab 6: Things We Wear
+**Topik utama:** Clothes, colors, weather, and simple descriptions of appearance.
+
+**Sub-konsep:** Shirt, skirt, trousers, shorts, shoes, hat, raincoat, uniform; colors; weather words; wearing clothes for different activities; adjective order in simple noun phrases.
+
+**Sample teks bacaan:** Today is rainy. Bimo wears a yellow raincoat and black shoes. His sister wears a white shirt and a blue skirt for school. They bring umbrellas because the sky is dark.
+
+**Kosakata kunci:** shirt, skirt, trousers, shorts, shoes, hat, raincoat, uniform, yellow, black, white, blue, rainy, sunny, cloudy, umbrella.
+
+**Kompetensi yang diuji:** Identify clothing vocabulary, connect clothes with weather or activities, understand color descriptions, and complete simple sentences using wear/wears.

@@ -1,0 +1,75 @@
+import { eq } from 'drizzle-orm'
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { db, user, session, account, verification } from '@teacher-exam/db'
+
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (value === undefined || value === '') {
+    throw new Error(`Missing required env var: ${name}`)
+  }
+  return value
+}
+
+async function main() {
+  if (process.env['DEV_AUTH_ENABLED'] !== 'true') {
+    throw new Error('Set DEV_AUTH_ENABLED=true in .env before running db:seed:dev')
+  }
+
+  const email = requireEnv('DEV_AUTH_EMAIL')
+  const password = requireEnv('DEV_AUTH_PASSWORD')
+  const secret = requireEnv('SESSION_SECRET')
+  const apiPort = process.env['API_PORT'] ?? '3000'
+
+  const seedAuth = betterAuth({
+    secret,
+    baseURL: `http://localhost:${apiPort}`,
+    database: drizzleAdapter(db, {
+      provider: 'pg',
+      schema: { user, session, account, verification },
+    }),
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: false,
+    },
+  })
+
+  const existing = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)
+
+  if (existing.length === 0) {
+    const signedUp = await seedAuth.api.signUpEmail({
+      body: { email, password, name: 'Guru Dev' },
+    })
+    if (signedUp === null || signedUp.user === undefined) {
+      throw new Error('signUpEmail did not return a user — check DATABASE_URL and credentials')
+    }
+    console.log(`Created dev user ${email}`)
+  } else {
+    console.log(`Dev user ${email} already exists — updating profile only`)
+  }
+
+  await db
+    .update(user)
+    .set({
+      username: 'guru.dev',
+      name: 'Guru Dev',
+      school: 'SDN Dev',
+      gradesTaught: [5, 6],
+      subjectsTaught: [
+        'bahasa_indonesia',
+        'pendidikan_pancasila',
+        'ipas',
+        'bahasa_inggris',
+      ],
+      profileCompleted: true,
+      emailVerified: true,
+    })
+    .where(eq(user.email, email))
+
+  console.log('Dev guru profile ready (profileCompleted=true, 4 mapel)')
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

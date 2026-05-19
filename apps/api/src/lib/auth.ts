@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db, user, session, account, verification } from '@teacher-exam/db'
 import { deriveUniqueUsername } from './username'
 import { resolveAuthBaseURL, resolveTrustedOrigins } from './auth-origins'
+import { isDevAuthEnabled } from './dev-auth'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -30,6 +31,14 @@ export const auth = betterAuth({
       clientSecret: GOOGLE_CLIENT_SECRET,
     },
   },
+  ...(isDevAuthEnabled()
+    ? {
+        emailAndPassword: {
+          enabled: true,
+          disableSignUp: true,
+        },
+      }
+    : {}),
   session: {
     cookieCache: { enabled: true, maxAge: 60 * 60 * 24 * 30 },
   },

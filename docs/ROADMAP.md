@@ -47,7 +47,7 @@ Each milestone maps to a PRD:
 
 | # | Milestone | Target | PRD | Status |
 |---|-----------|--------|-----|--------|
-| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | 🔄 In progress |
+| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | 🟡 Code complete, QA pending |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ⬜ Not started |
 | 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started |
@@ -60,7 +60,7 @@ Each milestone maps to a PRD:
 
 **Target:** May 15, 2026
 **Goal:** 4/5 academic subjects available in Generate
-**Status:** 🔄 In progress
+**Status:** 🟡 Code complete — QA / browser verification pending
 
 ### Tasks
 

@@ -15,3 +15,15 @@ describe('question shape repair migration', () => {
     expect(sql).toContain('ALTER COLUMN "correct_answer" DROP NOT NULL')
   })
 })
+
+describe('subject enum phase 1 migration', () => {
+  test('appends IPAS and Bahasa Inggris enum values', () => {
+    const sql = readFileSync(
+      join(process.cwd(), 'src/migrations/0005_add_ipas_bahasa_inggris_subjects.sql'),
+      'utf8',
+    )
+
+    expect(sql).toContain('ALTER TYPE "exam_subject" ADD VALUE IF NOT EXISTS \'ipas\'')
+    expect(sql).toContain('ALTER TYPE "exam_subject" ADD VALUE IF NOT EXISTS \'bahasa_inggris\'')
+  })
+})

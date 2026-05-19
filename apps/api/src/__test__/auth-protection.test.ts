@@ -29,10 +29,12 @@ const { meRouter } = await import('../routes/me')
 const { createAiRouter } = await import('../routes/ai')
 const { healthRouter } = await import('../routes/health')
 const { publicExamsRouter } = await import('../routes/public-exams')
+const { devAuthRouter } = await import('../routes/dev-auth')
 
 function buildApp() {
   const app = new Hono()
   app.route('/api/health', healthRouter)
+  app.route('/api/dev', devAuthRouter)
   app.route('/api/public/exams', publicExamsRouter)
   app.use('/api/*', requireAuth)
   app.route('/api/me', meRouter)
@@ -45,6 +47,24 @@ describe('auth protection on protected API routes', () => {
     const app = buildApp()
     const res = await app.request('/api/health')
     expect(res.status).toBe(200)
+  })
+
+  it('POST /api/dev/login is not blocked by requireAuth when dev auth is disabled', async () => {
+    vi.stubEnv('DEV_AUTH_ENABLED', '')
+    vi.stubEnv('NODE_ENV', 'development')
+
+    const app = buildApp()
+    const res = await app.request('/api/dev/login', {
+      method: 'POST',
+      headers: { Host: 'localhost:3000' },
+    })
+
+    expect(res.status).toBe(403)
+    expect(await res.json()).toMatchObject({
+      error: 'Forbidden',
+      message: 'Dev auth is not available',
+    })
+    vi.unstubAllEnvs()
   })
 
   it('GET /api/me returns 401 without a session', async () => {

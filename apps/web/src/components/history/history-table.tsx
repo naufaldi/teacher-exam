@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Exam } from '@teacher-exam/shared'
-import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare, Share2 } from 'lucide-react'
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Badge,
@@ -26,41 +26,7 @@ import {
   TooltipTrigger,
 } from '@teacher-exam/ui'
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
-
-interface SubjectMeta {
-  short: string
-  label: string
-  dotClass: string
-}
-
-const SUBJECT_MAP: Record<string, SubjectMeta> = {
-  bahasa_indonesia: {
-    short: 'BI',
-    label: 'Bahasa Indonesia',
-    dotClass: 'text-subject-bi',
-  },
-  pendidikan_pancasila: {
-    short: 'PP',
-    label: 'Pendidikan Pancasila',
-    dotClass: 'text-subject-ppkn',
-  },
-  ipas: {
-    short: 'IPAS',
-    label: 'IPAS',
-    dotClass: 'text-subject-ipas',
-  },
-  bahasa_inggris: {
-    short: 'BING',
-    label: 'Bahasa Inggris',
-    dotClass: 'text-subject-binggris',
-  },
-}
-
-const FALLBACK_SUBJECT: SubjectMeta = {
-  short: '?',
-  label: 'Mata Pelajaran',
-  dotClass: 'text-text-tertiary',
-}
+import { subjectMetaFor } from '../../lib/subjects'
 
 const HEAD_CLS = 'text-caption font-semibold tracking-wider uppercase text-text-tertiary px-5 py-3 h-auto'
 
@@ -76,10 +42,9 @@ interface HistoryTableProps {
   exams: ReadonlyArray<Exam>
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
-  onShare: (exam: Exam) => Promise<void>
 }
 
-function HistoryTable({ exams, onDelete, onDuplicate, onShare }: HistoryTableProps) {
+function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
   return (
     <TooltipProvider delayDuration={250}>
       <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden [&>div]:overflow-hidden">
@@ -105,7 +70,6 @@ function HistoryTable({ exams, onDelete, onDuplicate, onShare }: HistoryTablePro
                 exam={exam}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
-                onShare={onShare}
               />
             ))}
           </TableBody>
@@ -119,13 +83,12 @@ interface HistoryTableRowProps {
   exam: Exam
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
-  onShare: (exam: Exam) => Promise<void>
 }
 
-function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableRowProps) {
+function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) {
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
+  const subj = subjectMetaFor(exam.subject)
   const isFinal = exam.status === 'final'
 
   function handlePreview() {
@@ -150,10 +113,6 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
 
   function handleDuplicate() {
     onDuplicate(exam)
-  }
-
-  function handleShare() {
-    void onShare(exam)
   }
 
   function handleDeleteConfirm() {
@@ -242,10 +201,6 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
                 <Button variant="secondary" size="sm" onClick={handlePreview}>
                   <Eye size={13} />
                   Preview
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleShare} aria-label="Bagikan">
-                  <Share2 size={13} />
-                  Bagikan
                 </Button>
                 <Button
                   variant="secondary"

@@ -7,6 +7,7 @@
     "build": "turbo run build",
     "db:generate": "turbo run db:generate --filter=@teacher-exam/db",
     "db:migrate": "turbo run db:migrate --filter=@teacher-exam/db",
+    "db:seed:dev": "node --env-file-if-exists=.env --import tsx/esm apps/api/scripts/seed-dev-guru.ts",
     "type-check": "turbo run type-check"
   },
   "devDependencies": {
