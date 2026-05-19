@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { auth } from './lib/auth'
 import { resolveAllowedCorsOrigins, resolveApiPort } from './lib/auth-origins'
+import { logError, logInfo } from './lib/server-log'
 import { requireAuth } from './middleware/auth'
 import { errorHandler } from './middleware/error-handler'
 import { aiGenerateLimiter, globalLimiter } from './middleware/rate-limit'
@@ -13,6 +14,25 @@ import { examsRouter } from './routes/exams'
 import { publicExamsRouter } from './routes/public-exams'
 import { questionsRouter } from './routes/questions'
 import { createAiRouter } from './routes/ai'
+
+process.on('uncaughtException', (err) => {
+  logError('uncaught_exception', {
+    message: err.message,
+    stack: err.stack,
+  })
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  if (reason instanceof Error) {
+    logError('unhandled_rejection', {
+      message: reason.message,
+      stack: reason.stack,
+    })
+    return
+  }
+  logError('unhandled_rejection', { reason: String(reason) })
+})
 
 const app = new Hono()
 const allowedCorsOrigins = new Set(resolveAllowedCorsOrigins())
@@ -46,7 +66,7 @@ app.notFound((c) => c.json({ error: 'Not found' }, 404))
 const port = resolveApiPort()
 
 const server = serve({ fetch: app.fetch, port }, () => {
-  console.log(`API server running on http://localhost:${port}`)
+  logInfo('listening', { port, url: `http://localhost:${port}`, pid: process.pid })
 })
 
 const shutdown = () => {

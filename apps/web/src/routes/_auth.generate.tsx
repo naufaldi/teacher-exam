@@ -26,6 +26,8 @@ import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
 import { api, ApiError, RateLimitedError } from '../lib/api.js'
+import { TOPICS_BY_SUBJECT } from '../lib/generate-topics.js'
+import { SUBJECT_OPTIONS, subjectMetaFor } from '../lib/subjects.js'
 
 export const Route = createFileRoute('/_auth/generate')({
   component: GeneratePage,
@@ -36,89 +38,6 @@ export const Route = createFileRoute('/_auth/generate')({
     return result
   },
 })
-
-// ── Topic lists from PRD section 8.3 ─────────────────────────────────────────
-
-const TOPIK_BI = [
-  'Pemahaman Bacaan',
-  'Ide Pokok dan Gagasan Pendukung',
-  'Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat)',
-  'Teks Narasi',
-  'Teks Eksplanasi',
-  'Teks Deskripsi',
-  'Teks Eksposisi',
-  'Teks Persuasi',
-  'Kosakata (Denotatif, Konotatif, Kiasan)',
-  'Gaya Bahasa (Majas)',
-  'Kalimat Langsung dan Tidak Langsung',
-  'Kalimat Majemuk',
-  'Tanda Baca dan Ejaan',
-  'Puisi',
-  'Cerpen dan Fabel',
-  'Dongeng dan Legenda',
-  'Surat Resmi dan Surat Pribadi',
-  'Iklan',
-  'Opini dan Fakta',
-  'Ringkasan dan Kesimpulan',
-] as const
-
-const TOPIK_PPKN = [
-  'Hubungan Antar-Sila dalam Pancasila',
-  'Nilai-Nilai Pancasila sebagai Pandangan Hidup',
-  'Penerapan Nilai Pancasila di Kehidupan Sehari-hari',
-  'Pengamalan Pancasila di Lingkungan Keluarga, Sekolah, Masyarakat',
-  'Norma dalam Kehidupan Bermasyarakat',
-  'Hak dan Kewajiban Warga Negara',
-  'Hak dan Kewajiban Anak',
-  'Keberagaman Budaya Indonesia',
-  'Keberagaman Agama dan Toleransi',
-  'Menghormati Perbedaan',
-  'Provinsi di Indonesia dan Wilayah NKRI',
-  'Persatuan dan Kesatuan Bangsa',
-  'Gotong Royong',
-  'Musyawarah dan Pengambilan Keputusan',
-] as const
-
-const TOPIK_IPAS = [
-  'Cahaya dan Sifat-sifatnya',
-  'Bunyi dan Sumber Bunyi',
-  'Ekosistem dan Keseimbangan Alam',
-  'Air dan Siklus Air',
-  'Perubahan Wujud Benda',
-  'Energi dan Perubahannya',
-  'Tata Surya dan Planet',
-  'Sistem Pencernaan Manusia',
-  'Keanekaragaman Hayati Indonesia',
-  'Pelestarian Lingkungan Hidup',
-  'Geografi Indonesia dan Wilayah NKRI',
-  'Sejarah dan Keberagaman Budaya Daerah',
-] as const
-
-const TOPIK_BINGGRIS = [
-  'Reading Comprehension',
-  'Vocabulary — Daily Activities',
-  'Vocabulary — Food and Health',
-  'Descriptive Text',
-  'Narrative Text',
-  'Functional Text (Labels, Signs, Instructions)',
-  'Grammar — Simple Present Tense',
-  'Grammar — Simple Past Tense',
-  'Listening Comprehension',
-  'Speaking — Greetings and Introductions',
-  'Writing — Short Messages and Letters',
-  'Procedures and Instructions',
-] as const
-
-const TOPIK_MATEMATIKA_NON_DIAGRAM = [
-  'Bilangan Cacah dan Operasi Hitung',
-  'Pecahan, Desimal, dan Persen',
-  'Pola dan Kalimat Matematika',
-  'Pengukuran',
-  'Data dan Peluang Awal',
-  'Bangun Datar',
-  'Bangun Ruang',
-  'Bidang Koordinat',
-] as const
 
 // ── Display label maps ────────────────────────────────────────────────────────
 
@@ -304,11 +223,8 @@ function GeneratePage() {
     return clearTimers
   }, [clearTimers])
 
-  const topikOptions = mapel === 'bahasa_indonesia' ? TOPIK_BI
-    : mapel === 'pendidikan_pancasila' ? TOPIK_PPKN
-    : mapel === 'ipas' ? TOPIK_IPAS
-    : mapel === 'bahasa_inggris' ? TOPIK_BINGGRIS
-    : TOPIK_MATEMATIKA_NON_DIAGRAM
+  const subjectMeta = subjectMetaFor(mapel)
+  const topikOptions = TOPICS_BY_SUBJECT[mapel]
 
   // Effective topics array for submission
   const effectiveTopiks: string[] = showCustomInput && customTopik.trim() !== ''
@@ -353,10 +269,14 @@ function GeneratePage() {
     }).then((result) => {
       clearTimers()
       setProgress(100)
-      void navigate({
-        to: '/review',
-        search: { examId: result.id, mode: reviewMode, from: 'generate' },
-      })
+
+      completionTimerRef.current = setTimeout(() => {
+        setIsGenerating(false)
+        void navigate({
+          to: '/review',
+          search: { examId: result.id, mode: reviewMode, from: 'generate' },
+        })
+      }, 450)
     }).catch((err: unknown) => {
       clearTimers()
       setIsGenerating(false)
@@ -459,17 +379,7 @@ function GeneratePage() {
                   <Lock size={11} />
                   Kurikulum Merdeka · Fase C
                 </Badge>
-                {mapel === 'bahasa_indonesia' ? (
-                  <Badge variant="subject-bi">Bahasa Indonesia</Badge>
-                ) : mapel === 'pendidikan_pancasila' ? (
-                  <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
-                ) : mapel === 'ipas' ? (
-                  <Badge variant="subject-ipas">IPAS</Badge>
-                ) : mapel === 'bahasa_inggris' ? (
-                  <Badge variant="subject-binggris">Bahasa Inggris</Badge>
-                ) : (
-                  <Badge>Matematika</Badge>
-                )}
+                <Badge variant={subjectMeta.badgeVariant}>{subjectMeta.label}</Badge>
                 <Badge variant="secondary">{EXAM_TYPE_LABEL_MAP[examType]}</Badge>
               </div>
             </div>
@@ -540,11 +450,11 @@ function GeneratePage() {
                   <SelectValue placeholder="Pilih mata pelajaran" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bahasa_indonesia">Bahasa Indonesia</SelectItem>
-                  <SelectItem value="pendidikan_pancasila">Pendidikan Pancasila</SelectItem>
-                  <SelectItem value="ipas">IPAS</SelectItem>
-                  <SelectItem value="bahasa_inggris">Bahasa Inggris</SelectItem>
-                  <SelectItem value="matematika">Matematika</SelectItem>
+                  {SUBJECT_OPTIONS.map((subject) => (
+                    <SelectItem key={subject.value} value={subject.value}>
+                      {subject.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -939,27 +849,9 @@ function GeneratePage() {
               <div className="flex justify-between items-center gap-2">
                 <span className="text-text-tertiary shrink-0">Mata Pelajaran</span>
                 <span className="text-right">
-                  {mapel === 'bahasa_indonesia' ? (
-                    <Badge variant="subject-bi" className="text-caption">
-                      Bahasa Indonesia
-                    </Badge>
-                  ) : mapel === 'pendidikan_pancasila' ? (
-                    <Badge variant="subject-ppkn" className="text-caption">
-                      Pend. Pancasila
-                    </Badge>
-                  ) : mapel === 'ipas' ? (
-                    <Badge variant="subject-ipas" className="text-caption">
-                      IPAS
-                    </Badge>
-                  ) : mapel === 'bahasa_inggris' ? (
-                    <Badge variant="subject-binggris" className="text-caption">
-                      B. Inggris
-                    </Badge>
-                  ) : (
-                    <Badge className="text-caption">
-                      Matematika
-                    </Badge>
-                  )}
+                  <Badge variant={subjectMeta.badgeVariant} className="text-caption">
+                    {subjectMeta.short}
+                  </Badge>
                 </span>
               </div>
 

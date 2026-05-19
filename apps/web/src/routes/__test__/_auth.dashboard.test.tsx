@@ -129,6 +129,14 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Riwayat terbaru')).toBeInTheDocument()
   })
 
+  it('links to Bank Soal from the primary action cards', () => {
+    renderDashboard()
+
+    const bankLink = screen.getByRole('link', { name: /Bank Soal/i })
+
+    expect(bankLink).toHaveAttribute('href', '/bank-soal')
+  })
+
   it('shows empty state in Riwayat terbaru when no exams', () => {
     renderDashboard()
     expect(screen.getByText(/Belum ada riwayat ujian/i)).toBeInTheDocument()

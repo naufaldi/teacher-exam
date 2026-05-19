@@ -26,6 +26,7 @@ describe('buildExamPrompt', () => {
     const { system, user } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
@@ -45,6 +46,7 @@ describe('buildExamPrompt', () => {
     const { system, user } = buildExamPrompt({
       examType: 'sas',
       difficulty: 'sulit',
+      examSubject: 'pendidikan_pancasila',
       subjectLabel: 'Pendidikan Pancasila',
       grade: 5,
       topics: ['Hak dan Kewajiban'],
@@ -64,6 +66,7 @@ describe('buildExamPrompt', () => {
     const { system } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
@@ -81,6 +84,7 @@ describe('buildExamPrompt', () => {
     const { user } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
@@ -96,6 +100,7 @@ describe('buildExamPrompt', () => {
     const { user } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Pemahaman Bacaan'],
@@ -114,6 +119,7 @@ describe('buildExamPrompt', () => {
     const { user } = buildExamPrompt({
       examType: 'sas',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 6,
       topics: ['Teks Narasi', 'Puisi', 'Opini dan Fakta'],
@@ -131,6 +137,7 @@ describe('buildExamPrompt', () => {
     const { user } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'mudah',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 5,
       topics: ['Kosakata'],
@@ -146,6 +153,7 @@ describe('buildExamPrompt', () => {
       buildExamPrompt({
         examType: 'formatif',
         difficulty: 'campuran',
+        examSubject: 'bahasa_indonesia',
         subjectLabel: 'Bahasa Indonesia',
         grade: 6,
         topics: [],
@@ -154,12 +162,47 @@ describe('buildExamPrompt', () => {
       }),
     ).toThrow('topics must contain at least one item')
   })
+
+  it('adds Bahasa Inggris language rules when examSubject is bahasa_inggris', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      examSubject: 'bahasa_inggris',
+      subjectLabel: 'Bahasa Inggris',
+      grade: 5,
+      topics: ['Daily Activities'],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('Bahasa Inggris language rules')
+    expect(system).toMatch(/stem.*Bahasa Inggris|Bahasa Inggris.*stem/i)
+    expect(system).toContain('option_*')
+  })
+
+  it('does not add Bahasa Inggris language rules for IPAS', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      examSubject: 'ipas',
+      subjectLabel: 'IPAS',
+      grade: 5,
+      topics: ['Cahaya dan Bunyi'],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).not.toContain('Bahasa Inggris language rules')
+  })
 })
 
 describe('buildExamPrompt — totalSoal', () => {
   const basePromptInput = {
     examType: 'formatif' as const,
     difficulty: 'campuran' as const,
+    examSubject: 'bahasa_indonesia' as const,
     subjectLabel: 'Bahasa Indonesia',
     grade: 6,
     topics: ['Pemahaman Bacaan'],
@@ -196,6 +239,7 @@ describe('buildExamPrompt — totalSoal', () => {
     const { user } = buildExamPrompt({
       examType: 'sts',
       difficulty: 'sulit',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Bahasa Indonesia',
       grade: 5,
       topics: [
@@ -226,6 +270,7 @@ describe('buildExamPrompt — composition and multi-type', () => {
   const base = {
     examType: 'latihan' as const,
     difficulty: 'campuran' as const,
+    examSubject: 'bahasa_indonesia' as const,
     subjectLabel: 'Bahasa Indonesia',
     grade: 5,
     topics: ['Teks Narasi'],
@@ -282,6 +327,7 @@ describe('buildExamPrompt — geometry figure spec', () => {
     const { system } = buildExamPrompt({
       examType: 'formatif',
       difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
       subjectLabel: 'Matematika',
       grade: 5,
       topics: ['Bangun Datar'],

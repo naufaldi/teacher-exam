@@ -8,6 +8,24 @@ import {
   SUBJECT_LABEL,
 } from '../primitives.js'
 
+describe('ExamSubjectSchema', () => {
+  test.each([
+    ['bahasa_indonesia', 'Bahasa Indonesia'],
+    ['pendidikan_pancasila', 'Pendidikan Pancasila'],
+    ['ipas', 'IPAS'],
+    ['bahasa_inggris', 'Bahasa Inggris'],
+  ])("accepts '%s' and exposes its label", (subject, label) => {
+    const result = Schema.decodeUnknownEither(ExamSubjectSchema)(subject)
+    expect(Either.isRight(result)).toBe(true)
+    expect(SUBJECT_LABEL[subject as keyof typeof SUBJECT_LABEL]).toBe(label)
+  })
+
+  test("rejects 'matematika' until the later PRD v3 phase", () => {
+    const result = Schema.decodeUnknownEither(ExamSubjectSchema)('matematika')
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
 describe('AnswerLetterSchema', () => {
   test("accepts 'a'", () => {
     const result = Schema.decodeUnknownEither(AnswerLetterSchema)('a')

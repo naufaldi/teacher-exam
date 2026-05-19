@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Printer, FileText, ClipboardList, Key, Layers, BookOpen } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import {
   Button,
   Badge,
@@ -13,11 +14,9 @@ import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { pointsPerQuestion } from '../lib/points.js'
 import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
-import { MathText } from '../components/math-text.js'
-import { MarkdownMath } from '../components/markdown-math.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
-import { SUBJECT_LABEL } from '@teacher-exam/shared'
 import { api } from '../lib/api.js'
+import { subjectMetaFor } from '../lib/subjects.js'
 
 export const Route = createFileRoute('/_auth/preview')({
   component: PreviewPage,
@@ -48,7 +47,6 @@ export const Route = createFileRoute('/_auth/preview')({
     return exam
   },
 })
-
 
 /**
  * Uppercase title printed in the kop of the printed sheet. See PRD §8.6.
@@ -97,7 +95,7 @@ function PreviewPage() {
   const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua' | 'pembahasan'>('semua')
 
   const { questions, metadata, subject, grade } = draft
-  const subjectLabel = SUBJECT_LABEL[subject] ?? subject
+  const subjectLabel = subjectMetaFor(subject).label
   const topicsLabel = exam?.topics?.join(' · ') ?? ''
 
   return (
@@ -119,9 +117,8 @@ function PreviewPage() {
       <div
         data-screen-only
         data-no-print
-        className="space-y-3"
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
-        {/* Tab navigation */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="semua">
@@ -141,32 +138,22 @@ function PreviewPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* Print controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-secondary">
-            Pilih tab untuk preview, atau cetak langsung:
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-1.5">
-              <Button variant="secondary" size="sm" onClick={() => triggerPrint('soal')}>
-                <Printer className="h-3.5 w-3.5 mr-1.5" /> Soal
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => triggerPrint('lj')}>
-                <Printer className="h-3.5 w-3.5 mr-1.5" /> LJ
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => triggerPrint('kunci')}>
-                <Printer className="h-3.5 w-3.5 mr-1.5" /> Kunci
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => triggerPrint('pembahasan')}>
-                <Printer className="h-3.5 w-3.5 mr-1.5" /> Pembahasan
-              </Button>
-            </div>
-            <div className="h-4 w-px bg-border-default hidden sm:block" />
-            <Button size="sm" onClick={() => triggerPrint('all')}>
-              <Printer className="h-4 w-4 mr-1.5" /> Cetak Semua
-            </Button>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint('soal')}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Soal
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint('lj')}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak LJ
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint('kunci')}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Kunci
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint('pembahasan')}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
+          </Button>
+          <Button onClick={() => triggerPrint('all')}>
+            <Printer className="h-4 w-4 mr-2" /> Cetak Semua
+          </Button>
         </div>
       </div>
 
@@ -209,11 +196,6 @@ function PreviewPage() {
             padding: 0 !important;
             background: white !important;
           }
-          /* Hide section labels in print */
-          [data-preview-frame] ~ [data-preview-frame],
-          [data-preview-frame] + div {
-            margin-top: 0 !important;
-          }
         }
       `}</style>
 
@@ -230,26 +212,19 @@ function PreviewPage() {
 
 // ── A4-styled paper sections ─────────────────────────────────────────────────
 
-function PaperFrame({ children, label }: { children: React.ReactNode; label?: string }) {
+function PaperFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto" style={{ width: 'min(100%, 794px)' }}>
-      {label ? (
-        <div data-no-print className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">{label}</span>
-          <div className="flex-1 h-px bg-border-default" />
-        </div>
-      ) : null}
-      <div
-        data-preview-frame
-        className="bg-white border border-border-default rounded-md shadow-sm"
-        style={{
-          padding: '40px 48px',
-          fontFamily: 'var(--font-serif)',
-          color: '#000',
-        }}
-      >
-        {children}
-      </div>
+    <div
+      data-preview-frame
+      className="mx-auto bg-white border border-border-default rounded-md shadow-sm"
+      style={{
+        width: 'min(100%, 794px)', // ~A4 width @ 96dpi
+        padding: '40px 48px',
+        fontFamily: 'var(--font-serif)',
+        color: '#000',
+      }}
+    >
+      {children}
     </div>
   )
 }
@@ -298,7 +273,7 @@ function renderMcqOptions(options: { a: string; b: string; c: string; d: string 
       {OPTION_LETTERS.map((letter) => (
         <li key={letter} className="flex gap-2">
           <span className="font-semibold">{letter}.</span>
-          <span><MathText text={options[letter]} /></span>
+          <span>{options[letter]}</span>
         </li>
       ))}
     </ol>
@@ -318,7 +293,7 @@ function renderTrueFalseTable(statements: ReadonlyArray<{ text: string; answer: 
       <tbody>
         {statements.map((stmt, i) => (
           <tr key={i}>
-            <td className="border border-black/40 px-2 py-1"><MathText text={stmt.text} /></td>
+            <td className="border border-black/40 px-2 py-1">{stmt.text}</td>
             <td className="text-center border border-black/40 px-2 py-1">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-black/60 text-[10px]" />
             </td>
@@ -347,7 +322,7 @@ function SoalSection({
 }) {
   return (
     <div data-print-section="soal">
-      <PaperFrame label="Soal Ujian">
+      <PaperFrame>
         <PaperHeader metadata={metadata} subjectLabel={subjectLabel} grade={grade} topicsLabel={topicsLabel} />
 
         {/* Petunjuk */}
@@ -371,7 +346,7 @@ function SoalSection({
             <div key={q.id} className="break-inside-avoid mb-4">
               <p className="mb-1.5">
                 <span className="font-bold mr-1">{q.number}.</span>
-                <span className="whitespace-pre-line"><MathText text={q.text} /></span>
+                <span className="whitespace-pre-line">{q.text}</span>
               </p>
               {q.figure ? <FigureSvg figure={q.figure} /> : null}
               {matchQuestion(q, {
@@ -453,7 +428,7 @@ function LembarJawabanSection({
 
   return (
     <div data-print-section="lj" className="print-break-before">
-      <PaperFrame label="Lembar Jawaban">
+      <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-4">
           <p className="text-sm font-bold uppercase tracking-wide">
             {metadata.schoolName || 'SD Negeri ___________'}
@@ -523,7 +498,7 @@ function KunciSection({
 }) {
   return (
     <div data-print-section="kunci" className="print-break-before">
-      <PaperFrame label="Kunci Jawaban">
+      <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">KUNCI JAWABAN</p>
           <p className="text-sm mt-1">
@@ -587,7 +562,7 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
 
   return (
     <div data-print-section="pembahasan" className="print-break-before">
-      <PaperFrame label="Pembahasan">
+      <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">PEMBAHASAN</p>
         </div>
@@ -608,7 +583,7 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
           </div>
         ) : (
           <div className="prose prose-sm max-w-none text-[13px] leading-relaxed">
-            <MarkdownMath markdown={md} />
+            <ReactMarkdown>{md}</ReactMarkdown>
           </div>
         )}
       </PaperFrame>

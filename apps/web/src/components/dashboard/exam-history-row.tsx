@@ -3,41 +3,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { Badge, Button } from '@teacher-exam/ui'
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
-
-interface SubjectMeta {
-  short: string
-  label: string
-  dotClass: string
-}
-
-const SUBJECT_MAP: Record<string, SubjectMeta> = {
-  bahasa_indonesia: {
-    short: 'BI',
-    label: 'Bahasa Indonesia',
-    dotClass: 'text-subject-bi',
-  },
-  pendidikan_pancasila: {
-    short: 'PP',
-    label: 'Pendidikan Pancasila',
-    dotClass: 'text-subject-ppkn',
-  },
-  ipas: {
-    short: 'IPAS',
-    label: 'IPAS',
-    dotClass: 'text-subject-ipas',
-  },
-  bahasa_inggris: {
-    short: 'BING',
-    label: 'Bahasa Inggris',
-    dotClass: 'text-subject-binggris',
-  },
-}
-
-const FALLBACK_SUBJECT: SubjectMeta = {
-  short: '?',
-  label: 'Mata Pelajaran',
-  dotClass: 'text-text-tertiary',
-}
+import { subjectMetaFor } from '../../lib/subjects'
 
 function formatShortDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -54,7 +20,7 @@ interface ExamHistoryRowProps {
 
 function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
   const navigate = useNavigate()
-  const subj = SUBJECT_MAP[exam.subject] ?? FALLBACK_SUBJECT
+  const subj = subjectMetaFor(exam.subject)
   const isFinal = exam.status === 'final'
 
   function handleEdit() {

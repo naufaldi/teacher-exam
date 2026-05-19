@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REQUIRED_FIELDS } from '../../../scripts/lib/merge-bab'
+import { curriculumMdFilename } from '../../lib/curriculum'
 
 interface BookCase {
   slug: string
@@ -15,6 +16,10 @@ const BOOKS: BookCase[] = [
   { slug: 'bahasa-indonesia-kelas-6', subject: 'Bahasa Indonesia', grade: 6, expectedMinBab: 8 },
   { slug: 'pendidikan-pancasila-kelas-5', subject: 'Pendidikan Pancasila', grade: 5, expectedMinBab: 4 },
   { slug: 'pendidikan-pancasila-kelas-6', subject: 'Pendidikan Pancasila', grade: 6, expectedMinBab: 7 },
+  { slug: 'ipas-kelas-5', subject: 'IPAS', grade: 5, expectedMinBab: 6 },
+  { slug: 'ipas-kelas-6', subject: 'IPAS', grade: 6, expectedMinBab: 6 },
+  { slug: 'bahasa-inggris-kelas-5', subject: 'Bahasa Inggris', grade: 5, expectedMinBab: 6 },
+  { slug: 'bahasa-inggris-kelas-6', subject: 'Bahasa Inggris', grade: 6, expectedMinBab: 6 },
 ]
 
 const MD_DIR = join(__dirname, '..', 'md')
@@ -22,7 +27,8 @@ const MD_DIR = join(__dirname, '..', 'md')
 describe('curriculum extraction output', () => {
   for (const book of BOOKS) {
     const path = join(MD_DIR, `${book.slug}.md`)
-    it.skipIf(!existsSync(path))(`${book.slug} matches schema`, () => {
+    it(`${book.slug} matches schema`, () => {
+      expect(existsSync(path)).toBe(true)
       const text = readFileSync(path, 'utf-8')
       const size = statSync(path).size
       expect(size).toBeGreaterThan(5 * 1024)
@@ -47,4 +53,11 @@ describe('curriculum extraction output', () => {
       }
     })
   }
+})
+
+describe('curriculum markdown filename resolver', () => {
+  it('resolves PRD v3 phase 1 subject filenames', () => {
+    expect(curriculumMdFilename('ipas', 5)).toBe('ipas-kelas-5.md')
+    expect(curriculumMdFilename('bahasa_inggris', 6)).toBe('bahasa-inggris-kelas-6.md')
+  })
 })

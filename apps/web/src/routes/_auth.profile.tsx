@@ -3,20 +3,14 @@ import { useEffect, useState } from 'react'
 import { Button, Input, Label, PaperCard } from '@teacher-exam/ui'
 import { GraduationCap, BookOpen, MapPin } from 'lucide-react'
 import { api } from '../lib/api'
-import type { Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
+import type { ExamSubject, Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
+import { SUBJECT_OPTIONS } from '../lib/subjects'
 
 export const Route = createFileRoute('/_auth/profile')({
   component: ProfilePage,
 })
 
 const ALL_GRADES: readonly Grade[] = [1, 2, 3, 4, 5, 6] as const
-const SUBJECT_OPTIONS = [
-  { value: 'bahasa_indonesia',     label: 'Bahasa Indonesia' },
-  { value: 'pendidikan_pancasila', label: 'Pendidikan Pancasila' },
-  { value: 'ipas',                 label: 'IPAS' },
-  { value: 'bahasa_inggris',       label: 'Bahasa Inggris' },
-] as const
-type SubjectValue = typeof SUBJECT_OPTIONS[number]['value']
 
 function ProfilePage() {
   const [profile, setProfile]         = useState<UserProfile | null>(null)
@@ -24,7 +18,7 @@ function ProfilePage() {
   const [school, setSchool]           = useState('')
   const [username, setUsername]       = useState('')
   const [grades, setGrades]           = useState<Grade[]>([])
-  const [subjects, setSubjects]       = useState<SubjectValue[]>([])
+  const [subjects, setSubjects]       = useState<ExamSubject[]>([])
   const [submitting, setSubmitting]   = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [savedAt, setSavedAt]         = useState<Date | null>(null)
@@ -36,7 +30,7 @@ function ProfilePage() {
       setSchool(p.school ?? '')
       setUsername(p.username)
       setGrades([...(p.gradesTaught ?? [])])
-      setSubjects([...((p.subjectsTaught ?? []) as SubjectValue[])])
+      setSubjects([...(p.subjectsTaught ?? [])])
     }).catch((e: unknown) => {
       setError(e instanceof Error ? e.message : 'Gagal memuat profil')
     })
@@ -45,7 +39,7 @@ function ProfilePage() {
   const toggleGrade = (g: Grade) => {
     setGrades((cur) => (cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].sort()))
   }
-  const toggleSubject = (s: SubjectValue) => {
+  const toggleSubject = (s: ExamSubject) => {
     setSubjects((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
   }
 

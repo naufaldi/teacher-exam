@@ -9,8 +9,10 @@ apps/api/src/curriculum/pdf/*.pdf
 apps/api/src/curriculum/cache/
 .cursor/
 .agent-browser/
+docs/qa/samples/
 .tmp-auth.json
 .mcp.json
 
 # Personal hackathon submission notes — not for the public repo
 docs/hackathon-submission.md
+apps/web/.tanstack/
