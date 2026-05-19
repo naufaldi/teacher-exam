@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db, user, session, account, verification } from '@teacher-exam/db'
+import { deriveUniqueUsername } from '../src/lib/username.js'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -32,13 +33,35 @@ async function main() {
       enabled: true,
       disableSignUp: false,
     },
+    user: {
+      additionalFields: {
+        username:         { type: 'string',   required: true,  input: true },
+        school:           { type: 'string',   required: false },
+        gradesTaught:     { type: 'number[]', required: false },
+        subjectsTaught:   { type: 'string[]', required: false },
+        profileCompleted: { type: 'boolean',  required: false, defaultValue: false, input: false },
+        locale:           { type: 'string',   required: false, defaultValue: 'id-ID' },
+        timezone:         { type: 'string',   required: false, defaultValue: 'Asia/Jakarta' },
+        lastLoginAt:      { type: 'date',     required: false, input: false },
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (data) => {
+            const username = await deriveUniqueUsername(data.email)
+            return { data: { ...data, username } }
+          },
+        },
+      },
+    },
   })
 
   const existing = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)
 
   if (existing.length === 0) {
     const signedUp = await seedAuth.api.signUpEmail({
-      body: { email, password, name: 'Guru Dev' },
+      body: { email, password, name: 'Guru Dev', username: 'guru.dev' },
     })
     if (signedUp === null || signedUp.user === undefined) {
       throw new Error('signUpEmail did not return a user — check DATABASE_URL and credentials')

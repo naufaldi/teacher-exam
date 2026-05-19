@@ -1039,27 +1039,29 @@ Field opsional pada form Generate untuk menangkap *intent pedagogis* guru — ap
 Guru tidak punya cara cepat memverifikasi apakah soal hasil AI benar-benar sesuai CP/TP Kurikulum Merdeka. Tanpa validasi, ada risiko soal "menyimpang" dari capaian pembelajaran resmi.
 
 **Solusi:**
-Setelah generate, jalankan Claude API call kedua yang me-review tiap soal terhadap data CP/TP yang sudah ada di **§8 PRD ini** (sudah hardcoded — itu reference sempurna untuk validator).
+Setelah generate, jalankan AI validation call (via `AiService` — MiniMax when `AI_PROVIDER=minimax`, Anthropic when `AI_PROVIDER=anthropic`) yang me-review **semua soal** terhadap data CP/TP yang sudah ada di **§8 PRD ini** (sudah hardcoded — itu reference sempurna untuk validator). Validasi sama untuk Fast Track dan Slow Track; mode review hanya mengubah alur persetujuan guru, bukan cakupan validasi.
 
 **Output per soal:**
 
-- ✅ **Sesuai** — soal cocok dengan CP/TP & level kognitif yang dipilih
-- ⚠️ **Perlu review** — ada ketidaksesuaian minor (mis. level kognitif terlalu tinggi/rendah)
-- ❌ **Tidak sesuai** — soal keluar dari topik atau melenceng dari CP
+- ✅ **Sesuai** (`valid`) — soal cocok dengan CP/TP & level kognitif yang dipilih
+- ⚠️ **Perlu review** (`needs_review`) — ada ketidaksesuaian minor (mis. level kognitif terlalu tinggi/rendah)
+- ❌ **Tidak sesuai** (`invalid`) — soal keluar dari topik atau melenceng dari CP
 
 Disertai **alasan singkat** (1-2 kalimat) per badge.
 
 **UI Integration:**
 
-- Di Review (US-9/9b), tampilkan badge di pojok kanan atas tiap kartu soal.
-- Tambah filter "Tampilkan hanya yang perlu review" untuk fokus revisi.
+- Di Review Fast Track (US-9b) dan Slow Track (US-9): badge per soal (compact di mode cepat, full di mode detail).
+- Tambah filter **"Perlu review only"** di kedua mode untuk fokus revisi.
 - Badge bersifat **advisory** — guru tetap punya keputusan final (sesuai prinsip §1: Teacher always in control).
 
 **Teknis:**
 
 - Reuse data CP/TP & matriks kesulitan dari **§8.1, §8.2, §8.3, §8.4**.
-- 1 Claude API call (batch validate semua soal sekaligus untuk hemat token).
-- Async — jalan paralel dengan render Review, tidak blok UX.
+- **Sync** — validasi selesai sebelum `POST /api/ai/generate` mengembalikan `201`; badge siap saat Review pertama kali dibuka.
+- Batch validate semua soal (internal chunking + max 3 concurrent API calls untuk batas token/rate).
+- Model: `AI_DISCUSSION_MODEL` (default `MiniMax-M2.7-highspeed` saat MiniMax).
+- Regenerate satu soal → re-validate soal tersebut saja.
 
 ---
 
@@ -1163,10 +1165,10 @@ Untuk tiap soal, AI menghasilkan:
 
 **Fitur 1 — Penjaga Kurikulum:**
 
-- Setelah generate, badge muncul di tiap soal di Review dalam < 5 detik
-- Tiga state badge (✅ / ⚠️ / ❌) dengan alasan singkat
-- Filter "tampilkan yang perlu review" berfungsi
-- Validator menggunakan data CP/TP dari §8
+- Setelah generate, setiap soal punya `validation_status` non-null sebelum Review dibuka
+- Tiga state badge (✅ / ⚠️ / ❌) dengan alasan singkat — **Fast Track dan Slow Track**
+- Filter "Perlu review only" berfungsi di kedua mode
+- Validator menggunakan data CP/TP dari §8 via `AiService` (MiniMax-compatible)
 
 **Fitur 2 — Adaptive Difficulty:**
 

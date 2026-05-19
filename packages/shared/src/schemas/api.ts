@@ -5,6 +5,7 @@ import {
   ExamTypeSchema,
   ReviewModeSchema,
   AnswerSchema,
+  ValidationStatusSchema,
 } from './primitives.js'
 import { GradeSchema } from './entities.js'
 import type {
@@ -102,6 +103,13 @@ export const RegenerateQuestionInputSchema = Schema.Struct({
   hint: Schema.optional(Schema.String),
 })
 export type RegenerateQuestionInput = typeof RegenerateQuestionInputSchema.Type
+
+export const CurriculumValidationItemSchema = Schema.Struct({
+  number: Schema.Int.pipe(Schema.positive()),
+  status: ValidationStatusSchema,
+  reason: Schema.String,
+})
+export type CurriculumValidationItem = typeof CurriculumValidationItemSchema.Type
 
 export const ExamShareResponseSchema = Schema.Struct({
   slug: Schema.String,

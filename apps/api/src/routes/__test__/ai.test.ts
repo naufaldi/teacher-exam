@@ -8,12 +8,13 @@ vi.mock('@teacher-exam/db', () => {
   const db = {
     select: vi.fn(),
     insert: vi.fn(),
+    update: vi.fn(),
     transaction: vi.fn(),
   }
   return {
     db,
     exams: { id: 'exams.id', userId: 'exams.userId' },
-    questions: { examId: 'questions.examId', number: 'questions.number' },
+    questions: { examId: 'questions.examId', number: 'questions.number', id: 'questions.id' },
   }
 })
 
@@ -59,6 +60,17 @@ const FAKE_AI_QUESTIONS: GeneratedQuestion[] = Array.from({ length: 20 }, (_, i)
 
 const fakeAiService: AiService = {
   generate: vi.fn(() => Effect.succeed(FAKE_AI_QUESTIONS)),
+  validateCurriculum: vi.fn(({ expectedCount }) =>
+    Effect.succeed(
+      Array.from({ length: expectedCount }, (_, i) => ({
+        number: i + 1,
+        status: 'valid' as const,
+        reason: 'Sesuai CP.',
+      })),
+    ),
+  ),
+  generateDiscussion: vi.fn(),
+  streamDiscussion: vi.fn(),
 }
 
 function makeExamRow(overrides: Record<string, unknown> = {}) {
@@ -113,6 +125,16 @@ describe('POST /api/ai/generate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(fakeAiService.generate as Mock).mockReturnValue(Effect.succeed(FAKE_AI_QUESTIONS))
+    ;(fakeAiService.validateCurriculum as Mock).mockImplementation(({ expectedCount }: { expectedCount: number }) =>
+      Effect.succeed(
+        Array.from({ length: expectedCount }, (_, i) => ({
+          number: i + 1,
+          status: 'valid' as const,
+          reason: 'Sesuai CP.',
+        })),
+      ),
+    )
+    ;(db.update as Mock).mockReturnValue(makeChain([]))
   })
 
   it('returns 401 without session', async () => {
@@ -371,6 +393,53 @@ describe('POST /api/ai/generate', () => {
     const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as Array<Record<string, unknown>> | undefined
     expect(insertedQuestions?.[0]?.['validationStatus']).toBe('needs_review')
     expect(insertedQuestions?.[0]?.['validationReason']).toContain('LaTeX')
+  })
+
+  it('runs curriculum validation after insert and updates every question with non-null status', async () => {
+    const examRow = makeExamRow()
+    const questionRows = Array.from({ length: 20 }, (_, i) =>
+      makeQuestionRow({
+        id: `q-${i + 1}`,
+        examId: 'exam-gen-1',
+        number: i + 1,
+        validationStatus: i === 0 ? 'needs_review' : 'valid',
+        validationReason: i === 0 ? 'Level kognitif tinggi.' : 'Sesuai CP.',
+      }),
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    ;(db.transaction as Mock).mockImplementation(
+      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
+    )
+    ;(fakeAiService.validateCurriculum as Mock).mockImplementation(({ expectedCount }: { expectedCount: number }) =>
+      Effect.succeed(
+        Array.from({ length: expectedCount }, (_, i) => ({
+          number: i + 1,
+          status: i === 0 ? ('needs_review' as const) : ('valid' as const),
+          reason: i === 0 ? 'Level kognitif tinggi.' : 'Sesuai CP.',
+        })),
+      ),
+    )
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
+
+    const app = buildTestApp()
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_BODY),
+    })
+
+    expect(res.status).toBe(201)
+    expect(fakeAiService.validateCurriculum as Mock).toHaveBeenCalled()
+    expect(db.update as Mock).toHaveBeenCalled()
+    const body = await res.json() as { questions: Array<{ validationStatus: string | null }> }
+    expect(body.questions.every((q) => q.validationStatus !== null)).toBe(true)
+    expect(body.questions[0]?.validationStatus).toBe('needs_review')
   })
 
   it('returns 502 and skips DB insert when AiService fails', async () => {

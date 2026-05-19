@@ -1468,6 +1468,58 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
   })
 })
 
+describe('ReviewPage — Penjaga Kurikulum badges', () => {
+  function makeExamWithValidation(id: string) {
+    const base = makeExamWithQuestions(id)
+    return {
+      ...base,
+      questions: base.questions.map((q, i) => ({
+        ...q,
+        validationStatus: i === 0 ? ('needs_review' as const) : ('valid' as const),
+        validationReason: i === 0 ? 'Level kognitif tinggi.' : 'Sesuai CP.',
+      })),
+    }
+  }
+
+  it('shows curriculum badges in fast mode', async () => {
+    mockSearchParams = { mode: 'fast', examId: 'exam_val_fast' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithValidation('exam_val_fast'))
+    await getLoader()({ deps: { examId: 'exam_val_fast' } })
+
+    renderReviewPage()
+
+    expect(await screen.findByTestId('curriculum-badge-needs_review')).toBeInTheDocument()
+    expect(screen.getAllByTestId('curriculum-badge-valid').length).toBeGreaterThan(0)
+  })
+
+  it('shows curriculum badges in slow mode', async () => {
+    mockSearchParams = { mode: 'slow', examId: 'exam_val_slow' }
+    const exam = { ...makeExamWithValidation('exam_val_slow'), reviewMode: 'slow' as const }
+    mockExamsGet.mockResolvedValueOnce(exam)
+    await getLoader()({ deps: { examId: 'exam_val_slow' } })
+
+    renderReviewPage()
+
+    await screen.findAllByText('Question 1')
+    expect(screen.getAllByTestId('curriculum-badge-needs_review').length).toBeGreaterThan(0)
+  })
+
+  it('filters to flagged questions when Perlu review only is checked', async () => {
+    const user = userEvent.setup()
+    mockSearchParams = { mode: 'fast', examId: 'exam_val_filter' }
+    mockExamsGet.mockResolvedValueOnce(makeExamWithValidation('exam_val_filter'))
+    await getLoader()({ deps: { examId: 'exam_val_filter' } })
+
+    renderReviewPage()
+    await screen.findByText('Question 1')
+
+    await user.click(screen.getByTestId('review-only-filter'))
+
+    expect(screen.getByText('Question 1')).toBeInTheDocument()
+    expect(screen.queryByText('Question 2')).not.toBeInTheDocument()
+  })
+})
+
 describe('ReviewRoute — pendingComponent', () => {
   it('route has pendingComponent for loading state during navigation', () => {
     expect(Route.options.pendingComponent).toBeDefined()

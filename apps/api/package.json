@@ -9,7 +9,8 @@
     "test": "vitest run",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "curriculum:extract": "node --env-file-if-exists=../../.env --import tsx/esm scripts/extract-curriculum.ts",
-    "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts"
+    "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts",
+    "db:seed:dev": "node --env-file-if-exists=../../.env --import tsx/esm scripts/seed-dev-guru.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

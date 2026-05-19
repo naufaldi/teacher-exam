@@ -63,7 +63,7 @@ function isTypedQuestion(q: PembahasanQuestion): q is Exclude<PembahasanQuestion
   return '_tag' in q
 }
 
-function serializeQuestion(q: PembahasanQuestion) {
+export function serializeQuestionForPrompt(q: PembahasanQuestion) {
   if (!isTypedQuestion(q)) {
     return {
       number: q.number,
@@ -162,7 +162,7 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
   ].join('\n')
 
   const user = JSON.stringify(
-    input.questions.map((q) => serializeQuestion(q)),
+    input.questions.map((q) => serializeQuestionForPrompt(q)),
   )
 
   return { system, user }
