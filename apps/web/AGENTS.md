@@ -57,7 +57,7 @@ api.exams.patch(id, body)
 api.exams.remove(id)
 ```
 
-Base path is `/api`. In dev, Vite proxies `/api` → `http://localhost:3000`.
+Base path is `/api`. In dev, Vite proxies `/api` → `http://localhost:3000` (or `API_PORT` from `.env`).
 
 ## Styling — Tailwind CSS v4
 

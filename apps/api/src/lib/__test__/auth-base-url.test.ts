@@ -6,8 +6,8 @@ describe('defaultBetterAuthBaseURL', () => {
     expect(defaultBetterAuthBaseURL({
       explicit: undefined,
       appUrl: 'http://localhost:5173',
-      apiPort: '3001',
-    })).toBe('http://localhost:3001')
+      apiPort: '3000',
+    })).toBe('http://localhost:3000')
   })
 
   it('uses explicit BETTER_AUTH_URL when set', () => {

@@ -1,11 +1,14 @@
 /**
+ * Set QA_SESSION_COOKIE from a browser session after dev login (`POST /api/dev/login`
+ * with DEV_AUTH_ENABLED=true) or Google OAuth — copy the Cookie header from DevTools.
+ *
  * Smoke-generate one exam per PRD v3 Phase 1 combo (4 total).
  * Usage: node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-phase1-smoke.ts
  */
 import { writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-const API = process.env['API_URL'] ?? 'http://localhost:3001'
+const API = process.env['API_URL'] ?? 'http://localhost:3000'
 
 const COMBOS = [
   { subject: 'ipas', grade: 5, topic: 'Cahaya dan Bunyi' },
