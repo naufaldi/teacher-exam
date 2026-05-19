@@ -25,6 +25,8 @@ export interface ExamDraft {
   topic: string
   /** Optional teacher-provided steering context (PRD §8.7). */
   classContext: string
+  generationIncomplete: boolean
+  failedQuestionNumbers: number[]
 }
 
 function makeInitialDraft(): ExamDraft {
@@ -43,6 +45,8 @@ function makeInitialDraft(): ExamDraft {
     grade: 6,
     topic: '',
     classContext: '',
+    generationIncomplete: false,
+    failedQuestionNumbers: [],
   }
 }
 
@@ -98,6 +102,22 @@ export const examDraftStore = {
 
   setReviewMode(mode: 'fast' | 'slow') {
     state = { ...state, reviewMode: mode }
+    emit()
+  },
+
+  setGenerationState(patch: {
+    generationIncomplete?: boolean
+    failedQuestionNumbers?: number[]
+  }) {
+    state = {
+      ...state,
+      ...(patch.generationIncomplete !== undefined
+        ? { generationIncomplete: patch.generationIncomplete }
+        : {}),
+      ...(patch.failedQuestionNumbers !== undefined
+        ? { failedQuestionNumbers: patch.failedQuestionNumbers }
+        : {}),
+    }
     emit()
   },
 

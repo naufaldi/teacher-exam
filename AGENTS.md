@@ -22,7 +22,7 @@ pnpm 10.15 + Turborepo monorepo. Node >= 22 required.
 | Build all | `pnpm build` |
 | Type-check all | `pnpm type-check` |
 | Generate migration | `pnpm db:generate` |
-| Run migration | `pnpm db:migrate` |
+| Run migration | `pnpm db:migrate` (required after pulling new `exam_subject` enum values, e.g. Matematika) |
 | DB studio | `cd packages/db && pnpm drizzle-kit studio` |
 | Dev API only | `cd apps/api && node --env-file-if-exists=../../.env --watch --import tsx/esm src/index.ts` |
 | Dev web only | `cd apps/web && pnpm vite --port 5173` |
@@ -47,6 +47,10 @@ AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
 - **`AI_PROVIDER=minimax`** (MiniMax M2.7 via the same `@anthropic-ai/sdk`; [Anthropic-compatible API](https://platform.minimax.io/docs/api-reference/text-anthropic-api)): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
 
 Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
+
+**Dev logging:** `AI_LOG=1` logs MiniMax/Claude timing (`[ai]` in API stdout); auto-on when `DEV_AUTH_ENABLED=true` or `NODE_ENV=development`. Web dev builds log `[dev] api.fetch` timing in the browser console via `devLog`.
+
+**Curriculum validation:** `POST /api/ai/generate` does not run Penjaga Kurikulum; teachers trigger it from Review via `POST /api/exams/:id/validate-curriculum` (“Periksa kurikulum”).
 
 ## Critical Rules
 

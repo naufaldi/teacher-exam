@@ -99,11 +99,12 @@ describe('createDefaultAiService', () => {
     createDefaultAiService()
 
     expect(ctorMock).toHaveBeenCalledOnce()
-    expect(getFirstCtorArg()).toEqual({
+    expect(getFirstCtorArg()).toMatchObject({
       apiKey: 'minimax-test',
       baseURL: 'https://api.minimax.io/anthropic',
       timeout: DEFAULT_TIMEOUT_MS,
     })
+    expect(typeof getFirstCtorArg()['fetch']).toBe('function')
   })
 
   it('uses MiniMax anthropic base URL by default when MINIMAX_ANTHROPIC_BASE_URL is unset', () => {
@@ -132,13 +133,37 @@ describe('createDefaultAiService', () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-fallback')
 
     const ai = createDefaultAiService()
+    const pdfQuestion = {
+      _tag: 'mcq_single' as const,
+      number: 1,
+      text: 'Question 1',
+      option_a: 'A',
+      option_b: 'B',
+      option_c: 'C',
+      option_d: 'D',
+      correct_answer: 'a',
+      topic: 'Teks',
+      difficulty: 'sedang',
+    }
+    ctorMock.mockImplementationOnce(function MockAnthropicPdf(this: {
+      messages: { create: ReturnType<typeof vi.fn> }
+    }) {
+      this.messages = {
+        create: vi.fn().mockResolvedValue({
+          content: [{ type: 'text', text: JSON.stringify([pdfQuestion]) }],
+          stop_reason: 'end_turn',
+          stop_sequence: null,
+        }),
+      }
+      return this
+    })
 
     await Effect.runPromise(
       ai.generate({
         system: 'system',
         user: 'user',
         pdfBytes: Buffer.from('%PDF-1.4'),
-        expectedCount: 0,
+        expectedCount: 1,
       }),
     )
 

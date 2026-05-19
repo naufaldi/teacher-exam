@@ -270,6 +270,18 @@ describe('api.exams.finalize', () => {
   })
 })
 
+describe('api.exams.validateCurriculum', () => {
+  test('POSTs to /api/exams/:id/validate-curriculum', async () => {
+    mockFetch.mockResolvedValue(makeResponse(VALID_EXAM_WITH_QUESTIONS))
+    const result = await api.exams.validateCurriculum('exam_1')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/exams/exam_1/validate-curriculum',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    )
+    expect(result.id).toBe('exam_1')
+  })
+})
+
 describe('api.questions.patch', () => {
   test('PATCHes /api/questions/:id with body and credentials', async () => {
     mockFetch.mockResolvedValue(makeResponse({

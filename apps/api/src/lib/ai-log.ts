@@ -5,19 +5,24 @@ function redactSecrets(msg: string, max = 800): string {
   return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
+export function isAiLogEnabled(): boolean {
+  const on = process.env['AI_LOG']
+  if (on === '1' || on === 'true') return true
+  if (process.env['DEV_AUTH_ENABLED'] === 'true') return true
+  if (process.env['NODE_ENV'] === 'development') return true
+  return false
+}
+
 /**
  * Structured AI logs (no raw API keys). Failures always emit `warn`.
- * Success / request detail: set `AI_LOG=1` or `AI_LOG=true`.
+ * Success / request detail: `AI_LOG=1`, or auto-on in local dev (`DEV_AUTH_ENABLED`, `NODE_ENV=development`).
  */
 export function logAiEvent(
   scope: string,
   level: 'info' | 'warn',
   data: Record<string, unknown>,
 ): void {
-  if (level === 'info') {
-    const on = process.env['AI_LOG']
-    if (on !== '1' && on !== 'true') return
-  }
+  if (level === 'info' && !isAiLogEnabled()) return
 
   const safe: Record<string, unknown> = { scope, ...data }
   for (const key of ['cause', 'message', 'error']) {

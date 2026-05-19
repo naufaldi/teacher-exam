@@ -20,6 +20,7 @@ import {
   ExamWithQuestionsSchema,
   PublicExamWithQuestionsSchema,
 } from '@teacher-exam/shared'
+import { devLog } from './dev-log.js'
 
 // Prod: VITE_API_URL=https://api.ujiansd.com/api (baked at build time)
 // Dev: unset → relative path, proxied by Vite to API_PORT (default :3000)
@@ -87,11 +88,32 @@ export function setUnauthorizedHandler(handler: AuthErrorHandler | null): void {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  })
+  const method = init?.method ?? 'GET'
+  const t0 = performance.now()
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      ...init,
+    })
+  } catch (err) {
+    devLog('api.fetch', {
+      path,
+      method,
+      ok: false,
+      durationMs: Math.round(performance.now() - t0),
+      error: err instanceof Error ? err.message : String(err),
+    })
+    throw err
+  }
+
+  const durationMs = Math.round(performance.now() - t0)
+  if (!res.ok) {
+    devLog('api.fetch', { path, method, status: res.status, ok: false, durationMs })
+  } else {
+    devLog('api.fetch', { path, method, status: res.status, ok: true, durationMs })
+  }
 
   if (res.status === 401) {
     const err = new UnauthorizedError()
@@ -151,6 +173,10 @@ export const api = {
     },
     finalize: (id: string) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
+    validateCurriculum: async (id: string): Promise<ExamWithQuestions> => {
+      const raw = await apiFetch<unknown>(`/exams/${id}/validate-curriculum`, { method: 'POST' })
+      return decodeResponse<ExamWithQuestions>(ExamWithQuestionsSchema, raw)
+    },
     generateDiscussion: (id: string) =>
       apiFetch<ExamDetailResponse>(`/exams/${id}/discussion`, { method: 'POST' }),
     streamDiscussion: async (

@@ -134,7 +134,7 @@ Components use CVA variants: `<Button variant="primary" size="md">`.
 
 Follow the root **Testing & TDD** rule: write the failing test first, watch it fail, then implement.
 
-- **Location**: `src/<area>/__test__/<file>.test.tsx` (e.g. `src/routes/__test__/_auth.dashboard.test.tsx`, `src/lib/__test__/api.test.ts`).
+- **Location**: `src/<area>/__test__/<file>.test.tsx` (e.g. `src/routes/__test__/_auth.dashboard.test.tsx`, `src/lib/__test__/api.test.ts`). For large route flows, prefer `src/routes/__test__/<feature>/*.test.tsx` plus a local `setup.tsx` harness; keep each `*.test.tsx` under ~500 lines (`node scripts/check-test-file-length.mjs` from repo root).
 - **Stack**: Vitest + `@testing-library/react` + `@testing-library/user-event` + `jsdom`.
 - **What to test**: route components (render + user interaction), hooks (behavior, not implementation), `apiFetch` calls (validate the response with `Schema.decodeUnknownEither`), and any `Match`-based UI state machine.
 - **Do not test**: generated files (`routeTree.gen.ts`), third-party UI internals.

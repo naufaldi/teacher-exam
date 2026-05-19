@@ -125,10 +125,16 @@ describe('POST /api/questions/:id/regenerate', () => {
     expect(res.status).toBe(404)
   })
 
-  it('replaces the question row content and resets status to pending', async () => {
+  it('replaces the question row content and leaves validationStatus null', async () => {
     const examRow = makeExamRow()
     const originalRow = makeQuestionRow({ status: 'rejected' })
-    const updatedRow = makeQuestionRow({ text: 'New question text', optionB: 'Option B', status: 'pending' })
+    const updatedRow = makeQuestionRow({
+      text: 'New question text',
+      optionB: 'Option B',
+      status: 'pending',
+      validationStatus: null,
+      validationReason: null,
+    })
 
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
@@ -136,7 +142,7 @@ describe('POST /api/questions/:id/regenerate', () => {
       if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])  // ownership + question
       return makeChain([])  // sibling questions (no others)
     })
-    mockRegenerateUpdates(updatedRow)
+    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
 
     const generated = makeGeneratedQuestion()
     const fakeAi = makeFakeAiService({
@@ -153,6 +159,9 @@ describe('POST /api/questions/:id/regenerate', () => {
     const body = await res.json() as Record<string, unknown>
     expect(body['id']).toBe('q-1')
     expect(body['status']).toBe('pending')
+    expect(body['validationStatus']).toBeNull()
+    expect(fakeAi.validateCurriculum).not.toHaveBeenCalled()
+    expect((db.update as Mock).mock.calls).toHaveLength(1)
   })
 
   it('forwards the hint to the AI service', async () => {
