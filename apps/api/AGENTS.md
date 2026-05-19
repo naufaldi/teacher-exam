@@ -93,7 +93,7 @@ const userId = c.get('userId') // string
 
 Follow the root **Testing & TDD** rule: failing test first, watch it fail, then implement.
 
-- **Location**: `src/<area>/__test__/<file>.test.ts` — mirrored per module.
+- **Location**: `src/<area>/__test__/<file>.test.ts` — mirrored per module. For route families (e.g. AI, exams), prefer `src/routes/__test__/<family>/*.test.ts` with a local setup module; cap each test file at ~500 lines (`node scripts/check-test-file-length.mjs` from repo root).
   - `src/routes/__test__/exams.test.ts`
   - `src/layers/__test__/AppLayer.test.ts`
   - `src/middleware/__test__/auth.test.ts`

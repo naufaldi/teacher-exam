@@ -19,11 +19,24 @@ describe('question shape repair migration', () => {
 describe('subject enum phase 1 migration', () => {
   test('appends IPAS and Bahasa Inggris enum values', () => {
     const sql = readFileSync(
-      join(process.cwd(), 'src/migrations/0005_add_ipas_bahasa_inggris_subjects.sql'),
+      join(process.cwd(), 'src/migrations/0005_brown_chronomancer.sql'),
       'utf8',
     )
 
-    expect(sql).toContain('ALTER TYPE "exam_subject" ADD VALUE IF NOT EXISTS \'ipas\'')
-    expect(sql).toContain('ALTER TYPE "exam_subject" ADD VALUE IF NOT EXISTS \'bahasa_inggris\'')
+    expect(sql).toContain("ADD VALUE 'ipas'")
+    expect(sql).toContain("ADD VALUE 'bahasa_inggris'")
+  })
+})
+
+describe('subject enum matematika migration', () => {
+  test('appends Matematika enum value idempotently', () => {
+    const sql = readFileSync(
+      join(process.cwd(), 'src/migrations/0007_add_matematika_subject.sql'),
+      'utf8',
+    )
+
+    expect(sql).toContain(
+      'ALTER TYPE "public"."exam_subject" ADD VALUE IF NOT EXISTS \'matematika\'',
+    )
   })
 })

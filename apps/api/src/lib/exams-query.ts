@@ -67,7 +67,20 @@ export async function fetchExamWithQuestions(examId: string): Promise<ExamWithQu
     .where(eq(questions.examId, examId))
     .orderBy(questions.number)
 
-  return { ...toExam(examRow), questions: questionRows.map((q) => rowToQuestion(q)) }
+  const mappedQuestions = questionRows.map((q) => rowToQuestion(q))
+  const failedQuestionNumbers = mappedQuestions
+    .filter((q) => q.generationFailed === true)
+    .map((q) => q.number)
+  return {
+    ...toExam(examRow),
+    questions: mappedQuestions,
+    ...(failedQuestionNumbers.length > 0
+      ? {
+          generationIncomplete: true,
+          failedQuestionNumbers,
+        }
+      : {}),
+  }
 }
 
 export async function fetchPublicExamWithQuestions(slug: string): Promise<PublicExamWithQuestions | null> {

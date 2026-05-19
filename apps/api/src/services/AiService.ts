@@ -1,8 +1,10 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk'
 import { Effect, Schema, Either } from 'effect'
-import { GeneratedQuestionSchema, CurriculumValidationItemSchema, type GeneratedQuestion, type CurriculumValidationItem } from '@teacher-exam/shared'
+import { CurriculumValidationItemSchema, type GeneratedQuestion, type CurriculumValidationItem } from '@teacher-exam/shared'
 import { AiGenerationError } from '../errors'
 import { logAiEvent } from '../lib/ai-log'
+import { createMinimaxFetch, isMinimaxDnsFallbackEnabled } from '../lib/minimax-fetch'
+import { parseGeneratedQuestionsStrict } from '../lib/parse-generated-questions'
 
 export interface GenerateInput {
   /** Sent verbatim as the Anthropic `system` field. Carries curriculum corpus. */
@@ -26,8 +28,16 @@ export interface ValidateCurriculumInput {
   expectedCount: number
 }
 
+export interface GenerateRawInput {
+  system: string
+  user: string
+  pdfBytes?: Buffer | undefined
+}
+
 export interface AiService {
   generate: (input: GenerateInput) => Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError>
+  /** Raw assistant text — for bulk salvage parsing in the generate route. */
+  generateRaw: (input: GenerateRawInput) => Effect.Effect<string, AiGenerationError>
   validateCurriculum: (input: ValidateCurriculumInput) => Effect.Effect<ReadonlyArray<CurriculumValidationItem>, AiGenerationError>
   generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
   streamDiscussion: (input: DiscussionInput) => AsyncGenerator<string>
@@ -68,11 +78,24 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 const DEFAULT_MINIMAX_ANTHROPIC_BASE_URL = 'https://api.minimax.io/anthropic'
 
 function createMinimaxAnthropicClient(apiKey: string, baseURL: string): Anthropic {
-  return new Anthropic({
+  const clientOptions: ConstructorParameters<typeof Anthropic>[0] = {
     apiKey,
     baseURL,
     timeout: DEFAULT_TIMEOUT_MS,
-  })
+  }
+
+  if (isMinimaxDnsFallbackEnabled()) {
+    try {
+      const hostname = new URL(baseURL).hostname
+      if (hostname === 'api.minimax.io') {
+        clientOptions.fetch = createMinimaxFetch()
+      }
+    } catch {
+      // keep default fetch when baseURL is invalid; request will fail with existing errors
+    }
+  }
+
+  return new Anthropic(clientOptions)
 }
 
 /**
@@ -101,21 +124,38 @@ export function createAiService(config: AiServiceConfig): AiService {
       content: [{ type: 'text', text: input.user }],
     }).pipe(Effect.map((text) => stripCodeFence(text)))
 
-  return {
-    generate({ system, user, pdfBytes, expectedCount }) {
-      const content: Anthropic.ContentBlockParam[] = []
-      if (pdfBytes) {
-        content.push({
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: pdfBytes.toString('base64'),
-          },
-        })
-      }
-      content.push({ type: 'text', text: user })
+  const buildGenerateContent = (
+    user: string,
+    pdfBytes: Buffer | undefined,
+  ): Anthropic.ContentBlockParam[] => {
+    const content: Anthropic.ContentBlockParam[] = []
+    if (pdfBytes) {
+      content.push({
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data: pdfBytes.toString('base64'),
+        },
+      })
+    }
+    content.push({ type: 'text', text: user })
+    return content
+  }
 
+  return {
+    generateRaw({ system, user, pdfBytes }) {
+      const generateModel = pdfBytes ? pdfModel : model
+      return callAnthropicText({
+        config,
+        model: generateModel,
+        max_tokens: maxTokens,
+        system,
+        content: buildGenerateContent(user, pdfBytes),
+      })
+    },
+
+    generate({ system, user, pdfBytes, expectedCount }) {
       const generateModel = pdfBytes ? pdfModel : model
 
       return Effect.gen(function* () {
@@ -124,9 +164,9 @@ export function createAiService(config: AiServiceConfig): AiService {
           model: generateModel,
           max_tokens: maxTokens,
           system,
-          content,
+          content: buildGenerateContent(user, pdfBytes),
         })
-        const questions = yield* parseAndValidate(text).pipe(
+        const questions = yield* parseGeneratedQuestionsStrict(text, expectedCount).pipe(
           Effect.tapError((e) =>
             Effect.sync(() =>
               logAiEvent('ai.generate.parse', 'warn', {
@@ -136,18 +176,6 @@ export function createAiService(config: AiServiceConfig): AiService {
             ),
           ),
         )
-        if (questions.length !== expectedCount) {
-          logAiEvent('ai.generate.count', 'warn', {
-            model: generateModel,
-            expected: expectedCount,
-            actual: questions.length,
-          })
-          return yield* Effect.fail(
-            new AiGenerationError({
-              cause: `Expected ${expectedCount} questions, got ${questions.length}`,
-            }),
-          )
-        }
         return questions
       })
     },
@@ -241,6 +269,12 @@ export function createDefaultAiService(): AiService {
           return getAnthropicPdfService().generate(input)
         }
         return minimaxService.generate(input)
+      },
+      generateRaw(input) {
+        if (input.pdfBytes) {
+          return getAnthropicPdfService().generateRaw(input)
+        }
+        return minimaxService.generateRaw(input)
       },
       generateDiscussion(input) {
         return minimaxService.generateDiscussion(input)
@@ -399,32 +433,6 @@ function callAnthropicText({
     }
 
     return assistantText
-  })
-}
-
-function parseAndValidate(raw: string): Effect.Effect<Array<GeneratedQuestion>, AiGenerationError> {
-  return Effect.gen(function* () {
-    const parsed = yield* Effect.try({
-      try: () => JSON.parse(stripCodeFence(raw)) as unknown,
-      catch: (cause) =>
-        new AiGenerationError({
-          cause: `AI returned non-JSON output: ${(cause as Error).message}`,
-        }),
-    })
-
-    if (!Array.isArray(parsed)) {
-      return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned non-array JSON' }))
-    }
-
-    const decoded = Schema.decodeUnknownEither(Schema.Array(GeneratedQuestionSchema))(parsed)
-    if (Either.isLeft(decoded)) {
-      return yield* Effect.fail(
-        new AiGenerationError({
-          cause: `AI output failed schema validation: ${String(decoded.left)}`,
-        }),
-      )
-    }
-    return Array.from(decoded.right)
   })
 }
 

@@ -13,7 +13,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      TanStackRouterVite({ routesDirectory: './src/routes' }),
+      TanStackRouterVite({
+        routesDirectory: './src/routes',
+        routeFileIgnorePattern: '__test__',
+      }),
       react(),
       tailwindcss(),
     ],

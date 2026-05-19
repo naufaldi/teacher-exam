@@ -1,19 +1,36 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { TooltipProvider } from '@teacher-exam/ui'
 import { CurriculumValidationBadge, needsCurriculumReview } from '../curriculum-validation-badge.js'
 
 describe('CurriculumValidationBadge', () => {
-  it('renders valid badge with reason tooltip', () => {
-    render(<CurriculumValidationBadge status="valid" reason="Sesuai CP." />)
+  it('renders valid badge with Radix tooltip showing reason', async () => {
+    const user = userEvent.setup()
+    render(
+      <TooltipProvider>
+        <CurriculumValidationBadge status="valid" reason="Sesuai CP." />
+      </TooltipProvider>,
+    )
     expect(screen.getByTestId('curriculum-badge-valid')).toHaveTextContent('Sesuai')
-    expect(screen.getByTitle('Sesuai CP.')).toBeInTheDocument()
+
+    await user.hover(screen.getByTestId('curriculum-badge-valid'))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Sesuai CP.')
   })
 
   it('renders needs_review and invalid variants', () => {
-    render(<CurriculumValidationBadge status="needs_review" reason="Minor issue" />)
+    render(
+      <TooltipProvider>
+        <CurriculumValidationBadge status="needs_review" reason="Minor issue" />
+      </TooltipProvider>,
+    )
     expect(screen.getByTestId('curriculum-badge-needs_review')).toHaveTextContent('Perlu review')
 
-    render(<CurriculumValidationBadge status="invalid" reason="Off topic" compact />)
+    render(
+      <TooltipProvider>
+        <CurriculumValidationBadge status="invalid" reason="Off topic" compact />
+      </TooltipProvider>,
+    )
     expect(screen.getByTestId('curriculum-badge-invalid')).toHaveTextContent('Tidak')
   })
 })

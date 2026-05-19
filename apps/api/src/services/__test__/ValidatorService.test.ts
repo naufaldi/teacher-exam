@@ -29,6 +29,7 @@ describe('validateQuestionBatch', () => {
   it('merges curriculum validation with existing structural flags', async () => {
     const aiService: AiService = {
       generate: vi.fn(),
+      generateRaw: vi.fn(),
       validateCurriculum: vi.fn(() =>
         Effect.succeed([
           { number: 1, status: 'valid', reason: 'Sesuai CP.' },
@@ -70,6 +71,7 @@ describe('validateQuestionBatch', () => {
 
     const aiService: AiService = {
       generate: vi.fn(),
+      generateRaw: vi.fn(),
       validateCurriculum: vi.fn(({ expectedCount }) => {
         inFlight++
         maxInFlight = Math.max(maxInFlight, inFlight)
@@ -103,6 +105,7 @@ describe('validateQuestionBatch', () => {
     let call = 0
     const aiService: AiService = {
       generate: vi.fn(),
+      generateRaw: vi.fn(),
       validateCurriculum: vi.fn(({ expectedCount }) => {
         call++
         if (call === 2) {

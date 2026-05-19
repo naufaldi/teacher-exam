@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Exam } from '@teacher-exam/shared'
-import { Copy, Eye, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
+import { Copy, Eye, Link2, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Badge,
@@ -42,9 +42,10 @@ interface HistoryTableProps {
   exams: ReadonlyArray<Exam>
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
+  onShare: (exam: Exam) => void | Promise<void>
 }
 
-function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
+function HistoryTable({ exams, onDelete, onDuplicate, onShare }: HistoryTableProps) {
   return (
     <TooltipProvider delayDuration={250}>
       <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden [&>div]:overflow-hidden">
@@ -70,6 +71,7 @@ function HistoryTable({ exams, onDelete, onDuplicate }: HistoryTableProps) {
                 exam={exam}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
+                onShare={onShare}
               />
             ))}
           </TableBody>
@@ -83,9 +85,10 @@ interface HistoryTableRowProps {
   exam: Exam
   onDelete: (id: string) => Promise<void>
   onDuplicate: (exam: Exam) => void
+  onShare: (exam: Exam) => void | Promise<void>
 }
 
-function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) {
+function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableRowProps) {
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const subj = subjectMetaFor(exam.subject)
@@ -211,6 +214,10 @@ function HistoryTableRow({ exam, onDelete, onDuplicate }: HistoryTableRowProps) 
                 >
                   <CheckSquare size={13} />
                   Koreksi
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => void onShare(exam)}>
+                  <Link2 size={13} />
+                  Bagikan
                 </Button>
               </>
             ) : (

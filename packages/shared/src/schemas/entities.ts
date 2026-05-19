@@ -51,6 +51,8 @@ const QuestionCommonFields = {
   status:           QuestionStatusSchema,
   validationStatus: Schema.NullOr(ValidationStatusSchema),
   validationReason: Schema.NullOr(Schema.String),
+  /** True when bulk generate could not produce this soal; guru should use Regenerate. */
+  generationFailed: Schema.optional(Schema.Boolean),
   figure:           Schema.optional(Schema.NullOr(FigureSpecSchema)),
   createdAt:        Schema.String,
 } as const
@@ -115,6 +117,9 @@ export type Exam = typeof ExamSchema.Type
 export const ExamWithQuestionsSchema = Schema.Struct({
   ...ExamSchema.fields,
   questions: Schema.Array(QuestionSchema),
+  /** Set when bulk generate salvaged partial output; some numbers need regen. */
+  generationIncomplete: Schema.optional(Schema.Boolean),
+  failedQuestionNumbers: Schema.optional(Schema.Array(Schema.Int)),
 })
 export type ExamWithQuestions = typeof ExamWithQuestionsSchema.Type
 

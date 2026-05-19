@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev:kill": "node scripts/kill-dev-ports.mjs",
+    "dev": "pnpm dev:kill && pnpm --parallel --filter @teacher-exam/api --filter @teacher-exam/web run dev",
     "build": "turbo run build",
     "db:generate": "turbo run db:generate --filter=@teacher-exam/db",
     "db:migrate": "turbo run db:migrate --filter=@teacher-exam/db",

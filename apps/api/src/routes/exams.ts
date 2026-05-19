@@ -10,6 +10,7 @@ import { rowToQuestion } from '../lib/question-mapper'
 import type { AiService } from '../services/AiService'
 import { createDefaultAiService } from '../services/AiService'
 import { buildPembahasanPrompt } from '../lib/pembahasan-prompt'
+import { validateExamCurriculum } from '../lib/validate-exam-curriculum'
 
 export function createExamsRouter(opts: { aiService?: AiService } = {}): Hono {
   let aiService = opts.aiService
@@ -259,6 +260,19 @@ router.post('/:id/share', async (c) => {
     publicUrlPath: `/share/${slug}`,
     publishedAt: publishedAt.toISOString(),
   }
+
+  return c.json(result)
+})
+
+// POST /:id/validate-curriculum — Penjaga Kurikulum (on-demand; not run during generate)
+router.post('/:id/validate-curriculum', async (c) => {
+  const userId = c.get('userId')
+  const { id } = c.req.param()
+
+  aiService ??= createDefaultAiService()
+
+  const result = await validateExamCurriculum(id, userId, aiService)
+  if (!result) return c.json({ error: 'Exam not found', code: 'NOT_FOUND' }, 404)
 
   return c.json(result)
 })

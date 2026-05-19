@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { Effect, Either, Schema, Match } from 'effect'
 import { db, exams, questions } from '@teacher-exam/db'
-import { eq } from 'drizzle-orm'
 import {
   GenerateExamInputSchema,
   normalizeExamType,
@@ -17,21 +16,54 @@ import { buildExamPrompt } from '../lib/prompt'
 import { fetchExamWithQuestions } from '../lib/exams-query'
 import { questionToRow } from '../lib/question-mapper'
 import { validateGeneratedQuestionLatex, type LatexValidationResult } from '../lib/latex-validator'
-import { validateQuestionBatch } from '../services/ValidatorService'
 import {
   createDefaultAiService,
   type AiService,
 } from '../services/AiService'
-import type { AiGenerationError } from '../errors'
+import { AiGenerationError } from '../errors'
+import {
+  parseGeneratedQuestions,
+  type ParsedItemFailure,
+} from '../lib/parse-generated-questions'
+import {
+  EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE,
+  isExamSubjectEnumMismatch,
+} from '../lib/db-errors'
 
-type GenerationValidationResult = {
-  questions: ReadonlyArray<GeneratedQuestion>
-  latexResults: ReadonlyArray<LatexValidationResult>
+const PLACEHOLDER_STUB_TEXT =
+  'Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang.'
+
+function makeFakeQuestionShape(number: number): GeneratedQuestion {
+  return {
+    _tag: 'mcq_single',
+    number,
+    text: `Soal simulasi ${number}`,
+    option_a: 'A',
+    option_b: 'B',
+    option_c: 'C',
+    option_d: 'D',
+    correct_answer: 'a',
+    topic: 'Simulasi',
+    difficulty: 'mudah',
+  }
+}
+
+type SalvageGenerationResult = {
+  questions: ReadonlyArray<Question>
+  generationIncomplete: boolean
+  failedQuestionNumbers: ReadonlyArray<number>
 }
 
 function convertGeneratedToQuestion(
   q: GeneratedQuestion,
-  meta: { id: string; examId: string; number: number; status: 'accepted' | 'pending'; createdAt: Date },
+  meta: {
+    id: string
+    examId: string
+    number: number
+    status: 'accepted' | 'pending'
+    createdAt: Date
+    generationFailed?: boolean
+  },
   latexResult: LatexValidationResult = { _tag: 'valid' },
 ): Question {
   const figureResult = decodeGeneratedFigure(q.figure)
@@ -49,6 +81,7 @@ function convertGeneratedToQuestion(
     status: meta.status,
     validationStatus: validationReasons.length > 0 ? 'needs_review' as const : null,
     validationReason: validationReasons.length > 0 ? validationReasons.join('\n') : null,
+    ...(meta.generationFailed === true ? { generationFailed: true as const } : {}),
     figure: figureResult.figure,
     createdAt: meta.createdAt.toISOString(),
   }
@@ -75,39 +108,176 @@ function convertGeneratedToQuestion(
   return result
 }
 
-async function generateWithLatexValidation(
+function failureReasonForNumber(
+  number: number,
+  failed: ReadonlyArray<ParsedItemFailure>,
+  missingNumbers: ReadonlyArray<number>,
+): string {
+  const failAtNumber = failed.find((f) => f.index + 1 === number)
+  if (failAtNumber) return failAtNumber.error
+  if (missingNumbers.includes(number)) return 'Soal tidak ada dalam output AI.'
+  return 'Soal gagal divalidasi.'
+}
+
+function makePlaceholderQuestion(
+  examId: string,
+  number: number,
+  createdAt: Date,
+  reason: string,
+): Question {
+  return {
+    id: crypto.randomUUID(),
+    examId,
+    number,
+    text: PLACEHOLDER_STUB_TEXT,
+    topic: null,
+    difficulty: null,
+    status: 'pending',
+    validationStatus: 'needs_review',
+    validationReason: reason,
+    generationFailed: true,
+    _tag: 'mcq_single',
+    options: { a: '—', b: '—', c: '—', d: '—' },
+    correct: 'a',
+    createdAt: createdAt.toISOString(),
+  }
+}
+
+async function generateWithSalvage(
   aiService: AiService,
-  request: { system: string; user: string; expectedCount: number; shouldValidateLatex: boolean },
-): Promise<Either.Either<GenerationValidationResult, AiGenerationError>> {
+  request: {
+    system: string
+    user: string
+    expectedCount: number
+    shouldValidateLatex: boolean
+    reviewMode: 'fast' | 'slow'
+    examId: string
+    createdAt: Date
+  },
+): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
   const maxAttempts = request.shouldValidateLatex ? 3 : 1
-  let lastInvalid:
+  let lastSalvage:
     | {
-      questions: ReadonlyArray<GeneratedQuestion>
-      latexResults: ReadonlyArray<LatexValidationResult>
+      valid: ReadonlyArray<GeneratedQuestion>
+      failed: ReadonlyArray<ParsedItemFailure>
+      missingNumbers: ReadonlyArray<number>
+      latexByNumber: Map<number, LatexValidationResult>
     }
     | null = null
 
+  const devSimulateSalvage = process.env['DEV_SIMULATE_SALVAGE'] === '1'
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const generated = await Effect.runPromise(
-      Effect.either(aiService.generate({
-        system: request.system,
-        user: request.user,
-        expectedCount: request.expectedCount,
-      })),
-    )
-    if (Either.isLeft(generated)) return Either.left(generated.left)
+    const rawResult = devSimulateSalvage
+      ? Either.right(
+          JSON.stringify(
+            Array.from({ length: request.expectedCount }, (_, i) => {
+              const n = i + 1
+              if (n === request.expectedCount) {
+                return { ...makeFakeQuestionShape(n), correct_answer: 'z' }
+              }
+              return makeFakeQuestionShape(n)
+            }),
+          ),
+        )
+      : await Effect.runPromise(
+          Effect.either(
+            aiService.generateRaw({
+              system: request.system,
+              user: request.user,
+            }),
+          ),
+        )
+    if (Either.isLeft(rawResult)) return Either.left(rawResult.left)
 
-    const latexResults = request.shouldValidateLatex
-      ? generated.right.map((question) => validateGeneratedQuestionLatex(question))
-      : generated.right.map((): LatexValidationResult => ({ _tag: 'valid' }))
+    const parsed = parseGeneratedQuestions(rawResult.right, request.expectedCount)
+    if (Either.isLeft(parsed)) return Either.left(parsed.left)
 
-    const hasInvalidLatex = latexResults.some((result) => result._tag === 'invalid')
-    if (!hasInvalidLatex) return Either.right({ questions: generated.right, latexResults })
+    const { valid, failed, missingNumbers } = parsed.right
+    const latexByNumber = new Map<number, LatexValidationResult>()
+    for (const question of valid) {
+      latexByNumber.set(
+        question.number,
+        request.shouldValidateLatex
+          ? validateGeneratedQuestionLatex(question)
+          : { _tag: 'valid' },
+      )
+    }
 
-    lastInvalid = { questions: generated.right, latexResults }
+    const hasInvalidLatex = [...latexByNumber.values()].some((r) => r._tag === 'invalid')
+    lastSalvage = { valid, failed, missingNumbers, latexByNumber }
+    if (!hasInvalidLatex) break
   }
 
-  return Either.right(lastInvalid ?? { questions: [], latexResults: [] })
+  if (!lastSalvage) {
+    return Either.left(new AiGenerationError({ cause: 'AI generation produced no output' }))
+  }
+
+  const validNumbers = new Set(lastSalvage.valid.map((q) => q.number))
+  const failedQuestionNumbers: number[] = []
+  for (let n = 1; n <= request.expectedCount; n++) {
+    if (!validNumbers.has(n)) failedQuestionNumbers.push(n)
+  }
+  const generationIncomplete = failedQuestionNumbers.length > 0
+
+  if (lastSalvage.valid.length === 0 && failedQuestionNumbers.length === 0) {
+    return Either.left(new AiGenerationError({ cause: 'AI generation produced no valid questions' }))
+  }
+
+  logAiEvent('api.ai.generate.salvage', 'warn', {
+    path: '/api/ai/generate',
+    valid: lastSalvage.valid.length,
+    failedItems: lastSalvage.failed.length,
+    missing: lastSalvage.missingNumbers.length,
+    gaps: failedQuestionNumbers.length,
+  })
+
+  const statusForValid: 'accepted' | 'pending' =
+    request.reviewMode === 'fast' ? 'accepted' : 'pending'
+
+  const byNumber = new Map<number, Question>()
+  for (const q of lastSalvage.valid) {
+    const latex = lastSalvage.latexByNumber.get(q.number) ?? { _tag: 'valid' as const }
+    byNumber.set(
+      q.number,
+      convertGeneratedToQuestion(
+        q,
+        {
+          id: crypto.randomUUID(),
+          examId: request.examId,
+          number: q.number,
+          status: statusForValid,
+          createdAt: request.createdAt,
+        },
+        latex,
+      ),
+    )
+  }
+
+  for (const number of failedQuestionNumbers) {
+    if (byNumber.has(number)) continue
+    byNumber.set(
+      number,
+      makePlaceholderQuestion(
+        request.examId,
+        number,
+        request.createdAt,
+        failureReasonForNumber(number, lastSalvage.failed, lastSalvage.missingNumbers),
+      ),
+    )
+  }
+
+  const questions: Question[] = []
+  for (let n = 1; n <= request.expectedCount; n++) {
+    const row = byNumber.get(n)
+    if (row) questions.push(row)
+  }
+
+  return Either.right({
+    questions,
+    generationIncomplete,
+    failedQuestionNumbers,
+  })
 }
 
 function decodeGeneratedFigure(raw: unknown): {
@@ -140,6 +310,7 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
   let aiService = opts.aiService
 
   router.post('/generate', async (c) => {
+    const handlerT0 = Date.now()
     const userId = c.get('userId') as string | undefined
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -183,23 +354,6 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
 
     aiService ??= createDefaultAiService()
 
-    const generated = await generateWithLatexValidation(aiService, {
-      system,
-      user,
-      expectedCount: totalSoal,
-      shouldValidateLatex: input.subject === 'matematika',
-    })
-    if (Either.isLeft(generated)) {
-      const err = generated.left
-      logAiEvent('api.ai.generate', 'warn', {
-        path: '/api/ai/generate',
-        message: String((err as { cause?: unknown }).cause),
-      })
-      return c.json({ error: 'AI generation failed', message: String((err as { cause?: unknown }).cause) }, 502)
-    }
-    const generatedQuestions = generated.right.questions
-    const latexResults = generated.right.latexResults
-
     const title = formatExamTitle({
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
@@ -210,82 +364,79 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
     const examId = crypto.randomUUID()
     const now = new Date()
 
-    const insertedQuestions: Question[] = generatedQuestions.map((q, i) =>
-      convertGeneratedToQuestion(
-        q,
-        {
-          id: crypto.randomUUID(),
-          examId,
-          number: i + 1,
-          status: input.reviewMode === 'fast' ? 'accepted' : 'pending',
-          createdAt: now,
-        },
-        latexResults[i],
-      ),
-    )
-
-    await db.transaction(async (tx) => {
-      await tx.insert(exams).values({
-        id:          examId,
-        userId,
-        title,
-        subject:     input.subject,
-        grade:       input.grade,
-        difficulty:  input.difficulty,
-        topics:      [...input.topics],
-        reviewMode:  input.reviewMode,
-        status:      'draft',
-        examType,
-        classContext: input.classContext ?? null,
-        createdAt:   now,
-        updatedAt:   now,
+    const generated = await generateWithSalvage(aiService, {
+      system,
+      user,
+      expectedCount: totalSoal,
+      shouldValidateLatex: input.subject === 'matematika',
+      reviewMode: input.reviewMode,
+      examId,
+      createdAt: now,
+    })
+    if (Either.isLeft(generated)) {
+      const err = generated.left
+      logAiEvent('api.ai.generate', 'warn', {
+        path: '/api/ai/generate',
+        message: String((err as { cause?: unknown }).cause),
       })
+      return c.json({ error: 'AI generation failed', message: String((err as { cause?: unknown }).cause) }, 502)
+    }
 
-      await tx.insert(questions).values(
-        insertedQuestions.map((dbQuestion) => {
-          const rowFields = questionToRow(dbQuestion)
-          return {
-            id: dbQuestion.id,
-            examId: dbQuestion.examId,
-            number: dbQuestion.number,
-            text: dbQuestion.text,
-            topic: dbQuestion.topic,
-            difficulty: dbQuestion.difficulty,
-            status: dbQuestion.status,
-            validationStatus: dbQuestion.validationStatus,
-            validationReason: dbQuestion.validationReason,
-            createdAt: now,
-            type: rowFields.type,
-            optionA: rowFields.optionA,
-            optionB: rowFields.optionB,
-            optionC: rowFields.optionC,
-            optionD: rowFields.optionD,
-            correctAnswer: rowFields.correctAnswer,
-            payload: rowFields.payload,
-          }
-        }),
-      )
-    })
+    const insertedQuestions = [...generated.right.questions]
+    const generationIncomplete = generated.right.generationIncomplete
+    const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
 
-    const validationUpdates = await validateQuestionBatch({
-      aiService,
-      exam: {
-        subject: input.subject,
-        grade: input.grade,
-        examType,
-      },
-      curriculumText,
-      questions: insertedQuestions,
-    })
-
-    for (const update of validationUpdates) {
-      await db
-        .update(questions)
-        .set({
-          validationStatus: update.validationStatus,
-          validationReason: update.validationReason,
+    try {
+      await db.transaction(async (tx) => {
+        await tx.insert(exams).values({
+          id:          examId,
+          userId,
+          title,
+          subject:     input.subject,
+          grade:       input.grade,
+          difficulty:  input.difficulty,
+          topics:      [...input.topics],
+          reviewMode:  input.reviewMode,
+          status:      'draft',
+          examType,
+          classContext: input.classContext ?? null,
+          createdAt:   now,
+          updatedAt:   now,
         })
-        .where(eq(questions.id, update.id))
+
+        await tx.insert(questions).values(
+          insertedQuestions.map((dbQuestion) => {
+            const rowFields = questionToRow(dbQuestion)
+            return {
+              id: dbQuestion.id,
+              examId: dbQuestion.examId,
+              number: dbQuestion.number,
+              text: dbQuestion.text,
+              topic: dbQuestion.topic,
+              difficulty: dbQuestion.difficulty,
+              status: dbQuestion.status,
+              validationStatus: dbQuestion.validationStatus,
+              validationReason: dbQuestion.validationReason,
+              createdAt: now,
+              type: rowFields.type,
+              optionA: rowFields.optionA,
+              optionB: rowFields.optionB,
+              optionC: rowFields.optionC,
+              optionD: rowFields.optionD,
+              correctAnswer: rowFields.correctAnswer,
+              payload: rowFields.payload,
+            }
+          }),
+        )
+      })
+    } catch (err) {
+      if (isExamSubjectEnumMismatch(err)) {
+        return c.json(
+          { error: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, code: 'DATABASE_ERROR' },
+          500,
+        )
+      }
+      throw err
     }
 
     const result = await fetchExamWithQuestions(examId)
@@ -293,7 +444,22 @@ export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
       return c.json({ error: 'Failed to retrieve generated exam', code: 'DATABASE_ERROR' }, 500)
     }
 
-    return c.json(result, 201)
+    logAiEvent('api.ai.generate', 'info', {
+      path: '/api/ai/generate',
+      examId,
+      questionCount: insertedQuestions.length,
+      durationMs: Date.now() - handlerT0,
+    })
+
+    return c.json(
+      {
+        ...result,
+        ...(generationIncomplete
+          ? { generationIncomplete: true, failedQuestionNumbers }
+          : {}),
+      },
+      201,
+    )
   })
 
   return router

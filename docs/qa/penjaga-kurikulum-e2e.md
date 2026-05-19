@@ -112,7 +112,15 @@ agent-browser eval "(() => { const b = [...document.querySelectorAll('button')].
 
 **Fix:** Restart `pnpm dev`. Headless login via `POST /api/dev/login` still works without the button.
 
-### 5. Radix Select automation
+### 6. MiniMax `Connection error` / `host=api.minimax.io` (502 on generate)
+
+**Symptom:** `POST /api/ai/generate` → 502; logs show `[HTTP undefined] Connection error. (provider=minimax, host=api.minimax.io)`.
+
+**Cause:** Local DNS (e.g. router/VPN DNS) cannot resolve `api.minimax.io` (`ENOTFOUND`), even though public resolvers (`8.8.8.8`, `1.1.1.1`) can. `api.minimaxi.com` (China endpoint) is reachable but rejects international API keys.
+
+**Fix (code):** API enables **Google DNS fallback** for MiniMax by default (`MINIMAX_DNS_FALLBACK`, see `.env.example`). When system DNS fails, the client resolves `api.minimax.io` via `dns.google` and connects with correct TLS SNI.
+
+**If it still fails:** Check `MINIMAX_API_KEY` is from [platform.minimax.io](https://platform.minimax.io) (not minimaxi.com). Confirm quota/rate limits (429). Set `MINIMAX_DNS_FALLBACK=false` only if your DNS already resolves `api.minimax.io`.
 
 **Symptom:** `agent-browser select` / click on Kelas combobox did not persist value; Generate stayed disabled.
 

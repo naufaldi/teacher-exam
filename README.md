@@ -86,6 +86,8 @@ pnpm dev                      # web :5173  ·  api :3000
 | New migration     | `pnpm db:generate` |
 | Run migration     | `pnpm db:migrate`  |
 
+After pulling changes that add a new mapel (subject enum), run `pnpm db:migrate` before testing generate for that subject.
+
 See [`apps/api/CLAUDE.md`](apps/api/CLAUDE.md) and [`apps/web/CLAUDE.md`](apps/web/CLAUDE.md)
 for per-package conventions, and [`docs/ops/PRODUCTION.md`](docs/ops/PRODUCTION.md) for
 the deploy reference (Caddy, Docker labels, Cloudflare DNS, env vars).

@@ -25,12 +25,13 @@ import {
   PageHeader,
   useToast,
   DatePicker,
+  TooltipProvider,
 } from '@teacher-exam/ui'
 import type { ExamType, Question, UpdateExamInput } from '@teacher-exam/shared'
 import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dialog.js'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
 import { api } from '../lib/api.js'
-import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
+import { matchQuestion } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
@@ -41,6 +42,10 @@ import {
   CurriculumValidationBadge,
   needsCurriculumReview,
 } from '../components/review/curriculum-validation-badge.js'
+import { ReviewFastModeLegend } from '../components/review/review-fast-mode-legend.js'
+import { FastModeAnswerKeyBadge } from '../components/review/fast-mode-answer-key-badge.js'
+import { FastModeTopicBadge } from '../components/review/fast-mode-topic-badge.js'
+import { RegenerateQuestionButton } from '../components/review/regenerate-question-button.js'
 
 const ACADEMIC_YEARS = Array.from({ length: 11 }, (_, i) => {
   const start = new Date().getFullYear() - 5 + i
@@ -79,6 +84,12 @@ export const Route = createFileRoute('/_auth/review')({
       durationMinutes: exam.durationMinutes ?? 60,
       instructions: exam.instructions ?? '',
     })
+    examDraftStore.setGenerationState({
+      generationIncomplete: exam.generationIncomplete === true,
+      failedQuestionNumbers: exam.failedQuestionNumbers
+        ? [...exam.failedQuestionNumbers]
+        : [],
+    })
     return exam
   },
 })
@@ -93,6 +104,7 @@ const STATUS_BORDER: Record<QuestionStatus, string> = {
 
 function ReviewPage() {
   const { mode, from, examId } = Route.useSearch()
+  const exam = Route.useLoaderData()
   const navigate = useNavigate()
   const draft = useExamDraft()
   const { toast } = useToast()
@@ -107,7 +119,9 @@ function ReviewPage() {
     Object.fromEntries(
       draft.questions.map((q) => [
         q.id,
-        mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending'),
+        mode === 'fast'
+          ? (q.generationFailed === true ? 'pending' : 'accepted')
+          : ((q.status as QuestionStatus | undefined) ?? 'pending'),
       ]),
     ),
   )
@@ -123,6 +137,7 @@ function ReviewPage() {
   const [regenBatchDialogOpen, setRegenBatchDialogOpen] = useState(false)
   const [batchRegenerating, setBatchRegenerating] = useState(false)
   const [reviewOnlyFilter, setReviewOnlyFilter] = useState(false)
+  const [curriculumValidating, setCurriculumValidating] = useState(false)
   const [newReplacementIds, setNewReplacementIds] = useState<Set<string>>(new Set())
   type TolakDialogState =
     | { kind: 'closed' }
@@ -142,14 +157,27 @@ function ReviewPage() {
     }
   }, [])
 
-  // Success toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
+  // Toast + strip ?from=generate from URL after first render so refresh doesn't re-trigger
   useEffect(() => {
     if (from === 'generate') {
-      toast({
-        variant: 'success',
-        title: 'Lembar berhasil dibuat',
-        description: `${draft.questions.length} soal berhasil dibuat — siap di-review.`,
-      })
+      const failedCount =
+        exam?.failedQuestionNumbers?.length ??
+        draft.questions.filter((q) => q.generationFailed === true).length
+      if (exam?.generationIncomplete === true && failedCount > 0) {
+        toast({
+          variant: 'warning',
+          title: `${failedCount} soal perlu dibuat ulang`,
+          description:
+            'Sebagian soal gagal dibuat otomatis. Gunakan Regenerate pada baris yang bermasalah sebelum lanjut.',
+        })
+        setReviewOnlyFilter(true)
+      } else {
+        toast({
+          variant: 'success',
+          title: 'Lembar berhasil dibuat',
+          description: `${draft.questions.length} soal berhasil dibuat — siap di-review.`,
+        })
+      }
       void navigate({
         to: '/review',
         search: examId !== undefined ? { mode, examId } : { mode },
@@ -165,7 +193,10 @@ function ReviewPage() {
       const next = { ...prev }
       for (const q of draft.questions) {
         if (!(q.id in next)) {
-          next[q.id] = mode === 'fast' ? 'accepted' : ((q.status as QuestionStatus | undefined) ?? 'pending')
+          next[q.id] =
+            mode === 'fast'
+              ? (q.generationFailed === true ? 'pending' : 'accepted')
+              : ((q.status as QuestionStatus | undefined) ?? 'pending')
         }
       }
       for (const id of Object.keys(next)) {
@@ -198,6 +229,10 @@ function ReviewPage() {
   }, [examId, toast])
 
   const questions = draft.questions
+  const hasCurriculumValidation = useMemo(
+    () => questions.some((q) => q.validationStatus !== null && q.validationStatus !== undefined),
+    [questions],
+  )
   const reviewFlaggedCount = useMemo(
     () => questions.filter((q) => needsCurriculumReview(q.validationStatus)).length,
     [questions],
@@ -209,12 +244,19 @@ function ReviewPage() {
         : questions,
     [questions, reviewOnlyFilter],
   )
+  const generationFailedCount = useMemo(
+    () => questions.filter((q) => q.generationFailed === true).length,
+    [questions],
+  )
   const acceptedCount = useMemo(
     () => Object.values(questionStatuses).filter((s) => s === 'accepted').length,
     [questionStatuses],
   )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
-  const canPreview = acceptedCount === questions.length && isMetadataComplete
+  const canPreview =
+    acceptedCount === questions.length &&
+    isMetadataComplete &&
+    generationFailedCount === 0
   const isRegenerating = regeneratingIds.size > 0 || batchRegenerating
 
   const editingQuestion = editingId !== null
@@ -379,6 +421,41 @@ function ReviewPage() {
     void handleRegenerateOne(questionId, hint)
   }
 
+  const handleValidateCurriculum = async () => {
+    if (!examId || curriculumValidating) return
+    const count = questions.filter((q) => q.generationFailed !== true).length
+    if (count === 0) return
+
+    setCurriculumValidating(true)
+    toast({
+      title: 'Memeriksa kurikulum…',
+      description: `Memeriksa ${count} soal (bisa ~2 menit).`,
+    })
+    try {
+      const updated = await api.exams.validateCurriculum(examId)
+      examDraftStore.setQuestions([...updated.questions])
+      const flagged = updated.questions.filter((q) =>
+        needsCurriculumReview(q.validationStatus),
+      ).length
+      toast({
+        variant: flagged > 0 ? 'warning' : 'success',
+        title: 'Pemeriksaan selesai',
+        description:
+          flagged > 0
+            ? `${flagged} soal perlu review kurikulum.`
+            : 'Semua soal sesuai kurikulum.',
+      })
+    } catch (err) {
+      toast({
+        variant: 'error',
+        title: 'Pemeriksaan kurikulum gagal',
+        description: err instanceof Error ? err.message : 'Coba lagi.',
+      })
+    } finally {
+      setCurriculumValidating(false)
+    }
+  }
+
   const handleBatalkan = (qId: string) => {
     const snapshot = prevSnapshotsRef.current[qId]
     if (snapshot) {
@@ -432,7 +509,10 @@ function ReviewPage() {
     try {
       const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
       examDraftStore.updateQuestion(id, server)
-      setQuestionStatuses((prev) => ({ ...prev, [id]: 'pending' }))
+      setQuestionStatuses((prev) => ({
+        ...prev,
+        [id]: mode === 'fast' ? 'accepted' : 'pending',
+      }))
       setFailedRegenIds((prev) => {
         if (!prev.has(id)) return prev
         const s = new Set(prev)
@@ -442,6 +522,15 @@ function ReviewPage() {
       delete prevSnapshotsRef.current[id]
       delete lastHintsRef.current[id]
       scheduleNewBadge(id)
+      const stillFailed = examDraftStore
+        .getSnapshot()
+        .questions.some((q) => q.generationFailed === true)
+      if (!stillFailed) {
+        examDraftStore.setGenerationState({
+          generationIncomplete: false,
+          failedQuestionNumbers: [],
+        })
+      }
       return true
     } catch (err) {
       setFailedRegenIds((prev) => new Set(prev).add(id))
@@ -489,6 +578,14 @@ function ReviewPage() {
 
   const handlePreviewClick = async () => {
     if (!examId) return
+    if (generationFailedCount > 0) {
+      toast({
+        variant: 'warning',
+        title: 'Selesaikan soal yang gagal dibuat',
+        description: `Masih ada ${generationFailedCount} soal yang perlu di-Regenerate sebelum preview.`,
+      })
+      return
+    }
     setFinalizing(true)
     try {
       if (mode === 'fast') {
@@ -521,6 +618,7 @@ function ReviewPage() {
   }
 
   return (
+    <TooltipProvider delayDuration={250}>
     <div className="space-y-6">
       {mode === 'fast' ? (
         <PageHeader
@@ -539,7 +637,35 @@ function ReviewPage() {
         </PageHeader>
       )}
 
+      {generationFailedCount > 0 ? (
+        <div
+          className="rounded-sm border border-warning-border bg-warning-bg px-4 py-3 text-body-sm text-warning-fg"
+          data-testid="generation-incomplete-banner"
+        >
+          <p className="font-medium">
+            {generationFailedCount} soal gagal dibuat otomatis
+          </p>
+          <p className="text-caption mt-1 text-warning-fg/90">
+            Gunakan Regenerate pada soal yang bermasalah sebelum melanjutkan ke preview.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={curriculumValidating || questions.length === 0}
+          onClick={() => void handleValidateCurriculum()}
+          data-testid="validate-curriculum-btn"
+        >
+          <RefreshCw
+            className={`h-3.5 w-3.5 mr-1.5 ${curriculumValidating ? 'animate-spin' : ''}`}
+            aria-hidden
+          />
+          {hasCurriculumValidation ? 'Periksa ulang kurikulum' : 'Periksa kurikulum'}
+        </Button>
         <label className="inline-flex items-center gap-2 text-body-sm text-text-secondary cursor-pointer">
           <input
             type="checkbox"
@@ -562,7 +688,9 @@ function ReviewPage() {
 
       {mode === 'fast' && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <ReviewFastModeLegend />
+
+          <div className="flex items-center justify-between mb-4 mt-4">
             <span className="text-body-sm text-text-secondary">
               {questions.length} soal auto-diterima
             </span>
@@ -579,40 +707,60 @@ function ReviewPage() {
             {visibleQuestions.map((q) => (
               <div
                 key={q.id}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-kertas-50 transition-colors"
+                data-testid={q.generationFailed === true ? `fast-failed-row-${q.number}` : undefined}
+                className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                  q.generationFailed === true
+                    ? 'bg-danger-bg/40 border-l-4 border-l-danger-solid'
+                    : 'hover:bg-kertas-50'
+                }`}
               >
                 <span className="text-caption text-text-tertiary font-mono w-6 shrink-0">
                   {q.number}.
                 </span>
-                <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex-1 min-w-0 space-y-1">
+                  {q.generationFailed === true ? (
+                    <span className="text-caption font-medium text-danger-fg">Gagal dibuat</span>
+                  ) : null}
                   <p className="text-body-sm text-text-primary truncate">
                     {q.text.split('\n')[0]}
                   </p>
                   {q.figure ? <FigureSvg figure={q.figure} /> : null}
                 </div>
-                {q.validationStatus ? (
+                {q.validationStatus && q.generationFailed !== true ? (
                   <CurriculumValidationBadge
                     status={q.validationStatus}
                     reason={q.validationReason}
                     compact
                   />
                 ) : null}
-                <span className="font-mono text-caption bg-bg-muted px-1.5 py-0.5 rounded-xs shrink-0">
-                  {questionCorrectLabel(q)}
-                </span>
-                {q.topic && (
-                  <Badge variant="secondary" className="text-caption shrink-0">
-                    {q.topic.split(' ')[0]}
-                  </Badge>
+                {q.generationFailed === true ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <RegenerateQuestionButton
+                      loading={regeneratingIds.has(q.id)}
+                      failedRetry={failedRegenIds.has(q.id)}
+                      disabled={isRegenerating && !regeneratingIds.has(q.id)}
+                      onClick={() =>
+                        failedRegenIds.has(q.id)
+                          ? openRetryDialog(q.id)
+                          : void handleRegenerateOne(q.id)
+                      }
+                      testId={`fast-regenerate-${q.number}`}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <FastModeAnswerKeyBadge question={q} />
+                    {q.topic ? <FastModeTopicBadge topic={q.topic} /> : null}
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(q.id)}
+                      className="p-1 text-text-tertiary hover:text-text-primary transition-colors shrink-0"
+                      aria-label={`Edit cepat soal ${q.number}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setEditingId(q.id)}
-                  className="p-1 text-text-tertiary hover:text-text-primary transition-colors shrink-0"
-                  aria-label={`Edit cepat soal ${q.number}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
               </div>
             ))}
           </div>
@@ -663,10 +811,14 @@ function ReviewPage() {
               return (
                 <Card
                   key={q.id}
-                  className={`relative border-l-4 transition-colors ${STATUS_BORDER[status]}`}
+                  className={`relative border-l-4 transition-colors ${
+                    q.generationFailed === true
+                      ? 'border-l-danger-solid bg-danger-bg/20'
+                      : STATUS_BORDER[status]
+                  }`}
                 >
                   <CardContent className="p-4">
-                    {q.validationStatus ? (
+                    {q.validationStatus && q.generationFailed !== true ? (
                       <div className="absolute top-3 right-3">
                         <CurriculumValidationBadge
                           status={q.validationStatus}
@@ -785,7 +937,27 @@ function ReviewPage() {
                           ),
                         })}
                         <div className="flex gap-2 flex-wrap">
-                          {failedRegenIds.has(q.id) ? (
+                          {q.generationFailed === true ? (
+                            failedRegenIds.has(q.id) ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={isRegenerating}
+                                onClick={() => openRetryDialog(q.id)}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Coba lagi
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                disabled={isRegenerating}
+                                onClick={() => void handleRegenerateOne(q.id)}
+                                data-testid={`slow-regenerate-${q.number}`}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+                              </Button>
+                            )
+                          ) : failedRegenIds.has(q.id) ? (
                             <>
                               <Button
                                 size="sm"
@@ -1011,6 +1183,7 @@ function ReviewPage() {
         onConfirm={() => { void handleRetryAllFailed() }}
       />
     </div>
+    </TooltipProvider>
   )
 }
 

@@ -14,15 +14,11 @@ describe('ExamSubjectSchema', () => {
     ['pendidikan_pancasila', 'Pendidikan Pancasila'],
     ['ipas', 'IPAS'],
     ['bahasa_inggris', 'Bahasa Inggris'],
+    ['matematika', 'Matematika'],
   ])("accepts '%s' and exposes its label", (subject, label) => {
     const result = Schema.decodeUnknownEither(ExamSubjectSchema)(subject)
     expect(Either.isRight(result)).toBe(true)
     expect(SUBJECT_LABEL[subject as keyof typeof SUBJECT_LABEL]).toBe(label)
-  })
-
-  test("rejects 'matematika' until the later PRD v3 phase", () => {
-    const result = Schema.decodeUnknownEither(ExamSubjectSchema)('matematika')
-    expect(Either.isLeft(result)).toBe(true)
   })
 })
 

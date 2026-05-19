@@ -5,8 +5,6 @@ import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, GeneratedQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../lib/question-mapper'
-import { getCurriculumText } from '../lib/curriculum'
-import { validateSingleQuestion } from '../services/ValidatorService'
 import {
   createDefaultAiService,
   type AiService,
@@ -249,31 +247,7 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
 
     if (!updatedRow) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)
 
-    const regeneratedQuestion = rowToQuestion(updatedRow)
-    const curriculumText = await getCurriculumText(exam.subject, exam.grade)
-    const validationUpdate = await validateSingleQuestion({
-      aiService,
-      exam: {
-        subject: exam.subject,
-        grade: exam.grade,
-        examType: exam.examType ?? 'formatif',
-      },
-      curriculumText,
-      question: regeneratedQuestion,
-    })
-
-    const [validatedRow] = await db
-      .update(questions)
-      .set({
-        validationStatus: validationUpdate.validationStatus,
-        validationReason: validationUpdate.validationReason,
-      })
-      .where(eq(questions.id, id))
-      .returning()
-
-    if (!validatedRow) return c.json({ error: 'Question disappeared', code: 'DATABASE_ERROR' }, 500)
-
-    return c.json(rowToQuestion(validatedRow))
+    return c.json(rowToQuestion(updatedRow))
   })
 
   return router
