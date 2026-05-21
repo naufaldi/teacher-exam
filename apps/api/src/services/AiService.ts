@@ -4,6 +4,12 @@ import { CurriculumValidationItemSchema, type GeneratedQuestion, type Curriculum
 import { AiGenerationError } from '../errors'
 import { logAiEvent } from '../lib/ai-log'
 import { createMinimaxFetch, isMinimaxDnsFallbackEnabled } from '../lib/minimax-fetch'
+import {
+  callOpenAiLlmText,
+  createOpenAiClient,
+  type OpenAiCallConfig,
+  type OpenAiLike,
+} from '../lib/openai-llm'
 import { parseGeneratedQuestionsStrict } from '../lib/parse-generated-questions'
 
 export interface GenerateInput {
@@ -76,6 +82,21 @@ const DEFAULT_DISCUSSION_MAX_TOKENS = 16000
 const DEFAULT_VALIDATION_MAX_TOKENS = 8000
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 const DEFAULT_MINIMAX_ANTHROPIC_BASE_URL = 'https://api.minimax.io/anthropic'
+const DEFAULT_OPENAI_MODEL = 'gpt-5.4-mini'
+const DEFAULT_OPENAI_DISCUSSION_MODEL = 'gpt-5.4-mini'
+const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1'
+
+export interface OpenAiServiceConfig {
+  client: OpenAiLike
+  model?: string
+  maxTokens?: number
+  discussionModel?: string
+  discussionMaxTokens?: number
+  validationModel?: string
+  validationMaxTokens?: number
+  provider?: 'openai'
+  baseURL?: string
+}
 
 function createMinimaxAnthropicClient(apiKey: string, baseURL: string): Anthropic {
   const clientOptions: ConstructorParameters<typeof Anthropic>[0] = {
@@ -218,13 +239,130 @@ export function createAiService(config: AiServiceConfig): AiService {
 }
 
 /**
+ * Create an `AiService` bound to a given OpenAI client.
+ * Text calls use Chat Completions; PDF materi uses the Responses API.
+ */
+export function createOpenAiService(config: OpenAiServiceConfig): AiService {
+  const model = config.model ?? DEFAULT_OPENAI_MODEL
+  const discussionModel = config.discussionModel ?? DEFAULT_OPENAI_DISCUSSION_MODEL
+  const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
+  const discussionMaxTokens = config.discussionMaxTokens ?? DEFAULT_DISCUSSION_MAX_TOKENS
+  const validationModel = config.validationModel ?? discussionModel
+  const validationMaxTokens = config.validationMaxTokens ?? DEFAULT_VALIDATION_MAX_TOKENS
+  const callConfig: OpenAiCallConfig = {
+    client: config.client,
+    provider: 'openai',
+    ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+  }
+
+  const getDiscussionText = (input: DiscussionInput): Effect.Effect<string, AiGenerationError> =>
+    callOpenAiLlmText({
+      config: callConfig,
+      model: discussionModel,
+      maxTokens: discussionMaxTokens,
+      system: input.system,
+      user: input.user,
+    }).pipe(Effect.map((text) => stripCodeFence(text)))
+
+  return {
+    generateRaw({ system, user, pdfBytes }) {
+      return callOpenAiLlmText({
+        config: callConfig,
+        model,
+        maxTokens,
+        system,
+        user,
+        pdfBytes,
+      })
+    },
+
+    generate({ system, user, pdfBytes, expectedCount }) {
+      return Effect.gen(function* () {
+        const text = yield* callOpenAiLlmText({
+          config: callConfig,
+          model,
+          maxTokens,
+          system,
+          user,
+          pdfBytes,
+        })
+        const questions = yield* parseGeneratedQuestionsStrict(text, expectedCount).pipe(
+          Effect.tapError((e) =>
+            Effect.sync(() =>
+              logAiEvent('ai.generate.parse', 'warn', {
+                model,
+                cause: String(e.cause),
+              }),
+            ),
+          ),
+        )
+        return questions
+      })
+    },
+
+    validateCurriculum({ system, user, expectedCount }) {
+      return Effect.gen(function* () {
+        const text = yield* callOpenAiLlmText({
+          config: callConfig,
+          model: validationModel,
+          maxTokens: validationMaxTokens,
+          system,
+          user,
+        })
+        const items = yield* parseCurriculumValidation(text)
+        if (items.length !== expectedCount) {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Expected ${expectedCount} validation items, got ${items.length}`,
+            }),
+          )
+        }
+        return items
+      })
+    },
+
+    generateDiscussion(input) {
+      return getDiscussionText(input)
+    },
+
+    async *streamDiscussion(input) {
+      const result = await Effect.runPromise(Effect.either(getDiscussionText(input)))
+      if (Either.isLeft(result)) {
+        const err = result.left
+        const message = typeof err.cause === 'string' ? err.cause : String(err.cause)
+        throw new Error(message, { cause: err })
+      }
+      yield result.right
+    },
+  }
+}
+
+/**
  * Builds the production `AiService` from env.
  * Uses Anthropic Claude when `AI_PROVIDER=anthropic` (default); MiniMax when
  * `AI_PROVIDER=minimax` (`MINIMAX_API_KEY` +
- * {@link DEFAULT_MINIMAX_ANTHROPIC_BASE_URL}).
+ * {@link DEFAULT_MINIMAX_ANTHROPIC_BASE_URL}); OpenAI when `AI_PROVIDER=openai`.
  */
 export function createDefaultAiService(): AiService {
   const provider = (process.env['AI_PROVIDER'] ?? 'anthropic').toLowerCase()
+
+  if (provider === 'openai') {
+    const apiKey = process.env['OPENAI_API_KEY']
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is required when AI_PROVIDER=openai')
+    }
+    const baseURL = process.env['OPENAI_BASE_URL']?.trim() || DEFAULT_OPENAI_BASE_URL
+    const model = process.env['AI_MODEL']?.trim() || DEFAULT_OPENAI_MODEL
+    const discussionModel =
+      process.env['AI_DISCUSSION_MODEL']?.trim() || DEFAULT_OPENAI_DISCUSSION_MODEL
+    return createOpenAiService({
+      client: createOpenAiClient(apiKey, baseURL),
+      model,
+      discussionModel,
+      provider: 'openai',
+      baseURL,
+    })
+  }
 
   if (provider === 'minimax') {
     const apiKey = process.env['MINIMAX_API_KEY']
@@ -289,7 +427,7 @@ export function createDefaultAiService(): AiService {
   }
 
   if (provider !== 'anthropic') {
-    throw new Error(`AI_PROVIDER must be "anthropic" or "minimax", got "${provider}"`)
+    throw new Error(`AI_PROVIDER must be "anthropic", "minimax", or "openai", got "${provider}"`)
   }
 
   const apiKey = process.env['ANTHROPIC_API_KEY']

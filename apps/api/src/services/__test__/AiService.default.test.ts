@@ -14,8 +14,44 @@ const ctorMock = vi.hoisted(() =>
   }),
 )
 
+const openAiCtorMock = vi.hoisted(() =>
+  vi.fn(function MockOpenAI(this: {
+    chat: { completions: { create: ReturnType<typeof vi.fn> } }
+    responses: { create: ReturnType<typeof vi.fn> }
+  }) {
+    this.chat = {
+      completions: {
+        create: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: '[]' }, finish_reason: 'stop' }],
+        }),
+      },
+    }
+    this.responses = {
+      create: vi.fn().mockResolvedValue({
+        output_text: '[]',
+        error: null,
+        status: 'completed',
+      }),
+    }
+    return this
+  }),
+)
+
 vi.mock('@anthropic-ai/sdk', () => ({
   default: ctorMock,
+}))
+
+vi.mock('openai', () => ({
+  default: openAiCtorMock,
+  OpenAI: openAiCtorMock,
+  APIError: class MockOpenAiApiError extends Error {
+    status: number
+    constructor(message: string, status = 500) {
+      super(message)
+      this.name = 'APIError'
+      this.status = status
+    }
+  },
 }))
 
 import { createDefaultAiService } from '../AiService'
@@ -57,9 +93,36 @@ function getCreateMock(index: number): ReturnType<typeof vi.fn> {
   return create
 }
 
+function getOpenAiCtorArg(index = 0): Record<string, unknown> {
+  const call = openAiCtorMock.mock.calls.at(index)
+  if (!call) {
+    throw new Error(`Expected OpenAI constructor call at index ${index}`)
+  }
+  const arg = (call as Array<unknown>).at(0)
+  if (!arg || typeof arg !== 'object') {
+    throw new Error('Expected OpenAI constructor to receive an options object')
+  }
+  return arg as Record<string, unknown>
+}
+
+function getOpenAiInstance(index = 0): {
+  chat: { completions: { create: ReturnType<typeof vi.fn> } }
+  responses: { create: ReturnType<typeof vi.fn> }
+} {
+  const instance = openAiCtorMock.mock.results.at(index)?.value
+  if (!instance) {
+    throw new Error(`Expected OpenAI instance at index ${index}`)
+  }
+  return instance as {
+    chat: { completions: { create: ReturnType<typeof vi.fn> } }
+    responses: { create: ReturnType<typeof vi.fn> }
+  }
+}
+
 describe('createDefaultAiService', () => {
   beforeEach(() => {
     ctorMock.mockClear()
+    openAiCtorMock.mockClear()
     vi.unstubAllEnvs()
   })
 
@@ -127,6 +190,83 @@ describe('createDefaultAiService', () => {
     expect(() => createDefaultAiService()).toThrow(/MINIMAX_API_KEY is required/)
   })
 
+  it('builds OpenAI client with OPENAI_API_KEY and default base URL when AI_PROVIDER=openai', () => {
+    vi.stubEnv('AI_PROVIDER', 'openai')
+    vi.stubEnv('OPENAI_API_KEY', 'sk-openai-test')
+
+    createDefaultAiService()
+
+    expect(openAiCtorMock).toHaveBeenCalledOnce()
+    expect(ctorMock).not.toHaveBeenCalled()
+    expect(getOpenAiCtorArg()).toMatchObject({
+      apiKey: 'sk-openai-test',
+      baseURL: 'https://api.openai.com/v1',
+      timeout: DEFAULT_TIMEOUT_MS,
+    })
+  })
+
+  it('requires OPENAI_API_KEY when AI_PROVIDER=openai', () => {
+    vi.stubEnv('AI_PROVIDER', 'openai')
+    vi.stubEnv('OPENAI_API_KEY', '')
+
+    expect(() => createDefaultAiService()).toThrow(/OPENAI_API_KEY is required/)
+  })
+
+  it('uses OPENAI_BASE_URL and model env overrides when AI_PROVIDER=openai', () => {
+    vi.stubEnv('AI_PROVIDER', 'openai')
+    vi.stubEnv('OPENAI_API_KEY', 'sk-openai-test')
+    vi.stubEnv('OPENAI_BASE_URL', 'https://proxy.example/v1')
+    vi.stubEnv('AI_MODEL', 'gpt-5.4-mini-custom')
+    vi.stubEnv('AI_DISCUSSION_MODEL', 'gpt-5.4-mini-fast')
+
+    const ai = createDefaultAiService()
+    expect(getOpenAiCtorArg()).toMatchObject({
+      baseURL: 'https://proxy.example/v1',
+    })
+
+    void Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
+    const chatCreate = getOpenAiInstance().chat.completions.create
+    expect(chatCreate).toHaveBeenCalledOnce()
+    expect((chatCreate.mock.calls[0]![0] as { model: string }).model).toBe('gpt-5.4-mini-fast')
+  })
+
+  it('routes PDF generation to OpenAI responses API when AI_PROVIDER=openai', async () => {
+    vi.stubEnv('AI_PROVIDER', 'openai')
+    vi.stubEnv('OPENAI_API_KEY', 'sk-openai-test')
+
+    const ai = createDefaultAiService()
+    const pdfQuestion = {
+      _tag: 'mcq_single' as const,
+      number: 1,
+      text: 'Question 1',
+      option_a: 'A',
+      option_b: 'B',
+      option_c: 'C',
+      option_d: 'D',
+      correct_answer: 'a',
+      topic: 'Teks',
+      difficulty: 'sedang',
+    }
+    const instance = getOpenAiInstance()
+    instance.responses.create.mockResolvedValueOnce({
+      output_text: JSON.stringify([pdfQuestion]),
+      error: null,
+      status: 'completed',
+    })
+
+    await Effect.runPromise(
+      ai.generate({
+        system: 'system',
+        user: 'user',
+        pdfBytes: Buffer.from('%PDF-1.4'),
+        expectedCount: 1,
+      }),
+    )
+
+    expect(instance.responses.create).toHaveBeenCalledOnce()
+    expect(instance.chat.completions.create).not.toHaveBeenCalled()
+  })
+
   it('routes PDF generation to Anthropic when AI_PROVIDER=minimax', async () => {
     vi.stubEnv('AI_PROVIDER', 'minimax')
     vi.stubEnv('MINIMAX_API_KEY', 'minimax-test')
@@ -183,6 +323,6 @@ describe('createDefaultAiService', () => {
   it('rejects unknown AI_PROVIDER', () => {
     vi.stubEnv('AI_PROVIDER', 'bogus')
 
-    expect(() => createDefaultAiService()).toThrow(/must be "anthropic" or "minimax"/)
+    expect(() => createDefaultAiService()).toThrow(/must be "anthropic", "minimax", or "openai"/)
   })
 })

@@ -222,12 +222,14 @@ ssh vps-faldi 'docker exec teacher-exam-api-1 wget -qO- http://localhost:3001/ap
 | `BETTER_AUTH_URL` | docker-compose (from API_DOMAIN) | `https://api-ujian-sekolah.faldi.xyz` | better-auth `baseURL` — must be the **API** host |
 | `GOOGLE_CLIENT_ID` | `.env.production` | (secret) | |
 | `GOOGLE_CLIENT_SECRET` | `.env.production` | (secret) | |
-| `AI_PROVIDER` | `.env.production` | `anthropic` \| `minimax` | Default `anthropic` if unset — match key block below |
+| `AI_PROVIDER` | `.env.production` | `anthropic` \| `minimax` \| `openai` | Default `anthropic` if unset — match key block below |
 | `ANTHROPIC_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=anthropic`; keep it set even with `AI_PROVIDER=minimax` if you want PDF generation to continue working |
 | `MINIMAX_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=minimax` |
 | `MINIMAX_ANTHROPIC_BASE_URL` | `.env.production` | `https://api.minimax.io/anthropic` | MiniMax API root for Anthropic-compatible requests |
-| `AI_MODEL` | `.env.production` | `MiniMax-M2.7` | Text generation/discussion default when `AI_PROVIDER=minimax` |
-| `AI_DISCUSSION_MODEL` | `.env.production` | `MiniMax-M2.7-highspeed` | Discussion/pembahasan override when `AI_PROVIDER=minimax` |
+| `OPENAI_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=openai` |
+| `OPENAI_BASE_URL` | `.env.production` | `https://api.openai.com/v1` | OpenAI API root (optional proxy/Azure) |
+| `AI_MODEL` | `.env.production` | provider-specific | Text generation default (`MiniMax-M2.7` for minimax; `gpt-5.4-mini` for openai) |
+| `AI_DISCUSSION_MODEL` | `.env.production` | provider-specific | Discussion/pembahasan + curriculum validation override |
 | `VITE_API_URL` | docker-compose build arg | `https://api-ujian-sekolah.faldi.xyz/api` | Baked into JS bundle at build time; changes require `--build web` |
 
 ---
