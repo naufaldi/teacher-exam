@@ -124,6 +124,8 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
         '- Gunakan $$...$$ untuk rumus atau langkah hitung yang berdiri sendiri.',
         '- Jangan tulis pecahan, akar, pangkat, atau rumus matematika sebagai teks biasa.',
         '- Contoh benar: $\\frac{3}{4}$, $2^3$, $\\sqrt{16}$, $$12 \\times 5 = 60$$.',
+        '- Jangan bungkus kalimat narasi dengan $; angka ribuan Indonesia (5.678) dan Rp tetap teks biasa.',
+        '- Jangan mulai paragraf dengan $ diikuti huruf.',
       ]
     : []
 
