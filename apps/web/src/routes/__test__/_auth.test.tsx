@@ -155,6 +155,14 @@ describe('AuthLayout', () => {
     )
   })
 
+  it('links help button to notasi matematika guide in a new tab', () => {
+    render(<AuthLayout />)
+    const help = screen.getByRole('link', { name: 'Bantuan' })
+    expect(help).toHaveAttribute('href', '/help/notasi-matematika')
+    expect(help).toHaveAttribute('target', '_blank')
+    expect(help).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
   it('signs out and navigates home when "Keluar" is clicked', async () => {
     const user = userEvent.setup()
     render(<AuthLayout />)
