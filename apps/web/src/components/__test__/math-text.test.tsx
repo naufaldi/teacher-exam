@@ -16,11 +16,34 @@ describe('MathText', () => {
     const { container } = render(<MathText text="$$x^2 + y^2$$" />)
 
     expect(container.querySelector('.katex-display')).not.toBeNull()
+    expect(container.textContent).not.toContain('$')
   })
 
-  it('falls back to readable text for malformed LaTeX', () => {
+  it('falls back without dollar signs for malformed LaTeX', () => {
     const { container } = render(<MathText text="Rumus $\\frac{3}{4" />)
 
-    expect(container.textContent).toBe(String.raw`Rumus $\\frac{3}{4`)
+    expect(container.textContent).not.toContain('$')
+    expect(container.textContent).toContain('3/4')
+  })
+
+  it('renders ribuan-style inline math without visible delimiters', () => {
+    const { container } = render(<MathText text="Hasil dari $5.678 + 3.421$ adalah ...." />)
+
+    expect(container.textContent).not.toContain('$')
+    expect(container.textContent).not.toContain('\\div')
+  })
+
+  it('renders delimited division without dollar signs', () => {
+    const { container } = render(<MathText text="Hasil dari $1824 \\div 12$ adalah ...." />)
+
+    expect(container.textContent).not.toContain('$')
+    expect(container.querySelector('.katex')).not.toBeNull()
+  })
+
+  it('repairs tab-corrupted times and renders multiplication sign', () => {
+    const { container } = render(<MathText text={'Hasil dari $124\times 36$'} />)
+
+    expect(container.querySelector('.katex')).not.toBeNull()
+    expect(container.textContent).toMatch(/124\s*×\s*36/)
   })
 })

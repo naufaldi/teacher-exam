@@ -721,8 +721,8 @@ function ReviewPage() {
                   {q.generationFailed === true ? (
                     <span className="text-caption font-medium text-danger-fg">Gagal dibuat</span>
                   ) : null}
-                  <p className="text-body-sm text-text-primary truncate">
-                    {q.text.split('\n')[0]}
+                  <p className="text-body-sm text-text-primary truncate min-w-0">
+                    <MathText text={q.text.split('\n')[0] ?? ''} />
                   </p>
                   {q.figure ? <FigureSvg figure={q.figure} /> : null}
                 </div>
@@ -1151,6 +1151,7 @@ function ReviewPage() {
         <QuestionEditDialog
           open
           question={editingQuestion}
+          subject={exam.subject}
           onClose={() => setEditingId(null)}
           onSave={(updated) => { void handleEditSave(updated) }}
         />

@@ -83,6 +83,25 @@ describe('ReviewPage — Task 13: Slow mode card highlights correctly', () => {
 })
 
 describe('ReviewPage — math rendering', () => {
+  it('renders LaTeX in fast review list without dollar signs', async () => {
+    setReviewSearch({ mode: 'fast', examId: 'exam_math_fast' })
+    const exam = makeExamWithQuestions('exam_math_fast')
+    mockExamsGet.mockResolvedValueOnce({
+      ...exam,
+      subject: 'matematika',
+      questions: [{
+        ...exam.questions[0]!,
+        text: 'Hasil dari $5.678 + 3.421$ adalah ....',
+      }],
+    })
+    await getLoader()({ deps: { examId: 'exam_math_fast' } })
+
+    const { container } = renderReviewPage()
+
+    expect(container.querySelector('.katex')).not.toBeNull()
+    expect(container.textContent).not.toContain('$')
+  })
+
   it('renders LaTeX in slow review cards', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_math_review' })
     const exam = makeExamWithQuestions('exam_math_review')

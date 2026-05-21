@@ -2,6 +2,7 @@ import { Effect, Either, Schema } from 'effect'
 import { GeneratedQuestionSchema, type GeneratedQuestion } from '@teacher-exam/shared'
 import { AiGenerationError } from '../errors'
 import { normalizeGeneratedQuestionItem } from './normalize-ai-output'
+import { parseAiJsonArray } from './repair-ai-json'
 
 export type ParsedItemFailure = {
   index: number
@@ -36,19 +37,15 @@ export function parseGeneratedQuestions(
   raw: string,
   expectedCount: number,
 ): Either.Either<ParseGeneratedQuestionsResult, AiGenerationError> {
-  let parsed: unknown
+  let parsed: unknown[]
   try {
-    parsed = JSON.parse(stripCodeFence(raw))
+    parsed = parseAiJsonArray(stripCodeFence(raw))
   } catch (cause) {
     return Either.left(
       new AiGenerationError({
         cause: `AI returned non-JSON output: ${(cause as Error).message}`,
       }),
     )
-  }
-
-  if (!Array.isArray(parsed)) {
-    return Either.left(new AiGenerationError({ cause: 'AI returned non-array JSON' }))
   }
 
   const failed: ParsedItemFailure[] = []

@@ -273,6 +273,7 @@ export function createOpenAiService(config: OpenAiServiceConfig): AiService {
         system,
         user,
         pdfBytes,
+        structuredOutput: pdfBytes ? undefined : 'generated_questions',
       })
     },
 
@@ -285,6 +286,7 @@ export function createOpenAiService(config: OpenAiServiceConfig): AiService {
           system,
           user,
           pdfBytes,
+          structuredOutput: pdfBytes ? undefined : 'generated_questions',
         })
         const questions = yield* parseGeneratedQuestionsStrict(text, expectedCount).pipe(
           Effect.tapError((e) =>
@@ -308,6 +310,7 @@ export function createOpenAiService(config: OpenAiServiceConfig): AiService {
           maxTokens: validationMaxTokens,
           system,
           user,
+          structuredOutput: 'curriculum_validation',
         })
         const items = yield* parseCurriculumValidation(text)
         if (items.length !== expectedCount) {
