@@ -55,11 +55,11 @@ describe('callOpenAiLlmText', () => {
     expect(responsesCreate).not.toHaveBeenCalled()
     const params = chatCreate.mock.calls[0]![0] as {
       model: string
-      max_tokens: number
+      max_completion_tokens: number
       messages: Array<{ role: string; content: string }>
     }
     expect(params.model).toBe('gpt-5.4-mini')
-    expect(params.max_tokens).toBe(32000)
+    expect(params.max_completion_tokens).toBe(32000)
     expect(params.messages).toEqual([
       { role: 'system', content: 'BASELINE\n## Capaian Pembelajaran' },
       { role: 'user', content: 'task params' },
@@ -103,6 +103,71 @@ describe('callOpenAiLlmText', () => {
       `data:application/pdf;base64,${pdfBytes.toString('base64')}`,
     )
     expect(params.input[0]!.content[1]).toEqual({ type: 'input_text', text: 'user task' })
+  })
+
+  it('passes response_format json_schema when structuredOutput is generated_questions', async () => {
+    const { client, chatCreate } = fakeOpenAiClient()
+    await Effect.runPromise(
+      callOpenAiLlmText({
+        config: { client, provider: 'openai' },
+        model: 'gpt-5.4-mini',
+        maxTokens: 32000,
+        system: 'BASELINE',
+        user: 'task params',
+        structuredOutput: 'generated_questions',
+      }),
+    )
+
+    const params = chatCreate.mock.calls[0]![0] as {
+      response_format?: { type: string; json_schema?: { name: string } }
+    }
+    expect(params.response_format?.type).toBe('json_schema')
+    expect(params.response_format?.json_schema?.name).toBe('generated_questions')
+  })
+
+  it('omits response_format for markdown-style calls without structuredOutput', async () => {
+    const { client, chatCreate } = fakeOpenAiClient()
+    await Effect.runPromise(
+      callOpenAiLlmText({
+        config: { client, provider: 'openai' },
+        model: 'gpt-5.4-mini',
+        maxTokens: 16000,
+        system: 'pembahasan',
+        user: '[]',
+      }),
+    )
+
+    const params = chatCreate.mock.calls[0]![0] as { response_format?: unknown }
+    expect(params.response_format).toBeUndefined()
+  })
+
+  it('retries without response_format when structured output is rejected', async () => {
+    const chatCreate = vi
+      .fn()
+      .mockRejectedValueOnce(new APIError(400, undefined, 'Invalid response_format json_schema', undefined))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '[]' }, finish_reason: 'stop' }],
+      })
+    const client: OpenAiLike = {
+      chat: { completions: { create: chatCreate } },
+      responses: { create: vi.fn() },
+    }
+
+    const text = await Effect.runPromise(
+      callOpenAiLlmText({
+        config: { client, provider: 'openai' },
+        model: 'gpt-5.4-mini',
+        maxTokens: 1000,
+        system: 's',
+        user: 'u',
+        structuredOutput: 'curriculum_validation',
+      }),
+    )
+
+    expect(text).toBe('[]')
+    expect(chatCreate).toHaveBeenCalledTimes(2)
+    expect(chatCreate.mock.calls[0]![0]).toHaveProperty('response_format')
+    expect(chatCreate.mock.calls[1]![0]).not.toHaveProperty('response_format')
   })
 
   it('maps OpenAI APIError status into AiGenerationError', async () => {

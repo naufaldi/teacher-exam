@@ -2,12 +2,13 @@ import { Hono } from 'hono'
 import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
-import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
+import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, GeneratedQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../lib/question-mapper'
-import { buildMatematikaLatexPromptRules } from '../lib/matematika-latex-prompt.js'
+import { getCurriculumText } from '../lib/curriculum'
 import { validateGeneratedQuestionLatex } from '../lib/latex-validator.js'
 import { normalizeMatematikaLatexField } from '../lib/normalize-matematika-latex.js'
+import { buildRegeneratePrompt } from '../lib/prompt'
 import {
   createDefaultAiService,
   type AiService,
@@ -185,29 +186,19 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
 
     const siblingTexts = siblingRows.map((r) => r.text)
 
-    // Step 3: build a single-question prompt.
-    // Shape MUST match `GeneratedQuestionSchema` (tagged Schema.Union in
-    // packages/shared) — `_tag` is the discriminator and `number` is required.
+    // Step 3: build a single-question prompt (shape matches GeneratedQuestionSchema).
     const isMatematika = exam.subject === 'matematika'
-    const system = [
-      'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka.',
-      'Jawab HANYA dengan JSON array berisi tepat 1 objek soal pilihan ganda — tanpa prosa, tanpa pembungkus markdown.',
-      'Semua nilai string WAJIB memakai tanda kutip ganda valid JSON (mis. "Rp350.000", bukan Rp350.000).',
-      'Format wajib (semua field diperlukan):',
-      '  { "_tag": "mcq_single", "number": 1, "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit" }',
-      ...(isMatematika ? buildMatematikaLatexPromptRules() : []),
-    ].join('\n')
-    const userPayload: Record<string, unknown> = {
-      kelas:            exam.grade,
-      mata_pelajaran:   exam.subject,
-      topik:            question.topic ?? exam.topics[0] ?? exam.subject,
-      kesulitan:        question.difficulty ?? exam.difficulty,
-      hindari_soal_mirip: siblingTexts.slice(0, 10).map((t) => t.substring(0, 80)),
-    }
-    if (hint !== undefined) {
-      userPayload['petunjuk_guru'] = hint
-    }
-    const user = JSON.stringify(userPayload, null, 2)
+    const curriculumText = await getCurriculumText(exam.subject, exam.grade)
+    const { system, user } = buildRegeneratePrompt({
+      grade: exam.grade,
+      subjectLabel: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,
+      examSubject: exam.subject,
+      topic: question.topic ?? exam.topics[0] ?? exam.subject,
+      difficulty: question.difficulty ?? exam.difficulty,
+      siblingTexts,
+      hint,
+      curriculumText,
+    })
 
     // Step 4: call AI service
     aiService ??= createDefaultAiService()

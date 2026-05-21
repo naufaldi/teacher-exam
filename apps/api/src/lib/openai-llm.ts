@@ -2,6 +2,10 @@ import OpenAI, { APIError } from 'openai'
 import { Effect } from 'effect'
 import { AiGenerationError } from '../errors'
 import { logAiEvent } from './ai-log'
+import {
+  buildOpenAiResponseFormat,
+  type OpenAiStructuredOutputKind,
+} from './openai-json-schemas.js'
 
 export interface OpenAiLike {
   chat: {
@@ -121,6 +125,7 @@ export function callOpenAiLlmText({
   system,
   user,
   pdfBytes,
+  structuredOutput,
 }: {
   config: OpenAiCallConfig
   model: string
@@ -128,6 +133,7 @@ export function callOpenAiLlmText({
   system: string
   user: string
   pdfBytes?: Buffer | undefined
+  structuredOutput?: OpenAiStructuredOutputKind | undefined
 }): Effect.Effect<string, AiGenerationError> {
   return Effect.gen(function* () {
     const t0 = Date.now()
@@ -193,26 +199,14 @@ export function callOpenAiLlmText({
       return assistantText
     }
 
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        config.client.chat.completions.create({
-          model,
-          max_tokens: maxTokens,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
-      catch: (cause) => {
-        const msg = summarizeOpenAiFailure(cause, config)
-        logAiEvent('ai.chat.completions.create', 'warn', {
-          model,
-          durationMs: Date.now() - t0,
-          status: cause instanceof APIError ? cause.status : undefined,
-          message: msg,
-        })
-        return new AiGenerationError({ cause: msg })
-      },
+    const response = yield* callOpenAiChatCompletion({
+      config,
+      model,
+      maxTokens,
+      system,
+      user,
+      structuredOutput,
+      t0,
     })
 
     const durationMs = Date.now() - t0
@@ -243,5 +237,103 @@ export function callOpenAiLlmText({
       return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned no text block' }))
     }
     return assistantText
+  })
+}
+
+function shouldRetryChatWithoutStructuredOutput(error: unknown): boolean {
+  if (!(error instanceof APIError)) {
+    return false
+  }
+  if (error.status === 400 || error.status === 422) {
+    return true
+  }
+  const message = error.message.toLowerCase()
+  return message.includes('response_format') || message.includes('json_schema')
+}
+
+function callOpenAiChatCompletion({
+  config,
+  model,
+  maxTokens,
+  system,
+  user,
+  structuredOutput,
+  t0,
+}: {
+  config: OpenAiCallConfig
+  model: string
+  maxTokens: number
+  system: string
+  user: string
+  structuredOutput?: OpenAiStructuredOutputKind | undefined
+  t0: number
+}): Effect.Effect<OpenAI.Chat.Completions.ChatCompletion, AiGenerationError> {
+  const baseParams: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+    model,
+    max_completion_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+  }
+
+  const attempt = (
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+    usedStructured: boolean,
+  ) =>
+    Effect.tryPromise({
+      try: () => config.client.chat.completions.create(params),
+      catch: (cause) => {
+        const msg = summarizeOpenAiFailure(cause, config)
+        logAiEvent('ai.chat.completions.create', 'warn', {
+          model,
+          durationMs: Date.now() - t0,
+          status: cause instanceof APIError ? cause.status : undefined,
+          message: msg,
+          structuredOutput: usedStructured ? structuredOutput : undefined,
+        })
+        return new AiGenerationError({ cause: msg })
+      },
+    })
+
+  if (structuredOutput === undefined) {
+    return attempt(baseParams, false)
+  }
+
+  const structuredParams: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+    ...baseParams,
+    response_format: buildOpenAiResponseFormat(structuredOutput),
+  }
+
+  return Effect.gen(function* () {
+    const structuredAttempt = yield* Effect.tryPromise({
+      try: () => config.client.chat.completions.create(structuredParams),
+      catch: (cause) => cause,
+    }).pipe(Effect.either)
+
+    if (structuredAttempt._tag === 'Right') {
+      return structuredAttempt.right
+    }
+
+    const structuredCause = structuredAttempt.left
+    if (!shouldRetryChatWithoutStructuredOutput(structuredCause)) {
+      const msg = summarizeOpenAiFailure(structuredCause, config)
+      logAiEvent('ai.chat.completions.create', 'warn', {
+        model,
+        durationMs: Date.now() - t0,
+        status: structuredCause instanceof APIError ? structuredCause.status : undefined,
+        message: msg,
+        structuredOutput,
+      })
+      return yield* Effect.fail(new AiGenerationError({ cause: msg }))
+    }
+
+    logAiEvent('ai.chat.completions.create', 'warn', {
+      model,
+      durationMs: Date.now() - t0,
+      message: 'structured output rejected; retrying without response_format',
+      structuredOutput,
+    })
+    return yield* attempt(baseParams, false)
   })
 }
