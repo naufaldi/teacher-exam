@@ -365,6 +365,26 @@ describe('buildExamPrompt — Matematika LaTeX rules', () => {
     expect(system).toContain('\\frac{3}{4}')
     expect(system).toContain('x^2')
     expect(system).toContain('\\sqrt{16}')
+    expect(system).toContain('Rp350.000')
+    expect(system).toContain('tanda kutip ganda JSON')
+    expect(system).toContain('pemisah ribuan')
+    expect(system).toContain('Jangan mulai field "text" dengan `$`')
+    expect(system).toContain('tanpa delimiter')
+  })
+
+  test('requires valid JSON string quoting for all subjects', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
+      curriculumText: 'Dummy curriculum.',
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('tanda kutip ganda valid JSON')
   })
 
   test('does not add Matematika-only LaTeX rules for non-Matematika', () => {

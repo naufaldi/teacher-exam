@@ -1,21 +1,42 @@
 import katex from 'katex'
+import { parseMathText, detectBrokenMatematikaLatex, type MathTextPart } from '@teacher-exam/shared'
 import type { GeneratedQuestion } from '@teacher-exam/shared'
+import { normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
 
 export type LatexValidationResult =
   | { _tag: 'valid' }
   | { _tag: 'invalid'; reason: string }
 
-type TextPart =
-  | { _tag: 'text'; value: string }
-  | { _tag: 'math'; value: string; displayMode: boolean; raw: string }
+const UNDELIMITED_MATH_RE = /\\(?:div|frac|sqrt|times)\b/
 
 export function validateLatexText(text: string): LatexValidationResult {
-  const parts = parseMathText(text)
+  const broken = detectBrokenMatematikaLatex(text)
+  if (broken.length > 0) {
+    return {
+      _tag: 'invalid',
+      reason: `Corrupted LaTeX command (missing backslash): ${broken.join(', ')}`,
+    }
+  }
+
+  const normalized = normalizeMatematikaLatexField(text)
+  const parts = parseMathText(normalized)
+
+  const undelimited = findUndelimitedMathInPlainParts(parts)
+  if (undelimited !== null) {
+    return { _tag: 'invalid', reason: `LaTeX command outside delimiters: ${undelimited}` }
+  }
+
   for (const part of parts) {
     if (part._tag === 'text' && part.value.includes('$')) {
-      return { _tag: 'invalid', reason: `Unclosed LaTeX delimiter in: ${text}` }
+      return { _tag: 'invalid', reason: `Unclosed LaTeX delimiter in: ${normalized}` }
     }
     if (part._tag === 'math') {
+      if (/Rp[\d.]/.test(part.value)) {
+        return { _tag: 'invalid', reason: `Currency must stay outside $...$: ${part.raw}` }
+      }
+      if (isNarrativeInsideMath(part.value)) {
+        return { _tag: 'invalid', reason: `Narrative text inside math delimiters: ${part.raw}` }
+      }
       try {
         katex.renderToString(part.value, {
           displayMode: part.displayMode,
@@ -40,6 +61,22 @@ export function validateGeneratedQuestionLatex(question: GeneratedQuestion): Lat
   return { _tag: 'valid' }
 }
 
+function findUndelimitedMathInPlainParts(parts: MathTextPart[]): string | null {
+  for (const part of parts) {
+    if (part._tag !== 'text') continue
+    const match = part.value.match(UNDELIMITED_MATH_RE)
+    if (match !== null) return match[0] ?? part.value.slice(0, 40)
+  }
+  return null
+}
+
+function isNarrativeInsideMath(value: string): boolean {
+  if (value.length < 24) return false
+  const letters = (value.match(/[A-Za-zÀ-ÿ]/g) ?? []).length
+  if (letters < 12) return false
+  return /\s/.test(value) && /[A-Za-zÀ-ÿ]{4,}/.test(value)
+}
+
 function generatedQuestionTextFields(question: GeneratedQuestion): string[] {
   switch (question._tag) {
     case 'mcq_single':
@@ -49,36 +86,4 @@ function generatedQuestionTextFields(question: GeneratedQuestion): string[] {
     case 'true_false':
       return [question.text, ...question.statements.map((statement) => statement.text)]
   }
-}
-
-function parseMathText(text: string): TextPart[] {
-  const parts: TextPart[] = []
-  let cursor = 0
-
-  while (cursor < text.length) {
-    const start = text.indexOf('$', cursor)
-    if (start === -1) {
-      parts.push({ _tag: 'text', value: text.slice(cursor) })
-      break
-    }
-
-    if (start > cursor) parts.push({ _tag: 'text', value: text.slice(cursor, start) })
-
-    const displayMode = text.startsWith('$$', start)
-    const delimiter = displayMode ? '$$' : '$'
-    const contentStart = start + delimiter.length
-    const end = text.indexOf(delimiter, contentStart)
-
-    if (end === -1) {
-      parts.push({ _tag: 'text', value: text.slice(start) })
-      break
-    }
-
-    const value = text.slice(contentStart, end)
-    const raw = text.slice(start, end + delimiter.length)
-    parts.push({ _tag: 'math', value, displayMode, raw })
-    cursor = end + delimiter.length
-  }
-
-  return parts
 }

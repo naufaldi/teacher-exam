@@ -1,6 +1,7 @@
 import type { ExamDifficulty, ExamSubject, ExamType } from '@teacher-exam/shared'
 import type { Composition } from './exam-type-profile'
 import { EXAM_TYPE_PROFILE, resolveDifficultyDist } from './exam-type-profile'
+import { buildMatematikaLatexPromptRules } from './matematika-latex-prompt.js'
 
 export interface BuildPromptInput {
   examType: ExamType
@@ -31,15 +32,8 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     throw new Error('buildExamPrompt: topics must contain at least one item')
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
-  const matematikaRules = input.subjectLabel === 'Matematika'
-    ? [
-        '',
-        '- Khusus Matematika: semua notasi matematika WAJIB memakai delimiter LaTeX.',
-        '  Gunakan `$inline$` untuk ekspresi pendek di dalam kalimat dan `$$display$$` untuk ekspresi panjang.',
-        '  Contoh benar: `$\\frac{3}{4}$`, `$x^2$`, `$\\sqrt{16}$`.',
-        '  Jangan tulis notasi matematika ambigu seperti 3/4, x^2, atau akar 16 tanpa delimiter LaTeX.',
-      ]
-    : []
+  const matematikaRules =
+    input.subjectLabel === 'Matematika' ? [...buildMatematikaLatexPromptRules()] : []
 
   const bahasaInggrisRules =
     input.examSubject === 'bahasa_inggris'
@@ -67,6 +61,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     '',
     'Output rules:',
     `- Jawab HANYA dengan JSON array berisi tepat ${input.totalSoal} soal — tanpa prosa, tanpa pembungkus markdown.`,
+    '- Semua nilai string (text, option_*, topic, label, dll.) WAJIB memakai tanda kutip ganda valid JSON — jangan pernah menulis nilai tanpa kutip.',
     `- Setiap soal WAJIB memiliki field "_tag" yang menentukan jenisnya. Tiga jenis yang diizinkan:`,
     `- Setiap soal WAJIB memiliki field "number" berurutan dari 1 sampai ${input.totalSoal}.`,
     ``,
