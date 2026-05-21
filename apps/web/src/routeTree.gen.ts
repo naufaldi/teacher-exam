@@ -20,6 +20,7 @@ import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
 import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
 import { Route as AuthBankSoalRouteImport } from './routes/_auth.bank-soal'
+import { Route as AuthHelpNotasiMatematikaRouteImport } from './routes/_auth.help.notasi-matematika'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -76,6 +77,12 @@ const AuthBankSoalRoute = AuthBankSoalRouteImport.update({
   path: '/bank-soal',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthHelpNotasiMatematikaRoute =
+  AuthHelpNotasiMatematikaRouteImport.update({
+    id: '/help/notasi-matematika',
+    path: '/help/notasi-matematika',
+    getParentRoute: () => AuthRoute,
+  } as any)
 const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
   id: '/correction/$examId',
   path: '/correction/$examId',
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof AuthReviewRoute
   '/share/$slug': typeof ShareSlugRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
+  '/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/review': typeof AuthReviewRoute
   '/share/$slug': typeof ShareSlugRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
+  '/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_auth/review': typeof AuthReviewRoute
   '/share/$slug': typeof ShareSlugRoute
   '/_auth/correction/$examId': typeof AuthCorrectionExamIdRoute
+  '/_auth/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/share/$slug'
     | '/correction/$examId'
+    | '/help/notasi-matematika'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/share/$slug'
     | '/correction/$examId'
+    | '/help/notasi-matematika'
   id:
     | '__root__'
     | '/'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_auth/review'
     | '/share/$slug'
     | '/_auth/correction/$examId'
+    | '/_auth/help/notasi-matematika'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBankSoalRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/help/notasi-matematika': {
+      id: '/_auth/help/notasi-matematika'
+      path: '/help/notasi-matematika'
+      fullPath: '/help/notasi-matematika'
+      preLoaderRoute: typeof AuthHelpNotasiMatematikaRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/correction/$examId': {
       id: '/_auth/correction/$examId'
       path: '/correction/$examId'
@@ -271,6 +291,7 @@ interface AuthRouteChildren {
   AuthProfileRoute: typeof AuthProfileRoute
   AuthReviewRoute: typeof AuthReviewRoute
   AuthCorrectionExamIdRoute: typeof AuthCorrectionExamIdRoute
+  AuthHelpNotasiMatematikaRoute: typeof AuthHelpNotasiMatematikaRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -283,6 +304,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthProfileRoute: AuthProfileRoute,
   AuthReviewRoute: AuthReviewRoute,
   AuthCorrectionExamIdRoute: AuthCorrectionExamIdRoute,
+  AuthHelpNotasiMatematikaRoute: AuthHelpNotasiMatematikaRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
