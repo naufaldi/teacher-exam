@@ -164,6 +164,70 @@ describe('POST /api/questions/:id/regenerate', () => {
     expect((db.update as Mock).mock.calls).toHaveLength(1)
   })
 
+  it('includes Matematika LaTeX rules in regenerate prompt for matematika exams', async () => {
+    const examRow = makeExamRow({ subject: 'matematika' })
+    const originalRow = makeQuestionRow({ status: 'rejected' })
+    const updatedRow = makeQuestionRow({ status: 'pending' })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])
+      return makeChain([])
+    })
+    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+
+    const generated = makeGeneratedQuestion({ text: 'Hasil dari 5.678 + 3.421 adalah ....' })
+    const fakeAi = makeFakeAiService({
+      generate: vi.fn(() => Effect.succeed([generated])),
+    })
+    const app = buildTestApp(fakeAi)
+
+    await app.request('/api/questions/q-1/regenerate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({}),
+    })
+
+    expect(fakeAi.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ system: expect.stringContaining('pemisah ribuan') }),
+    )
+  })
+
+  it('marks needs_review when regenerated Matematika LaTeX is invalid', async () => {
+    const examRow = makeExamRow({ subject: 'matematika' })
+    const originalRow = makeQuestionRow({ status: 'rejected' })
+    const updatedRow = makeQuestionRow({
+      status: 'pending',
+      validationStatus: 'needs_review',
+      validationReason: 'LaTeX validation failed: LaTeX command outside delimiters: \\div',
+    })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([{ question: originalRow, exam: examRow }])
+      return makeChain([])
+    })
+    ;(db.update as Mock).mockReturnValue(makeChain([updatedRow]))
+
+    const generated = makeGeneratedQuestion({ text: 'Hasil dari 1.824 \\div 12 adalah ....' })
+    const fakeAi = makeFakeAiService({
+      generate: vi.fn(() => Effect.succeed([generated])),
+    })
+    const app = buildTestApp(fakeAi)
+
+    const res = await app.request('/api/questions/q-1/regenerate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({}),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body['validationStatus']).toBe('needs_review')
+    expect(String(body['validationReason'])).toContain('LaTeX')
+  })
+
   it('forwards the hint to the AI service', async () => {
     const examRow = makeExamRow()
     const originalRow = makeQuestionRow({ status: 'rejected' })
