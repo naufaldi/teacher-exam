@@ -5,6 +5,9 @@ import { db, exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion, GeneratedQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../lib/question-mapper'
+import { buildMatematikaLatexPromptRules } from '../lib/matematika-latex-prompt.js'
+import { validateGeneratedQuestionLatex } from '../lib/latex-validator.js'
+import { normalizeMatematikaLatexField } from '../lib/normalize-matematika-latex.js'
 import {
   createDefaultAiService,
   type AiService,
@@ -185,11 +188,14 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
     // Step 3: build a single-question prompt.
     // Shape MUST match `GeneratedQuestionSchema` (tagged Schema.Union in
     // packages/shared) — `_tag` is the discriminator and `number` is required.
+    const isMatematika = exam.subject === 'matematika'
     const system = [
       'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka.',
       'Jawab HANYA dengan JSON array berisi tepat 1 objek soal pilihan ganda — tanpa prosa, tanpa pembungkus markdown.',
+      'Semua nilai string WAJIB memakai tanda kutip ganda valid JSON (mis. "Rp350.000", bukan Rp350.000).',
       'Format wajib (semua field diperlukan):',
       '  { "_tag": "mcq_single", "number": 1, "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit" }',
+      ...(isMatematika ? buildMatematikaLatexPromptRules() : []),
     ].join('\n')
     const userPayload: Record<string, unknown> = {
       kelas:            exam.grade,
@@ -218,11 +224,28 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)
     }
 
-    const generated = result[0]
+    let generated = result[0]
 
     if (generated._tag !== 'mcq_single') {
       return c.json({ error: 'AI generation failed', code: 'AI_ERROR' }, 502)
     }
+
+    if (isMatematika) {
+      generated = {
+        ...generated,
+        text: normalizeMatematikaLatexField(generated.text),
+        option_a: normalizeMatematikaLatexField(generated.option_a),
+        option_b: normalizeMatematikaLatexField(generated.option_b),
+        option_c: normalizeMatematikaLatexField(generated.option_c),
+        option_d: normalizeMatematikaLatexField(generated.option_d),
+      }
+    }
+
+    const latexResult = isMatematika
+      ? validateGeneratedQuestionLatex(generated)
+      : { _tag: 'valid' as const }
+    const validationReason =
+      latexResult._tag === 'invalid' ? `LaTeX validation failed: ${latexResult.reason}` : null
 
     // Step 5: update the question row (regeneration always produces mcq_single)
     const [updatedRow] = await db
@@ -239,8 +262,8 @@ export function createQuestionsRouter(opts: QuestionsRouterOptions = {}): Hono {
         status:        'pending' as const,
         topic:         generated.topic,
         difficulty:    generated.difficulty,
-        validationStatus: null,
-        validationReason: null,
+        validationStatus: validationReason !== null ? 'needs_review' as const : null,
+        validationReason,
       })
       .where(eq(questions.id, id))
       .returning()

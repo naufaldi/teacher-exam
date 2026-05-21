@@ -110,8 +110,10 @@ function AuthLayout() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2">
             {/* Help button */}
-            <Button variant="ghost" size="icon" aria-label="Bantuan">
-              <HelpCircle size={18} />
+            <Button variant="ghost" size="icon" aria-label="Bantuan" asChild>
+              <a href="/help/notasi-matematika" target="_blank" rel="noopener noreferrer">
+                <HelpCircle size={18} />
+              </a>
             </Button>
 
             {/* Teacher pill -> /profile */}
