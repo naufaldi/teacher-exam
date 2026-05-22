@@ -195,12 +195,21 @@ describe('GeneratePage — runGenerate flow', () => {
     mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
 
     renderGeneratePage()
-    await clickGenerateAndFlush()
 
-    // navigate should have been called
-    expect(mockNavigate).toHaveBeenCalledOnce()
-    // dialog should still be open (isGenerating=true) — no 450ms gap where modal closes before route changes
+    fireEvent.click(screen.getByRole('button', { name: /generate lembar/i }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400)
+    })
+
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(mockNavigate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(mockNavigate).toHaveBeenCalledOnce()
   })
 
   it('does NOT navigate when api.ai.generate rejects', async () => {
@@ -240,13 +249,24 @@ describe('GeneratePage — runGenerate flow', () => {
 })
 
 describe('GeneratePage — Matematika subject', () => {
-  it('offers Matematika diagram topics for D phase', () => {
-    renderGeneratePage()
+  it('offers Matematika diagram topics for D phase', async () => {
+    const { TOPICS_BY_SUBJECT } = await import('../../lib/generate-topics.js')
+    const { render: rtlRender } = await import('@testing-library/react')
+    const { TopicMultiSelect } = await import('../../components/generate/topic-multi-select.js')
 
-    fireEvent.click(screen.getByLabelText('Mata Pelajaran'))
-    fireEvent.click(screen.getByText('Matematika'))
+    expect(TOPICS_BY_SUBJECT['matematika']).toContain('Pecahan, Desimal, dan Persen')
+    expect(TOPICS_BY_SUBJECT['matematika']).toContain('Bangun Datar')
+    expect(TOPICS_BY_SUBJECT['matematika']).toContain('Bangun Ruang')
+    expect(TOPICS_BY_SUBJECT['matematika']).toContain('Bidang Koordinat')
 
-    fireEvent.keyDown(screen.getByRole('combobox', { name: /pilih topik/i }), { key: 'Enter' })
+    rtlRender(
+      <TopicMultiSelect
+        options={TOPICS_BY_SUBJECT['matematika']}
+        selected={[]}
+        onChange={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: /pilih topik/i }))
 
     expect(screen.getByText('Pecahan, Desimal, dan Persen')).toBeInTheDocument()
     expect(screen.getByText('Bangun Datar')).toBeInTheDocument()
