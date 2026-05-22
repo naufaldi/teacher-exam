@@ -14,11 +14,14 @@ vi.mock('../../lib/auth-client', () => ({
   signIn: { social: mockSignInSocial },
 }))
 
+const mockNavigate = vi.fn()
+
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (config: Record<string, unknown>) => ({
     options: config,
     useSearch: () => mockSearch,
   }),
+  useNavigate: () => mockNavigate,
   redirect: (opts: Record<string, unknown>) => {
     const err = new Error('redirect') as Error & Record<string, unknown>
     err.isRedirect = true
