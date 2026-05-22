@@ -1,29 +1,6 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
-import { Schema, Either } from 'effect'
+import { vi } from 'vitest'
 import { QuestionSchema } from '@teacher-exam/shared'
 
-// Mock the DB module before importing the router
-vi.mock('@teacher-exam/db', () => {
-  return {
-    db: {
-      select: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-      insert: vi.fn(),
-    },
-    exams: {
-      id: 'exams.id',
-      userId: 'exams.userId',
-      createdAt: 'exams.createdAt',
-      isPublic: 'exams.isPublic',
-      publicShareSlug: 'exams.publicShareSlug',
-    },
-    questions: { examId: 'questions.examId', number: 'questions.number' },
-  }
-})
-
-// Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
   and: vi.fn((...args) => ({ op: 'and', args })),
@@ -31,10 +8,9 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import { db } from '@teacher-exam/db'
-import { examsRouter } from '../../exams.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
+import { buildHttpApiTestApp } from '../http-api-setup.js'
 
-// Fixed timestamp for testing
 const NOW = '2024-01-01T00:00:00.000Z'
 
 const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
@@ -63,14 +39,11 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-function buildTestApp() {
-  const app = new Hono()
-  app.use('*', async (c, next) => {
-    c.set('userId', 'test-user-id')
-    await next()
+function buildTestApp(opts: { aiService?: import('../../services/AiService.js').AiService } = {}) {
+  return buildHttpApiTestApp({
+    userId: 'test-user-id',
+    ...(opts.aiService !== undefined ? { aiService: opts.aiService } : {}),
   })
-  app.route('/api/exams', examsRouter)
-  return app
 }
 
-export { buildTestApp, makeExamRow, NOW }
+export { buildTestApp, makeExamRow, NOW, db, QuestionSchema, makeChain, makeQuestionRow }

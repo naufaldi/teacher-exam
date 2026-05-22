@@ -1,22 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
 import { Effect } from 'effect'
 import type { AiService, GeneratedQuestion } from '../../../services/AiService.js'
-import { AiGenerationError } from '../../../errors/index.js'
-
-vi.mock('@teacher-exam/db', () => {
-  const db = {
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    transaction: vi.fn(),
-  }
-  return {
-    db,
-    exams: { id: 'exams.id', userId: 'exams.userId' },
-    questions: { examId: 'questions.examId', number: 'questions.number', id: 'questions.id' },
-  }
-})
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
@@ -34,8 +18,8 @@ vi.mock('../../../lib/prompt.js', () => ({
 
 import { db } from '@teacher-exam/db'
 import { buildExamPrompt } from '../../../lib/prompt.js'
-import { createAiRouter } from '../../ai.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
+import { buildHttpApiTestApp } from '../http-api-setup.js'
 
 const NOW = '2024-01-01T00:00:00.000Z'
 
@@ -113,17 +97,11 @@ const VALID_BODY = {
 }
 
 function buildUnauthApp() {
-  return new Hono().route('/api/ai', createAiRouter({ aiService: fakeAiService }))
+  return buildHttpApiTestApp({ aiService: fakeAiService, authenticated: false })
 }
 
 function buildTestApp() {
-  const app = new Hono()
-  app.use('*', async (c, next) => {
-    c.set('userId', 'test-user-id')
-    await next()
-  })
-  app.route('/api/ai', createAiRouter({ aiService: fakeAiService }))
-  return app
+  return buildHttpApiTestApp({ userId: 'test-user-id', aiService: fakeAiService })
 }
 
 export {
@@ -135,4 +113,8 @@ export {
   makeFakeQuestion,
   VALID_BODY,
   FAKE_AI_QUESTIONS,
+  db,
+  buildExamPrompt,
+  makeChain,
+  makeQuestionRow,
 }

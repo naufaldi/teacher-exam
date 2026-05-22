@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
 
 vi.mock('../../lib/auth', () => ({
   auth: {
     api: {
       signInEmail: vi.fn(),
+      getSession: vi.fn(async () => null),
     },
   },
 }))
 
 import { auth } from '../../lib/auth'
-import { devAuthRouter } from '../dev-auth'
+import { buildHttpApiTestApp } from './http-api-setup'
 
 function buildApp() {
-  return new Hono().route('/api/dev', devAuthRouter)
+  return buildHttpApiTestApp({ authenticated: false })
 }
 
 describe('POST /api/dev/login', () => {
@@ -80,7 +80,12 @@ describe('POST /api/dev/login', () => {
         asResponse: true,
       }),
     )
-    expect(res.headers.get('set-cookie')).toContain('better-auth.session_token')
+    const setCookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : []
+    const cookieHeader = res.headers.get('set-cookie')
+    expect(
+      setCookies.some((c) => c.includes('better-auth.session_token')) ||
+        (cookieHeader?.includes('better-auth.session_token') ?? false),
+    ).toBe(true)
   })
 
   it('returns 401 when sign-in fails', async () => {

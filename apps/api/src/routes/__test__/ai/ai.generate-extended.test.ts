@@ -1,10 +1,8 @@
 import './ai-setup.js'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Effect } from 'effect'
-import { Hono } from 'hono'
 import { db } from '@teacher-exam/db'
 import { buildExamPrompt } from '../../../lib/prompt.js'
-import { createAiRouter } from '../../ai.js'
 import {
   buildTestApp,
   fakeAiService,
@@ -124,9 +122,7 @@ describe('POST /api/ai/generate — multi-topic', () => {
       return makeChain(questionRows)
     })
 
-    const app = new Hono()
-    app.use('*', async (c, next) => { c.set('userId', 'test-user-id'); await next() })
-    app.route('/api/ai', createAiRouter({ aiService: fakeAiService }))
+    const app = buildTestApp()
 
     const res = await app.request('/api/ai/generate', {
       method: 'POST',
@@ -145,9 +141,7 @@ describe('POST /api/ai/generate — multi-topic', () => {
   })
 
   it('rejects body with old single topic string field', async () => {
-    const app = new Hono()
-    app.use('*', async (c, next) => { c.set('userId', 'test-user-id'); await next() })
-    app.route('/api/ai', createAiRouter({ aiService: fakeAiService }))
+    const app = buildTestApp()
 
     const res = await app.request('/api/ai/generate', {
       method: 'POST',
