@@ -1,19 +1,4 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
-
-vi.mock('@teacher-exam/db', () => {
-  return {
-    db: {
-      select: vi.fn(),
-    },
-    exams: {
-      id: 'exams.id',
-      publicShareSlug: 'exams.publicShareSlug',
-      isPublic: 'exams.isPublic',
-    },
-    questions: { examId: 'questions.examId', number: 'questions.number' },
-  }
-})
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
@@ -21,13 +6,11 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import { db } from '@teacher-exam/db'
-import { publicExamsRouter } from '../public-exams'
 import { makeChain, makeExamRow, makeQuestionRow } from './helpers'
+import { buildHttpApiTestApp } from './http-api-setup'
 
 function buildTestApp() {
-  const app = new Hono()
-  app.route('/api/public/exams', publicExamsRouter)
-  return app
+  return buildHttpApiTestApp({ authenticated: false })
 }
 
 describe('GET /api/public/exams/:slug', () => {
@@ -63,7 +46,7 @@ describe('GET /api/public/exams/:slug', () => {
     const res = await app.request('/api/public/exams/share-abc123')
 
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body['id']).toBe('exam-1')
     expect(body['publishedAt']).toBe('2026-05-08T09:00:00.000Z')
     expect(body).not.toHaveProperty('userId')

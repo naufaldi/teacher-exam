@@ -1,35 +1,25 @@
-import { Hono } from 'hono'
 import { Effect, Either, Schema, Match } from 'effect'
 import { db, exams, questions } from '@teacher-exam/db'
 import {
-  GenerateExamInputSchema,
   normalizeExamType,
   formatExamTitle,
   SUBJECT_LABEL,
   FigureSpecSchema,
 } from '@teacher-exam/shared'
 import type { FigureSpec, GeneratedQuestion, Question } from '@teacher-exam/shared'
-import { getCurriculumText } from '../lib/curriculum'
-import { logAiEvent } from '../lib/ai-log'
-import { EXAM_TYPE_PROFILE, resolveComposition } from '../lib/exam-type-profile'
-import { buildExamPrompt } from '../lib/prompt'
-import { fetchExamWithQuestions } from '../lib/exams-query'
-import { questionToRow } from '../lib/question-mapper'
-import { validateGeneratedQuestionLatex, type LatexValidationResult } from '../lib/latex-validator'
-import {
-  createDefaultAiService,
-  type AiService,
-} from '../services/AiService'
+import type { GenerateExamInput } from '@teacher-exam/shared'
+import { getCurriculumText } from './curriculum'
+import { logAiEvent } from './ai-log'
+import { EXAM_TYPE_PROFILE, resolveComposition } from './exam-type-profile'
+import { buildExamPrompt } from './prompt'
+import { fetchExamWithQuestions } from './exams-query'
+import { questionToRow } from './question-mapper'
+import { validateGeneratedQuestionLatex, type LatexValidationResult } from './latex-validator'
+import { type AiService } from '../services/AiService'
 import { AiGenerationError } from '../errors'
-import {
-  parseGeneratedQuestions,
-  type ParsedItemFailure,
-} from '../lib/parse-generated-questions'
-import {
-  EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE,
-  isExamSubjectEnumMismatch,
-} from '../lib/db-errors'
-import { normalizeGeneratedQuestionLatexFields } from '../lib/normalize-matematika-latex.js'
+import { parseGeneratedQuestions, type ParsedItemFailure } from './parse-generated-questions'
+import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from './db-errors'
+import { normalizeGeneratedQuestionLatexFields, normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
 
 const PLACEHOLDER_STUB_TEXT =
   'Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang.'
@@ -308,166 +298,143 @@ function decodeGeneratedFigure(raw: unknown): {
   }
 }
 
-/**
- * Build the `/api/ai` router. Accepts an injected `AiService` for tests; in
- * production the default service (`createDefaultAiService`, from `AI_PROVIDER` + keys) is created lazily.
- */
-export function createAiRouter(opts: { aiService?: AiService } = {}): Hono {
-  const router = new Hono()
-  let aiService = opts.aiService
+export type GenerateExamResult =
+  | { readonly _tag: 'success'; readonly body: Record<string, unknown>; readonly status: 201 }
+  | { readonly _tag: 'ai_error'; readonly message: string }
+  | { readonly _tag: 'database_error'; readonly message: string }
+  | { readonly _tag: 'validation_error'; readonly details: string }
 
-  router.post('/generate', async (c) => {
-    const handlerT0 = Date.now()
-    const userId = c.get('userId') as string | undefined
-    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+export async function generateExam(
+  userId: string,
+  input: GenerateExamInput,
+  aiService: AiService,
+): Promise<GenerateExamResult> {
+  const handlerT0 = Date.now()
+  const examType = normalizeExamType(input.examType ?? 'formatif')
+  const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
-    const body = await c.req.json().catch(() => null)
-    if (body === null) return c.json({ error: 'Invalid JSON body' }, 400)
+  let composition: ReturnType<typeof resolveComposition>
+  try {
+    composition = resolveComposition(examType, totalSoal, input.composition)
+  } catch (err) {
+    return { _tag: 'validation_error', details: (err as Error).message }
+  }
 
-    const decode = Schema.decodeUnknownEither(GenerateExamInputSchema)
-    const parsed = decode(body)
-    if (parsed._tag === 'Left') {
-      return c.json(
-        { error: 'Validation failed', details: String(parsed.left) },
-        400,
-      )
-    }
-    const input = parsed.right
-
-    const examType = normalizeExamType(input.examType ?? 'formatif')
-    const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
-
-    let composition: ReturnType<typeof resolveComposition>
-    try {
-      composition = resolveComposition(examType, totalSoal, input.composition)
-    } catch (err) {
-      return c.json({ error: 'Validation failed', details: (err as Error).message }, 400)
-    }
-
-    const curriculumText = await getCurriculumText(input.subject, input.grade)
-    const { system, user } = buildExamPrompt({
-      examType,
-      difficulty: input.difficulty,
-      examSubject: input.subject,
-      subjectLabel: SUBJECT_LABEL[input.subject],
-      grade: input.grade,
-      topics: [...input.topics],
-      totalSoal,
-      composition,
-      curriculumText,
-      classContext: input.classContext,
-      exampleQuestions: input.exampleQuestions,
-    })
-
-    aiService ??= createDefaultAiService()
-
-    const title = formatExamTitle({
-      subjectLabel: SUBJECT_LABEL[input.subject],
-      grade: input.grade,
-      examType,
-      examDate: null,
-      topics: [...input.topics],
-    })
-    const examId = crypto.randomUUID()
-    const now = new Date()
-
-    const generated = await generateWithSalvage(aiService, {
-      system,
-      user,
-      expectedCount: totalSoal,
-      shouldValidateLatex: input.subject === 'matematika',
-      reviewMode: input.reviewMode,
-      examId,
-      createdAt: now,
-    })
-    if (Either.isLeft(generated)) {
-      const err = generated.left
-      logAiEvent('api.ai.generate', 'warn', {
-        path: '/api/ai/generate',
-        message: String((err as { cause?: unknown }).cause),
-      })
-      return c.json({ error: 'AI generation failed', message: String((err as { cause?: unknown }).cause) }, 502)
-    }
-
-    const insertedQuestions = [...generated.right.questions]
-    const generationIncomplete = generated.right.generationIncomplete
-    const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
-
-    try {
-      await db.transaction(async (tx) => {
-        await tx.insert(exams).values({
-          id:          examId,
-          userId,
-          title,
-          subject:     input.subject,
-          grade:       input.grade,
-          difficulty:  input.difficulty,
-          topics:      [...input.topics],
-          reviewMode:  input.reviewMode,
-          status:      'draft',
-          examType,
-          classContext: input.classContext ?? null,
-          createdAt:   now,
-          updatedAt:   now,
-        })
-
-        await tx.insert(questions).values(
-          insertedQuestions.map((dbQuestion) => {
-            const rowFields = questionToRow(dbQuestion)
-            return {
-              id: dbQuestion.id,
-              examId: dbQuestion.examId,
-              number: dbQuestion.number,
-              text: dbQuestion.text,
-              topic: dbQuestion.topic,
-              difficulty: dbQuestion.difficulty,
-              status: dbQuestion.status,
-              validationStatus: dbQuestion.validationStatus,
-              validationReason: dbQuestion.validationReason,
-              createdAt: now,
-              type: rowFields.type,
-              optionA: rowFields.optionA,
-              optionB: rowFields.optionB,
-              optionC: rowFields.optionC,
-              optionD: rowFields.optionD,
-              correctAnswer: rowFields.correctAnswer,
-              payload: rowFields.payload,
-            }
-          }),
-        )
-      })
-    } catch (err) {
-      if (isExamSubjectEnumMismatch(err)) {
-        return c.json(
-          { error: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, code: 'DATABASE_ERROR' },
-          500,
-        )
-      }
-      throw err
-    }
-
-    const result = await fetchExamWithQuestions(examId)
-    if (!result) {
-      return c.json({ error: 'Failed to retrieve generated exam', code: 'DATABASE_ERROR' }, 500)
-    }
-
-    logAiEvent('api.ai.generate', 'info', {
-      path: '/api/ai/generate',
-      examId,
-      questionCount: insertedQuestions.length,
-      durationMs: Date.now() - handlerT0,
-    })
-
-    return c.json(
-      {
-        ...result,
-        ...(generationIncomplete
-          ? { generationIncomplete: true, failedQuestionNumbers }
-          : {}),
-      },
-      201,
-    )
+  const curriculumText = await getCurriculumText(input.subject, input.grade)
+  const { system, user } = buildExamPrompt({
+    examType,
+    difficulty: input.difficulty,
+    examSubject: input.subject,
+    subjectLabel: SUBJECT_LABEL[input.subject],
+    grade: input.grade,
+    topics: [...input.topics],
+    totalSoal,
+    composition,
+    curriculumText,
+    classContext: input.classContext,
+    exampleQuestions: input.exampleQuestions,
   })
 
-  return router
+  const title = formatExamTitle({
+    subjectLabel: SUBJECT_LABEL[input.subject],
+    grade: input.grade,
+    examType,
+    examDate: null,
+    topics: [...input.topics],
+  })
+  const examId = crypto.randomUUID()
+  const now = new Date()
+
+  const generated = await generateWithSalvage(aiService, {
+    system,
+    user,
+    expectedCount: totalSoal,
+    shouldValidateLatex: input.subject === 'matematika',
+    reviewMode: input.reviewMode,
+    examId,
+    createdAt: now,
+  })
+  if (Either.isLeft(generated)) {
+    const err = generated.left
+    logAiEvent('api.ai.generate', 'warn', {
+      path: '/api/ai/generate',
+      message: String((err as { cause?: unknown }).cause),
+    })
+    return { _tag: 'ai_error', message: String((err as { cause?: unknown }).cause) }
+  }
+
+  const insertedQuestions = [...generated.right.questions]
+  const generationIncomplete = generated.right.generationIncomplete
+  const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(exams).values({
+        id: examId,
+        userId,
+        title,
+        subject: input.subject,
+        grade: input.grade,
+        difficulty: input.difficulty,
+        topics: [...input.topics],
+        reviewMode: input.reviewMode,
+        status: 'draft',
+        examType,
+        classContext: input.classContext ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await tx.insert(questions).values(
+        insertedQuestions.map((dbQuestion) => {
+          const rowFields = questionToRow(dbQuestion)
+          return {
+            id: dbQuestion.id,
+            examId: dbQuestion.examId,
+            number: dbQuestion.number,
+            text: dbQuestion.text,
+            topic: dbQuestion.topic,
+            difficulty: dbQuestion.difficulty,
+            status: dbQuestion.status,
+            validationStatus: dbQuestion.validationStatus,
+            validationReason: dbQuestion.validationReason,
+            createdAt: now,
+            type: rowFields.type,
+            optionA: rowFields.optionA,
+            optionB: rowFields.optionB,
+            optionC: rowFields.optionC,
+            optionD: rowFields.optionD,
+            correctAnswer: rowFields.correctAnswer,
+            payload: rowFields.payload,
+          }
+        }),
+      )
+    })
+  } catch (err) {
+    if (isExamSubjectEnumMismatch(err)) {
+      return { _tag: 'database_error', message: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE }
+    }
+    throw err
+  }
+
+  const result = await fetchExamWithQuestions(examId)
+  if (!result) {
+    return { _tag: 'database_error', message: 'Failed to retrieve generated exam' }
+  }
+
+  logAiEvent('api.ai.generate', 'info', {
+    path: '/api/ai/generate',
+    examId,
+    questionCount: insertedQuestions.length,
+    durationMs: Date.now() - handlerT0,
+  })
+
+  return {
+    _tag: 'success',
+    status: 201,
+    body: {
+      ...result,
+      ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {}),
+    },
+  }
 }

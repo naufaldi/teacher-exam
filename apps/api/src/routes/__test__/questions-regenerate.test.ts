@@ -1,18 +1,8 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
 import { Effect } from 'effect'
 import type { AiService, AnthropicLike, GeneratedQuestion } from '../../services/AiService'
 import { createAiService } from '../../services/AiService'
 import { AiGenerationError } from '../../errors'
-
-vi.mock('@teacher-exam/db', () => ({
-  db: {
-    select: vi.fn(),
-    update: vi.fn(),
-  },
-  exams:     { id: 'exams.id', userId: 'exams.userId' },
-  questions: { id: 'questions.id', examId: 'questions.examId', status: 'questions.status' },
-}))
 
 vi.mock('drizzle-orm', () => ({
   eq:  vi.fn((col, val) => ({ op: 'eq', col, val })),
@@ -25,8 +15,15 @@ vi.mock('../../lib/curriculum', () => ({
 }))
 
 import { db } from '@teacher-exam/db'
-import { createQuestionsRouter } from '../questions'
 import { makeChain, makeQuestionRow, makeExamRow } from './helpers.js'
+import { buildHttpApiTestApp } from './http-api-setup'
+
+function buildTestApp(aiService?: AiService) {
+  return buildHttpApiTestApp({
+    userId: 'test-user-id',
+    ...(aiService !== undefined ? { aiService } : {}),
+  })
+}
 
 function makeGeneratedQuestion(overrides: Partial<Extract<GeneratedQuestion, { _tag: 'mcq_single' }>> = {}): Extract<GeneratedQuestion, { _tag: 'mcq_single' }> {
   return {
@@ -74,17 +71,6 @@ function mockRegenerateUpdates(
       : (validatedRow ?? { ...contentRow, validationStatus: 'valid', validationReason: 'Sesuai CP.' })
     return makeChain([row])
   })
-}
-
-function buildTestApp(aiService?: AiService) {
-  const router = createQuestionsRouter({ aiService })
-  const app = new Hono()
-  app.use('*', async (c, next) => {
-    c.set('userId', 'test-user-id')
-    await next()
-  })
-  app.route('/api/questions', router)
-  return app
 }
 
 describe('PATCH /api/questions/:id accepts status: pending', () => {

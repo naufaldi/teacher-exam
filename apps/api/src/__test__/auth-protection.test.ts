@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
-import { Hono } from 'hono'
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest'
 
 vi.mock('../lib/auth', () => ({
   auth: {
@@ -9,40 +8,18 @@ vi.mock('../lib/auth', () => ({
   },
 }))
 
-vi.mock('@teacher-exam/db', () => ({
-  db: {
-    select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }),
-    update: () => ({ set: () => ({ where: async () => undefined }) }),
-  },
-  exams: {
-    publicShareSlug: 'exams.publicShareSlug',
-  },
-  questions: {
-    examId: 'questions.examId',
-    number: 'questions.number',
-  },
-  user: {},
-}))
-
-const { requireAuth } = await import('../middleware/auth')
-const { meRouter } = await import('../routes/me')
-const { createAiRouter } = await import('../routes/ai')
-const { healthRouter } = await import('../routes/health')
-const { publicExamsRouter } = await import('../routes/public-exams')
-const { devAuthRouter } = await import('../routes/dev-auth')
+import { db } from '@teacher-exam/db'
+import { buildHttpApiTestApp } from '../routes/__test__/http-api-setup'
+import { makeChain } from '../routes/__test__/helpers'
 
 function buildApp() {
-  const app = new Hono()
-  app.route('/api/health', healthRouter)
-  app.route('/api/dev', devAuthRouter)
-  app.route('/api/public/exams', publicExamsRouter)
-  app.use('/api/*', requireAuth)
-  app.route('/api/me', meRouter)
-  app.route('/api/ai', createAiRouter())
-  return app
+  return buildHttpApiTestApp({ authenticated: false })
 }
 
 describe('auth protection on protected API routes', () => {
+  beforeEach(() => {
+    vi.mocked(db.select).mockReturnValue(makeChain([]))
+  })
   it('GET /api/health is reachable without a session', async () => {
     const app = buildApp()
     const res = await app.request('/api/health')
@@ -71,7 +48,7 @@ describe('auth protection on protected API routes', () => {
     const app = buildApp()
     const res = await app.request('/api/me')
     expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ error: 'Unauthorized' })
+    expect(await res.json()).toMatchObject({ error: 'Unauthorized' })
   })
 
   it('GET /api/public/exams/:slug is reachable without a session', async () => {

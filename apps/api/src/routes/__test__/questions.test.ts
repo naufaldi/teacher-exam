@@ -1,14 +1,4 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Hono } from 'hono'
-
-vi.mock('@teacher-exam/db', () => ({
-  db: {
-    select: vi.fn(),
-    update: vi.fn(),
-  },
-  exams:     { id: 'exams.id', userId: 'exams.userId' },
-  questions: { id: 'questions.id', examId: 'questions.examId', status: 'questions.status' },
-}))
 
 vi.mock('drizzle-orm', () => ({
   eq:  vi.fn((col, val) => ({ op: 'eq', col, val })),
@@ -16,17 +6,11 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import { db } from '@teacher-exam/db'
-import { questionsRouter } from '../questions'
 import { makeChain, makeQuestionRow } from './helpers'
+import { buildHttpApiTestApp } from './http-api-setup'
 
 function buildTestApp() {
-  const app = new Hono()
-  app.use('*', async (c, next) => {
-    c.set('userId', 'test-user-id')
-    await next()
-  })
-  app.route('/api/questions', questionsRouter)
-  return app
+  return buildHttpApiTestApp({ userId: 'test-user-id' })
 }
 
 describe('PATCH /api/questions/:id', () => {
