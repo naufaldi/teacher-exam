@@ -19,6 +19,7 @@ import { type AiService } from '../services/AiService'
 import { AiGenerationError } from '../errors'
 import { parseGeneratedQuestions, type ParsedItemFailure } from './parse-generated-questions'
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from './db-errors'
+import { normalizeGeneratedQuestionLatexFields, normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
 
 const PLACEHOLDER_STUB_TEXT =
   'Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang.'
@@ -154,6 +155,7 @@ async function generateWithSalvage(
       latexByNumber: Map<number, LatexValidationResult>
     }
     | null = null
+  let lastParseError: AiGenerationError | null = null
 
   const devSimulateSalvage = process.env['DEV_SIMULATE_SALVAGE'] === '1'
 
@@ -181,7 +183,10 @@ async function generateWithSalvage(
     if (Either.isLeft(rawResult)) return Either.left(rawResult.left)
 
     const parsed = parseGeneratedQuestions(rawResult.right, request.expectedCount)
-    if (Either.isLeft(parsed)) return Either.left(parsed.left)
+    if (Either.isLeft(parsed)) {
+      lastParseError = parsed.left
+      continue
+    }
 
     const { valid, failed, missingNumbers } = parsed.right
     const latexByNumber = new Map<number, LatexValidationResult>()
@@ -200,6 +205,7 @@ async function generateWithSalvage(
   }
 
   if (!lastSalvage) {
+    if (lastParseError) return Either.left(lastParseError)
     return Either.left(new AiGenerationError({ cause: 'AI generation produced no output' }))
   }
 
@@ -228,10 +234,11 @@ async function generateWithSalvage(
   const byNumber = new Map<number, Question>()
   for (const q of lastSalvage.valid) {
     const latex = lastSalvage.latexByNumber.get(q.number) ?? { _tag: 'valid' as const }
+    const stored = request.shouldValidateLatex ? normalizeGeneratedQuestionLatexFields(q) : q
     byNumber.set(
       q.number,
       convertGeneratedToQuestion(
-        q,
+        stored,
         {
           id: crypto.randomUUID(),
           examId: request.examId,

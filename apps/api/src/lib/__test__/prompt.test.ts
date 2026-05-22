@@ -365,6 +365,26 @@ describe('buildExamPrompt — Matematika LaTeX rules', () => {
     expect(system).toContain('\\frac{3}{4}')
     expect(system).toContain('x^2')
     expect(system).toContain('\\sqrt{16}')
+    expect(system).toContain('Rp350.000')
+    expect(system).toContain('tanda kutip ganda JSON')
+    expect(system).toContain('pemisah ribuan')
+    expect(system).toContain('Jangan mulai field "text" dengan `$`')
+    expect(system).toContain('tanpa delimiter')
+  })
+
+  test('requires valid JSON string quoting for all subjects', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 5,
+      topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
+      curriculumText: 'Dummy curriculum.',
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('tanda kutip ganda valid JSON')
   })
 
   test('does not add Matematika-only LaTeX rules for non-Matematika', () => {
@@ -382,5 +402,24 @@ describe('buildExamPrompt — Matematika LaTeX rules', () => {
     expect(system).not.toContain('$inline$')
     expect(system).not.toContain('$$display$$')
     expect(system).not.toContain('\\frac{3}{4}')
+  })
+
+  test('includes GPT-5.4 modular sections and mcq_single example', () => {
+    const { system } = buildExamPrompt({
+      examType: 'formatif',
+      difficulty: 'campuran',
+      examSubject: 'bahasa_indonesia',
+      subjectLabel: 'Bahasa Indonesia',
+      grade: 6,
+      topics: ['Pemahaman Bacaan'],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    })
+
+    expect(system).toContain('# Tujuan')
+    expect(system).toContain('# Verifikasi')
+    expect(system).toContain('Contoh minimal mcq_single')
+    expect(system).toContain('"mcq_single"')
   })
 })

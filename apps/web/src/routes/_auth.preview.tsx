@@ -295,7 +295,9 @@ function renderTrueFalseTable(statements: ReadonlyArray<{ text: string; answer: 
       <tbody>
         {statements.map((stmt, i) => (
           <tr key={i}>
-            <td className="border border-black/40 px-2 py-1">{stmt.text}</td>
+            <td className="border border-black/40 px-2 py-1">
+              <MathText text={stmt.text} />
+            </td>
             <td className="text-center border border-black/40 px-2 py-1">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-black/60 text-[10px]" />
             </td>

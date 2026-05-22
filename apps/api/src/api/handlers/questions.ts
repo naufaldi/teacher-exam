@@ -2,9 +2,13 @@ import { HttpApiBuilder } from '@effect/platform'
 import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
 import { db, exams, questions } from '@teacher-exam/db'
-import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema } from '@teacher-exam/shared'
+import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../../lib/question-mapper'
+import { getCurriculumText } from '../../lib/curriculum'
+import { validateGeneratedQuestionLatex } from '../../lib/latex-validator.js'
+import { normalizeMatematikaLatexField } from '../../lib/normalize-matematika-latex.js'
+import { buildRegeneratePrompt } from '../../lib/prompt'
 import { TeacherExamApi } from '../definition'
 import {
   ApiAiError,
@@ -211,24 +215,21 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
         )
 
         const siblingTexts = siblingRows.map((r) => r.text)
-
-        const system = [
-          'Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka.',
-          'Jawab HANYA dengan JSON array berisi tepat 1 objek soal pilihan ganda — tanpa prosa, tanpa pembungkus markdown.',
-          'Format wajib (semua field diperlukan):',
-          '  { "_tag": "mcq_single", "number": 1, "text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "a|b|c|d", "topic": "...", "difficulty": "mudah|sedang|sulit" }',
-        ].join('\n')
-        const userPayload: Record<string, unknown> = {
-          kelas: exam.grade,
-          mata_pelajaran: exam.subject,
-          topik: question.topic ?? exam.topics[0] ?? exam.subject,
-          kesulitan: question.difficulty ?? exam.difficulty,
-          hindari_soal_mirip: siblingTexts.slice(0, 10).map((t) => t.substring(0, 80)),
-        }
-        if (hint !== undefined) {
-          userPayload['petunjuk_guru'] = hint
-        }
-        const user = JSON.stringify(userPayload, null, 2)
+        const isMatematika = exam.subject === 'matematika'
+        const curriculumText = yield* Effect.tryPromise({
+          try: () => getCurriculumText(exam.subject, exam.grade),
+          catch: () => new ApiDatabaseError({ error: 'Curriculum lookup failed', code: 'DATABASE_ERROR' }),
+        })
+        const { system, user } = buildRegeneratePrompt({
+          grade: exam.grade,
+          subjectLabel: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,
+          examSubject: exam.subject,
+          topic: question.topic ?? exam.topics[0] ?? exam.subject,
+          difficulty: question.difficulty ?? exam.difficulty,
+          siblingTexts,
+          hint,
+          curriculumText,
+        })
 
         const aiResult = yield* Effect.either(aiService.generate({ system, user, expectedCount: 1 }))
         if (Either.isLeft(aiResult)) {
@@ -244,12 +245,29 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
           )
         }
 
-        const generated = result[0]
+        let generated = result[0]
         if (generated._tag !== 'mcq_single') {
           return yield* Effect.fail(
             new ApiAiError({ error: 'AI generation failed', code: 'AI_ERROR' }),
           )
         }
+
+        if (isMatematika) {
+          generated = {
+            ...generated,
+            text: normalizeMatematikaLatexField(generated.text),
+            option_a: normalizeMatematikaLatexField(generated.option_a),
+            option_b: normalizeMatematikaLatexField(generated.option_b),
+            option_c: normalizeMatematikaLatexField(generated.option_c),
+            option_d: normalizeMatematikaLatexField(generated.option_d),
+          }
+        }
+
+        const latexResult = isMatematika
+          ? validateGeneratedQuestionLatex(generated)
+          : { _tag: 'valid' as const }
+        const validationReason =
+          latexResult._tag === 'invalid' ? `LaTeX validation failed: ${latexResult.reason}` : null
 
         const updatedRows = yield* tryDb(() =>
           db
@@ -266,8 +284,8 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
               status: 'pending' as const,
               topic: generated.topic,
               difficulty: generated.difficulty,
-              validationStatus: null,
-              validationReason: null,
+              validationStatus: validationReason !== null ? ('needs_review' as const) : null,
+              validationReason,
             })
             .where(eq(questions.id, id))
             .returning(),

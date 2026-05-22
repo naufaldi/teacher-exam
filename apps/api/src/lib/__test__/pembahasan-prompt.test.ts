@@ -73,11 +73,13 @@ describe('buildPembahasanPrompt', () => {
     expect(system).toContain('pembahasan')
   })
 
-  it('system specifies the per-question markdown structure from PRD §10.4', () => {
+  it('system specifies student printable pembahasan structure', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
     expect(system).toContain('Jawaban Benar')
-    expect(system).toContain('menjelaskan')
-    expect(system).toContain('Tip')
+    expect(system).toContain('**Langkah:**')
+    expect(system).toContain('**Penjelasan:**')
+    expect(system).toContain('**Opsi Lain:**')
+    expect(system).toContain('**Tip:**')
   })
 
   it('system does NOT contain raw question data (keeps system cacheable)', () => {
@@ -115,14 +117,19 @@ describe('buildPembahasanPrompt', () => {
     ).toThrow('buildPembahasanPrompt: questions must not be empty')
   })
 
-  it('system contains kakak persona for student-friendly tone', () => {
+  it('system targets printable lembar for siswa only', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
-    expect(system).toContain('kakak')
+    expect(system).toContain('siswa')
+    expect(system).toContain('dicetak')
+    expect(system).not.toContain('kakak')
+    expect(system).not.toMatch(/### Untuk Guru|\*\*Untuk Guru\*\*/)
+    expect(system).not.toMatch(/\*\*Catatan Guru\*\*/)
+    expect(system).not.toMatch(/\*\*Strategi Mengajar\*\*/)
   })
 
-  it('system contains 12 kata sentence-length constraint', () => {
+  it('system does not impose the old 12-kata sentence cap', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
-    expect(system).toContain('12 kata')
+    expect(system).not.toContain('12 kata')
   })
 
   it('system contains sehari-hari vocabulary instruction', () => {
@@ -130,18 +137,25 @@ describe('buildPembahasanPrompt', () => {
     expect(system).toContain('sehari-hari')
   })
 
-  it('system explicitly bans formal/academic words that are too hard for SD students', () => {
+  it('system includes GPT-5.4 success criteria and verification blocks', () => {
     const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
-    expect(system).toContain('implisit')
-    expect(system).toContain('eksplisit')
-    expect(system).toContain('rincian')
-    expect(system).toContain('mendalam')
-    expect(system).toContain('JANGAN')
+    expect(system).toContain('# Kriteria keberhasilan')
+    expect(system).toContain('Verifikasi (internal')
   })
 
-  it('system provides replacement words for banned terms', () => {
-    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS })
-    expect(system).toContain('tersembunyi')
+  it('grade 5 and grade 6 produce different depth rules', () => {
+    const grade5 = buildPembahasanPrompt({
+      exam: { ...FAKE_EXAM, grade: 5 },
+      questions: FAKE_QUESTIONS.slice(0, 1),
+    }).system
+    const grade6 = buildPembahasanPrompt({
+      exam: FAKE_EXAM,
+      questions: FAKE_QUESTIONS.slice(0, 1),
+    }).system
+
+    expect(grade5).toContain('2–3 langkah')
+    expect(grade6).toContain('3–5 langkah')
+    expect(grade5).not.toBe(grade6)
   })
 
   it('serializes mixed question types without empty legacy option placeholders', () => {
@@ -176,11 +190,97 @@ describe('buildPembahasanPrompt', () => {
     expect(system).toContain('B, S, B')
   })
 
-  it('requires LaTeX delimiters for Matematika pembahasan', () => {
+  it('requires LaTeX delimiters for Matematika pembahasan via shared rules', () => {
     const { system } = buildPembahasanPrompt({ exam: MATEMATIKA_EXAM, questions: MIXED_QUESTIONS })
 
-    expect(system).toContain('$...$')
-    expect(system).toContain('$$...$$')
-    expect(system).toContain('Jangan tulis pecahan, akar, pangkat, atau rumus matematika sebagai teks biasa')
+    expect(system).toContain('$inline$')
+    expect(system).toContain('$$display$$')
+    expect(system).toContain('\\frac{3}{4}')
+    expect(system).toContain('# Kelengkapan')
+    expect(system).toContain('# Personality')
+  })
+
+  it('requires step-by-step calculation in Langkah for Matematika', () => {
+    const { system } = buildPembahasanPrompt({ exam: MATEMATIKA_EXAM, questions: MIXED_QUESTIONS })
+    expect(system).toContain('perhitungan bertahap')
+  })
+
+  it('requires Bahasa Indonesia reading strategy in Langkah', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: FAKE_QUESTIONS.slice(0, 1) })
+    expect(system).toContain('bukti di teks')
+  })
+
+  it('instructs skipping Opsi Lain for true_false questions', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: MIXED_QUESTIONS })
+    expect(system).toMatch(/true_false.*lewati.*Opsi Lain/is)
+  })
+})
+
+const SINGLE_QUESTION = FAKE_QUESTIONS.slice(0, 1)
+
+describe('buildPembahasanPrompt subject rules', () => {
+  it('includes Bahasa Indonesia-specific pembahasan guidance', () => {
+    const { system } = buildPembahasanPrompt({ exam: FAKE_EXAM, questions: SINGLE_QUESTION })
+    expect(system).toContain('Aturan Bahasa Indonesia:')
+    expect(system).toContain('ide pokok')
+    expect(system).toContain('bukti di teks')
+  })
+
+  it('includes Pendidikan Pancasila-specific pembahasan guidance', () => {
+    const { system } = buildPembahasanPrompt({
+      exam: { subject: 'Pendidikan Pancasila', grade: 6, examType: 'formatif' },
+      questions: SINGLE_QUESTION,
+    })
+    expect(system).toContain('Aturan Pendidikan Pancasila:')
+    expect(system).toMatch(/nilai Pancasila|norma/)
+  })
+
+  it('includes IPAS-specific pembahasan guidance', () => {
+    const { system } = buildPembahasanPrompt({
+      exam: { subject: 'IPAS', grade: 6, examType: 'formatif' },
+      questions: SINGLE_QUESTION,
+    })
+    expect(system).toContain('Aturan IPAS:')
+    expect(system).toMatch(/konsep IPA|fenomena|sebab-akibat/)
+  })
+
+  it('includes Bahasa Inggris-specific pembahasan guidance', () => {
+    const { system } = buildPembahasanPrompt({
+      exam: { subject: 'Bahasa Inggris', grade: 6, examType: 'formatif' },
+      questions: SINGLE_QUESTION,
+    })
+    expect(system).toContain('Aturan Bahasa Inggris:')
+    expect(system).toContain('Bahasa Indonesia')
+    expect(system).toMatch(/teks.*Inggris|instruksi.*Inggris/i)
+  })
+
+  it('includes Matematika-specific pembahasan guidance without BI markers', () => {
+    const { system } = buildPembahasanPrompt({ exam: MATEMATIKA_EXAM, questions: SINGLE_QUESTION })
+    expect(system).toContain('Aturan Matematika:')
+    expect(system).toContain('perhitungan bertahap')
+    expect(system).not.toContain('Aturan Bahasa Indonesia:')
+  })
+
+  it('uses general fallback for unknown subjects without cross-subject leakage', () => {
+    const { system } = buildPembahasanPrompt({
+      exam: { subject: 'Seni Budaya', grade: 6, examType: 'formatif' },
+      questions: SINGLE_QUESTION,
+    })
+    expect(system).toContain('Aturan umum mata pelajaran Seni Budaya:')
+    expect(system).toMatch(/baca pertanyaan.*pahami topik|pahami topik.*cari bukti/is)
+    expect(system).toContain('field `topic`')
+    expect(system).not.toContain('perhitungan bertahap')
+    expect(system).not.toContain('Aturan Bahasa Indonesia:')
+    expect(system).not.toContain('Aturan Pendidikan Pancasila:')
+    expect(system).not.toContain('Aturan Matematika:')
+  })
+
+  it('normalizes subject label case for known subjects', () => {
+    const { system } = buildPembahasanPrompt({
+      exam: { subject: 'matematika', grade: 6, examType: 'formatif' },
+      questions: SINGLE_QUESTION,
+    })
+    expect(system).toContain('Aturan Matematika:')
+    expect(system).not.toContain('Aturan umum mata pelajaran')
   })
 })

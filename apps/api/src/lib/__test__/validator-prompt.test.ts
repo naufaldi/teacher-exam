@@ -33,6 +33,19 @@ describe('buildValidatorPrompt', () => {
     expect(system).toContain('invalid')
   })
 
+  it('includes grounding, completeness, and JSON output contract blocks', () => {
+    const corpus = '--- KORPUS CP Fase C ---\nCapaian Pembelajaran'
+    const { system } = buildValidatorPrompt({
+      exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
+      curriculumText: corpus,
+      questions: [SAMPLE_QUESTION],
+    })
+    expect(system).toContain('# Grounding')
+    expect(system).toContain('# Kelengkapan')
+    expect(system).toContain('# Kontrak output JSON')
+    expect(system).toContain('# Verifikasi')
+  })
+
   it('serializes questions as JSON in the user message', () => {
     const { user } = buildValidatorPrompt({
       exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },

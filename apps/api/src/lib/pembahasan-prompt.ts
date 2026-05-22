@@ -1,4 +1,22 @@
 import { Match } from 'effect'
+import {
+  buildPembahasanGradeRules,
+  buildPembahasanSubjectRules,
+  isKnownPembahasanSubject,
+  normalizeSubjectLabel,
+} from './pembahasan-subject-rules.js'
+import {
+  completenessBlock,
+  formattingBlock,
+  goalBlock,
+  joinPromptSections,
+  outputBlock,
+  personalityBlock,
+  roleBlock,
+  stopRulesBlock,
+  successCriteriaBlock,
+  verificationBlock,
+} from './prompt-blocks.js'
 import type { BuiltPrompt } from './prompt'
 
 export interface PembahasanLegacyQuestion {
@@ -59,6 +77,14 @@ export interface BuildPembahasanInput {
 
 export type { BuiltPrompt }
 
+export {
+  buildPembahasanGradeRules,
+  buildPembahasanSubjectRules,
+  buildGeneralPembahasanRules,
+  isKnownPembahasanSubject,
+  normalizeSubjectLabel,
+} from './pembahasan-subject-rules.js'
+
 function isTypedQuestion(q: PembahasanQuestion): q is Exclude<PembahasanQuestion, PembahasanLegacyQuestion> {
   return '_tag' in q
 }
@@ -106,8 +132,85 @@ export function serializeQuestionForPrompt(q: PembahasanQuestion) {
   )
 }
 
-function isMatematikaSubject(subject: string): boolean {
-  return subject.toLowerCase() === 'matematika'
+function buildAnswerLabelRules(): readonly string[] {
+  return [
+    'Format label jawaban berdasarkan jenis soal:',
+    '- Pilihan ganda biasa (mcq_single): satu huruf, contoh A.',
+    '- Pilihan ganda kompleks (mcq_multi): beberapa huruf dipisah koma, contoh A, C.',
+    '- Benar/Salah (true_false): urutan B/S sesuai baris pernyataan, contoh B, S, B.',
+    '- Jangan mencari opsi A-D pada soal Benar/Salah. Gunakan statements dan answers.',
+    '- Untuk true_false: lewati **Opsi Lain**; jelaskan tiap pernyataan di **Langkah** atau **Penjelasan**.',
+  ]
+}
+
+function buildOutputTemplate(): readonly string[] {
+  return [
+    'Format markdown per soal (lembar dicetak untuk siswa):',
+    '',
+    '## {nomor}. {ringkas isi soal dalam 1 kalimat pendek}',
+    '**Jawaban Benar: {label jawaban}**',
+    '',
+    '**Langkah:**',
+    '1. {langkah konkret}',
+    '2. {langkah berikutnya jika perlu}',
+    '',
+    '**Penjelasan:**',
+    '{2–4 kalimat: mengapa jawaban benar, bahasa sesuai kelas}',
+    '',
+    '**Opsi Lain:** *(wajib untuk mcq_single / mcq_multi; lewati untuk true_false)*',
+    '- A: … *(salah karena … — kalimat sederhana untuk siswa)*',
+    '- B: …',
+    '- C: …',
+    '- D: …',
+    '*(Hanya jelaskan opsi yang salah; opsi benar tidak perlu diulang di sini.)*',
+    '',
+    '**Tip:**',
+    '{1–2 kalimat strategi singkat agar mudah diingat}',
+    '',
+    '---',
+  ]
+}
+
+function buildSuccessCriteria(subject: string): readonly string[] {
+  const normalized = normalizeSubjectLabel(subject)
+  const subjectAlignment = isKnownPembahasanSubject(normalized)
+    ? `Pembahasan selaras aturan mata pelajaran ${normalized} (bukan aturan umum atau mapel lain).`
+    : `Pembahasan mengikuti aturan umum mata pelajaran ${normalized}; jangan pakai pedagogy mapel lain (Matematika LaTeX, ide pokok BI, nilai Pancasila, dll.).`
+
+  return [
+    'Setiap soal punya **Jawaban Benar**, **Langkah**, **Penjelasan**, dan **Tip**.',
+    'Soal mcq_single dan mcq_multi punya **Opsi Lain** untuk setiap distraktor yang salah.',
+    'Soal true_false lewati **Opsi Lain**; jelaskan B/S per pernyataan di **Langkah** atau **Penjelasan**.',
+    subjectAlignment,
+    'Bahasa sesuai kedalaman kelas; tidak ada blok guru atau catatan untuk guru.',
+    'Label jawaban benar sesuai jenis soal (mcq_single, mcq_multi, true_false).',
+  ]
+}
+
+function buildVerificationRules(subject: string): readonly string[] {
+  const normalized = normalizeSubjectLabel(subject)
+  const known = isKnownPembahasanSubject(normalized)
+
+  const subjectCheck = Match.value(known).pipe(
+    Match.when(true, () => {
+      if (normalized === 'Matematika') {
+        return 'Matematika: langkah hitung bertahap + LaTeX benar; tidak ada pedagogy mapel lain.'
+      }
+      return `Aturan khusus ${normalized} tercermin di Langkah/Penjelasan/Opsi Lain.`
+    }),
+    Match.when(false, () =>
+      `Mata pelajaran umum ${normalized}: ikuti aturan umum; tidak ada LaTeX Matematika atau jargon mapel lain.`,
+    ),
+    Match.exhaustive,
+  )
+
+  return [
+    'Semua nomor soal dari input sudah dibahas berurutan.',
+    'Setiap soal punya Langkah, Penjelasan, Tip; Opsi Lain ada untuk MCQ, tidak untuk true_false.',
+    'Label Jawaban Benar sesuai jenis soal.',
+    subjectCheck,
+    'Tidak ada blok guru atau catatan guru.',
+  ]
 }
 
 export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt {
@@ -115,51 +218,45 @@ export function buildPembahasanPrompt(input: BuildPembahasanInput): BuiltPrompt 
     throw new Error('buildPembahasanPrompt: questions must not be empty')
   }
 
-  const matematikaRules = isMatematikaSubject(input.exam.subject)
-    ? [
-        '',
-        'Aturan Matematika (WAJIB):',
-        '- Tulis semua ekspresi matematika dengan delimiter LaTeX.',
-        '- Gunakan $...$ untuk matematika inline.',
-        '- Gunakan $$...$$ untuk rumus atau langkah hitung yang berdiri sendiri.',
-        '- Jangan tulis pecahan, akar, pangkat, atau rumus matematika sebagai teks biasa.',
-        '- Contoh benar: $\\frac{3}{4}$, $2^3$, $\\sqrt{16}$, $$12 \\times 5 = 60$$.',
-      ]
-    : []
+  const { grade, subject, examType } = input.exam
+  const questionCount = input.questions.length
+  const displaySubject = normalizeSubjectLabel(subject)
+  const gradeRules = buildPembahasanGradeRules(grade)
+  const subjectRules = buildPembahasanSubjectRules(subject, grade)
 
-  const system = [
-    `Kamu adalah kakak yang sabar membantu adik kelas ${input.exam.grade} SD memahami soal ${input.exam.subject} (${input.exam.examType.toUpperCase()}).`,
-    '',
-    'Tugas: untuk SETIAP soal pada daftar JSON di bawah, tulis pembahasan dalam format markdown:',
-    '',
-    '## {nomor}. {ringkas isi soal dalam 1 kalimat pendek}',
-    '**Jawaban Benar: {label jawaban}**',
-    '',
-    '{2 sampai 3 kalimat pendek menjelaskan MENGAPA jawaban itu benar.}',
-    '',
-    '**Tip:** {1 kalimat singkat agar mudah diingat}',
-    '',
-    '---',
-    '',
-    'Format label jawaban berdasarkan jenis soal:',
-    '- Pilihan ganda biasa (mcq_single): satu huruf, contoh A.',
-    '- Pilihan ganda kompleks (mcq_multi): beberapa huruf dipisah koma, contoh A, C.',
-    '- Benar/Salah (true_false): urutan B/S sesuai baris pernyataan, contoh B, S, B.',
-    '- Jangan mencari opsi A-D pada soal Benar/Salah. Gunakan statements dan answers.',
-    '',
-    'Aturan bahasa (WAJIB):',
-    `- Tulis untuk anak kelas ${input.exam.grade} SD. Bayangkan kamu menjelaskan ke adikmu sendiri.`,
-    '- Setiap kalimat maksimal 12 kata.',
-    '- Pakai kata sehari-hari. Hindari istilah teknis. Kalau terpaksa pakai, jelaskan dalam tanda kurung.',
-    '- JANGAN gunakan kata-kata ini (terlalu sulit untuk SD): implisit, eksplisit, rincian, mendalam, konsep, konkret, abstrak, analisis, komprehensif.',
-    '- Ganti dengan kata sederhana: tersembunyi (bukan implisit), jelas/terang-terangan (bukan eksplisit), isi/bagian (bukan rincian), dalam-dalam (bukan mendalam).',
-    '- Boleh memakai contoh sederhana dari kehidupan sehari-hari (uang jajan, mainan, makanan, sekolah).',
-    '- Tidak boleh menyalin soal kata per kata. Ringkas dengan kalimatmu sendiri.',
-    '- Tidak boleh ada paragraf pembuka atau penutup di luar blok per-soal.',
+  const system = joinPromptSections([
+    roleBlock(
+      `Kamu menulis lembar pembahasan untuk siswa SD kelas ${grade} — soal ${displaySubject} (${examType.toUpperCase()}). Lembar ini dicetak dan diberikan ke siswa setelah ujian agar mereka paham jawaban benar dan salah.`,
+    ),
+    personalityBlock(
+      'Ramah, jelas, sabar — seperti penjelasan teman sebaya yang mudah dipahami. Bukan kunci jawaban kering.',
+    ),
+    goalBlock(
+      `Tulis pembahasan markdown untuk SETIAP soal pada daftar JSON user (${questionCount} soal). Setiap soal wajib punya **Langkah**, **Penjelasan**, **Opsi Lain** (kecuali true_false), dan **Tip**.`,
+    ),
+    successCriteriaBlock(buildSuccessCriteria(subject)),
+    completenessBlock(questionCount, 'soal'),
+    formattingBlock([
+      'Tulis hanya untuk siswa — lembar ini dicetak dan dibaca mandiri.',
+      'Gunakan paragraf pendek; daftar bernomor di **Langkah:**; bullet di **Opsi Lain:**.',
+      'Tidak boleh ada paragraf pembuka atau penutup di luar blok per-soal.',
+      'Tidak boleh menyalin soal kata per kata — ringkas dengan kalimatmu sendiri.',
+      'Tidak boleh ada Untuk Guru, Catatan Guru, Strategi Mengajar, atau blok serupa.',
+    ]),
+    'Aturan bahasa:',
+    `- Tulis untuk siswa kelas ${grade} SD.`,
+    '- Pakai kata sehari-hari; hindari istilah akademik tinggi.',
+    '- Boleh memakai contoh sederhana dari kehidupan sehari-hari.',
     '- Jawaban Benar wajib mengikuti format label jawaban sesuai jenis soal.',
-    '- Ikuti urutan nomor soal dari kecil ke besar. Jangan lewati nomor.',
-    ...matematikaRules,
-  ].join('\n')
+    ...gradeRules,
+    ...subjectRules,
+    outputBlock([...buildOutputTemplate(), ...buildAnswerLabelRules()]),
+    verificationBlock(buildVerificationRules(subject)),
+    stopRulesBlock([
+      'Setelah semua soal selesai, jangan tulis apa pun lagi.',
+      'Jangan minta klarifikasi; gunakan data JSON user.',
+    ]),
+  ])
 
   const user = JSON.stringify(
     input.questions.map((q) => serializeQuestionForPrompt(q)),

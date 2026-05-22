@@ -8,6 +8,19 @@ import {
   type PembahasanQuestion,
   type PembahasanTrueFalseQuestion,
 } from './pembahasan-prompt'
+import {
+  completenessBlock,
+  corpusBlock,
+  goalBlock,
+  groundingBlock,
+  joinPromptSections,
+  outputBlock,
+  roleBlock,
+  stopRulesBlock,
+  structuredJsonOutputBlock,
+  successCriteriaBlock,
+  verificationBlock,
+} from './prompt-blocks.js'
 
 export type { BuiltPrompt }
 
@@ -58,28 +71,41 @@ export function buildValidatorPrompt(input: BuildValidatorInput): BuiltPrompt {
     throw new Error('buildValidatorPrompt: questions must not be empty')
   }
 
-  const system = [
-    `Kamu adalah Penjaga Kurikulum untuk soal ulangan SD Kurikulum Merdeka Fase C (Kelas 5–6).`,
-    `Mata pelajaran: ${input.exam.subject}, kelas ${input.exam.grade}, jenis ujian: ${input.exam.examType}.`,
-    '',
-    'Tugas: evaluasi SETIAP soal pada daftar JSON user terhadap CP/TP pada korpus di bawah.',
-    '',
-    'Status yang diizinkan (field "status"):',
-    '- "valid" — soal sesuai CP/TP dan level kognitif untuk kelas ini',
-    '- "needs_review" — ketidaksesuaian minor (mis. level kognitif sedikit tinggi/rendah)',
-    '- "invalid" — soal keluar topik atau tidak selaras CP',
-    '',
-    'Field "reason": 1–2 kalimat singkat dalam Bahasa Indonesia.',
-    '',
-    'Output rules:',
-    '- Jawab HANYA dengan JSON array — tanpa prosa, tanpa markdown fence.',
-    `- Satu objek per soal: { "number": <int>, "status": "valid"|"needs_review"|"invalid", "reason": "..." }`,
-    `- Wajib ada entri untuk setiap nomor soal pada input (${input.questions.length} soal).`,
-    '',
-    '--- KORPUS BUKU SISWA (Kurikulum Merdeka, Fase C) ---',
-    input.curriculumText,
-    '--- AKHIR KORPUS ---',
-  ].join('\n')
+  const questionCount = input.questions.length
+
+  const system = joinPromptSections([
+    roleBlock(
+      `Kamu adalah Penjaga Kurikulum untuk soal ulangan SD Kurikulum Merdeka Fase C (Kelas 5–6). Mata pelajaran: ${input.exam.subject}, kelas ${input.exam.grade}, jenis ujian: ${input.exam.examType}.`,
+    ),
+    goalBlock('Evaluasi SETIAP soal pada daftar JSON user terhadap CP/TP pada korpus di bawah.'),
+    successCriteriaBlock([
+      `Satu objek JSON per soal input (${questionCount} entri).`,
+      'Field "status" hanya valid | needs_review | invalid.',
+      'Field "reason": 1–2 kalimat singkat Bahasa Indonesia.',
+    ]),
+    structuredJsonOutputBlock(),
+    groundingBlock(),
+    corpusBlock(input.curriculumText),
+    completenessBlock(questionCount, 'soal'),
+    outputBlock([
+      'Status yang diizinkan (field "status"):',
+      '- "valid" — soal sesuai CP/TP dan level kognitif untuk kelas ini',
+      '- "needs_review" — ketidaksesuaian minor (mis. level kognitif sedikit tinggi/rendah)',
+      '- "invalid" — soal keluar topik atau tidak selaras CP',
+      '',
+      'Bentuk setiap objek:',
+      '  { "number": <int>, "status": "valid"|"needs_review"|"invalid", "reason": "..." }',
+    ]),
+    verificationBlock([
+      'Pastikan jumlah entri sama dengan jumlah soal input.',
+      'Pastikan setiap nomor input muncul tepat sekali.',
+      'Pastikan status hanya nilai enum yang diizinkan.',
+    ]),
+    stopRulesBlock([
+      'Setelah array JSON valid, jangan tulis apa pun lagi.',
+      'Jangan minta klarifikasi; evaluasi dari korpus dan soal yang diberikan.',
+    ]),
+  ])
 
   const user = JSON.stringify(
     input.questions.map((q) => serializeQuestionForPrompt(questionToPembahasanShape(q))),
