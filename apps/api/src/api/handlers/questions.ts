@@ -1,7 +1,7 @@
 import { HttpApiBuilder } from '@effect/platform'
 import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
-import { db, exams, questions } from '@teacher-exam/db'
+import { exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../../lib/question-mapper'
@@ -18,7 +18,8 @@ import {
   ApiValidationError422NoDetails,
 } from '../errors/http'
 import { CurrentUser } from '../middleware/auth'
-import { tryDb } from '../lib/db-effect'
+import { runDb } from '../lib/db-effect'
+import { DbClient } from '../services/db'
 import { AiClient } from '../services/ai'
 
 export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (handlers) =>
@@ -27,6 +28,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
         const decode = Schema.decodeUnknownEither(UpdateQuestionInputSchema)
         const parsed = decode(payload)
@@ -57,7 +59,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
           )
         }
 
-        const ownerRows = yield* tryDb(() =>
+        const ownerRows = yield* runDb(
           db
             .select({ questionId: questions.id, examUserId: exams.userId })
             .from(questions)
@@ -72,7 +74,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
           )
         }
 
-        const existingRows = yield* tryDb(() =>
+        const existingRows = yield* runDb(
           db.select().from(questions).where(eq(questions.id, id)).limit(1),
         )
 
@@ -158,7 +160,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
         if (input.text !== undefined) updateData['text'] = input.text
         if (input.status !== undefined) updateData['status'] = input.status
 
-        const updatedRows = yield* tryDb(() =>
+        const updatedRows = yield* runDb(
           db.update(questions).set(updateData).where(eq(questions.id, id)).returning(),
         )
         const updated = updatedRows[0]
@@ -175,6 +177,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
         const { userId } = yield* CurrentUser
         const { id } = path
         const aiService = yield* AiClient
+        const db = yield* DbClient
 
         const decode = Schema.decodeUnknownEither(RegenerateQuestionInputSchema)
         const parsed = decode(payload)
@@ -190,7 +193,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
         const input = parsed.right
         const hint = input.hint
 
-        const ownerRows = yield* tryDb(() =>
+        const ownerRows = yield* runDb(
           db
             .select({ question: questions, exam: exams })
             .from(questions)
@@ -207,7 +210,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
 
         const { question, exam } = ownerRows[0]
 
-        const siblingRows = yield* tryDb(() =>
+        const siblingRows = yield* runDb(
           db
             .select({ text: questions.text })
             .from(questions)
@@ -269,7 +272,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
         const validationReason =
           latexResult._tag === 'invalid' ? `LaTeX validation failed: ${latexResult.reason}` : null
 
-        const updatedRows = yield* tryDb(() =>
+        const updatedRows = yield* runDb(
           db
             .update(questions)
             .set({

@@ -1,9 +1,14 @@
 import { Effect } from 'effect'
+import { SqlError } from '@effect/sql/SqlError'
 import { ApiDatabaseError } from '../errors/http'
+import { DbClient } from '../services/db'
 
-export function tryDb<A>(run: () => Promise<A>): Effect.Effect<A, ApiDatabaseError> {
-  return Effect.tryPromise({
-    try: run,
-    catch: () => new ApiDatabaseError({ error: 'Database error', code: 'DATABASE_ERROR' }),
-  })
+export function runDb<A>(
+  query: Effect.Effect<A, SqlError, DbClient>,
+): Effect.Effect<A, ApiDatabaseError, DbClient> {
+  return query.pipe(
+    Effect.catchTag('SqlError', (e) =>
+      Effect.fail(new ApiDatabaseError({ error: e.message, code: 'DATABASE_ERROR' })),
+    ),
+  )
 }

@@ -1,8 +1,12 @@
 import { eq } from 'drizzle-orm'
-import { db, exams, questions } from '@teacher-exam/db'
+import { Effect } from 'effect'
+import { exams, questions } from '@teacher-exam/db'
 import { normalizeExamType } from '@teacher-exam/shared'
 import type { Exam, ExamWithQuestions, PublicExam, PublicExamWithQuestions } from '@teacher-exam/shared'
 import type { InferSelectModel } from 'drizzle-orm'
+import { ApiDatabaseError } from '../api/errors/http'
+import { DbClient } from '../api/services/db'
+import { runDb } from '../api/lib/db-effect'
 import { rowToQuestion } from './question-mapper'
 
 type ExamRow = InferSelectModel<typeof exams>
@@ -56,47 +60,51 @@ export function toPublicExam(row: ExamRow): PublicExam {
   }
 }
 
-export async function fetchExamWithQuestions(examId: string): Promise<ExamWithQuestions | null> {
-  const examRows = await db.select().from(exams).where(eq(exams.id, examId)).limit(1)
-  const examRow = examRows[0]
-  if (!examRow) return null
+export function fetchExamWithQuestions(
+  examId: string,
+): Effect.Effect<ExamWithQuestions | null, ApiDatabaseError, DbClient> {
+  return Effect.gen(function* () {
+    const db = yield* DbClient
+    const examRows = yield* runDb(db.select().from(exams).where(eq(exams.id, examId)).limit(1))
+    const examRow = examRows[0]
+    if (!examRow) return null
 
-  const questionRows = await db
-    .select()
-    .from(questions)
-    .where(eq(questions.examId, examId))
-    .orderBy(questions.number)
+    const questionRows = yield* runDb(
+      db.select().from(questions).where(eq(questions.examId, examId)).orderBy(questions.number),
+    )
 
-  const mappedQuestions = questionRows.map((q) => rowToQuestion(q))
-  const failedQuestionNumbers = mappedQuestions
-    .filter((q) => q.generationFailed === true)
-    .map((q) => q.number)
-  return {
-    ...toExam(examRow),
-    questions: mappedQuestions,
-    ...(failedQuestionNumbers.length > 0
-      ? {
-          generationIncomplete: true,
-          failedQuestionNumbers,
-        }
-      : {}),
-  }
+    const mappedQuestions = questionRows.map((q) => rowToQuestion(q))
+    const failedQuestionNumbers = mappedQuestions
+      .filter((q) => q.generationFailed === true)
+      .map((q) => q.number)
+    return {
+      ...toExam(examRow),
+      questions: mappedQuestions,
+      ...(failedQuestionNumbers.length > 0
+        ? {
+            generationIncomplete: true,
+            failedQuestionNumbers,
+          }
+        : {}),
+    }
+  })
 }
 
-export async function fetchPublicExamWithQuestions(slug: string): Promise<PublicExamWithQuestions | null> {
-  const examRows = await db
-    .select()
-    .from(exams)
-    .where(eq(exams.publicShareSlug, slug))
-    .limit(1)
-  const examRow = examRows[0]
-  if (!examRow || !examRow.isPublic || examRow.publishedAt === null) return null
+export function fetchPublicExamWithQuestions(
+  slug: string,
+): Effect.Effect<PublicExamWithQuestions | null, ApiDatabaseError, DbClient> {
+  return Effect.gen(function* () {
+    const db = yield* DbClient
+    const examRows = yield* runDb(
+      db.select().from(exams).where(eq(exams.publicShareSlug, slug)).limit(1),
+    )
+    const examRow = examRows[0]
+    if (!examRow || !examRow.isPublic || examRow.publishedAt === null) return null
 
-  const questionRows = await db
-    .select()
-    .from(questions)
-    .where(eq(questions.examId, examRow.id))
-    .orderBy(questions.number)
+    const questionRows = yield* runDb(
+      db.select().from(questions).where(eq(questions.examId, examRow.id)).orderBy(questions.number),
+    )
 
-  return { ...toPublicExam(examRow), questions: questionRows.map((q) => rowToQuestion(q)) }
+    return { ...toPublicExam(examRow), questions: questionRows.map((q) => rowToQuestion(q)) }
+  })
 }

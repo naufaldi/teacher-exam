@@ -1,5 +1,6 @@
 import { Effect, Either, Schema, Match } from 'effect'
-import { db, exams, questions } from '@teacher-exam/db'
+import { SqlClient } from '@effect/sql/SqlClient'
+import { exams, questions } from '@teacher-exam/db'
 import {
   normalizeExamType,
   formatExamTitle,
@@ -17,9 +18,12 @@ import { questionToRow } from './question-mapper'
 import { validateGeneratedQuestionLatex, type LatexValidationResult } from './latex-validator'
 import { type AiService } from '../services/AiService'
 import { AiGenerationError } from '../errors'
+import { ApiDatabaseError } from '../api/errors/http'
 import { parseGeneratedQuestions, type ParsedItemFailure } from './parse-generated-questions'
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from './db-errors'
 import { normalizeGeneratedQuestionLatexFields, normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
+import { DbClient } from '../api/services/db'
+import { runDb } from '../api/lib/db-effect'
 
 const PLACEHOLDER_STUB_TEXT =
   'Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang.'
@@ -304,137 +308,160 @@ export type GenerateExamResult =
   | { readonly _tag: 'database_error'; readonly message: string }
   | { readonly _tag: 'validation_error'; readonly details: string }
 
-export async function generateExam(
+export function generateExam(
   userId: string,
   input: GenerateExamInput,
   aiService: AiService,
-): Promise<GenerateExamResult> {
-  const handlerT0 = Date.now()
-  const examType = normalizeExamType(input.examType ?? 'formatif')
-  const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
+): Effect.Effect<GenerateExamResult, AiGenerationError | ApiDatabaseError, DbClient | SqlClient> {
+  return Effect.gen(function* () {
+    const handlerT0 = Date.now()
+    const examType = normalizeExamType(input.examType ?? 'formatif')
+    const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
-  let composition: ReturnType<typeof resolveComposition>
-  try {
-    composition = resolveComposition(examType, totalSoal, input.composition)
-  } catch (err) {
-    return { _tag: 'validation_error', details: (err as Error).message }
-  }
-
-  const curriculumText = await getCurriculumText(input.subject, input.grade)
-  const { system, user } = buildExamPrompt({
-    examType,
-    difficulty: input.difficulty,
-    examSubject: input.subject,
-    subjectLabel: SUBJECT_LABEL[input.subject],
-    grade: input.grade,
-    topics: [...input.topics],
-    totalSoal,
-    composition,
-    curriculumText,
-    classContext: input.classContext,
-    exampleQuestions: input.exampleQuestions,
-  })
-
-  const title = formatExamTitle({
-    subjectLabel: SUBJECT_LABEL[input.subject],
-    grade: input.grade,
-    examType,
-    examDate: null,
-    topics: [...input.topics],
-  })
-  const examId = crypto.randomUUID()
-  const now = new Date()
-
-  const generated = await generateWithSalvage(aiService, {
-    system,
-    user,
-    expectedCount: totalSoal,
-    shouldValidateLatex: input.subject === 'matematika',
-    reviewMode: input.reviewMode,
-    examId,
-    createdAt: now,
-  })
-  if (Either.isLeft(generated)) {
-    const err = generated.left
-    logAiEvent('api.ai.generate', 'warn', {
-      path: '/api/ai/generate',
-      message: String((err as { cause?: unknown }).cause),
-    })
-    return { _tag: 'ai_error', message: String((err as { cause?: unknown }).cause) }
-  }
-
-  const insertedQuestions = [...generated.right.questions]
-  const generationIncomplete = generated.right.generationIncomplete
-  const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
-
-  try {
-    await db.transaction(async (tx) => {
-      await tx.insert(exams).values({
-        id: examId,
-        userId,
-        title,
-        subject: input.subject,
-        grade: input.grade,
-        difficulty: input.difficulty,
-        topics: [...input.topics],
-        reviewMode: input.reviewMode,
-        status: 'draft',
-        examType,
-        classContext: input.classContext ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-
-      await tx.insert(questions).values(
-        insertedQuestions.map((dbQuestion) => {
-          const rowFields = questionToRow(dbQuestion)
-          return {
-            id: dbQuestion.id,
-            examId: dbQuestion.examId,
-            number: dbQuestion.number,
-            text: dbQuestion.text,
-            topic: dbQuestion.topic,
-            difficulty: dbQuestion.difficulty,
-            status: dbQuestion.status,
-            validationStatus: dbQuestion.validationStatus,
-            validationReason: dbQuestion.validationReason,
-            createdAt: now,
-            type: rowFields.type,
-            optionA: rowFields.optionA,
-            optionB: rowFields.optionB,
-            optionC: rowFields.optionC,
-            optionD: rowFields.optionD,
-            correctAnswer: rowFields.correctAnswer,
-            payload: rowFields.payload,
-          }
-        }),
-      )
-    })
-  } catch (err) {
-    if (isExamSubjectEnumMismatch(err)) {
-      return { _tag: 'database_error', message: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE }
+    let composition: ReturnType<typeof resolveComposition>
+    try {
+      composition = resolveComposition(examType, totalSoal, input.composition)
+    } catch (err) {
+      return { _tag: 'validation_error', details: (err as Error).message }
     }
-    throw err
-  }
 
-  const result = await fetchExamWithQuestions(examId)
-  if (!result) {
-    return { _tag: 'database_error', message: 'Failed to retrieve generated exam' }
-  }
+    const curriculumText = yield* Effect.tryPromise({
+      try: () => getCurriculumText(input.subject, input.grade),
+      catch: (cause) => cause,
+    }).pipe(Effect.orDie)
+    const { system, user } = buildExamPrompt({
+      examType,
+      difficulty: input.difficulty,
+      examSubject: input.subject,
+      subjectLabel: SUBJECT_LABEL[input.subject],
+      grade: input.grade,
+      topics: [...input.topics],
+      totalSoal,
+      composition,
+      curriculumText,
+      classContext: input.classContext,
+      exampleQuestions: input.exampleQuestions,
+    })
 
-  logAiEvent('api.ai.generate', 'info', {
-    path: '/api/ai/generate',
-    examId,
-    questionCount: insertedQuestions.length,
-    durationMs: Date.now() - handlerT0,
+    const title = formatExamTitle({
+      subjectLabel: SUBJECT_LABEL[input.subject],
+      grade: input.grade,
+      examType,
+      examDate: null,
+      topics: [...input.topics],
+    })
+    const examId = crypto.randomUUID()
+    const now = new Date()
+
+    const generated = yield* Effect.tryPromise({
+      try: () =>
+        generateWithSalvage(aiService, {
+          system,
+          user,
+          expectedCount: totalSoal,
+          shouldValidateLatex: input.subject === 'matematika',
+          reviewMode: input.reviewMode,
+          examId,
+          createdAt: now,
+        }),
+      catch: (cause) => new AiGenerationError({ cause }),
+    })
+    if (Either.isLeft(generated)) {
+      const err = generated.left
+      logAiEvent('api.ai.generate', 'warn', {
+        path: '/api/ai/generate',
+        message: String((err as { cause?: unknown }).cause),
+      })
+      return { _tag: 'ai_error', message: String((err as { cause?: unknown }).cause) }
+    }
+
+    const insertedQuestions = [...generated.right.questions]
+    const generationIncomplete = generated.right.generationIncomplete
+    const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
+
+    const db = yield* DbClient
+    const sql = yield* SqlClient
+
+    const insertTransaction = sql.withTransaction(
+      Effect.gen(function* () {
+        yield* runDb(
+          db.insert(exams).values({
+            id: examId,
+            userId,
+            title,
+            subject: input.subject,
+            grade: input.grade,
+            difficulty: input.difficulty,
+            topics: [...input.topics],
+            reviewMode: input.reviewMode,
+            status: 'draft',
+            examType,
+            classContext: input.classContext ?? null,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        )
+
+        yield* runDb(
+          db.insert(questions).values(
+            insertedQuestions.map((dbQuestion) => {
+              const rowFields = questionToRow(dbQuestion)
+              return {
+                id: dbQuestion.id,
+                examId: dbQuestion.examId,
+                number: dbQuestion.number,
+                text: dbQuestion.text,
+                topic: dbQuestion.topic,
+                difficulty: dbQuestion.difficulty,
+                status: dbQuestion.status,
+                validationStatus: dbQuestion.validationStatus,
+                validationReason: dbQuestion.validationReason,
+                createdAt: now,
+                type: rowFields.type,
+                optionA: rowFields.optionA,
+                optionB: rowFields.optionB,
+                optionC: rowFields.optionC,
+                optionD: rowFields.optionD,
+                correctAnswer: rowFields.correctAnswer,
+                payload: rowFields.payload,
+              }
+            }),
+          ),
+        )
+      }),
+    )
+
+    const insertResult = yield* Effect.either(insertTransaction)
+    if (insertResult._tag === 'Left') {
+      const err = insertResult.left
+      if (isExamSubjectEnumMismatch(err)) {
+        return { _tag: 'database_error', message: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE }
+      }
+      return {
+        _tag: 'database_error',
+        message: err instanceof Error ? err.message : 'Database error',
+      }
+    }
+
+    const result = yield* fetchExamWithQuestions(examId)
+    if (!result) {
+      return { _tag: 'database_error', message: 'Failed to retrieve generated exam' }
+    }
+
+    logAiEvent('api.ai.generate', 'info', {
+      path: '/api/ai/generate',
+      examId,
+      questionCount: insertedQuestions.length,
+      durationMs: Date.now() - handlerT0,
+    })
+
+    return {
+      _tag: 'success',
+      status: 201,
+      body: {
+        ...result,
+        ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {}),
+      },
+    }
   })
-
-  return {
-    _tag: 'success',
-    status: 201,
-    body: {
-      ...result,
-      ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {}),
-    },
-  }
 }

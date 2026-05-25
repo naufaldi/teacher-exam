@@ -1,28 +1,37 @@
 import { eq } from 'drizzle-orm'
-import { db, user } from '@teacher-exam/db'
+import { Effect } from 'effect'
+import { user } from '@teacher-exam/db'
+import { DbClient } from '../api/services/db'
+import { runDb } from '../api/lib/db-effect'
+import { ApiDatabaseError } from '../api/errors/http'
 
 const USERNAME_RE = /[^a-z0-9._-]/g
 
-/**
- * Derive a stable, URL-safe username from a Google email and ensure it
- * is unique in the `user` table by appending `-2`, `-3`, ... on collision.
- */
-export async function deriveUniqueUsername(email: string): Promise<string> {
-  const local = (email.split('@')[0] ?? 'user').toLowerCase().replace(USERNAME_RE, '')
-  const base = local.length >= 3 ? local.slice(0, 32) : `user${local}`.slice(0, 32)
+export function deriveUniqueUsername(email: string): Effect.Effect<string, ApiDatabaseError, DbClient> {
+  return Effect.gen(function* () {
+    const local = (email.split('@')[0] ?? 'user').toLowerCase().replace(USERNAME_RE, '')
+    const base = local.length >= 3 ? local.slice(0, 32) : `user${local}`.slice(0, 32)
 
-  let candidate = base
-  let suffix = 2
-  while (await usernameExists(candidate)) {
-    const tail = `-${suffix}`
-    candidate = `${base.slice(0, 32 - tail.length)}${tail}`
-    suffix += 1
-    if (suffix > 9999) throw new Error('Could not derive unique username')
-  }
-  return candidate
+    let candidate = base
+    let suffix = 2
+    while (yield* usernameExists(candidate)) {
+      const tail = `-${suffix}`
+      candidate = `${base.slice(0, 32 - tail.length)}${tail}`
+      suffix += 1
+      if (suffix > 9999) {
+        return yield* Effect.die(new Error('Could not derive unique username'))
+      }
+    }
+    return candidate
+  })
 }
 
-async function usernameExists(candidate: string): Promise<boolean> {
-  const rows = await db.select({ id: user.id }).from(user).where(eq(user.username, candidate)).limit(1)
-  return rows.length > 0
+function usernameExists(candidate: string): Effect.Effect<boolean, ApiDatabaseError, DbClient> {
+  return Effect.gen(function* () {
+    const db = yield* DbClient
+    const rows = yield* runDb(
+      db.select({ id: user.id }).from(user).where(eq(user.username, candidate)).limit(1),
+    )
+    return rows.length > 0
+  })
 }
