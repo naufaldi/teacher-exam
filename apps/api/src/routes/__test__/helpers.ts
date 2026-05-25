@@ -1,15 +1,8 @@
 import { vi } from 'vitest'
+import { makeQueryEffect } from '../../__test__/mock-db.js'
 
 export function makeChain(result: unknown) {
-  const p = Promise.resolve(result)
-  const chain: Record<string, unknown> = {
-    then:  (p as Promise<unknown>).then.bind(p),
-    catch: (p as Promise<unknown>).catch.bind(p),
-  }
-  for (const m of ['from', 'where', 'orderBy', 'limit', 'set', 'values', 'innerJoin', 'returning']) {
-    chain[m] = vi.fn(() => chain)
-  }
-  return chain
+  return makeQueryEffect(result)
 }
 
 const NOW = '2024-01-01T00:00:00.000Z'
@@ -61,3 +54,5 @@ export function makeQuestionRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   }
 }
+
+export { vi }

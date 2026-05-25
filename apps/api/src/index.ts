@@ -1,5 +1,6 @@
 import { HttpApiBuilder } from '@effect/platform'
-import { auth } from './lib/auth'
+import { startDatabase, disposeDatabase } from './api/services/bootstrap-db'
+import { initAuth } from './lib/auth'
 import { resolveApiPort } from './lib/auth-origins'
 import { assertDevAuthNotEnabledInProduction } from './lib/dev-auth'
 import { logError, logInfo } from './lib/server-log'
@@ -28,23 +29,40 @@ process.on('unhandledRejection', (reason) => {
   logError('unhandled_rejection', { reason: String(reason) })
 })
 
-const port = resolveApiPort()
-const { handler, dispose } = HttpApiBuilder.toWebHandler(createWebHandlerLayer())
+async function main() {
+  const db = await startDatabase()
+  initAuth(db)
 
-const { server } = createBridgeServer({
-  port,
-  authHandler: auth.handler,
-  httpApiHandler: async (request) => attachRateLimitHeaders(await handler(request)),
-  disposeHttpApi: dispose,
-  onListen: () => {
-    logInfo('listening', { port, url: `http://localhost:${port}`, pid: process.pid })
-  },
-})
+  const port = resolveApiPort()
+  const { handler, dispose } = HttpApiBuilder.toWebHandler(createWebHandlerLayer())
 
-const shutdown = () => {
-  server.close(() => {
-    void dispose().finally(() => process.exit(0))
+  const { getAuth } = await import('./lib/auth.js')
+
+  const { server } = createBridgeServer({
+    port,
+    authHandler: getAuth().handler,
+    httpApiHandler: async (request) => attachRateLimitHeaders(await handler(request)),
+    disposeHttpApi: dispose,
+    onListen: () => {
+      logInfo('listening', { port, url: `http://localhost:${port}`, pid: process.pid })
+    },
   })
+
+  const shutdown = () => {
+    server.close(() => {
+      void dispose().finally(() => {
+        void disposeDatabase().finally(() => process.exit(0))
+      })
+    })
+  }
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
 }
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
+
+main().catch((err) => {
+  logError('startup_failed', {
+    message: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  })
+  process.exit(1)
+})

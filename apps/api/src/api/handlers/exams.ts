@@ -1,7 +1,8 @@
 import { HttpApiBuilder } from '@effect/platform'
-import { Effect, Layer, Schema, Match } from 'effect'
+import { Effect, Schema, Match, Layer } from 'effect'
+import { SqlClient } from '@effect/sql/SqlClient'
 import { eq, and, desc } from 'drizzle-orm'
-import { db, exams, questions } from '@teacher-exam/db'
+import { exams, questions } from '@teacher-exam/db'
 import { UpdateExamInputSchema, formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
 import type { ExamShareResponse, ExamWithQuestions, ExamSubject } from '@teacher-exam/shared'
 import { toExam, fetchExamWithQuestions } from '../../lib/exams-query'
@@ -18,7 +19,8 @@ import {
   ApiValidationError422,
 } from '../errors/http'
 import { CurrentUser } from '../middleware/auth'
-import { tryDb } from '../lib/db-effect'
+import { runDb } from '../lib/db-effect'
+import { DbClient } from '../services/db'
 import { AiClient } from '../services/ai'
 
 export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers) =>
@@ -26,7 +28,8 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
     .handle('listExams', () =>
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
-        const rows = yield* tryDb(() =>
+        const db = yield* DbClient
+        const rows = yield* runDb(
           db.select().from(exams).where(eq(exams.userId, userId)).orderBy(desc(exams.createdAt)),
         )
         return rows.map((r) => toExam(r))
@@ -36,8 +39,9 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -52,7 +56,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           )
         }
 
-        const questionRows = yield* tryDb(() =>
+        const questionRows = yield* runDb(
           db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
         )
 
@@ -67,6 +71,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
         const decode = Schema.decodeUnknownEither(UpdateExamInputSchema)
         const parsed = decode(payload)
@@ -81,7 +86,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         }
         const input = parsed.right
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -107,11 +112,11 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         if (input.status !== undefined) updateData['status'] = input.status
         if (input.reviewMode !== undefined) updateData['reviewMode'] = input.reviewMode
 
-        yield* tryDb(() =>
+        yield* runDb(
           db.update(exams).set(updateData).where(and(eq(exams.id, id), eq(exams.userId, userId))),
         )
 
-        const updatedRows = yield* tryDb(() =>
+        const updatedRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -126,7 +131,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           )
         }
 
-        const questionRows = yield* tryDb(() =>
+        const questionRows = yield* runDb(
           db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
         )
 
@@ -140,8 +145,9 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -155,7 +161,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           )
         }
 
-        yield* tryDb(() =>
+        yield* runDb(
           db.delete(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))),
         )
         return undefined
@@ -165,8 +171,10 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
+        const sql = yield* SqlClient
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -181,7 +189,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           )
         }
 
-        const sourceQuestions = yield* tryDb(() =>
+        const sourceQuestions = yield* runDb(
           db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
         )
 
@@ -196,57 +204,65 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           topics: (examRow.topics as string[]) ?? [],
         })
 
-        yield* tryDb(() =>
-          db.insert(exams).values({
-            id: newExamId,
-            userId: examRow.userId,
-            title: newTitle,
-            subject: examRow.subject,
-            grade: examRow.grade,
-            difficulty: examRow.difficulty,
-            topics: (examRow.topics as string[]) ?? [],
-            reviewMode: examRow.reviewMode,
-            status: 'draft',
-            schoolName: examRow.schoolName,
-            academicYear: examRow.academicYear,
-            examType: examRow.examType,
-            examDate: examRow.examDate,
-            durationMinutes: examRow.durationMinutes,
-            instructions: examRow.instructions,
-            classContext: examRow.classContext,
-            discussionMd: examRow.discussionMd,
-            createdAt: now,
-            updatedAt: now,
+        yield* sql.withTransaction(
+          Effect.gen(function* () {
+            yield* runDb(
+              db.insert(exams).values({
+                id: newExamId,
+                userId: examRow.userId,
+                title: newTitle,
+                subject: examRow.subject,
+                grade: examRow.grade,
+                difficulty: examRow.difficulty,
+                topics: (examRow.topics as string[]) ?? [],
+                reviewMode: examRow.reviewMode,
+                status: 'draft',
+                schoolName: examRow.schoolName,
+                academicYear: examRow.academicYear,
+                examType: examRow.examType,
+                examDate: examRow.examDate,
+                durationMinutes: examRow.durationMinutes,
+                instructions: examRow.instructions,
+                classContext: examRow.classContext,
+                discussionMd: examRow.discussionMd,
+                createdAt: now,
+                updatedAt: now,
+              }),
+            )
+
+            if (sourceQuestions.length > 0) {
+              yield* runDb(
+                db.insert(questions).values(
+                  sourceQuestions.map((q) => ({
+                    id: crypto.randomUUID(),
+                    examId: newExamId,
+                    number: q.number,
+                    text: q.text,
+                    type: q.type,
+                    optionA: q.optionA,
+                    optionB: q.optionB,
+                    optionC: q.optionC,
+                    optionD: q.optionD,
+                    correctAnswer: q.correctAnswer,
+                    payload: q.payload,
+                    topic: q.topic,
+                    difficulty: q.difficulty,
+                    status: q.status,
+                    validationStatus: q.validationStatus,
+                    validationReason: q.validationReason,
+                    createdAt: now,
+                  })),
+                ),
+              )
+            }
           }),
+        ).pipe(
+          Effect.catchTag('SqlError', (e) =>
+            Effect.fail(new ApiDatabaseError({ error: e.message, code: 'DATABASE_ERROR' })),
+          ),
         )
 
-        if (sourceQuestions.length > 0) {
-          yield* tryDb(() =>
-            db.insert(questions).values(
-              sourceQuestions.map((q) => ({
-                id: crypto.randomUUID(),
-                examId: newExamId,
-                number: q.number,
-                text: q.text,
-                type: q.type,
-                optionA: q.optionA,
-                optionB: q.optionB,
-                optionC: q.optionC,
-                optionD: q.optionD,
-                correctAnswer: q.correctAnswer,
-                payload: q.payload,
-                topic: q.topic,
-                difficulty: q.difficulty,
-                status: q.status,
-                validationStatus: q.validationStatus,
-                validationReason: q.validationReason,
-                createdAt: now,
-              })),
-            ),
-          )
-        }
-
-        const newExamWithQuestions = yield* tryDb(() => fetchExamWithQuestions(newExamId))
+        const newExamWithQuestions = yield* fetchExamWithQuestions(newExamId)
         if (!newExamWithQuestions) {
           return yield* Effect.fail(
             new ApiDatabaseError({
@@ -262,8 +278,9 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -281,7 +298,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         const slug = examRow.publicShareSlug ?? crypto.randomUUID()
         const publishedAt = examRow.publishedAt ?? new Date()
 
-        yield* tryDb(() =>
+        yield* runDb(
           db
             .update(exams)
             .set({
@@ -307,10 +324,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         const { id } = path
         const aiService = yield* AiClient
 
-        const result = yield* Effect.tryPromise({
-          try: () => validateExamCurriculum(id, userId, aiService),
-          catch: () => new ApiDatabaseError({ error: 'Database error', code: 'DATABASE_ERROR' }),
-        })
+        const result = yield* validateExamCurriculum(id, userId, aiService)
         if (!result) {
           return yield* Effect.fail(
             new ApiNotFound({ error: 'Exam not found', code: 'NOT_FOUND' }),
@@ -323,13 +337,14 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
         const { id } = path
+        const db = yield* DbClient
 
-        const [examRows, questionRows] = yield* tryDb(() =>
-          Promise.all([
+        const [examRows, questionRows] = yield* Effect.all([
+          runDb(
             db.select().from(exams).where(and(eq(exams.id, id), eq(exams.userId, userId))).limit(1),
-            db.select().from(questions).where(eq(questions.examId, id)),
-          ]),
-        )
+          ),
+          runDb(db.select().from(questions).where(eq(questions.examId, id))),
+        ])
 
         if (!examRows[0]) {
           return yield* Effect.fail(
@@ -352,7 +367,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
 
         if (pendingCount > 0 || rejectedCount > 0) {
           if (examRows[0]?.reviewMode === 'fast') {
-            yield* tryDb(() =>
+            yield* runDb(
               db.update(questions).set({ status: 'accepted' }).where(eq(questions.examId, id)),
             )
           } else {
@@ -366,14 +381,14 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           }
         }
 
-        yield* tryDb(() =>
+        yield* runDb(
           db
             .update(exams)
             .set({ status: 'final', updatedAt: new Date() })
             .where(and(eq(exams.id, id), eq(exams.userId, userId))),
         )
 
-        const result = yield* tryDb(() => fetchExamWithQuestions(id))
+        const result = yield* fetchExamWithQuestions(id)
         if (!result) {
           return yield* Effect.fail(
             new ApiDatabaseError({
@@ -390,8 +405,9 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         const { userId } = yield* CurrentUser
         const { id } = path
         const aiService = yield* AiClient
+        const db = yield* DbClient
 
-        const examRows = yield* tryDb(() =>
+        const examRows = yield* runDb(
           db
             .select()
             .from(exams)
@@ -425,7 +441,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           )
         }
 
-        const questionRows = yield* tryDb(() =>
+        const questionRows = yield* runDb(
           db.select().from(questions).where(eq(questions.examId, id)).orderBy(questions.number),
         )
 
@@ -458,12 +474,18 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
 
                 clearInterval(heartbeat)
 
-                await db
-                  .update(exams)
-                  .set({ discussionMd, updatedAt: new Date() })
-                  .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+                const updated = await Effect.runPromise(
+                  Effect.gen(function* () {
+                    yield* runDb(
+                      db
+                        .update(exams)
+                        .set({ discussionMd, updatedAt: new Date() })
+                        .where(and(eq(exams.id, id), eq(exams.userId, userId))),
+                    )
+                    return yield* fetchExamWithQuestions(id)
+                  }).pipe(Effect.provide(Layer.succeed(DbClient, db))),
+                )
 
-                const updated = await fetchExamWithQuestions(id)
                 writeSse('done', JSON.stringify(updated ?? { error: 'Failed to retrieve updated exam' }))
               } catch (err) {
                 clearInterval(heartbeat)

@@ -40,9 +40,6 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       )
       const insertChain = makeChain([])
       ;(db.insert as Mock).mockReturnValue(insertChain)
-      ;(db.transaction as Mock).mockImplementation(
-        async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-      )
       let selectCount = 0
       ;(db.select as Mock).mockImplementation(() => {
         selectCount++
@@ -297,9 +294,6 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       })
       return chain
     })
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
 
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {

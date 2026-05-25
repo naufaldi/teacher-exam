@@ -74,9 +74,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -117,9 +114,6 @@ describe('POST /api/ai/generate', () => {
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
 
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
@@ -144,7 +138,7 @@ describe('POST /api/ai/generate', () => {
     expect(Array.isArray(body['questions'])).toBe(true)
     expect((body['questions'] as unknown[]).length).toBe(20)
     expect(((body['questions'] as Record<string, unknown>[])[0] ?? {})['number']).toBe(1)
-    expect(db.transaction).toHaveBeenCalledOnce()
+    expect(db.insert).toHaveBeenCalled()
     expect(db.insert).toHaveBeenCalledTimes(2)
   })
 
@@ -156,9 +150,6 @@ describe('POST /api/ai/generate', () => {
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -186,9 +177,6 @@ describe('POST /api/ai/generate', () => {
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -223,9 +211,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -267,9 +252,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -306,9 +288,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -346,9 +325,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -381,9 +357,6 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -416,7 +389,7 @@ describe('POST /api/ai/generate', () => {
     })
 
     expect(res.status).toBe(502)
-    expect(db.transaction).not.toHaveBeenCalled()
+    expect(db.insert).not.toHaveBeenCalled()
     expect(db.insert).not.toHaveBeenCalled()
   })
 })

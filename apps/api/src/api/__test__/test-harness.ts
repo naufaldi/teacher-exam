@@ -10,6 +10,7 @@ import { AiLive } from '../handlers/ai'
 import { TeacherExamApi } from '../definition'
 import { createCorsLayer } from '../cors'
 import { DbLayer } from '../services/db'
+import { createTestDbLayer, TestSqlLayer } from '../services/test-db'
 import { TestAiLayer, type AiClient } from '../services/ai'
 import { AuthorizationLive, TestAuthorizationLive } from '../middleware/auth'
 import {
@@ -18,6 +19,8 @@ import {
   createTestGlobalRateLimitLive,
 } from '../middleware/rate-limit'
 import { attachRateLimitHeaders } from '../lib/rate-limit-response'
+import { db } from '@teacher-exam/db'
+import type { AppDb } from '../services/db'
 
 import type { AiService } from '../../services/AiService'
 
@@ -61,6 +64,8 @@ function createMiddlewareLayer(opts: {
   return Layer.mergeAll(authLayer, rateLayer, AiGenerateRateLimitLive)
 }
 
+const TestDbLayer = createTestDbLayer(db as unknown as AppDb)
+
 export function createHttpApiTestLayer(opts: {
   userId?: string
   authenticated?: boolean
@@ -83,7 +88,8 @@ export function createHttpApiTestLayer(opts: {
   return Layer.mergeAll(
     apiLayer,
     createCorsLayer(),
-    DbLayer,
+    TestDbLayer,
+    TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
     HttpServer.layerContext,
   )

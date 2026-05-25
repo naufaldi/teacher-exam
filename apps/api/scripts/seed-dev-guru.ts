@@ -1,8 +1,12 @@
 import { eq } from 'drizzle-orm'
+import { Effect, Layer } from 'effect'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { db, user, session, account, verification } from '@teacher-exam/db'
+import { user, session, account, verification } from '@teacher-exam/db'
+import { startDatabase } from '../src/api/services/bootstrap-db.js'
+import { DbClient } from '../src/api/services/db.js'
 import { deriveUniqueUsername } from '../src/lib/username.js'
+import { runDb } from '../src/api/lib/db-effect.js'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -16,6 +20,9 @@ async function main() {
   if (process.env['DEV_AUTH_ENABLED'] !== 'true') {
     throw new Error('Set DEV_AUTH_ENABLED=true in .env before running db:seed:dev')
   }
+
+  const db = await startDatabase()
+  const dbLayer = Layer.succeed(DbClient, db)
 
   const email = requireEnv('DEV_AUTH_EMAIL')
   const password = requireEnv('DEV_AUTH_PASSWORD')
@@ -49,7 +56,9 @@ async function main() {
       user: {
         create: {
           before: async (data) => {
-            const username = await deriveUniqueUsername(data.email)
+            const username = await Effect.runPromise(
+              deriveUniqueUsername(data.email).pipe(Effect.provide(dbLayer)),
+            )
             return { data: { ...data, username } }
           },
         },
@@ -57,7 +66,11 @@ async function main() {
     },
   })
 
-  const existing = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)
+  const existing = await Effect.runPromise(
+    runDb(db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)).pipe(
+      Effect.provide(dbLayer),
+    ),
+  )
 
   if (existing.length === 0) {
     const signedUp = await seedAuth.api.signUpEmail({
@@ -71,23 +84,27 @@ async function main() {
     console.log(`Dev user ${email} already exists — updating profile only`)
   }
 
-  await db
-    .update(user)
-    .set({
-      username: 'guru.dev',
-      name: 'Guru Dev',
-      school: 'SDN Dev',
-      gradesTaught: [5, 6],
-      subjectsTaught: [
-        'bahasa_indonesia',
-        'pendidikan_pancasila',
-        'ipas',
-        'bahasa_inggris',
-      ],
-      profileCompleted: true,
-      emailVerified: true,
-    })
-    .where(eq(user.email, email))
+  await Effect.runPromise(
+    runDb(
+      db
+        .update(user)
+        .set({
+          username: 'guru.dev',
+          name: 'Guru Dev',
+          school: 'SDN Dev',
+          gradesTaught: [5, 6],
+          subjectsTaught: [
+            'bahasa_indonesia',
+            'pendidikan_pancasila',
+            'ipas',
+            'bahasa_inggris',
+          ],
+          profileCompleted: true,
+          emailVerified: true,
+        })
+        .where(eq(user.email, email)),
+    ).pipe(Effect.provide(dbLayer)),
+  )
 
   console.log('Dev guru profile ready (profileCompleted=true, 4 mapel)')
 }

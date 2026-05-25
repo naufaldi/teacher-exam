@@ -1,7 +1,7 @@
 import { HttpApiBuilder } from '@effect/platform'
 import { Effect, Schema } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
-import { db, user } from '@teacher-exam/db'
+import { user } from '@teacher-exam/db'
 import {
   UpdateProfileInputSchema,
   type UserProfile,
@@ -13,28 +13,33 @@ import {
   ApiConflict,
   ApiUserNotFound,
   ApiValidationError400,
+  ApiDatabaseError,
 } from '../errors/http'
 import { CurrentUser } from '../middleware/auth'
-import { tryDb } from '../lib/db-effect'
+import { runDb } from '../lib/db-effect'
+import { DbClient } from '../services/db'
 
-async function loadProfile(userId: string): Promise<UserProfile | null> {
-  const rows = await db.select().from(user).where(eq(user.id, userId)).limit(1)
-  const row = rows[0]
-  if (!row) return null
+function loadProfile(userId: string): Effect.Effect<UserProfile | null, ApiDatabaseError, DbClient> {
+  return Effect.gen(function* () {
+    const db = yield* DbClient
+    const rows = yield* runDb(db.select().from(user).where(eq(user.id, userId)).limit(1))
+    const row = rows[0]
+    if (!row) return null
 
-  return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    username: row.username,
-    image: row.image,
-    school: row.school,
-    gradesTaught: row.gradesTaught as Grade[] | null,
-    subjectsTaught: row.subjectsTaught,
-    profileCompleted: row.profileCompleted,
-    locale: row.locale,
-    timezone: row.timezone,
-  }
+    return {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      username: row.username,
+      image: row.image,
+      school: row.school,
+      gradesTaught: row.gradesTaught as Grade[] | null,
+      subjectsTaught: row.subjectsTaught,
+      profileCompleted: row.profileCompleted,
+      locale: row.locale,
+      timezone: row.timezone,
+    }
+  })
 }
 
 export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
@@ -42,7 +47,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
     .handle('getMe', () =>
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
-        const profile = yield* tryDb(() => loadProfile(userId))
+        const profile = yield* loadProfile(userId)
         if (!profile) {
           return yield* Effect.fail(new ApiUserNotFound({ error: 'User not found' }))
         }
@@ -52,6 +57,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
     .handle('patchMe', ({ payload }) =>
       Effect.gen(function* () {
         const { userId } = yield* CurrentUser
+        const db = yield* DbClient
         const decode = Schema.decodeUnknownEither(UpdateProfileInputSchema)
         const parsed = decode(payload)
         if (parsed._tag === 'Left') {
@@ -65,7 +71,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
         const input: UpdateProfileInput = parsed.right
 
         if (input.username !== undefined) {
-          const taken = yield* tryDb(() =>
+          const taken = yield* runDb(
             db
               .select({ id: user.id })
               .from(user)
@@ -77,7 +83,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
           }
         }
 
-        const current = yield* tryDb(() => loadProfile(userId))
+        const current = yield* loadProfile(userId)
         if (!current) {
           return yield* Effect.fail(new ApiUserNotFound({ error: 'User not found' }))
         }
@@ -90,7 +96,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
             merged.subjectsTaught?.length,
         )
 
-        yield* tryDb(() =>
+        yield* runDb(
           db
             .update(user)
             .set({
@@ -103,7 +109,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, 'me', (handlers) =>
             .where(eq(user.id, userId)),
         )
 
-        const updated = yield* tryDb(() => loadProfile(userId))
+        const updated = yield* loadProfile(userId)
         if (!updated) {
           return yield* Effect.fail(new ApiUserNotFound({ error: 'User not found' }))
         }

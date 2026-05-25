@@ -15,10 +15,14 @@ export const AiLive = HttpApiBuilder.group(TeacherExamApi, 'ai', (handlers) =>
     Effect.gen(function* () {
       const { userId } = yield* CurrentUser
       const aiService = yield* AiClient
-      const result = yield* Effect.tryPromise({
-        try: () => generateExam(userId, payload, aiService),
-        catch: () => new ApiDatabaseError({ error: 'Database error', code: 'DATABASE_ERROR' }),
-      })
+      const result = yield* generateExam(userId, payload, aiService).pipe(
+        Effect.catchTag('AiGenerationError', (err) =>
+          Effect.succeed({ _tag: 'ai_error' as const, message: String(err.cause) }),
+        ),
+        Effect.catchTag('ApiDatabaseError', (err) =>
+          Effect.succeed({ _tag: 'database_error' as const, message: err.error }),
+        ),
+      )
 
       switch (result._tag) {
         case 'validation_error':

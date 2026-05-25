@@ -37,9 +37,6 @@ describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -107,9 +104,6 @@ describe('POST /api/ai/generate — multi-topic', () => {
   it('accepts topics array and returns 201', async () => {
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    ;(db.transaction as Mock).mockImplementation(
-      async (cb: (tx: typeof db) => Promise<unknown>) => cb(db),
-    )
 
     const examRow = makeExamRow({ topics: ['Teks Narasi', 'Puisi'] })
     const questionRows = Array.from({ length: 20 }, (_, i) =>

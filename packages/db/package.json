@@ -15,8 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2",
-    "postgres": "^3.4.5"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
