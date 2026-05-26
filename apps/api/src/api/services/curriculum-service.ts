@@ -83,4 +83,11 @@ export function TestCurriculumLayer(text: string = 'mock curriculum text') {
   })
 }
 
+export function TestCurriculumFailingLayer() {
+  return Layer.succeed(CurriculumService, {
+    getText: () => Effect.fail(new CurriculumReadError({ cause: 'curriculum unavailable' })),
+    resetCache: () => Effect.void,
+  })
+}
+
 export { SUBJECT_SLUG }

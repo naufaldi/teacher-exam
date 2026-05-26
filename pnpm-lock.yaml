@@ -53,6 +53,9 @@ importers:
       '@effect/vitest':
         specifier: ^0.29.0
         version: 0.29.0(effect@3.21.2)(vitest@4.1.5)
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.218.0
         version: 0.218.0(@opentelemetry/api@1.9.1)

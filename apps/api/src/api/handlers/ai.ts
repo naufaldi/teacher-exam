@@ -22,6 +22,12 @@ export const AiLive = HttpApiBuilder.group(TeacherExamApi, 'ai', (handlers) =>
         Effect.catchTag('ApiDatabaseError', (err) =>
           Effect.succeed({ _tag: 'database_error' as const, message: err.error }),
         ),
+        Effect.catchTag('CurriculumReadError', () =>
+          Effect.succeed({
+            _tag: 'database_error' as const,
+            message: 'Curriculum lookup failed',
+          }),
+        ),
       )
 
       switch (result._tag) {

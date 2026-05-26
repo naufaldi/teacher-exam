@@ -325,7 +325,15 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
         const { id } = path
         const aiService = yield* AiClient
 
-        const result = yield* validateExamCurriculum(id, userId, aiService)
+        const result = yield* validateExamCurriculum(id, userId, aiService).pipe(
+          Effect.mapError(
+            () =>
+              new ApiDatabaseError({
+                error: 'Curriculum lookup failed',
+                code: 'DATABASE_ERROR',
+              }),
+          ),
+        )
         if (!result) {
           return yield* Effect.fail(
             new ApiNotFound({ error: 'Exam not found', code: 'NOT_FOUND' }),
@@ -467,7 +475,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
               )
               const updated = yield* fetchExamWithQuestions(id)
               return JSON.stringify(updated ?? { error: 'Failed to retrieve updated exam' })
-            }),
+            }).pipe(Effect.provideService(DbClient, db)),
         )
       }),
     ),

@@ -21,7 +21,13 @@ import {
   type ResolvedModelLayerConfig,
 } from '../lib/effect-ai/layers'
 import { buildPrompt } from '../lib/effect-ai/prompt'
-import { runGenerateText } from '../lib/effect-ai/run'
+import { runGenerateText, runGenerateObject } from '../lib/effect-ai/run'
+import {
+  CURRICULUM_VALIDATION_OBJECT_NAME,
+  GENERATED_QUESTIONS_OBJECT_NAME,
+} from '../lib/effect-ai/schema-bridge'
+import { CurriculumValidationBatchSchema } from '../lib/effect-ai/schemas/curriculum-validation'
+import { GeneratedQuestionsBatchSchema } from '../lib/effect-ai/schemas/generated-questions'
 import { parseGeneratedQuestionsStrict } from '../lib/parse-generated-questions'
 
 export interface GenerateInput {
@@ -152,6 +158,33 @@ function callGenerateText(
   })
 }
 
+function callGenerateObject<A, I extends Record<string, unknown>>(
+  config: AiServiceConfig,
+  models: ResolvedAiModels,
+  input: { system: string; user: string; pdfBytes?: Buffer },
+  slot: 'text' | 'pdf' | 'discussion' | 'validation',
+  schema: Schema.Schema<A, I, never>,
+  objectName: string,
+): Effect.Effect<A, AiGenerationError> {
+  const modelLayer = config.layers[slot]
+  const model =
+    slot === 'discussion' || slot === 'validation'
+      ? models.discussionModel
+      : input.pdfBytes !== undefined
+        ? models.pdfModel
+        : models.generateModel
+
+  return runGenerateObject({
+    modelLayer,
+    prompt: buildPrompt(input),
+    model,
+    logEvent: 'ai.languageModel.generateObject',
+    errorContext: errorContext(config),
+    schema,
+    objectName,
+  })
+}
+
 export function createAiService(config: AiServiceConfig): AiService {
   const models = resolveModels(config)
 
@@ -163,58 +196,102 @@ export function createAiService(config: AiServiceConfig): AiService {
   return {
     generateRaw(input) {
       const slot = input.pdfBytes !== undefined ? 'pdf' : 'text'
-      return callGenerateText(
-        config,
-        models,
+      const promptInput =
         input.pdfBytes !== undefined
           ? { system: input.system, user: input.user, pdfBytes: input.pdfBytes }
-          : { system: input.system, user: input.user },
+          : { system: input.system, user: input.user }
+
+      return callGenerateObject(
+        config,
+        models,
+        promptInput,
         slot,
+        GeneratedQuestionsBatchSchema,
+        GENERATED_QUESTIONS_OBJECT_NAME,
+      ).pipe(
+        Effect.map((batch) => JSON.stringify(batch.questions)),
+        Effect.catchAll(() =>
+          callGenerateText(config, models, promptInput, slot),
+        ),
       )
     },
 
     generate({ system, user, pdfBytes, expectedCount }) {
       const slot = pdfBytes !== undefined ? 'pdf' : 'text'
       const generateModel = slot === 'pdf' ? models.pdfModel : models.generateModel
+      const promptInput =
+        pdfBytes !== undefined ? { system, user, pdfBytes } : { system, user }
 
       return Effect.gen(function* () {
-        const text = yield* callGenerateText(
+        const batch = yield* callGenerateObject(
           config,
           models,
-          pdfBytes !== undefined ? { system, user, pdfBytes } : { system, user },
+          promptInput,
           slot,
-        )
-        const questions = yield* parseGeneratedQuestionsStrict(text, expectedCount).pipe(
-          Effect.tapError((e) =>
-            Effect.sync(() =>
-              logAiEvent('ai.generate.parse', 'warn', {
-                model: generateModel,
-                cause: String(e.cause),
-              }),
-            ),
+          GeneratedQuestionsBatchSchema,
+          GENERATED_QUESTIONS_OBJECT_NAME,
+        ).pipe(
+          Effect.catchAll(() =>
+            Effect.gen(function* () {
+              const text = yield* callGenerateText(config, models, promptInput, slot)
+              const questions = yield* parseGeneratedQuestionsStrict(text, expectedCount).pipe(
+                Effect.tapError((e) =>
+                  Effect.sync(() =>
+                    logAiEvent('ai.generate.parse', 'warn', {
+                      model: generateModel,
+                      cause: String(e.cause),
+                    }),
+                  ),
+                ),
+              )
+              return { questions: Array.from(questions) }
+            }),
           ),
         )
-        return questions
+
+        if (batch.questions.length !== expectedCount) {
+          return yield* Effect.fail(
+            new AiGenerationError({
+              cause: `Expected ${expectedCount} questions, got ${batch.questions.length}`,
+            }),
+          )
+        }
+        return batch.questions
       })
     },
 
     validateCurriculum({ system, user, expectedCount }) {
       return Effect.gen(function* () {
-        const text = yield* callGenerateText(
+        const batch = yield* callGenerateObject(
           config,
           models,
           { system, user },
           'validation',
+          CurriculumValidationBatchSchema,
+          CURRICULUM_VALIDATION_OBJECT_NAME,
+        ).pipe(
+          Effect.catchAll(() =>
+            Effect.gen(function* () {
+              const text = yield* callGenerateText(
+                config,
+                models,
+                { system, user },
+                'validation',
+              )
+              const items = yield* parseCurriculumValidation(text)
+              return { items: Array.from(items) }
+            }),
+          ),
         )
-        const items = yield* parseCurriculumValidation(text)
-        if (items.length !== expectedCount) {
+
+        if (batch.items.length !== expectedCount) {
           return yield* Effect.fail(
             new AiGenerationError({
-              cause: `Expected ${expectedCount} validation items, got ${items.length}`,
+              cause: `Expected ${expectedCount} validation items, got ${batch.items.length}`,
             }),
           )
         }
-        return items
+        return batch.items
       })
     },
 

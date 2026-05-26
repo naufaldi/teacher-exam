@@ -11,6 +11,8 @@ import { db } from '@teacher-exam/db'
 import type { AiService } from '../../../services/AiService.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
 import { makeExamRow, buildTestApp } from './exams-setup.js'
+import { TestCurriculumFailingLayer } from '../../../api/services/curriculum-service.js'
+import { buildHttpApiTestApp } from '../http-api-setup.js'
 
 const fakeAiService = {
   validateCurriculum: vi.fn(),
@@ -72,5 +74,22 @@ describe('POST /api/exams/:id/validate-curriculum', () => {
     const body = (await res.json()) as { questions: Array<{ validationStatus: string | null }> }
     expect(body.questions[0]?.validationStatus).toBe('needs_review')
     expect(body.questions[1]?.validationStatus).toBe('valid')
+  })
+
+  it('returns 500 when curriculum lookup fails', async () => {
+    const examRow = makeExamRow()
+    ;(db.select as Mock).mockReturnValue(makeChain([examRow]))
+
+    const app = buildHttpApiTestApp({
+      userId: 'test-user-id',
+      aiService: fakeAiService,
+      curriculumLayer: TestCurriculumFailingLayer(),
+    })
+    const res = await app.request('/api/exams/exam-1/validate-curriculum', { method: 'POST' })
+
+    expect(res.status).toBe(500)
+    const body = (await res.json()) as { code?: string; error?: string }
+    expect(body.code).toBe('DATABASE_ERROR')
+    expect(body.error).toContain('Curriculum')
   })
 })

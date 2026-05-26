@@ -19,10 +19,22 @@ import { AiLayer } from '../api/services/ai'
 import { AuthorizationLive } from '../api/middleware/auth'
 import { AiGenerateRateLimitLive, GlobalRateLimitLive } from '../api/middleware/rate-limit'
 
+const CoreLive = Layer.mergeAll(
+  AppConfigLive,
+  NodeContext.layer,
+  getSharedDatabaseLayer(),
+  AuthServiceLive,
+)
+
 const MiddlewareLive = Layer.mergeAll(
   AuthorizationLive,
   GlobalRateLimitLive,
   AiGenerateRateLimitLive,
+).pipe(Layer.provideMerge(CoreLive))
+
+const SupportingLive = Layer.mergeAll(
+  CurriculumServiceLive,
+  createTelemetryLayer(),
 )
 
 const HandlersLive = Layer.mergeAll(
@@ -38,30 +50,18 @@ const HandlersLive = Layer.mergeAll(
 const ApiLive = HttpApiBuilder.api(TeacherExamApi).pipe(
   Layer.provide(HandlersLive),
   Layer.provide(MiddlewareLive),
+  Layer.provide(AiLayer),
+  Layer.provideMerge(createCorsLayer()),
 )
 
-export const HttpApiLayer = Layer.mergeAll(ApiLive, createCorsLayer()).pipe(
-  Layer.provide(AiLayer),
+export const HttpApiLayer = ApiLive.pipe(
+  Layer.provideMerge(SupportingLive),
+  Layer.provideMerge(CoreLive),
 )
 
 export function createWebHandlerLayer(extraLayers: Layer.Layer<never> = Layer.empty) {
-  const CoreLive = Layer.mergeAll(
-    AppConfigLive,
-    NodeContext.layer,
-    getSharedDatabaseLayer(),
-    AuthServiceLive,
-  )
-
-  const SupportingLive = Layer.mergeAll(
-    CurriculumServiceLive,
-    createTelemetryLayer(),
-  ).pipe(Layer.provide(CoreLive))
-
-  return Layer.mergeAll(
-    HttpApiLayer,
-    CoreLive,
-    SupportingLive,
-    extraLayers,
-    HttpServer.layerContext,
+  return HttpApiLayer.pipe(
+    Layer.provideMerge(extraLayers),
+    Layer.provideMerge(HttpServer.layerContext),
   )
 }

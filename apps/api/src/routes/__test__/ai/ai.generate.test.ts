@@ -13,6 +13,8 @@ import {
   makeFakeQuestion,
   VALID_BODY,
 } from './ai-setup.js'
+import { buildHttpApiTestApp } from '../http-api-setup.js'
+import { TestCurriculumFailingLayer } from '../../../api/services/curriculum-service.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
 describe('POST /api/ai/generate', () => {
   beforeEach(() => {
@@ -390,6 +392,25 @@ describe('POST /api/ai/generate', () => {
 
     expect(res.status).toBe(502)
     expect(db.insert).not.toHaveBeenCalled()
+    expect(db.insert).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when curriculum lookup fails', async () => {
+    const app = buildHttpApiTestApp({
+      userId: 'test-user-id',
+      aiService: fakeAiService,
+      curriculumLayer: TestCurriculumFailingLayer(),
+    })
+    const res = await app.request('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_BODY),
+    })
+
+    expect(res.status).toBe(500)
+    const body = (await res.json()) as { code?: string; error?: string }
+    expect(body.code).toBe('DATABASE_ERROR')
+    expect(body.error).toContain('Curriculum')
     expect(db.insert).not.toHaveBeenCalled()
   })
 })
