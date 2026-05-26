@@ -1,5 +1,5 @@
 import { HttpApiBuilder } from '@effect/platform'
-import { Effect } from 'effect'
+import { Effect, ManagedRuntime } from 'effect'
 import { startDatabase, disposeDatabase, databaseRuntime } from './api/services/bootstrap-db'
 import { setAuthEffectRunner } from './api/services/auth-service'
 import { initAuth } from './lib/auth'
@@ -9,6 +9,7 @@ import { logError, logInfo } from './lib/server-log'
 import { attachRateLimitHeaders } from './api/lib/rate-limit-response'
 import { createBridgeServer } from './api/bridge/create-bridge-server'
 import { createWebHandlerLayer } from './api/server'
+import { withHttpSpan } from './api/telemetry'
 
 process.on('uncaughtException', (err) => {
   logError('uncaught_exception', {
@@ -37,14 +38,26 @@ async function main() {
   initAuth(db)
 
   const port = resolveApiPort()
-  const { handler, dispose } = HttpApiBuilder.toWebHandler(createWebHandlerLayer())
+  const webLayer = createWebHandlerLayer()
+  const runtime = ManagedRuntime.make(webLayer)
+  const { handler, dispose } = HttpApiBuilder.toWebHandler(webLayer)
 
   const { getAuth } = await import('./lib/auth.js')
 
   const { server } = createBridgeServer({
     port,
     authHandler: getAuth().handler,
-    httpApiHandler: async (request) => attachRateLimitHeaders(await handler(request)),
+    httpApiHandler: async (request) => {
+      const url = new URL(request.url)
+      const response = await runtime.runPromise(
+        withHttpSpan(
+          request.method,
+          url.pathname,
+          Effect.promise(() => handler(request)),
+        ),
+      )
+      return attachRateLimitHeaders(response)
+    },
     disposeHttpApi: dispose,
     onListen: () => {
       logInfo('listening', { port, url: `http://localhost:${port}`, pid: process.pid })
@@ -54,7 +67,9 @@ async function main() {
   const shutdown = () => {
     server.close(() => {
       void dispose().finally(() => {
-        void disposeDatabase().finally(() => process.exit(0))
+        void runtime.dispose().finally(() => {
+          void disposeDatabase().finally(() => process.exit(0))
+        })
       })
     })
   }

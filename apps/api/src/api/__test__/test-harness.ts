@@ -12,7 +12,7 @@ import { createCorsLayer } from '../cors'
 import { DbLayer } from '../services/db'
 import { createTestDbLayer, TestSqlLayer } from '../services/test-db'
 import { TestAiLayer, type AiClient } from '../services/ai'
-import { TestCurriculumLayer } from '../services/curriculum-service'
+import { TestCurriculumLayer, type CurriculumService } from '../services/curriculum-service'
 import { TestAuthServiceLayer, AuthServiceLive } from '../services/auth-service'
 import { AuthorizationLive, TestAuthorizationLive } from '../middleware/auth'
 import {
@@ -57,13 +57,16 @@ function createMiddlewareLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
 }) {
-  const authLayer = opts.userId ? TestAuthorizationLive(opts.userId) : AuthorizationLive
+  const authMiddlewareLayer = opts.userId
+    ? TestAuthorizationLive(opts.userId)
+    : AuthorizationLive.pipe(Layer.provide(opts.authLayer ?? AuthServiceLive))
   const rateLayer = opts.rateLimit
     ? createTestGlobalRateLimitLive(opts.rateLimit)
     : GlobalRateLimitLive
 
-  return Layer.mergeAll(authLayer, rateLayer, AiGenerateRateLimitLive)
+  return Layer.mergeAll(authMiddlewareLayer, rateLayer, AiGenerateRateLimitLive)
 }
 
 const TestDbLayer = createTestDbLayer(db as unknown as AppDb)
@@ -77,6 +80,7 @@ export function createHttpApiTestLayer(opts: {
     now?: () => number
   }
   authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
+  curriculumLayer?: Layer.Layer<CurriculumService>
 } = {}) {
   const apiLayer = HttpApiBuilder.api(TeacherExamApi).pipe(
     Layer.provide(HandlerLayers),
@@ -84,6 +88,7 @@ export function createHttpApiTestLayer(opts: {
       createMiddlewareLayer({
         ...(opts.userId !== undefined ? { userId: opts.userId } : {}),
         ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
+        ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {}),
       }),
     ),
   )
@@ -94,7 +99,7 @@ export function createHttpApiTestLayer(opts: {
     TestDbLayer,
     TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
-    TestCurriculumLayer(),
+    opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,
     HttpServer.layerContext,
   )

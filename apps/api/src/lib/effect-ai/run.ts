@@ -1,11 +1,20 @@
-import { LanguageModel, Prompt } from '@effect/ai'
+import { AiError, LanguageModel, Prompt } from '@effect/ai'
 import * as Response from '@effect/ai/Response'
-import { GenerateTextResponse } from '@effect/ai/LanguageModel'
-import { Effect, Layer } from 'effect'
+import { GenerateObjectResponse, GenerateTextResponse } from '@effect/ai/LanguageModel'
+import { Effect, Layer, Schema } from 'effect'
 import { AiGenerationError } from '../../errors'
 import { mapAiError, type ProviderErrorContext } from './errors'
 import { logGenerateTextFailure, logGenerateTextSuccess } from './logging'
 import { withAiSpan } from '../../api/telemetry'
+
+function isAiGenerationError(error: unknown): error is AiGenerationError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    '_tag' in error &&
+    (error as { _tag: string })._tag === 'AiGenerationError'
+  )
+}
 
 export function isSuccessfulFinishReason(
   finishReason: Response.FinishReason,
@@ -81,6 +90,75 @@ export function runGenerateText(
       return assistantText
     }),
   )
+}
+
+export interface RunGenerateObjectInput<A, I extends Record<string, unknown>> {
+  modelLayer: Layer.Layer<LanguageModel.LanguageModel>
+  prompt: Prompt.Prompt
+  model: string
+  logEvent: string
+  errorContext: ProviderErrorContext
+  schema: Schema.Schema<A, I, never>
+  objectName: string
+}
+
+export function runGenerateObject<A, I extends Record<string, unknown>>(
+  input: RunGenerateObjectInput<A, I>,
+): Effect.Effect<A, AiGenerationError> {
+  return withAiSpan(
+    'ai.languageModel.generateObject',
+    Effect.gen(function* () {
+      const t0 = Date.now()
+      const response = yield* LanguageModel.generateObject({
+        prompt: input.prompt,
+        schema: input.schema,
+        objectName: input.objectName,
+      }).pipe(
+        Effect.mapError((error) => {
+          if (isAiGenerationError(error)) {
+            return error
+          }
+          return mapAiError(error as AiError.AiError, input.errorContext)
+        }),
+        Effect.provide(input.modelLayer),
+      )
+
+      const durationMs = Date.now() - t0
+      logGenerateTextSuccess({
+        model: input.model,
+        event: input.logEvent,
+        durationMs,
+        finishReason: 'stop',
+      })
+
+      return response.value
+    }),
+  ).pipe(
+    Effect.mapError((error) => {
+      if (isAiGenerationError(error)) {
+        return error
+      }
+      return new AiGenerationError({ cause: String(error) })
+    }),
+  )
+}
+
+export function buildGenerateObjectResponse<A>(
+  value: A,
+): GenerateObjectResponse<Record<string, never>, A> {
+  return new GenerateObjectResponse(value, [
+    Response.makePart('text', { text: JSON.stringify(value) }),
+    Response.makePart('finish', {
+      reason: 'stop',
+      usage: {
+        inputTokens: 1,
+        outputTokens: 1,
+        totalTokens: 2,
+        reasoningTokens: undefined,
+        cachedInputTokens: undefined,
+      },
+    }),
+  ])
 }
 
 export function buildGenerateTextResponse(

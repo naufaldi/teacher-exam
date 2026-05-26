@@ -57,7 +57,8 @@ export const ExamsGroup = HttpApiGroup.make('exams')
   .add(
     HttpApiEndpoint.post('validateCurriculum')`/exams/${idParam}/validate-curriculum`
       .addSuccess(ExamWithQuestionsSchema)
-      .addError(ApiNotFound, { status: 404 }),
+      .addError(ApiNotFound, { status: 404 })
+      .addError(ApiDatabaseError, { status: 500 }),
   )
   .add(
     HttpApiEndpoint.post('finalizeExam')`/exams/${idParam}/finalize`

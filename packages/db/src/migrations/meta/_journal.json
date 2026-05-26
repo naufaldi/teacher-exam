@@ -57,6 +57,13 @@
       "when": 1778576700000,
       "tag": "0007_add_matematika_subject",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779780613807,
+      "tag": "0008_clean_leopardon",
+      "breakpoints": true
     }
   ]
 }

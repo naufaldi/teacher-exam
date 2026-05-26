@@ -8,6 +8,7 @@ export function buildHttpApiTestApp(opts: {
   authenticated?: boolean
   aiService?: AiService
   authLayer?: Layer.Layer<AuthService>
+  curriculumLayer?: Layer.Layer<import('../../api/services/curriculum-service').CurriculumService>
   rateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
@@ -18,6 +19,7 @@ export function buildHttpApiTestApp(opts: {
     ...(opts.authenticated !== undefined ? { authenticated: opts.authenticated } : {}),
     ...(opts.aiService !== undefined ? { aiService: opts.aiService } : {}),
     ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {}),
+    ...(opts.curriculumLayer !== undefined ? { curriculumLayer: opts.curriculumLayer } : {}),
     ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
   })
 }

@@ -5,6 +5,7 @@ import { createAiService } from '../AiService'
 import { AiGenerationError } from '../../errors'
 import {
   createFakeModelLayers,
+  createFakeModelLayersFromQuestions,
   createFakeModelLayersFromText,
 } from '../../lib/effect-ai/test-utils'
 import {
@@ -39,7 +40,7 @@ async function expectAiGenerationError(
 
 describe('AiService.generate', () => {
   it('sends curriculum via the top-level system field, not in user content', async () => {
-    const { layers, calls } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS))
+    const { layers, calls } = createFakeModelLayersFromQuestions(VALID_QUESTIONS)
     const ai = createAiService({ layers })
 
     const system = 'BASELINE\n## Capaian Pembelajaran\n- foo'
@@ -55,7 +56,7 @@ describe('AiService.generate', () => {
   })
 
   it('attaches a PDF document block when pdfBytes is provided', async () => {
-    const { layers, calls } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS))
+    const { layers, calls } = createFakeModelLayersFromQuestions(VALID_QUESTIONS)
     const ai = createAiService({ layers })
 
     const pdfBytes = Buffer.from('%PDF-1.4 fake')
@@ -177,7 +178,14 @@ describe('AiService.generate', () => {
             description: 'Connection error.',
           }),
         ),
-      generateObject: () => Effect.die('not implemented'),
+      generateObject: () =>
+        Effect.fail(
+          new AiError.UnknownError({
+            module: 'test',
+            method: 'generateObject',
+            description: 'Connection error.',
+          }),
+        ),
       streamText: () => Effect.die('not implemented'),
     })
     const ai = createAiService({

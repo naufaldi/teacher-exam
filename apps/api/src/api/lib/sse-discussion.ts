@@ -25,7 +25,7 @@ function formatUnknownError(err: unknown): string {
  */
 export function runDiscussionSse<A>(
   stream: Stream.Stream<string, AiGenerationError>,
-  onComplete: (discussionMd: string) => Effect.Effect<A>,
+  onComplete: (discussionMd: string) => Effect.Effect<A, unknown, never>,
 ): Response {
   const encoder = new TextEncoder()
 

@@ -1,3 +1,5 @@
+import { getActiveTraceId } from '../api/telemetry'
+
 function redactSecrets(msg: string, max = 800): string {
   const s = msg
     .replace(/\bsk-ant-[a-zA-Z0-9_-]{20,}/g, 'sk-ant-[REDACTED]')
@@ -24,7 +26,12 @@ export function logAiEvent(
 ): void {
   if (level === 'info' && !isAiLogEnabled()) return
 
-  const safe: Record<string, unknown> = { scope, ...data }
+  const traceId = getActiveTraceId()
+  const safe: Record<string, unknown> = {
+    scope,
+    ...data,
+    ...(traceId !== undefined ? { traceId } : {}),
+  }
   for (const key of ['cause', 'message', 'error']) {
     const v = safe[key]
     if (typeof v === 'string') safe[key] = redactSecrets(v)

@@ -1,8 +1,10 @@
 import { LanguageModel, Prompt } from '@effect/ai'
 import * as Response from '@effect/ai/Response'
-import { GenerateTextResponse } from '@effect/ai/LanguageModel'
-import { Effect, Layer, Stream } from 'effect'
+import { GenerateObjectResponse, GenerateTextResponse } from '@effect/ai/LanguageModel'
+import { Effect, Layer, Schema, Stream } from 'effect'
 import type { ModelLayers } from './layers'
+import { buildGenerateObjectResponse } from './run'
+import { AiGenerationError } from '../../errors'
 
 export interface RecordedGenerateCall {
   prompt: Prompt.Prompt
@@ -10,6 +12,7 @@ export interface RecordedGenerateCall {
 
 export interface FakeModelOptions {
   text: string
+  objectValue?: unknown
   finishReason?: Response.FinishReason
   leadingReasoning?: string
 }
@@ -45,7 +48,36 @@ export function createFakeLanguageModelService(
         )
         return new GenerateTextResponse(content)
       }) as ReturnType<LanguageModel.Service['generateText']>,
-    generateObject: () => Effect.die('generateObject not implemented in fake LanguageModel'),
+    generateObject: (options) =>
+      Effect.gen(function* () {
+        const prompt = Prompt.make(options.prompt)
+        calls.push({ prompt })
+        const resolved = handler(prompt)
+        if (resolved.objectValue !== undefined) {
+          return buildGenerateObjectResponse(resolved.objectValue)
+        }
+        const parsed = yield* Effect.try({
+          try: () => JSON.parse(resolved.text) as unknown,
+          catch: (cause) =>
+            new AiGenerationError({
+              cause: `AI returned non-JSON output: ${(cause as Error).message}`,
+            }),
+        })
+        const payload = Array.isArray(parsed)
+          ? options.objectName === 'curriculum_validation'
+            ? { items: parsed }
+            : { questions: parsed }
+          : parsed
+        const value = yield* Schema.decodeUnknown(options.schema)(payload).pipe(
+          Effect.mapError(
+            (error) =>
+              new AiGenerationError({
+                cause: `Structured output failed schema validation: ${String(error)}`,
+              }),
+          ),
+        )
+        return buildGenerateObjectResponse(value)
+      }) as ReturnType<LanguageModel.Service['generateObject']>,
     streamText: () => Stream.dieMessage('streamText not implemented in fake LanguageModel'),
   }
 }
@@ -77,5 +109,13 @@ export function createFakeModelLayersFromText(
     text,
     ...(options.finishReason !== undefined ? { finishReason: options.finishReason } : {}),
     ...(options.leadingReasoning !== undefined ? { leadingReasoning: options.leadingReasoning } : {}),
+    ...(options.objectValue !== undefined ? { objectValue: options.objectValue } : {}),
   }))
+}
+
+export function createFakeModelLayersFromQuestions(
+  questions: ReadonlyArray<unknown>,
+): { layers: ModelLayers; calls: Array<RecordedGenerateCall> } {
+  const objectValue = { questions }
+  return createFakeModelLayersFromText(JSON.stringify(objectValue), { objectValue })
 }
