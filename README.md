@@ -1,10 +1,13 @@
 # Ujian SD
 
-> AI-generated, print-ready exam sheets for Indonesian elementary-school teachers — built on Claude **Opus 4.7**.
+> AI-generated, print-ready exam sheets for Indonesian elementary-school teachers — pair-built with **Opus 4.7**, **GPT 5.5**, and **Composer 2.5**; core exam generation runs on **OpenAI GPT-5.4-mini**.
 
 [![Live](https://img.shields.io/badge/live-ujian--sekolah.faldi.xyz-0a7c3a?logo=caddy&logoColor=white)](https://ujian-sekolah.faldi.xyz)
 [![API](https://img.shields.io/badge/api-api--ujian--sekolah.faldi.xyz-555?logo=hono)](https://api-ujian-sekolah.faldi.xyz/api/health)
 [![Built with Opus 4.7](https://img.shields.io/badge/built%20with-Claude%20Opus%204.7-d97706)](https://www.anthropic.com/)
+[![Built with GPT 5.5](https://img.shields.io/badge/built%20with-GPT%205.5-412991)](https://openai.com/)
+[![Built with Composer 2.5](https://img.shields.io/badge/built%20with-Composer%202.5-000000)](https://cursor.com/)
+[![Exam AI](https://img.shields.io/badge/exam%20AI-GPT--5.4--mini-10a37f)](https://openai.com/)
 [![Stack](https://img.shields.io/badge/stack-React%2019%20·%20Hono%20·%20Effect--TS-3178c6)](#stack)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -14,6 +17,14 @@ into an A4-ready exam sheet — mixed item types, answer key, and a teacher-faci
 
 Indonesian SD teachers spend 4–8 hours a week hand-writing exams in Word.
 Ujian SD compresses that into a 30-second generate + a 2-minute review.
+
+## Screenshots
+
+Captured during local dev verification (source: [`.agent-browser/`](.agent-browser/); committed copies in [`screenshots/`](screenshots/)).
+
+| Landing | Review + Penjaga Kurikulum | Fast review | Preview & cetak |
+|---------|----------------------------|-------------|-----------------|
+| ![Landing — masuk & contoh lembar A4](screenshots/landing.png) | ![Review — konfirmasi paket & periksa kurikulum](screenshots/review.png) | ![Review — mode cepat, soal perlu review](screenshots/review-fast-mode.png) | ![Preview — soal, LJ, kunci, pembahasan](screenshots/preview.png) |
 
 ---
 
@@ -46,7 +57,7 @@ out is what a guru would print, not what an LLM would freestyle.
 |--------------|------------------------------------------------------------------------------------------|
 | Frontend     | React 19, Vite 8, TanStack Router (file-based), Tailwind v4, Radix primitives            |
 | Backend      | Hono v4 on Node 22, Effect-TS service layers, Drizzle ORM (Postgres), better-auth        |
-| AI           | Claude **Opus 4.7** via the official Anthropic SDK, prompt caching, Effect Schema output |
+| AI           | **OpenAI GPT-5.4-mini** for core exam generate + pembahasan/validation when `AI_PROVIDER=openai`; Effect Schema structured output; also supports Anthropic Claude and MiniMax via `AI_PROVIDER` (see [`.env.example`](.env.example)) |
 | Shared types | `@teacher-exam/shared` Effect Schemas — single source of truth between API and web       |
 | Tooling      | pnpm 10, Turborepo, Vitest, TypeScript 6 (strict + `exactOptionalPropertyTypes`)         |
 | Infra        | Single VPS, Docker Compose, Caddy reverse-proxy with auto Let's Encrypt                  |
@@ -104,16 +115,17 @@ the deploy reference (Caddy, Docker labels, Cloudflare DNS, env vars).
   `api-ujian-sekolah.faldi.xyz`, single Caddy reverse-proxy reading Docker labels.
   Better-auth sits on the API host with cross-subdomain session cookies.
 
-## Built with Claude Code
+## Built with AI coding agents
 
-This project was pair-built end-to-end with **Claude Code + Opus 4.7**, using a
-mix of specialised skills (`agent-browser`, `effect-ts-expert`, `frontend-design`,
-`test-driven-development`) and the `Plan` workflow for non-trivial changes. Every
-frontend task ends with an `agent-browser` loop — drive the running app, capture
-console errors, fix, re-drive — so "did this actually work in the browser?" is
-verified, not assumed.
+This project was pair-built end-to-end with **Claude Code + Opus 4.7**, **GPT 5.5**, and
+**Composer 2.5** in Cursor, using a mix of specialised skills (`agent-browser`,
+`effect-ts-expert`, `frontend-design`, `test-driven-development`) and the `Plan`
+workflow for non-trivial changes. Every frontend task ends with an `agent-browser`
+loop — drive the running app, capture console errors, fix, re-drive — so "did this
+actually work in the browser?" is verified, not assumed.
 
-Submission for the **Cerebral Valley · Built with Opus 4.7** hackathon.
+Originally submitted for the **Cerebral Valley · Built with Opus 4.7** hackathon;
+later iteration and shipping also used **GPT 5.5** and **Composer 2.5** in Cursor.
 
 ## License
 
