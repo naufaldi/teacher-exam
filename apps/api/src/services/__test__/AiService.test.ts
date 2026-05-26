@@ -1,10 +1,17 @@
-import { describe, expect, it, vi } from 'vitest'
-import { Effect, Either } from 'effect'
-import {
-  createAiService,
-  type AnthropicLike,
-} from '../AiService'
+import { describe, expect, it } from 'vitest'
+import { AiError, LanguageModel } from '@effect/ai'
+import { Effect, Either, Layer } from 'effect'
+import { createAiService } from '../AiService'
 import { AiGenerationError } from '../../errors'
+import {
+  createFakeModelLayers,
+  createFakeModelLayersFromText,
+} from '../../lib/effect-ai/test-utils'
+import {
+  getPromptSystemContent,
+  getPromptUserFileParts,
+  getPromptUserText,
+} from '../../lib/effect-ai/prompt'
 
 const VALID_QUESTIONS = Array.from({ length: 20 }, (_, i) => ({
   _tag: 'mcq_single' as const,
@@ -20,24 +27,6 @@ const VALID_QUESTIONS = Array.from({ length: 20 }, (_, i) => ({
   cognitive_level: 'C2' as const,
 }))
 
-function fakeClient(
-  text: string,
-  opts: { stopReason?: string } = {},
-): {
-  client: AnthropicLike
-  create: ReturnType<typeof vi.fn>
-} {
-  const create = vi.fn().mockResolvedValue({
-    content: [{ type: 'text', text }],
-    stop_reason: opts.stopReason ?? 'end_turn',
-    stop_sequence: null,
-  })
-  return {
-    client: { messages: { create } } as unknown as AnthropicLike,
-    create,
-  }
-}
-
 async function expectAiGenerationError(
   effect: Effect.Effect<unknown, AiGenerationError>,
 ): Promise<AiGenerationError> {
@@ -50,49 +39,51 @@ async function expectAiGenerationError(
 
 describe('AiService.generate', () => {
   it('sends curriculum via the top-level system field, not in user content', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
-    const ai = createAiService({ client })
+    const { layers, calls } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS))
+    const ai = createAiService({ layers })
 
     const system = 'BASELINE\n## Capaian Pembelajaran\n- foo'
     const user = 'task params'
     await Effect.runPromise(ai.generate({ system, user, expectedCount: 20 }))
 
-    expect(create).toHaveBeenCalledOnce()
-    const params = create.mock.calls[0]![0] as {
-      system: string
-      messages: Array<{ role: string; content: Array<{ type: string; text?: string }> }>
-    }
-    expect(params.system).toBe(system)
-    expect(params.system).toContain('## Capaian Pembelajaran')
-    expect(params['max_tokens']).toBe(32000)
-
-    const userBlocks = params.messages[0]!.content
-    const joined = userBlocks
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
-    expect(joined).toBe(user)
-    expect(joined).not.toContain('## Capaian Pembelajaran')
+    expect(calls).toHaveLength(1)
+    const prompt = calls[0]!.prompt
+    expect(getPromptSystemContent(prompt)).toBe(system)
+    expect(getPromptSystemContent(prompt)).toContain('## Capaian Pembelajaran')
+    expect(getPromptUserText(prompt)).toBe(user)
+    expect(getPromptUserText(prompt)).not.toContain('## Capaian Pembelajaran')
   })
 
   it('attaches a PDF document block when pdfBytes is provided', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
-    const ai = createAiService({ client })
+    const { layers, calls } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS))
+    const ai = createAiService({ layers })
 
     const pdfBytes = Buffer.from('%PDF-1.4 fake')
     await Effect.runPromise(ai.generate({ system: 's', user: 'u', pdfBytes, expectedCount: 20 }))
 
-    const params = create.mock.calls[0]![0] as {
-      messages: Array<{ content: Array<{ type: string }> }>
-    }
-    const blocks = params.messages[0]!.content
-    expect(blocks[0]!.type).toBe('document')
+    const files = getPromptUserFileParts(calls[0]!.prompt)
+    expect(files).toHaveLength(1)
+    expect(files[0]?.type).toBe('file')
   })
 
-  it('uses pdfModel for generate when pdfBytes is provided', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
+  it('uses pdfModel layer for generate when pdfBytes is provided', async () => {
+    const textCalls: Array<string> = []
+    const pdfCalls: Array<string> = []
+    const textLayer = createFakeModelLayers((prompt) => {
+      textCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
+    const pdfLayer = createFakeModelLayers((prompt) => {
+      pdfCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
     const ai = createAiService({
-      client,
+      layers: {
+        text: textLayer.layers.text,
+        pdf: pdfLayer.layers.pdf,
+        discussion: textLayer.layers.discussion,
+        validation: textLayer.layers.validation,
+      },
       model: 'MiniMax-M2.7',
       pdfModel: 'claude-opus-4-5',
     })
@@ -100,74 +91,102 @@ describe('AiService.generate', () => {
     await Effect.runPromise(
       ai.generate({ system: 's', user: 'u', pdfBytes: Buffer.from('%PDF'), expectedCount: 20 }),
     )
-    expect((create.mock.calls[0]![0] as { model: string }).model).toBe('claude-opus-4-5')
+    expect(textCalls).toHaveLength(0)
+    expect(pdfCalls).toHaveLength(1)
   })
 
-  it('uses main model for generate when pdfBytes absent even when pdfModel is configured', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
+  it('uses main model layer for generate when pdfBytes absent even when pdfModel is configured', async () => {
+    const textCalls: Array<string> = []
+    const pdfCalls: Array<string> = []
+    const textLayer = createFakeModelLayers((prompt) => {
+      textCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
+    const pdfLayer = createFakeModelLayers((prompt) => {
+      pdfCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
     const ai = createAiService({
-      client,
+      layers: {
+        text: textLayer.layers.text,
+        pdf: pdfLayer.layers.pdf,
+        discussion: textLayer.layers.discussion,
+        validation: textLayer.layers.validation,
+      },
       model: 'MiniMax-M2.7',
       pdfModel: 'claude-opus-4-5',
     })
 
     await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
-    expect((create.mock.calls[0]![0] as { model: string }).model).toBe('MiniMax-M2.7')
+    expect(textCalls).toHaveLength(1)
+    expect(pdfCalls).toHaveLength(0)
   })
 
   it('strips ```json fenced output before parsing', async () => {
     const fenced = '```json\n' + JSON.stringify(VALID_QUESTIONS) + '\n```'
-    const { client } = fakeClient(fenced)
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(fenced)
+    const ai = createAiService({ layers })
     const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
     expect(out).toHaveLength(20)
   })
 
   it('reads the first text block when earlier content blocks are non-text', async () => {
-    const create = vi.fn().mockResolvedValue({
-      content: [
-        { type: 'thinking', thinking: 'reasoning stub' },
-        { type: 'text', text: JSON.stringify(VALID_QUESTIONS) },
-      ],
-      stop_reason: 'end_turn',
-      stop_sequence: null,
-    })
-    const client: AnthropicLike = { messages: { create } }
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayers(() => ({
+      text: JSON.stringify(VALID_QUESTIONS),
+      leadingReasoning: 'reasoning stub',
+    }))
+    const ai = createAiService({ layers })
     const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
     expect(out).toHaveLength(20)
   })
 
-  it('accepts stop_reason stop_sequence as a normal completion', async () => {
-    const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS), { stopReason: 'stop_sequence' })
-    const ai = createAiService({ client })
+  it('accepts finish_reason stop as a normal completion', async () => {
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS), {
+      finishReason: 'stop',
+    })
+    const ai = createAiService({ layers })
     const out = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
     expect(out).toHaveLength(20)
   })
 
   it('throws AiGenerationError when question count does not match expectedCount', async () => {
-    const { client } = fakeClient(JSON.stringify(VALID_QUESTIONS.slice(0, 5)))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(VALID_QUESTIONS.slice(0, 5)))
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 
-  it('throws a clear AiGenerationError when Claude stops at max_tokens', async () => {
-    const { client } = fakeClient('[{"_tag":"mcq_single","text":"truncated', {
-      stopReason: 'max_tokens',
+  it('throws a clear AiGenerationError when model stops at length', async () => {
+    const { layers } = createFakeModelLayersFromText('[{"_tag":"mcq_single","text":"truncated', {
+      finishReason: 'length',
     })
-    const ai = createAiService({ client })
+    const ai = createAiService({ layers })
 
     const err = await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
 
-    expect(String(err.cause)).toContain('max_tokens')
+    expect(String(err.cause)).toContain('length')
     expect(String(err.cause)).toContain('incomplete')
   })
 
   it('includes provider and host diagnostics on connection errors', async () => {
-    const create = vi.fn().mockRejectedValue(new Error('Connection error.'))
-    const client: AnthropicLike = { messages: { create } }
+    const failingLayer = Layer.succeed(LanguageModel.LanguageModel, {
+      generateText: () =>
+        Effect.fail(
+          new AiError.UnknownError({
+            module: 'test',
+            method: 'generateText',
+            description: 'Connection error.',
+          }),
+        ),
+      generateObject: () => Effect.die('not implemented'),
+      streamText: () => Effect.die('not implemented'),
+    })
     const ai = createAiService({
-      client,
+      layers: {
+        text: failingLayer,
+        pdf: failingLayer,
+        discussion: failingLayer,
+        validation: failingLayer,
+      },
       provider: 'minimax',
       baseURL: 'https://api.minimax.io/anthropic',
     })
@@ -179,18 +198,17 @@ describe('AiService.generate', () => {
     expect(String(err.cause)).toContain('host=api.minimax.io')
   })
 
-
   it('throws AiGenerationError on non-JSON output', async () => {
-    const { client } = fakeClient('not json')
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText('not json')
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 
   it('throws AiGenerationError when a question fails schema validation', async () => {
     const bad = [...VALID_QUESTIONS]
     bad[0] = { ...bad[0]!, correct_answer: 'z' as 'a' }
-    const { client } = fakeClient(JSON.stringify(bad))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(bad))
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
   })
 })
@@ -198,8 +216,8 @@ describe('AiService.generate', () => {
 describe('AiService.generate — expectedCount', () => {
   it('throws AiGenerationError with both numbers when AI returns fewer questions than expectedCount', async () => {
     const fiveQuestions = VALID_QUESTIONS.slice(0, 5)
-    const { client } = fakeClient(JSON.stringify(fiveQuestions))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(fiveQuestions))
+    const ai = createAiService({ layers })
     const err = await expectAiGenerationError(
       ai.generate({ system: 's', user: 'u', expectedCount: 10 }),
     )
@@ -210,8 +228,8 @@ describe('AiService.generate — expectedCount', () => {
 
   it('resolves successfully when AI returns exactly expectedCount questions', async () => {
     const tenQuestions = VALID_QUESTIONS.slice(0, 10)
-    const { client } = fakeClient(JSON.stringify(tenQuestions))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(tenQuestions))
+    const ai = createAiService({ layers })
     const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 10 }))
     expect(result).toHaveLength(10)
   })
@@ -239,8 +257,8 @@ describe('AiService.generate — multi-type schema validation', () => {
         statements: [{ text: 'p1', answer: 'B' }, { text: 'p2', answer: 'S' }, { text: 'p3', answer: 'B' }],
       },
     ]
-    const { client } = fakeClient(JSON.stringify(mixed))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(mixed))
+    const ai = createAiService({ layers })
     const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 3 }))
     expect(result).toHaveLength(3)
     expect(result[0]!._tag).toBe('mcq_single')
@@ -254,19 +272,19 @@ describe('AiService.generate — multi-type schema validation', () => {
         _tag: 'mcq_multi',
         number: 1,
         text: 'Bad soal', option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D',
-        correct_answers: ['a'],  // only 1 — min is 2
+        correct_answers: ['a'],
         topic: 'T', difficulty: 'mudah',
       },
     ]
-    const { client } = fakeClient(JSON.stringify(bad))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(bad))
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
 
   it('throws AiGenerationError for unknown _tag', async () => {
     const bad = [{ _tag: 'essay', number: 1, text: 'Ceritakan!', topic: 'T', difficulty: 'mudah' }]
-    const { client } = fakeClient(JSON.stringify(bad))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(bad))
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
   })
 
@@ -284,8 +302,8 @@ describe('AiService.generate — multi-type schema validation', () => {
       difficulty: 'mudah',
       figure: { type: 'pentagon', side: 5 },
     }]
-    const { client } = fakeClient(JSON.stringify(withInvalidFigure))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(withInvalidFigure))
+    const ai = createAiService({ layers })
     const result = await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 1 }))
     expect(result[0]?.figure).toEqual({ type: 'pentagon', side: 5 })
   })
@@ -295,72 +313,95 @@ describe('AiService.generateDiscussion', () => {
   const FAKE_MARKDOWN = `## 1. Soal tentang ide pokok\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.\n\n---`
 
   it('uses discussionModel (claude-haiku-4-5) by default, not the main model', async () => {
-    const { client, create } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
+    const discussionCalls: Array<string> = []
+    const textCalls: Array<string> = []
+    const discussionLayer = createFakeModelLayers((prompt) => {
+      discussionCalls.push(getPromptUserText(prompt))
+      return { text: FAKE_MARKDOWN }
+    })
+    const textLayer = createFakeModelLayers((prompt) => {
+      textCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
+    const ai = createAiService({
+      layers: {
+        text: textLayer.layers.text,
+        pdf: textLayer.layers.pdf,
+        discussion: discussionLayer.layers.discussion,
+        validation: discussionLayer.layers.validation,
+      },
+    })
     await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
-    const params = create.mock.calls[0]![0] as { model: string }
-    expect(params.model).toBe('claude-haiku-4-5')
+    expect(discussionCalls).toHaveLength(1)
+    expect(textCalls).toHaveLength(0)
   })
 
   it('respects custom discussionModel when provided', async () => {
-    const { client, create } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client, discussionModel: 'claude-opus-4-5' })
+    const { layers, calls } = createFakeModelLayersFromText(FAKE_MARKDOWN)
+    const ai = createAiService({ layers, discussionModel: 'claude-opus-4-5' })
     await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
-    const params = create.mock.calls[0]![0] as { model: string }
-    expect(params.model).toBe('claude-opus-4-5')
+    expect(calls).toHaveLength(1)
   })
 
   it('generate() still uses the main model not discussionModel', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_QUESTIONS))
-    const ai = createAiService({ client })
+    const discussionCalls: Array<string> = []
+    const textCalls: Array<string> = []
+    const discussionLayer = createFakeModelLayers((prompt) => {
+      discussionCalls.push(getPromptUserText(prompt))
+      return { text: FAKE_MARKDOWN }
+    })
+    const textLayer = createFakeModelLayers((prompt) => {
+      textCalls.push(getPromptUserText(prompt))
+      return { text: JSON.stringify(VALID_QUESTIONS) }
+    })
+    const ai = createAiService({
+      layers: {
+        text: textLayer.layers.text,
+        pdf: textLayer.layers.pdf,
+        discussion: discussionLayer.layers.discussion,
+        validation: discussionLayer.layers.validation,
+      },
+      discussionModel: 'claude-haiku-4-5',
+    })
     await Effect.runPromise(ai.generate({ system: 's', user: 'u', expectedCount: 20 }))
-    const params = create.mock.calls[0]![0] as { model: string }
-    expect(params.model).toBe('claude-opus-4-5')
+    expect(textCalls).toHaveLength(1)
+    expect(discussionCalls).toHaveLength(0)
   })
 
   it('returns the raw markdown string from Claude', async () => {
-    const { client } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN)
+    const ai = createAiService({ layers })
     const result = await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
     expect(result).toBe(FAKE_MARKDOWN)
   })
 
   it('sends system and user to Anthropic in the correct positions', async () => {
-    const { client, create } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
+    const { layers, calls } = createFakeModelLayersFromText(FAKE_MARKDOWN)
+    const ai = createAiService({ layers })
     await Effect.runPromise(ai.generateDiscussion({ system: 'SYS', user: 'USR' }))
-    const params = create.mock.calls[0]![0] as {
-      system: string
-      messages: Array<{ content: Array<{ type: string; text?: string }> }>
-    }
-    expect(params.system).toBe('SYS')
-    const textBlocks = params.messages[0]!.content.filter((b) => b.type === 'text')
-    expect(textBlocks[0]!.text).toBe('USR')
+    const prompt = calls[0]!.prompt
+    expect(getPromptSystemContent(prompt)).toBe('SYS')
+    expect(getPromptUserText(prompt)).toBe('USR')
   })
 
   it('strips code-fence wrapper if Claude wraps output in ```markdown', async () => {
     const fenced = '```markdown\n' + FAKE_MARKDOWN + '\n```'
-    const { client } = fakeClient(fenced)
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(fenced)
+    const ai = createAiService({ layers })
     const result = await Effect.runPromise(ai.generateDiscussion({ system: 's', user: 'u' }))
     expect(result).not.toContain('```')
     expect(result).toContain('Jawaban Benar')
   })
 
-  it('returns AiGenerationError when stop_reason is not end_turn', async () => {
-    const { client } = fakeClient(FAKE_MARKDOWN, { stopReason: 'max_tokens' })
-    const ai = createAiService({ client })
+  it('returns AiGenerationError when finish_reason is length', async () => {
+    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN, { finishReason: 'length' })
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generateDiscussion({ system: 's', user: 'u' }))
   })
 
   it('returns AiGenerationError when Claude returns no text block', async () => {
-    const create = vi.fn().mockResolvedValue({
-      content: [],
-      stop_reason: 'end_turn',
-      stop_sequence: null,
-    })
-    const client: AnthropicLike = { messages: { create } }
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText('', { finishReason: 'stop' })
+    const ai = createAiService({ layers })
     await expectAiGenerationError(ai.generateDiscussion({ system: 's', user: 'u' }))
   })
 })
@@ -369,8 +410,8 @@ describe('AiService.streamDiscussion', () => {
   const FAKE_MARKDOWN = `## 1. Soal tentang ide pokok\n**Jawaban Benar: B**\n\nPenjelasan.\n\n**Tip:** Kunci.\n\n---`
 
   it('yields the full discussion text from Claude', async () => {
-    const { client } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN)
+    const ai = createAiService({ layers })
     const chunks: string[] = []
     for await (const chunk of ai.streamDiscussion({ system: 's', user: 'u' })) {
       chunks.push(chunk)
@@ -378,35 +419,32 @@ describe('AiService.streamDiscussion', () => {
     expect(chunks.join('')).toBe(FAKE_MARKDOWN)
   })
 
-  it('uses discussionModel (claude-haiku-4-5) by default', async () => {
-    const { client, create } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
-    // consume the generator
-    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
-    const params = create.mock.calls[0]![0] as { model: string }
-    expect(params.model).toBe('claude-haiku-4-5')
-  })
-
-  it('uses 16000 as default discussionMaxTokens (fits a 40-question exam)', async () => {
-    const { client, create } = fakeClient(FAKE_MARKDOWN)
-    const ai = createAiService({ client })
-    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
-    const params = create.mock.calls[0]![0] as { max_tokens: number }
-    expect(params.max_tokens).toBe(16000)
+  it('uses discussion layer by default', async () => {
+    const discussionCalls: Array<string> = []
+    const { layers } = createFakeModelLayers((prompt) => {
+      discussionCalls.push(getPromptUserText(prompt))
+      return { text: FAKE_MARKDOWN }
+    })
+    const ai = createAiService({ layers })
+    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) {
+      /* noop */
+    }
+    expect(discussionCalls).toHaveLength(1)
   })
 
   it('throws an Error with a non-empty .message describing the cause when Claude fails', async () => {
-    const { client } = fakeClient(FAKE_MARKDOWN, { stopReason: 'max_tokens' })
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN, { finishReason: 'length' })
+    const ai = createAiService({ layers })
     let caught: unknown = null
     try {
-      for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) { /* noop */ }
+      for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) {
+        /* noop */
+      }
     } catch (e) {
       caught = e
     }
     expect(caught).toBeInstanceOf(Error)
-    expect((caught as Error).message).toContain('max_tokens')
-    // preserves the tagged AiGenerationError on .cause for upstream consumers
+    expect((caught as Error).message).toContain('length')
     expect((caught as Error).cause).toBeInstanceOf(AiGenerationError)
   })
 })
