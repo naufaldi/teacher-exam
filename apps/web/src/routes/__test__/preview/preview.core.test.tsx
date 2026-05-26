@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { vi } from 'vitest'
 import './setup.js'
+import { mockApiResolvedValueOnce } from '../../../lib/api-test-utils.js'
 import type { ExamWithQuestions } from '@teacher-exam/shared'
 import {
   makeExamWithQuestions,
@@ -62,7 +63,7 @@ describe('PreviewPage loader', () => {
       examType: 'sas',
       classContext: 'Siswa perlu contoh konkret.',
     }
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
 
     await getLoader()({ deps: { examId: 'exam-loaded' } })
 
@@ -115,7 +116,7 @@ describe('PreviewPage — multi-subject labels', () => {
       subject: 'ipas',
       grade: 5,
     }
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
 
     await getLoader()({ deps: { examId: exam.id } })
 

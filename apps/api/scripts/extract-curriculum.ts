@@ -1,18 +1,23 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { Effect, Layer } from 'effect'
+import { NodeRuntime } from '@effect/platform-node'
+import type { LanguageModel } from '@effect/ai'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PDFDocument } from 'pdf-lib'
 import type { ExamSubject } from '@teacher-exam/shared'
-import { extractPageRange, loadPdfDocument, planChunks } from './lib/pdf-split'
-import { mergeBab, MergeValidationError } from './lib/merge-bab'
-import { curriculumMdFilename } from '../src/lib/curriculum'
+import { AiGenerationError } from '../src/errors/index.js'
+import { buildAnthropicModelLayers } from '../src/lib/effect-ai/layers.js'
+import { buildPrompt } from '../src/lib/effect-ai/prompt.js'
+import { runGenerateText } from '../src/lib/effect-ai/run.js'
+import { extractPageRange, loadPdfDocument, planChunks } from './lib/pdf-split.js'
+import { mergeBab, MergeValidationError } from './lib/merge-bab.js'
+import { curriculumMdFilename } from '../src/lib/curriculum.js'
 
 /**
  * One-off extraction of Kemendikdasmen textbook PDFs to curriculum markdown (`pnpm curriculum:extract`).
- * Still calls **Anthropic Claude** (`ANTHROPIC_API_KEY`) on api.anthropic.com, not the runtime `AiService`.
- * This path stays Anthropic-only because it uploads PDF documents directly.
+ * Uses `@effect/ai-anthropic` via `runGenerateText` + PDF file parts (same stack as runtime API).
  */
 
 const MODEL = 'claude-opus-4-7'
@@ -153,12 +158,35 @@ Output HANYA markdown akhir, tanpa pengantar.
 ${draft}`
 }
 
-function extractText(content: Anthropic.Messages.ContentBlock[]): string {
-  return content
-    .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('\n')
-    .trim()
+function errorMessage(err: unknown): string {
+  if (err instanceof AiGenerationError) {
+    return typeof err.cause === 'string' ? err.cause : String(err.cause)
+  }
+  if (err instanceof Error) {
+    return err.message
+  }
+  return String(err)
+}
+
+async function generateMarkdown(
+  pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
+  system: string,
+  user: string,
+  pdfBytes?: Buffer,
+): Promise<string> {
+  return Effect.runPromise(
+    runGenerateText({
+      modelLayer: pdfModelLayer,
+      prompt: buildPrompt({
+        system,
+        user,
+        ...(pdfBytes !== undefined ? { pdfBytes } : {}),
+      }),
+      model: MODEL,
+      logEvent: 'curriculum.extract',
+      errorContext: { provider: 'anthropic' },
+    }),
+  )
 }
 
 function cachePathFor(slug: string, startPage: number, endPage: number): string {
@@ -177,9 +205,7 @@ async function writeFileAtomic(path: string, contents: string): Promise<void> {
  * model's context window so the caller can recover by halving the page range.
  */
 function isPromptTooLong(err: unknown): boolean {
-  if (!(err instanceof Anthropic.APIError)) return false
-  if (err.status !== 400 && err.status !== 413) return false
-  const message = String(err.message ?? '')
+  const message = errorMessage(err)
   return /prompt is too long|too large|exceeds|context length|too many tokens/i.test(message)
 }
 
@@ -237,19 +263,9 @@ async function readCachedChunk(cachePath: string): Promise<string | null> {
   }
 }
 
-/**
- * Soft failure raised when Anthropic returns 200 with no text content. We
- * route it through the same halve-and-retry path used for context overflow.
- */
-class EmptyResponseError extends Error {
-  constructor(public readonly startPage: number, public readonly endPage: number) {
-    super(`empty response for pages ${startPage}-${endPage}`)
-    this.name = 'EmptyResponseError'
-  }
-}
 
 async function extractChunkMarkdown(
-  client: Anthropic,
+  pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
   book: BookSpec,
   src: PDFDocument,
   totalPages: number,
@@ -272,36 +288,17 @@ async function extractChunkMarkdown(
   )
 
   try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: EXTRACTION_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBytes.toString('base64'),
-              },
-            },
-            { type: 'text', text: chunkInstruction(book, startPage, endPage, totalPages) },
-          ],
-        },
-      ],
-    })
-    const text = extractText(response.content)
+    const text = await generateMarkdown(
+      pdfModelLayer,
+      EXTRACTION_SYSTEM_PROMPT,
+      chunkInstruction(book, startPage, endPage, totalPages),
+      Buffer.from(pdfBytes),
+    )
     console.log(`${text.length} chars`)
-    if (text.trim().length === 0) {
-      throw new EmptyResponseError(startPage, endPage)
-    }
     await writeFileAtomic(cachePath, text)
     return text
   } catch (err) {
-    const isEmpty = err instanceof EmptyResponseError
+    const isEmpty = errorMessage(err).includes('no text block')
     if (!isPromptTooLong(err) && !isEmpty) throw err
 
     const pages = endPage - startPage + 1
@@ -322,15 +319,18 @@ async function extractChunkMarkdown(
     console.warn(
       `\n[${book.slug}] ${reason} for pages ${startPage}-${endPage}, halving into ${startPage}-${mid} + ${mid + 1}-${endPage}`,
     )
-    const left = await extractChunkMarkdown(client, book, src, totalPages, startPage, mid, cacheStats)
-    const right = await extractChunkMarkdown(client, book, src, totalPages, mid + 1, endPage, cacheStats)
+    const left = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, startPage, mid, cacheStats)
+    const right = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, mid + 1, endPage, cacheStats)
     const combined = `${left.trimEnd()}\n\n${right.trimStart()}`
     await writeFileAtomic(cachePath, combined)
     return combined
   }
 }
 
-async function extractBook(client: Anthropic, book: BookSpec): Promise<void> {
+async function extractBook(
+  pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
+  book: BookSpec,
+): Promise<void> {
   const pdfPath = join(PDF_DIR, book.pdfFilename)
   if (!existsSync(pdfPath)) {
     console.warn(`[${book.slug}] missing source PDF: ${pdfPath} — skipping`)
@@ -347,7 +347,7 @@ async function extractBook(client: Anthropic, book: BookSpec): Promise<void> {
   const chunkOutputs: string[] = []
   for (const chunk of chunks) {
     const text = await extractChunkMarkdown(
-      client,
+      pdfModelLayer,
       book,
       src,
       totalPages,
@@ -369,13 +369,11 @@ async function extractBook(client: Anthropic, book: BookSpec): Promise<void> {
   } catch (err) {
     if (!(err instanceof MergeValidationError)) throw err
     console.warn(`[${book.slug}] deterministic merge failed (${err.message}) — falling back to LLM consolidation`)
-    const fallback = await client.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: FALLBACK_MERGE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: fallbackMergePrompt(book, concatenated) }],
-    })
-    merged = extractText(fallback.content)
+    merged = await generateMarkdown(
+      pdfModelLayer,
+      FALLBACK_MERGE_SYSTEM_PROMPT,
+      fallbackMergePrompt(book, concatenated),
+    )
   }
 
   await mkdir(MD_DIR, { recursive: true })
@@ -398,37 +396,57 @@ function parseArgs(argv: readonly string[]): { bookFilter: string | null } {
   return { bookFilter }
 }
 
-async function main(): Promise<void> {
+const main = Effect.gen(function* () {
   const apiKey = process.env['ANTHROPIC_API_KEY']
   if (!apiKey || apiKey.includes('your-api-key')) {
-    throw new Error('ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running.')
+    return yield* Effect.die(
+      new Error('ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running.'),
+    )
   }
   const { bookFilter } = parseArgs(process.argv.slice(2))
   const targets = bookFilter ? BOOKS.filter((b) => b.slug === bookFilter) : BOOKS
   if (targets.length === 0) {
-    throw new Error(`unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(', ')}`)
+    return yield* Effect.die(
+      new Error(`unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(', ')}`),
+    )
   }
 
-  const client = new Anthropic({ apiKey })
+  const pdfModelLayer = buildAnthropicModelLayers({
+    provider: 'anthropic',
+    apiKey,
+    model: MODEL,
+    pdfModel: MODEL,
+    discussionModel: MODEL,
+    maxTokens: MAX_TOKENS,
+    discussionMaxTokens: MAX_TOKENS,
+    validationMaxTokens: MAX_TOKENS,
+  }).pdf
+
   const failed: Array<{ slug: string; error: string }> = []
   for (const book of targets) {
-    try {
-      await extractBook(client, book)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error(`[${book.slug}] failed: ${message}`)
-      failed.push({ slug: book.slug, error: message })
-    }
+    yield* Effect.tryPromise({
+      try: () => extractBook(pdfModelLayer, book),
+      catch: (error: unknown) => new Error(errorMessage(error)),
+    }).pipe(
+      Effect.catchAll((err) =>
+        Effect.sync(() => {
+          const message = err.message
+          console.error(`[${book.slug}] failed: ${message}`)
+          failed.push({ slug: book.slug, error: message })
+        }),
+      ),
+    )
   }
   if (failed.length > 0) {
-    console.error(`\n${failed.length} book(s) failed: ${failed.map((f) => f.slug).join(', ')}`)
-    console.error('Cached chunks were preserved — re-run to resume.')
-    process.exit(1)
+    yield* Effect.sync(() => {
+      console.error(`\n${failed.length} book(s) failed: ${failed.map((f) => f.slug).join(', ')}`)
+      console.error('Cached chunks were preserved — re-run to resume.')
+    })
+    return yield* Effect.die(new Error(`${failed.length} book(s) failed`))
   }
-  console.log('done.')
-}
-
-main().catch((err: unknown) => {
-  console.error(err)
-  process.exit(1)
+  yield* Effect.sync(() => {
+    console.log('done.')
+  })
 })
+
+NodeRuntime.runMain(main)

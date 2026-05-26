@@ -1,24 +1,14 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { eq } from 'drizzle-orm'
-import { Effect, Layer } from 'effect'
 import { user, session, account, verification } from '@teacher-exam/db'
 import type { AppDb } from '../api/services/db'
-import { DbClient } from '../api/services/db'
 import { runDb } from '../api/lib/db-effect'
 import { deriveUniqueUsername } from './username'
 import { resolveAuthBaseURL, resolveTrustedOrigins } from './auth-origins'
 import { isDevAuthEnabled } from './dev-auth'
-
-function requireEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing required env var: ${name}`)
-  return value
-}
-
-const GOOGLE_CLIENT_ID     = () => requireEnv('GOOGLE_CLIENT_ID')
-const GOOGLE_CLIENT_SECRET = () => requireEnv('GOOGLE_CLIENT_SECRET')
-const BETTER_AUTH_URL      = () => resolveAuthBaseURL()
+import { readAppConfigFromEnv } from '../api/services/app-config'
+import { runAuthDbEffect } from '../api/services/auth-service'
 
 type AuthInstance = ReturnType<typeof betterAuth>
 
@@ -27,9 +17,10 @@ let authDb: AppDb | undefined
 
 export function initAuth(db: AppDb): AuthInstance {
   authDb = db
+  const config = readAppConfigFromEnv()
   authInstance = betterAuth({
-    secret: requireEnv('SESSION_SECRET'),
-    baseURL: BETTER_AUTH_URL(),
+    secret: config.sessionSecret,
+    baseURL: resolveAuthBaseURL(),
     trustedOrigins: resolveTrustedOrigins(),
     database: drizzleAdapter(db, {
       provider: 'pg',
@@ -37,8 +28,8 @@ export function initAuth(db: AppDb): AuthInstance {
     }),
     socialProviders: {
       google: {
-        clientId: GOOGLE_CLIENT_ID(),
-        clientSecret: GOOGLE_CLIENT_SECRET(),
+        clientId: config.googleClientId,
+        clientSecret: config.googleClientSecret,
       },
     },
     ...(isDevAuthEnabled()
@@ -68,10 +59,9 @@ export function initAuth(db: AppDb): AuthInstance {
       user: {
         create: {
           before: async (data) => {
-            const username = await Effect.runPromise(
-              deriveUniqueUsername(data.email).pipe(
-                Effect.provide(Layer.succeed(DbClient, db)),
-              ),
+            const username = await runAuthDbEffect(
+              db,
+              deriveUniqueUsername(data.email),
             )
             return { data: { ...data, username } }
           },
@@ -80,13 +70,14 @@ export function initAuth(db: AppDb): AuthInstance {
       session: {
         create: {
           after: async (created) => {
-            await Effect.runPromise(
+            await runAuthDbEffect(
+              db,
               runDb(
                 db
                   .update(user)
                   .set({ lastLoginAt: new Date() })
                   .where(eq(user.id, created.userId)),
-              ).pipe(Effect.provide(Layer.succeed(DbClient, db))),
+              ),
             )
           },
         },

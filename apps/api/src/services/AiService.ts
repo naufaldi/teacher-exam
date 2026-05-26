@@ -1,4 +1,4 @@
-import { Effect, Schema, Either } from 'effect'
+import { Effect, Schema, Either, Stream } from 'effect'
 import { CurriculumValidationItemSchema, type GeneratedQuestion, type CurriculumValidationItem } from '@teacher-exam/shared'
 import { AiGenerationError } from '../errors'
 import { logAiEvent } from '../lib/ai-log'
@@ -53,7 +53,7 @@ export interface AiService {
   generateRaw: (input: GenerateRawInput) => Effect.Effect<string, AiGenerationError>
   validateCurriculum: (input: ValidateCurriculumInput) => Effect.Effect<ReadonlyArray<CurriculumValidationItem>, AiGenerationError>
   generateDiscussion: (input: DiscussionInput) => Effect.Effect<string, AiGenerationError>
-  streamDiscussion: (input: DiscussionInput) => AsyncGenerator<string>
+  streamDiscussion: (input: DiscussionInput) => Stream.Stream<string, AiGenerationError>
 }
 
 export interface AiServiceConfig {
@@ -222,14 +222,8 @@ export function createAiService(config: AiServiceConfig): AiService {
       return getDiscussionText(input)
     },
 
-    async *streamDiscussion(input) {
-      const result = await Effect.runPromise(Effect.either(getDiscussionText(input)))
-      if (Either.isLeft(result)) {
-        const err = result.left
-        const message = typeof err.cause === 'string' ? err.cause : String(err.cause)
-        throw new Error(message, { cause: err })
-      }
-      yield result.right
+    streamDiscussion(input) {
+      return Stream.fromEffect(getDiscussionText(input))
     },
   }
 }

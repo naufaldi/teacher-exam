@@ -1,4 +1,5 @@
 import './setup.js'
+import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { test, expect, vi } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -11,14 +12,14 @@ import {
   mockToast,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { api } from '../../../lib/api.js'
 import { makeExamWithQuestions, makeExamWithCompleteMetadata } from './fixtures.js'
 
 test('Nama Sekolah onBlur PATCHes exam with schoolName only', async () => {
-  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
   setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('E'))
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('E'))
   await getLoader()({ deps: { examId: 'E' } })
   renderReviewPage()
 
@@ -33,7 +34,7 @@ test('Nama Sekolah onBlur PATCHes exam with schoolName only', async () => {
 })
 
 test('persistMetaField skips PATCH when examId is undefined', async () => {
-  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
   setReviewSearch({ mode: 'fast' })
   examDraftStore.reset()
   renderReviewPage()
@@ -49,9 +50,9 @@ test('persistMetaField skips PATCH when examId is undefined', async () => {
 })
 
 test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
-  const examsPatchSpy = vi.spyOn(api.exams, 'patch').mockResolvedValue({} as never)
+  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
   setReviewSearch({ mode: 'fast', examId: 'E2' })
-  mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('E2'))
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('E2'))
   await getLoader()({ deps: { examId: 'E2' } })
   renderReviewPage()
 
@@ -66,10 +67,10 @@ test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
 
 test('Preview Lembar click calls api.exams.finalize then navigates with examId', async () => {
   const user = userEvent.setup()
-  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
 
   setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockExamsGet.mockResolvedValueOnce(makeExamWithCompleteMetadata('E'))
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata('E'))
   await getLoader()({ deps: { examId: 'E' } })
 
   renderReviewPage()
@@ -91,15 +92,15 @@ test('Preview Lembar click calls api.exams.finalize then navigates with examId',
 
 test('fast mode handlePreviewClick auto-accepts server-pending questions before calling finalize', async () => {
   const user = userEvent.setup()
-  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
-  const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
+  const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {} as never)
 
   setReviewSearch({ mode: 'fast', examId: 'exam_fast_auto' })
   const exam: ExamWithQuestions = {
     ...makeExamWithCompleteMetadata('exam_fast_auto'),
     questions: makeExamWithQuestions('exam_fast_auto').questions,
   }
-  mockExamsGet.mockResolvedValueOnce(exam)
+  mockApiResolvedValueOnce(mockExamsGet, exam)
   await getLoader()({ deps: { examId: 'exam_fast_auto' } })
 
   renderReviewPage()
@@ -121,15 +122,15 @@ test('fast mode handlePreviewClick auto-accepts server-pending questions before 
 
 test('slow mode handlePreviewClick does NOT auto-accept questions before finalize', async () => {
   const user = userEvent.setup()
-  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockResolvedValue({} as never)
-  const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
+  const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {} as never)
 
   setReviewSearch({ mode: 'slow', examId: 'exam_slow_no_auto' })
   const exam: ExamWithQuestions = {
     ...makeExamWithCompleteMetadata('exam_slow_no_auto'),
     questions: makeExamWithCompleteMetadata('exam_slow_no_auto').questions,
   }
-  mockExamsGet.mockResolvedValueOnce(exam)
+  mockApiResolvedValueOnce(mockExamsGet, exam)
   await getLoader()({ deps: { examId: 'exam_slow_no_auto' } })
 
   renderReviewPage()
@@ -153,7 +154,7 @@ test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOW
   )
 
   setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockExamsGet.mockResolvedValueOnce(makeExamWithCompleteMetadata('E'))
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata('E'))
   await getLoader()({ deps: { examId: 'E' } })
 
   renderReviewPage()

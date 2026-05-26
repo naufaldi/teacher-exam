@@ -1,4 +1,5 @@
 import './setup.js'
+import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,7 +11,7 @@ import {
   mockQuestionsRegenerate,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { api } from '../../../lib/api.js'
 import { makeExamWithQuestions, makeExamWithMixedTypes } from './fixtures.js'
 
@@ -18,7 +19,7 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
   it('reverts question text in store when api.questions.patch rejects', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_edit_fail' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_edit_fail'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_edit_fail'))
     await getLoader()({ deps: { examId: 'exam_edit_fail' } })
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockRejectedValue(new Error('Network error'))
@@ -50,10 +51,10 @@ describe('ReviewPage — Edit dialog saves via api.questions.patch', () => {
   it('calls api.questions.patch with only changed fields when text is modified', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_edit' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_edit'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_edit'))
     await getLoader()({ deps: { examId: 'exam_edit' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_edit',
@@ -93,10 +94,10 @@ describe('ReviewPage — Task 13: Edit dialog save fires api.questions.patch wit
   it('mcq_multi edit save sends {_tag:"mcq_multi", correct:[...]} to patch', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_multi_edit' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_multi_edit') as ExamWithQuestions)
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithMixedTypes('exam_multi_edit') as ExamWithQuestions)
     await getLoader()({ deps: { examId: 'exam_multi_edit' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       _tag: 'mcq_multi' as const,
       id: 'q-multi-1',
       examId: 'exam_multi_edit',
@@ -141,10 +142,10 @@ describe('ReviewPage — Edit preserves current status', () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_edit_pending' })
 
     const exam = makeExamWithQuestions('exam_edit_pending')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_edit_pending' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...exam.questions[0]!,
       text: 'Teks baru',
     })
@@ -177,10 +178,10 @@ describe('ReviewPage — Edit preserves current status', () => {
 
     const exam = makeExamWithQuestions('exam_edit_accepted')
     const questions = exam.questions.map((q) => ({ ...q, status: 'accepted' as const }))
-    mockExamsGet.mockResolvedValueOnce({ ...exam, questions })
+    mockApiResolvedValueOnce(mockExamsGet, { ...exam, questions })
     await getLoader()({ deps: { examId: 'exam_edit_accepted' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...questions[0]!,
       text: 'Teks baru',
     })
@@ -214,7 +215,7 @@ describe('ReviewPage — Edit dialog shows fresh content after regenerate', () =
     setReviewSearch({ mode: 'slow', examId: 'exam_regen_edit' })
 
     const exam = makeExamWithQuestions('exam_regen_edit')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_regen_edit' } })
 
     renderReviewPage()
@@ -230,7 +231,7 @@ describe('ReviewPage — Edit dialog shows fresh content after regenerate', () =
       expect(screen.queryByLabelText(/teks soal/i)).not.toBeInTheDocument()
     })
 
-    mockQuestionsRegenerate.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockQuestionsRegenerate, {
       ...exam.questions[0]!,
       text: 'Soal regenerasi baru',
       status: 'pending' as const,

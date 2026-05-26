@@ -8,13 +8,13 @@ import {
   mockExamsGet,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { makeExamWithQuestions, makeExamWithMixedTypes, makeExamWithValidation } from './fixtures.js'
 
 describe('ReviewPage — Task 13: Fast mode badges show correct label per type', () => {
   it('mcq_multi question badge shows "Kunci A, C"', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_mixed' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed') as ExamWithQuestions)
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithMixedTypes('exam_mixed') as ExamWithQuestions)
     await getLoader()({ deps: { examId: 'exam_mixed' } })
 
     renderReviewPage()
@@ -24,7 +24,7 @@ describe('ReviewPage — Task 13: Fast mode badges show correct label per type',
 
   it('true_false question badge shows "Kunci B, S, B"', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_mixed2' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed2') as ExamWithQuestions)
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithMixedTypes('exam_mixed2') as ExamWithQuestions)
     await getLoader()({ deps: { examId: 'exam_mixed2' } })
 
     renderReviewPage()
@@ -34,7 +34,7 @@ describe('ReviewPage — Task 13: Fast mode badges show correct label per type',
 
   it('shows fast mode legend in fast mode only', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_legend_fast' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_legend_fast'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_legend_fast'))
     await getLoader()({ deps: { examId: 'exam_legend_fast' } })
 
     renderReviewPage()
@@ -44,7 +44,7 @@ describe('ReviewPage — Task 13: Fast mode badges show correct label per type',
 
   it('hides fast mode legend in slow mode', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_legend_slow' })
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...makeExamWithQuestions('exam_legend_slow'),
       reviewMode: 'slow' as const,
     })
@@ -59,7 +59,7 @@ describe('ReviewPage — Task 13: Fast mode badges show correct label per type',
 describe('ReviewPage — Task 13: Slow mode card highlights correctly', () => {
   it('mcq_multi card highlights both correct letters A and C', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_mixed_slow' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed_slow') as ExamWithQuestions)
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithMixedTypes('exam_mixed_slow') as ExamWithQuestions)
     await getLoader()({ deps: { examId: 'exam_mixed_slow' } })
 
     renderReviewPage()
@@ -72,7 +72,7 @@ describe('ReviewPage — Task 13: Slow mode card highlights correctly', () => {
 
   it('true_false card shows 3 statement rows with B/S indicators', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_mixed_slow2' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithMixedTypes('exam_mixed_slow2') as ExamWithQuestions)
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithMixedTypes('exam_mixed_slow2') as ExamWithQuestions)
     await getLoader()({ deps: { examId: 'exam_mixed_slow2' } })
 
     renderReviewPage()
@@ -86,7 +86,7 @@ describe('ReviewPage — math rendering', () => {
   it('renders LaTeX in fast review list without dollar signs', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_math_fast' })
     const exam = makeExamWithQuestions('exam_math_fast')
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       subject: 'matematika',
       questions: [{
@@ -105,7 +105,7 @@ describe('ReviewPage — math rendering', () => {
   it('renders LaTeX in slow review cards', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_math_review' })
     const exam = makeExamWithQuestions('exam_math_review')
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       subject: 'matematika',
       questions: [{
@@ -127,7 +127,7 @@ describe('ReviewPage — figure rendering', () => {
   it('renders generated figure specs in slow review cards', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_figure_review' })
     const exam = makeExamWithQuestions('exam_figure_review')
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       subject: 'matematika',
       questions: [{
@@ -147,7 +147,7 @@ describe('ReviewPage — figure rendering', () => {
   it('renders generated figure specs in fast review cards', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_figure_fast' })
     const exam = makeExamWithQuestions('exam_figure_fast')
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       subject: 'matematika',
       questions: [{
@@ -168,7 +168,7 @@ describe('ReviewPage — figure rendering', () => {
 describe('ReviewPage — Penjaga Kurikulum badges', () => {
   it('shows curriculum badges in fast mode', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_val_fast' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithValidation('exam_val_fast'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithValidation('exam_val_fast'))
     await getLoader()({ deps: { examId: 'exam_val_fast' } })
 
     renderReviewPage()
@@ -180,7 +180,7 @@ describe('ReviewPage — Penjaga Kurikulum badges', () => {
   it('shows curriculum badges in slow mode', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_val_slow' })
     const exam = { ...makeExamWithValidation('exam_val_slow'), reviewMode: 'slow' as const }
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_val_slow' } })
 
     renderReviewPage()
@@ -192,7 +192,7 @@ describe('ReviewPage — Penjaga Kurikulum badges', () => {
   it('filters to flagged questions when Perlu review only is checked', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_val_filter' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithValidation('exam_val_filter'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithValidation('exam_val_filter'))
     await getLoader()({ deps: { examId: 'exam_val_filter' } })
 
     renderReviewPage()

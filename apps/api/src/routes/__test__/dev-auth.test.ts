@@ -1,19 +1,21 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-
-vi.mock('../../lib/auth', () => ({
-  auth: {
-    api: {
-      signInEmail: vi.fn(),
-      getSession: vi.fn(async () => null),
-    },
-  },
-}))
-
-import { auth } from '../../lib/auth'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Effect } from 'effect'
+import { TestAuthServiceLayer } from '../../api/services/auth-service'
 import { buildHttpApiTestApp } from './http-api-setup'
 
+const mockSignInEmail = vi.fn<(...args: unknown[]) => Promise<Response>>()
+
 function buildApp() {
-  return buildHttpApiTestApp({ authenticated: false })
+  return buildHttpApiTestApp({
+    authenticated: false,
+    authLayer: TestAuthServiceLayer({
+      signInEmail: (input) =>
+        Effect.tryPromise({
+          try: () => mockSignInEmail(input),
+          catch: (cause) => cause as never,
+        }),
+    }),
+  })
 }
 
 describe('POST /api/dev/login', () => {
@@ -33,7 +35,7 @@ describe('POST /api/dev/login', () => {
     })
 
     expect(res.status).toBe(403)
-    expect(auth.api.signInEmail as Mock).not.toHaveBeenCalled()
+    expect(mockSignInEmail).not.toHaveBeenCalled()
   })
 
   it('returns 403 when host is not localhost', async () => {
@@ -49,7 +51,7 @@ describe('POST /api/dev/login', () => {
     })
 
     expect(res.status).toBe(403)
-    expect(auth.api.signInEmail as Mock).not.toHaveBeenCalled()
+    expect(mockSignInEmail).not.toHaveBeenCalled()
   })
 
   it('returns 200 and forwards Set-Cookie when dev auth is enabled', async () => {
@@ -65,7 +67,7 @@ describe('POST /api/dev/login', () => {
         'Set-Cookie': 'better-auth.session_token=abc; Path=/; HttpOnly',
       },
     })
-    ;(auth.api.signInEmail as Mock).mockResolvedValueOnce(mockResponse)
+    mockSignInEmail.mockResolvedValueOnce(mockResponse)
 
     const app = buildApp()
     const res = await app.request('/api/dev/login', {
@@ -74,10 +76,10 @@ describe('POST /api/dev/login', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(auth.api.signInEmail as Mock).toHaveBeenCalledWith(
+    expect(mockSignInEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { email: 'dev@guru.local', password: 'secret' },
-        asResponse: true,
+        email: 'dev@guru.local',
+        password: 'secret',
       }),
     )
     const setCookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : []
@@ -94,7 +96,7 @@ describe('POST /api/dev/login', () => {
     vi.stubEnv('DEV_AUTH_EMAIL', 'dev@guru.local')
     vi.stubEnv('DEV_AUTH_PASSWORD', 'secret')
 
-    ;(auth.api.signInEmail as Mock).mockResolvedValueOnce(
+    mockSignInEmail.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 }),
     )
 

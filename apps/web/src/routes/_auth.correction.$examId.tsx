@@ -16,11 +16,11 @@ import {
   EmptyState,
 } from '@teacher-exam/ui'
 import { MOCK_STUDENTS } from '../lib/mock-data.js'
-import { api } from '../lib/api.js'
+import { api, unwrapApiEither } from '../lib/api.js'
 import { matchQuestion } from '../lib/question-render.js'
 
 export const Route = createFileRoute('/_auth/correction/$examId')({
-  loader: async ({ params }) => api.exams.get(params.examId),
+  loader: async ({ params }) => unwrapApiEither(await api.exams.get(params.examId)),
   component: CorrectionPage,
 })
 

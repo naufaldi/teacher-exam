@@ -1,15 +1,17 @@
 import './setup.js'
+import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { getLoader, mockExamsGet, mockNavigate, renderReviewPage, setReviewSearch } from './setup.js'
+import { getLoader, mockExamsGet, mockNavigate, renderReviewPage, setReviewSearch,
+  mockApiResolvedValueOnce} from './setup.js'
 import { api } from '../../../lib/api.js'
 import { lastReviewSearchResult } from './interactions.js'
 import { makeExamWithQuestions } from './fixtures.js'
 
 describe('ReviewPage — from=generate URL strip', () => {
   it('preserves examId in URL when stripping ?from=generate', async () => {
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_xyz'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_xyz'))
     await getLoader()({ deps: { examId: 'exam_xyz' } })
 
     setReviewSearch({ mode: 'fast', from: 'generate', examId: 'exam_xyz' })
@@ -30,7 +32,7 @@ describe('ReviewPage — switch mode preserves examId in URL', () => {
   it('navigates with both mode=slow AND examId when switching from fast → slow (clean state)', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_switch_1' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_switch_1'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_switch_1'))
     await getLoader()({ deps: { examId: 'exam_switch_1' } })
 
     renderReviewPage()
@@ -45,7 +47,7 @@ describe('ReviewPage — switch mode preserves examId in URL', () => {
   it('navigates with both mode=fast AND examId when switching from slow → fast (clean state)', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_switch_2' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_switch_2'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_switch_2'))
     await getLoader()({ deps: { examId: 'exam_switch_2' } })
 
     renderReviewPage()
@@ -61,10 +63,10 @@ describe('ReviewPage — switch mode preserves examId in URL', () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_switch_dirty' })
     const exam = makeExamWithQuestions('exam_switch_dirty')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_switch_dirty' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...exam.questions[0]!,
       status: 'accepted' as const,
     })

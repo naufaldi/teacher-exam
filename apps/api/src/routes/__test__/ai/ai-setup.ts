@@ -1,15 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Effect } from 'effect'
+import { Effect, Stream } from 'effect'
 import type { AiService, GeneratedQuestion } from '../../../services/AiService.js'
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
   and: vi.fn((...args) => ({ op: 'and', args })),
   desc: vi.fn((col) => ({ op: 'desc', col })),
-}))
-
-vi.mock('../../../lib/curriculum.js', () => ({
-  getCurriculumText: vi.fn(async () => 'mock curriculum text'),
 }))
 
 vi.mock('../../../lib/prompt.js', () => ({
@@ -59,7 +55,7 @@ const fakeAiService: AiService = {
     ),
   ),
   generateDiscussion: vi.fn(),
-  streamDiscussion: vi.fn(),
+  streamDiscussion: vi.fn(() => Stream.succeed('')),
 }
 
 function makeExamRow(overrides: Record<string, unknown> = {}) {

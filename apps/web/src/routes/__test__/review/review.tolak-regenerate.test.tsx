@@ -1,4 +1,6 @@
 import './setup.js'
+import { Either } from 'effect'
+import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,7 +12,7 @@ import {
   mockToast,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { api } from '../../../lib/api.js'
 import { deferred } from './interactions.js'
 import { makeExamWithQuestions } from './fixtures.js'
@@ -20,7 +22,7 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_slow' })
     const exam = makeExamWithQuestions('exam_slow')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_slow' } })
 
     const pending = deferred<Question>()
@@ -37,11 +39,13 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
     expect(await screen.findByText('AI sedang mengganti soal...')).toBeInTheDocument()
     expect(mockQuestionsRegenerate).toHaveBeenCalledWith('q-1', expect.any(Object))
 
-    pending.resolve({
-      ...exam.questions[0]!,
-      text: 'Soal pengganti setelah ditolak',
-      status: 'pending' as const,
-    })
+    pending.resolve(
+      Either.right({
+        ...exam.questions[0]!,
+        text: 'Soal pengganti setelah ditolak',
+        status: 'pending' as const,
+      }),
+    )
 
     expect(await screen.findByText('Soal pengganti setelah ditolak')).toBeInTheDocument()
   })
@@ -50,10 +54,10 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_slow_hint' })
     const exam = makeExamWithQuestions('exam_slow_hint')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_slow_hint' } })
 
-    mockQuestionsRegenerate.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockQuestionsRegenerate, {
       ...exam.questions[0]!,
       text: 'Replacement',
       status: 'pending' as const,
@@ -76,7 +80,7 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
   it('shows the persistent failure state with [Coba lagi] and [Batalkan] when regenerate fails', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_slow2' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_slow2'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_slow2'))
     await getLoader()({ deps: { examId: 'exam_slow2' } })
 
     mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI generation failed'))
@@ -100,7 +104,7 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
 describe('ReviewPage — fused Tolak replaces standalone "Ganti dengan AI" button', () => {
   it('does NOT render a standalone "Ganti dengan AI" button on any card', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_no_ganti_btn' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_no_ganti_btn'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_no_ganti_btn'))
     await getLoader()({ deps: { examId: 'exam_no_ganti_btn' } })
 
     renderReviewPage()
@@ -111,7 +115,7 @@ describe('ReviewPage — fused Tolak replaces standalone "Ganti dengan AI" butto
   it('shows an error toast when Tolak-triggered regenerate fails', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_tolak_toast' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_tolak_toast'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_tolak_toast'))
     await getLoader()({ deps: { examId: 'exam_tolak_toast' } })
 
     mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI generation failed'))
@@ -140,10 +144,10 @@ describe('ReviewPage — "Soal baru" badge for AI replacements', () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_new_badge' })
 
     const exam = makeExamWithQuestions('exam_new_badge')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_new_badge' } })
 
-    mockQuestionsRegenerate.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockQuestionsRegenerate, {
       ...exam.questions[0]!,
       text: 'Soal pengganti',
       status: 'pending' as const,
@@ -166,15 +170,15 @@ describe('ReviewPage — "Soal baru" badge for AI replacements', () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_new_badge_terima' })
 
     const exam = makeExamWithQuestions('exam_new_badge_terima')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_new_badge_terima' } })
 
-    mockQuestionsRegenerate.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockQuestionsRegenerate, {
       ...exam.questions[0]!,
       text: 'Soal pengganti',
       status: 'pending' as const,
     })
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...exam.questions[0]!,
       text: 'Soal pengganti',
       status: 'accepted' as const,
@@ -206,7 +210,7 @@ describe('ReviewPage — Batalkan reverts on regenerate failure', () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_batalkan' })
 
     const exam = makeExamWithQuestions('exam_batalkan')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_batalkan' } })
 
     mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI failed'))
@@ -236,7 +240,7 @@ describe('ReviewPage — Batalkan reverts on regenerate failure', () => {
 describe('ReviewPage — "Coba lagi yang gagal" top-bar button', () => {
   it('is hidden when there are no failed regenerations', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_no_fail' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_no_fail'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_no_fail'))
     await getLoader()({ deps: { examId: 'exam_no_fail' } })
 
     renderReviewPage()
@@ -247,7 +251,7 @@ describe('ReviewPage — "Coba lagi yang gagal" top-bar button', () => {
   it('appears with the count once a regenerate fails', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_fail_count' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_fail_count'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_fail_count'))
     await getLoader()({ deps: { examId: 'exam_fail_count' } })
 
     mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI failed'))
@@ -263,7 +267,7 @@ describe('ReviewPage — "Coba lagi yang gagal" top-bar button', () => {
   it('reuses the preserved hint when retrying all failed regenerations', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_retry_all' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_retry_all'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_retry_all'))
     await getLoader()({ deps: { examId: 'exam_retry_all' } })
 
     mockQuestionsRegenerate.mockRejectedValueOnce(new Error('AI failed'))
@@ -277,7 +281,7 @@ describe('ReviewPage — "Coba lagi yang gagal" top-bar button', () => {
 
     const retryAllBtn = await screen.findByText(/Coba lagi yang gagal \(1\)/i)
 
-    mockQuestionsRegenerate.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockQuestionsRegenerate, {
       ...makeExamWithQuestions('exam_retry_all').questions[0]!,
       text: 'Soal AI baru',
       status: 'pending' as const,

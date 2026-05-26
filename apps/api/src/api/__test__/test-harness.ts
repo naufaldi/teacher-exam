@@ -1,5 +1,5 @@
 import { HttpApiBuilder, HttpServer } from '@effect/platform'
-import { Effect, Layer } from 'effect'
+import { Effect, Layer, Stream } from 'effect'
 import { HealthLive } from '../handlers/health'
 import { DevAuthLive } from '../handlers/dev-auth'
 import { PublicExamsLive } from '../handlers/public-exams'
@@ -12,6 +12,8 @@ import { createCorsLayer } from '../cors'
 import { DbLayer } from '../services/db'
 import { createTestDbLayer, TestSqlLayer } from '../services/test-db'
 import { TestAiLayer, type AiClient } from '../services/ai'
+import { TestCurriculumLayer } from '../services/curriculum-service'
+import { TestAuthServiceLayer, AuthServiceLive } from '../services/auth-service'
 import { AuthorizationLive, TestAuthorizationLive } from '../middleware/auth'
 import {
   AiGenerateRateLimitLive,
@@ -36,7 +38,7 @@ const defaultTestAiService: AiService = {
       })),
     ),
   generateDiscussion: () => Effect.succeed(''),
-  streamDiscussion: async function* () {},
+  streamDiscussion: () => Stream.succeed(''),
 }
 
 const HandlerLayers = Layer.mergeAll(
@@ -74,6 +76,7 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
 } = {}) {
   const apiLayer = HttpApiBuilder.api(TeacherExamApi).pipe(
     Layer.provide(HandlerLayers),
@@ -91,6 +94,8 @@ export function createHttpApiTestLayer(opts: {
     TestDbLayer,
     TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
+    TestCurriculumLayer(),
+    opts.authLayer ?? AuthServiceLive,
     HttpServer.layerContext,
   )
 }

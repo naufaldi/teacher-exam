@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AiError, LanguageModel } from '@effect/ai'
-import { Effect, Either, Layer } from 'effect'
+import { Effect, Either, Layer, Stream } from 'effect'
 import { createAiService } from '../AiService'
 import { AiGenerationError } from '../../errors'
 import {
@@ -412,11 +412,10 @@ describe('AiService.streamDiscussion', () => {
   it('yields the full discussion text from Claude', async () => {
     const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN)
     const ai = createAiService({ layers })
-    const chunks: string[] = []
-    for await (const chunk of ai.streamDiscussion({ system: 's', user: 'u' })) {
-      chunks.push(chunk)
-    }
-    expect(chunks.join('')).toBe(FAKE_MARKDOWN)
+    const text = await Effect.runPromise(
+      Stream.runFold(ai.streamDiscussion({ system: 's', user: 'u' }), '', (acc, chunk) => acc + chunk),
+    )
+    expect(text).toBe(FAKE_MARKDOWN)
   })
 
   it('uses discussion layer by default', async () => {
@@ -426,25 +425,24 @@ describe('AiService.streamDiscussion', () => {
       return { text: FAKE_MARKDOWN }
     })
     const ai = createAiService({ layers })
-    for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) {
-      /* noop */
-    }
+    await Effect.runPromise(
+      Stream.runFold(ai.streamDiscussion({ system: 's', user: 'u' }), '', (acc, chunk) => acc + chunk),
+    )
     expect(discussionCalls).toHaveLength(1)
   })
 
-  it('throws an Error with a non-empty .message describing the cause when Claude fails', async () => {
+  it('fails with AiGenerationError when Claude fails', async () => {
     const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN, { finishReason: 'length' })
     const ai = createAiService({ layers })
-    let caught: unknown = null
-    try {
-      for await (const _ of ai.streamDiscussion({ system: 's', user: 'u' })) {
-        /* noop */
-      }
-    } catch (e) {
-      caught = e
+    const result = await Effect.runPromise(
+      Effect.either(
+        Stream.runFold(ai.streamDiscussion({ system: 's', user: 'u' }), '', (acc, chunk) => acc + chunk),
+      ),
+    )
+    expect(result._tag).toBe('Left')
+    if (result._tag === 'Left') {
+      expect(result.left).toBeInstanceOf(AiGenerationError)
+      expect(String(result.left.cause)).toContain('length')
     }
-    expect(caught).toBeInstanceOf(Error)
-    expect((caught as Error).message).toContain('length')
-    expect((caught as Error).cause).toBeInstanceOf(AiGenerationError)
   })
 })

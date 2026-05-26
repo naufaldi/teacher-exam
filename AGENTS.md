@@ -8,7 +8,7 @@ pnpm 10.15 + Turborepo monorepo. Node >= 22 required.
 
 | Package | Role |
 |---------|------|
-| `apps/api` | Hono v4 REST API, Effect-TS service layers, better-auth (Google OAuth), Drizzle ORM |
+| `apps/api` | Effect HttpApi server, Effect-TS service layers, better-auth (Google OAuth), `@effect/sql-drizzle` |
 | `apps/web` | React 19 + Vite 8 + TanStack Router (file-based) + Tailwind CSS v4 |
 | `packages/shared` | Effect Schema validation contracts — single source of truth for API types |
 | `packages/db` | Drizzle ORM PostgreSQL schemas + migrations |
@@ -44,10 +44,14 @@ Required — core: `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `GOOGLE_CLIENT_I
 AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
 
 - **`AI_PROVIDER=anthropic`** (Anthropic Claude on `api.anthropic.com`): `ANTHROPIC_API_KEY`
-- **`AI_PROVIDER=minimax`** (MiniMax M2.7 via the same `@anthropic-ai/sdk`; [Anthropic-compatible API](https://platform.minimax.io/docs/api-reference/text-anthropic-api)): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
+- **`AI_PROVIDER=minimax`** (MiniMax via `@effect/ai-anthropic` compatible API): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
 - **`AI_PROVIDER=openai`** (native OpenAI API via `openai` SDK): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (defaults `gpt-5.4-mini`). PDF materi uses OpenAI Responses API; no Claude fallback required for runtime flows.
 
 Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
+
+**Observability:** optional `OTEL_EXPORTER_OTLP_ENDPOINT` enables OpenTelemetry trace export (AI, DB spans via `@effect/opentelemetry` in `AppLayer`).
+
+**API service layers** (`apps/api/src/layers/AppLayer.ts`): `AppConfig` (Effect Config for env), `AuthService` (better-auth boundary), `CurriculumService` (`@effect/platform` FileSystem), `DbClient`, AI layers, telemetry.
 
 **Dev logging:** `AI_LOG=1` logs MiniMax/Claude timing (`[ai]` in API stdout); auto-on when `DEV_AUTH_ENABLED=true` or `NODE_ENV=development`. Web dev builds log `[dev] api.fetch` timing in the browser console via `devLog`.
 
@@ -84,6 +88,7 @@ Every new feature, bugfix, or behavior change follows **Test-Driven Development*
 ### Test Runner
 
 - **Vitest** for every package (web, api, shared, ui). ESM-native, single config style.
+- API service tests may use `@effect/vitest` (`it.effect`, `assert`) for Effect-native programs.
 - Invoke via `pnpm test` (RTK auto-rewrites to `rtk vitest` per the table above — failures-only output).
 - Test glob: `**/__test__/**/*.test.{ts,tsx}` (Vitest default).
 
@@ -199,7 +204,7 @@ These rules are enforceable across `apps/api`, `apps/web`, `packages/shared`, an
 9. **MUST** define the Schema first, then derive the type via `type X = typeof XSchema.Type`, and export both.
 10. **MUST** declare services with `Context.Tag` and provide them via `Layer.succeed` / `Layer.effect`, composed inside `apps/api/src/layers/AppLayer.ts`.
 11. **MUST** brand all new entity primary-key schemas via `Schema.String.pipe(Schema.brand('XId'))`.
-12. **MUST** use the platform-specific `runMain` (`NodeRuntime.runMain`, `BrowserRuntime.runMain`) for any standalone long-running Effect program. The existing Hono `serve()` entrypoint is exempt because Hono owns the request lifecycle.
+12. **MUST** use the platform-specific `runMain` (`NodeRuntime.runMain`, `BrowserRuntime.runMain`) for any standalone long-running Effect program. The HttpApi bridge entrypoint is exempt because it owns the Node HTTP request lifecycle.
 
 <!-- effect-solutions:start -->
 ## Effect Best Practices

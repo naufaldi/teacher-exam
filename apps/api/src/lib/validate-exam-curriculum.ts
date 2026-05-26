@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { Effect } from 'effect'
 import { exams, questions } from '@teacher-exam/db'
 import type { ExamSubject, ExamWithQuestions } from '@teacher-exam/shared'
-import { getCurriculumText } from './curriculum'
+import { CurriculumService, CurriculumReadError } from '../api/services/curriculum-service'
 import { fetchExamWithQuestions } from './exams-query'
 import { rowToQuestion } from './question-mapper'
 import { logAiEvent } from './ai-log'
@@ -16,7 +16,7 @@ export function validateExamCurriculum(
   examId: string,
   userId: string,
   aiService: AiService,
-): Effect.Effect<ExamWithQuestions | null, ApiDatabaseError, DbClient> {
+): Effect.Effect<ExamWithQuestions | null, ApiDatabaseError | CurriculumReadError, DbClient | CurriculumService> {
   return Effect.gen(function* () {
     const t0 = Date.now()
     const db = yield* DbClient
@@ -39,25 +39,22 @@ export function validateExamCurriculum(
       return yield* fetchExamWithQuestions(examId)
     }
 
-    const curriculumText = yield* Effect.tryPromise({
-      try: () => getCurriculumText(examRow.subject as ExamSubject, examRow.grade),
-      catch: (cause) => cause,
-    }).pipe(Effect.orDie)
+    const curriculum = yield* CurriculumService
+    const curriculumText = yield* curriculum.getText(
+      examRow.subject as ExamSubject,
+      examRow.grade,
+    )
 
-    const validationUpdates = yield* Effect.tryPromise({
-      try: () =>
-        validateQuestionBatch({
-          aiService,
-          exam: {
-            subject: examRow.subject,
-            grade: examRow.grade,
-            examType: examRow.examType ?? 'formatif',
-          },
-          curriculumText,
-          questions: questionsForCurriculum,
-        }),
-      catch: (cause) => cause,
-    }).pipe(Effect.orDie)
+    const validationUpdates = yield* validateQuestionBatch({
+      aiService,
+      exam: {
+        subject: examRow.subject,
+        grade: examRow.grade,
+        examType: examRow.examType ?? 'formatif',
+      },
+      curriculumText,
+      questions: questionsForCurriculum,
+    })
 
     for (const update of validationUpdates) {
       yield* runDb(

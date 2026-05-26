@@ -9,7 +9,7 @@ import {
 } from '@teacher-exam/shared'
 import type { FigureSpec, GeneratedQuestion, Question } from '@teacher-exam/shared'
 import type { GenerateExamInput } from '@teacher-exam/shared'
-import { getCurriculumText } from './curriculum'
+import { CurriculumService, CurriculumReadError } from '../api/services/curriculum-service'
 import { logAiEvent } from './ai-log'
 import { EXAM_TYPE_PROFILE, resolveComposition } from './exam-type-profile'
 import { buildExamPrompt } from './prompt'
@@ -312,7 +312,11 @@ export function generateExam(
   userId: string,
   input: GenerateExamInput,
   aiService: AiService,
-): Effect.Effect<GenerateExamResult, AiGenerationError | ApiDatabaseError, DbClient | SqlClient> {
+): Effect.Effect<
+  GenerateExamResult,
+  AiGenerationError | ApiDatabaseError | CurriculumReadError,
+  DbClient | SqlClient | CurriculumService
+> {
   return Effect.gen(function* () {
     const handlerT0 = Date.now()
     const examType = normalizeExamType(input.examType ?? 'formatif')
@@ -325,10 +329,8 @@ export function generateExam(
       return { _tag: 'validation_error', details: (err as Error).message }
     }
 
-    const curriculumText = yield* Effect.tryPromise({
-      try: () => getCurriculumText(input.subject, input.grade),
-      catch: (cause) => cause,
-    }).pipe(Effect.orDie)
+    const curriculum = yield* CurriculumService
+    const curriculumText = yield* curriculum.getText(input.subject, input.grade)
     const { system, user } = buildExamPrompt({
       examType,
       difficulty: input.difficulty,

@@ -25,7 +25,7 @@ import { GenerateProgressDialog } from '../components/generate/generate-progress
 import { TopicMultiSelect } from '../components/generate/topic-multi-select.js'
 import { GenerateErrorDialog } from '../components/generate/generate-error-dialog.js'
 import { examDraftStore } from '../lib/exam-draft-store.js'
-import { api, ApiError, RateLimitedError } from '../lib/api.js'
+import { api, ApiError, RateLimitedError, unwrapApiEither } from '../lib/api.js'
 import { TOPICS_BY_SUBJECT } from '../lib/generate-topics.js'
 import { SUBJECT_OPTIONS, subjectMetaFor } from '../lib/subjects.js'
 
@@ -267,6 +267,7 @@ function GeneratePage() {
       classContext: fokusGuru.trim() !== '' ? fokusGuru.trim() : undefined,
       exampleQuestions: contohSoal.trim() !== '' ? contohSoal.trim() : undefined,
     }).then((result) => {
+      const exam = unwrapApiEither(result)
       clearTimers()
       setProgress(100)
 
@@ -274,7 +275,7 @@ function GeneratePage() {
         setIsGenerating(false)
         void navigate({
           to: '/review',
-          search: { examId: result.id, mode: reviewMode, from: 'generate' },
+          search: { examId: exam.id, mode: reviewMode, from: 'generate' },
         })
       }, 450)
     }).catch((err: unknown) => {

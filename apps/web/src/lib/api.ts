@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Schema, Either, Match } from 'effect'
 import type {
   Exam,
   ExamShareResponse,
@@ -21,73 +21,82 @@ import {
   PublicExamWithQuestionsSchema,
 } from '@teacher-exam/shared'
 import { devLog } from './dev-log.js'
+import {
+  type ApiClientFailure,
+  UnauthorizedClientError,
+  RateLimitedClientError,
+  ApiClientError,
+  NetworkClientError,
+  DecodeClientError,
+  UnauthorizedError,
+  RateLimitedError,
+  ApiError,
+} from './api-errors.js'
 
-// Prod: VITE_API_URL=https://api.ujiansd.com/api (baked at build time)
-// Dev: unset → relative path, proxied by Vite to API_PORT (default :3000)
+export {
+  UnauthorizedError,
+  RateLimitedError,
+  ApiError,
+  type ApiClientFailure,
+  UnauthorizedClientError,
+  RateLimitedClientError,
+  ApiClientError,
+  NetworkClientError,
+  DecodeClientError,
+}
+
 const API_BASE = import.meta.env['VITE_API_URL'] ?? '/api'
 
-/**
- * Thrown when an API call returns 401. Caller should clear local session
- * state and redirect to the login page.
- */
-export class UnauthorizedError extends Error {
-  readonly _tag = 'UnauthorizedError' as const
-  constructor(message = 'Unauthorized') {
-    super(message)
-    this.name = 'UnauthorizedError'
-  }
-}
-
-/**
- * Thrown when an API call returns 429. `retryAfterSec` is parsed from the
- * `Retry-After` response header when present.
- */
-export class RateLimitedError extends Error {
-  readonly _tag = 'RateLimitedError' as const
-  readonly retryAfterSec: number
-  constructor(retryAfterSec: number, message = 'Terlalu banyak permintaan. Coba lagi sebentar.') {
-    super(message)
-    this.name = 'RateLimitedError'
-    this.retryAfterSec = retryAfterSec
-  }
-}
-
-export class ApiError extends Error {
-  code: string
-  status: number
-  details?: unknown
-
-  constructor({
-    message,
-    code,
-    status,
-    details,
-  }: {
-    message: string
-    code: string
-    status: number
-    details?: unknown
-  }) {
-    super(message)
-    this.name = 'ApiError'
-    this.code = code
-    this.status = status
-    this.details = details
-  }
-}
-
-type AuthErrorHandler = (err: UnauthorizedError) => void
+type AuthErrorHandler = (err: UnauthorizedClientError) => void
 let onUnauthorized: AuthErrorHandler | null = null
 
-/**
- * Register a global handler invoked whenever any API call returns 401.
- * Used by the auth layout to sign out and redirect to /.
- */
 export function setUnauthorizedHandler(handler: AuthErrorHandler | null): void {
   onUnauthorized = handler
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export function throwClientError(err: ApiClientFailure): never {
+  Match.value(err).pipe(
+    Match.tag('UnauthorizedClientError', (e) => {
+      const legacy = new UnauthorizedError(e.message)
+      if (onUnauthorized) onUnauthorized(e)
+      throw legacy
+    }),
+    Match.tag('RateLimitedClientError', (e) => {
+      throw new RateLimitedError(e.retryAfterSec, e.message)
+    }),
+    Match.tag('ApiClientError', (e) => {
+      throw new ApiError({
+        message: e.message,
+        code: e.code,
+        status: e.status,
+        details: e.details,
+      })
+    }),
+    Match.tag('NetworkClientError', (e) => {
+      throw new Error(e.message)
+    }),
+    Match.tag('DecodeClientError', (e) => {
+      throw new ApiError({
+        message: e.message,
+        code: 'DECODE_ERROR',
+        status: 0,
+      })
+    }),
+    Match.exhaustive,
+  )
+}
+
+export function unwrapApiEither<A>(result: Either.Either<ApiClientFailure, A>): A {
+  if (Either.isLeft(result)) {
+    throwClientError(result.left)
+  }
+  return result.right
+}
+
+export async function apiFetchEither<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<Either.Either<ApiClientFailure, T>> {
   const method = init?.method ?? 'GET'
   const t0 = performance.now()
   let res: Response
@@ -105,7 +114,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       durationMs: Math.round(performance.now() - t0),
       error: err instanceof Error ? err.message : String(err),
     })
-    throw err
+    return Either.left(
+      new NetworkClientError({
+        message: err instanceof Error ? err.message : String(err),
+      }),
+    )
   }
 
   const durationMs = Math.round(performance.now() - t0)
@@ -116,74 +129,86 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   if (res.status === 401) {
-    const err = new UnauthorizedError()
+    const err = new UnauthorizedClientError({})
     if (onUnauthorized) onUnauthorized(err)
-    throw err
+    return Either.left(err)
   }
 
   if (res.status === 429) {
     const header = res.headers.get('Retry-After')
     const retryAfterSec = header ? Number(header) : 60
-    throw new RateLimitedError(Number.isFinite(retryAfterSec) ? retryAfterSec : 60)
+    return Either.left(
+      new RateLimitedClientError({
+        retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : 60,
+      }),
+    )
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText, code: 'UNKNOWN' }))
     const errorBody = body as { error?: string; message?: string; code?: string; details?: unknown }
-    throw new ApiError({
-      message: errorBody.message ?? errorBody.error ?? res.statusText,
-      code: errorBody.code ?? 'UNKNOWN',
-      status: res.status,
-      details: errorBody.details,
-    })
+    return Either.left(
+      new ApiClientError({
+        message: errorBody.message ?? errorBody.error ?? res.statusText,
+        code: errorBody.code ?? 'UNKNOWN',
+        status: res.status,
+        details: errorBody.details,
+      }),
+    )
   }
-  return res.json() as Promise<T>
+
+  const json = (await res.json()) as T
+  return Either.right(json)
 }
 
-function decodeResponse<T>(schema: Schema.Schema<T>, raw: unknown): T {
+/** Throws legacy errors — use in TanStack loaders or legacy call sites. */
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  return unwrapApiEither(await apiFetchEither<T>(path, init))
+}
+
+function decodeEither<T>(schema: Schema.Schema<T>, raw: unknown): Either.Either<ApiClientFailure, T> {
   const decoded = Schema.decodeUnknownEither(schema)(raw)
   if (decoded._tag === 'Left') {
-    throw new ApiError({
-      message: 'Invalid response from server',
-      code: 'DECODE_ERROR',
-      status: 0,
-    })
+    return Either.left(
+      new DecodeClientError({ message: 'Invalid response from server' }),
+    )
   }
-
-  return decoded.right as T
+  return Either.right(decoded.right)
 }
 
 export const api = {
   health: {
-    get: () => apiFetch<HealthResponse>('/health'),
+    get: () => apiFetchEither<HealthResponse>('/health'),
   },
   exams: {
-    list: () => apiFetch<ExamListResponse>('/exams'),
-    get: (id: string) => apiFetch<ExamDetailResponse>(`/exams/${id}`),
+    list: () => apiFetchEither<ExamListResponse>('/exams'),
+    get: (id: string) => apiFetchEither<ExamDetailResponse>(`/exams/${id}`),
     patch: (id: string, body: Partial<UpdateExamInput>) =>
-      apiFetch<ExamDetailResponse>(`/exams/${id}`, {
+      apiFetchEither<ExamDetailResponse>(`/exams/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
-    remove: (id: string) => apiFetch<void>(`/exams/${id}`, { method: 'DELETE' }),
-    duplicate: (id: string) => apiFetch<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
-    share: async (id: string): Promise<ExamShareResponse> => {
-      const raw = await apiFetch<unknown>(`/exams/${id}/share`, { method: 'POST' })
-      return decodeResponse<ExamShareResponse>(ExamShareResponseSchema, raw)
+    remove: (id: string) => apiFetchEither<void>(`/exams/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) => apiFetchEither<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
+    share: async (id: string): Promise<Either.Either<ApiClientFailure, ExamShareResponse>> => {
+      const raw = await apiFetchEither<unknown>(`/exams/${id}/share`, { method: 'POST' })
+      if (Either.isLeft(raw)) return raw
+      return decodeEither(ExamShareResponseSchema, raw.right)
     },
     finalize: (id: string) =>
-      apiFetch<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
-    validateCurriculum: async (id: string): Promise<ExamWithQuestions> => {
-      const raw = await apiFetch<unknown>(`/exams/${id}/validate-curriculum`, { method: 'POST' })
-      return decodeResponse<ExamWithQuestions>(ExamWithQuestionsSchema, raw)
+      apiFetchEither<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
+    validateCurriculum: async (id: string): Promise<Either.Either<ApiClientFailure, ExamWithQuestions>> => {
+      const raw = await apiFetchEither<unknown>(`/exams/${id}/validate-curriculum`, { method: 'POST' })
+      if (Either.isLeft(raw)) return raw
+      return decodeEither(ExamWithQuestionsSchema, raw.right)
     },
     generateDiscussion: (id: string) =>
-      apiFetch<ExamDetailResponse>(`/exams/${id}/discussion`, { method: 'POST' }),
+      apiFetchEither<ExamDetailResponse>(`/exams/${id}/discussion`, { method: 'POST' }),
     streamDiscussion: async (
       id: string,
       onDone: (exam: ExamDetailResponse) => void,
       onError: (message: string) => void,
-    ): Promise<void> => {
+    ): Promise<Either.Either<ApiClientFailure, void>> => {
       let response: Response
       try {
         response = await fetch(`${API_BASE}/exams/${id}/discussion`, {
@@ -192,14 +217,18 @@ export const api = {
           headers: { 'Content-Length': '0' },
         })
       } catch {
-        onError('Failed to fetch')
-        return
+        return Either.left(new NetworkClientError({ message: 'Failed to fetch' }))
       }
 
       if (!response.ok || !response.body) {
         const body = await response.json().catch(() => ({})) as { message?: string; error?: string }
-        onError(body.message ?? body.error ?? `Request failed (${response.status})`)
-        return
+        return Either.left(
+          new ApiClientError({
+            message: body.message ?? body.error ?? `Request failed (${response.status})`,
+            code: 'DISCUSSION_ERROR',
+            status: response.status,
+          }),
+        )
       }
 
       const reader = response.body.getReader()
@@ -222,61 +251,67 @@ export const api = {
               else if (line.startsWith('data: ')) data = line.slice(6)
             }
             if (eventType === 'done') {
-              onDone(JSON.parse(data) as ExamDetailResponse)
-              return
-            } else if (eventType === 'error') {
+              const decoded = decodeEither(ExamWithQuestionsSchema, JSON.parse(data))
+              if (Either.isLeft(decoded)) {
+                return Either.left(decoded.left)
+              }
+              onDone(decoded.right as ExamDetailResponse)
+              return Either.right(undefined)
+            }
+            if (eventType === 'error') {
               const err = JSON.parse(data) as { message: string }
               onError(err.message)
-              return
+              return Either.left(
+                new ApiClientError({
+                  message: err.message,
+                  code: 'DISCUSSION_STREAM_ERROR',
+                  status: 500,
+                }),
+              )
             }
           }
         }
       } catch {
-        onError('Failed to fetch')
+        return Either.left(new NetworkClientError({ message: 'Failed to fetch' }))
       }
+      return Either.right(undefined)
     },
   },
   ai: {
-    generate: async (input: GenerateExamInput): Promise<ExamWithQuestions> => {
-      const raw = await apiFetch<unknown>('/ai/generate', {
+    generate: async (input: GenerateExamInput): Promise<Either.Either<ApiClientFailure, ExamWithQuestions>> => {
+      const raw = await apiFetchEither<unknown>('/ai/generate', {
         method: 'POST',
         body: JSON.stringify(input),
       })
-      const decoded = Schema.decodeUnknownEither(ExamWithQuestionsSchema)(raw)
-      if (decoded._tag === 'Left') {
-        throw new ApiError({
-          message: 'Invalid response from server',
-          code: 'DECODE_ERROR',
-          status: 0,
-        })
-      }
-      return decoded.right
+      if (Either.isLeft(raw)) return raw
+      return decodeEither(ExamWithQuestionsSchema, raw.right)
     },
   },
   questions: {
     patch: (id: string, body: UpdateQuestionInput) =>
-      apiFetch<QuestionResponse>(`/questions/${id}`, {
+      apiFetchEither<QuestionResponse>(`/questions/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
     regenerate: (id: string, body?: RegenerateQuestionInput) =>
-      apiFetch<QuestionResponse>(`/questions/${id}/regenerate`, {
+      apiFetchEither<QuestionResponse>(`/questions/${id}/regenerate`, {
         method: 'POST',
         body: JSON.stringify(body ?? {}),
       }),
   },
   me: {
-    get: () => apiFetch<UserProfile>('/me'),
+    get: () => apiFetchEither<UserProfile>('/me'),
     update: (body: UpdateProfileInput) =>
-      apiFetch<UserProfile>('/me', {
+      apiFetchEither<UserProfile>('/me', {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
   },
   publicExams: {
-    get: async (slug: string): Promise<PublicExamDetailResponse> => {
-      const raw = await apiFetch<unknown>(`/public/exams/${slug}`)
-      return decodeResponse<PublicExamDetailResponse>(PublicExamWithQuestionsSchema, raw)
+    get: async (slug: string): Promise<Either.Either<ApiClientFailure, PublicExamDetailResponse>> => {
+      const raw = await apiFetchEither<unknown>(`/public/exams/${slug}`)
+      if (Either.isLeft(raw)) return raw
+      return decodeEither(PublicExamWithQuestionsSchema, raw.right)
     },
   },
 }

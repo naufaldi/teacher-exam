@@ -1,8 +1,10 @@
 import './setup.js'
+import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { getLoader, mockExamsGet, renderReviewPage, setReviewSearch } from './setup.js'
+import { getLoader, mockExamsGet, renderReviewPage, setReviewSearch,
+  mockApiResolvedValueOnce} from './setup.js'
 import { api } from '../../../lib/api.js'
 import { makeExamWithQuestions, makeExamWithOneAccepted } from './fixtures.js'
 
@@ -10,10 +12,10 @@ describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => 
   it('calls api.questions.patch with status=accepted when Terima is clicked', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_terima' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_terima'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_terima'))
     await getLoader()({ deps: { examId: 'exam_terima' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_terima',
@@ -44,10 +46,10 @@ describe('ReviewPage — Slow Track Terima wires to api.questions.patch', () => 
   it('calls api.questions.patch for each question when Terima Semua is clicked', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_terima_semua' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_terima_semua'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_terima_semua'))
     await getLoader()({ deps: { examId: 'exam_terima_semua' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       _tag: 'mcq_single' as const,
       id: 'q-1',
       examId: 'exam_terima_semua',
@@ -84,7 +86,7 @@ describe('ReviewPage — Terima Semua partial failure reverts failed statuses', 
 
     const exam = makeExamWithQuestions('exam_partial_fail')
     const threeQuestions = exam.questions.slice(0, 3)
-    mockExamsGet.mockResolvedValueOnce({ ...exam, questions: threeQuestions })
+    mockApiResolvedValueOnce(mockExamsGet, { ...exam, questions: threeQuestions })
     await getLoader()({ deps: { examId: 'exam_partial_fail' } })
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockImplementation((id) => {
@@ -128,7 +130,7 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
   it('hides Terima and shows Batalkan terima on an accepted card', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_accepted_state' })
     const exam = makeExamWithOneAccepted()
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_accepted_state' } })
 
     renderReviewPage()
@@ -144,7 +146,7 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
   it('hides Tolak on an accepted card', async () => {
     setReviewSearch({ mode: 'slow', examId: 'exam_accepted_tolak' })
     const exam = makeExamWithOneAccepted('exam_accepted_tolak')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_accepted_tolak' } })
 
     renderReviewPage()
@@ -159,10 +161,10 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_undo_accept' })
     const exam = makeExamWithOneAccepted('exam_undo_accept')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_undo_accept' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...exam.questions[0]!,
       status: 'pending' as const,
     })
@@ -185,10 +187,10 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'slow', examId: 'exam_idempotent' })
     const exam = makeExamWithQuestions('exam_idempotent')
-    mockExamsGet.mockResolvedValueOnce(exam)
+    mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_idempotent' } })
 
-    const patchSpy = vi.spyOn(api.questions, 'patch').mockResolvedValue({
+    const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {
       ...exam.questions[0]!,
       status: 'accepted' as const,
     })
@@ -212,7 +214,7 @@ describe('ReviewPage — Slow Track accepted card state machine', () => {
       reviewMode: 'slow' as const,
       questions: base.questions.map((q) => ({ ...q, status: 'accepted' as const })),
     }
-    mockExamsGet.mockResolvedValueOnce(allAccepted)
+    mockApiResolvedValueOnce(mockExamsGet, allAccepted)
     await getLoader()({ deps: { examId: 'exam_all_accepted' } })
 
     renderReviewPage()

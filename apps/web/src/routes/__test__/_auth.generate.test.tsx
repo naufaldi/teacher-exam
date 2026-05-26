@@ -46,6 +46,7 @@ vi.mock('@teacher-exam/ui', async (importOriginal) => {
 })
 
 import { api, ApiError } from '../../lib/api.js'
+import { mockApiFailOnce, mockApiResolvedValueOnce } from '../../lib/api-test-utils.js'
 import { Route } from '../_auth.generate.js'
 
 const mockApi = api as unknown as { ai: { generate: ReturnType<typeof vi.fn> } }
@@ -156,7 +157,7 @@ describe('Jumlah Soal input', () => {
   })
 
   it('api.ai.generate is called with totalSoal in body', async () => {
-    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions('exam_abc'))
 
     renderGeneratePage()
 
@@ -174,7 +175,7 @@ describe('Jumlah Soal input', () => {
 
 describe('GeneratePage — runGenerate flow', () => {
   it('calls api.ai.generate and navigates to /review with examId on success', async () => {
-    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions('exam_abc'))
 
     renderGeneratePage()
     await clickGenerateAndFlush()
@@ -192,7 +193,7 @@ describe('GeneratePage — runGenerate flow', () => {
   })
 
   it('keeps progress dialog open until navigation (no premature close)', async () => {
-    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions('exam_abc'))
 
     renderGeneratePage()
 
@@ -213,7 +214,7 @@ describe('GeneratePage — runGenerate flow', () => {
   })
 
   it('does NOT navigate when api.ai.generate rejects', async () => {
-    mockApi.ai.generate.mockRejectedValueOnce(new Error('AI generation failed'))
+    mockApiFailOnce(mockApi.ai.generate, new Error('AI generation failed'))
 
     renderGeneratePage()
     await clickGenerateAndFlush()
@@ -222,7 +223,7 @@ describe('GeneratePage — runGenerate flow', () => {
   })
 
   it('shows the API error message in the failure dialog', async () => {
-    mockApi.ai.generate.mockRejectedValueOnce(
+    mockApiFailOnce(mockApi.ai.generate, 
       new ApiError({
         message: 'Expected 40 questions, got 20',
         code: 'AI_GENERATION_ERROR',
@@ -237,7 +238,7 @@ describe('GeneratePage — runGenerate flow', () => {
   })
 
   it('uses the dynamic examId from api response, not a fixed value', async () => {
-    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_from_server_42'))
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions('exam_from_server_42'))
 
     renderGeneratePage()
     await clickGenerateAndFlush()
@@ -306,7 +307,7 @@ describe('Atur komposisi panel', () => {
   })
 
   it('includes composition in the API payload on submit', async () => {
-    mockApi.ai.generate.mockResolvedValueOnce(makeExamWithQuestions('exam_abc'))
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions('exam_abc'))
 
     renderGeneratePage()
     // Expand panel; default formatif composition is {20,0,0} which sums to 20 == totalSoal

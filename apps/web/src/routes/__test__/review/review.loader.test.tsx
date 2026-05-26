@@ -2,12 +2,13 @@ import './setup.js'
 import { describe, it, expect } from 'vitest'
 import { screen } from '@testing-library/react'
 import { examDraftStore } from '../../../lib/exam-draft-store.js'
-import { getLoader, mockExamsGet, renderReviewPage } from './setup.js'
+import { getLoader, mockExamsGet, renderReviewPage,
+  mockApiResolvedValueOnce} from './setup.js'
 import { makeExamWithQuestions } from './fixtures.js'
 
 describe('ReviewPage — loader', () => {
   it('calls api.exams.get and seeds examDraftStore when examId is present', async () => {
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_123'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_123'))
 
     const loader = getLoader()
     await loader({ deps: { examId: 'exam_123' } })
@@ -26,7 +27,7 @@ describe('ReviewPage — loader', () => {
 
 describe('ReviewPage — component', () => {
   it('renders questions seeded by loader (not mock data)', async () => {
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_456'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_456'))
     await getLoader()({ deps: { examId: 'exam_456' } })
 
     renderReviewPage()

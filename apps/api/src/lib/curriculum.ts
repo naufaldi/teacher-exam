@@ -1,14 +1,11 @@
-import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ExamSubject } from '@teacher-exam/shared'
 
-const cache = new Map<string, Promise<string>>()
-
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
 const MD_DIR = join(MODULE_DIR, '..', 'curriculum', 'md')
 
-const SUBJECT_SLUG: Record<ExamSubject, string> = {
+export const SUBJECT_SLUG: Record<ExamSubject, string> = {
   bahasa_indonesia: 'bahasa-indonesia',
   pendidikan_pancasila: 'pendidikan-pancasila',
   ipas: 'ipas',
@@ -30,38 +27,9 @@ export function curriculumMdPath(subject: ExamSubject, grade: number): string {
   return join(MD_DIR, curriculumMdFilename(subject, grade))
 }
 
-/**
- * Load the curriculum markdown for `(subject, grade)` from the extracted
- * corpus. Falls back to a CP-only PRD §8 stub when the file is missing so
- * the API stays usable before the extractor has been run.
- *
- * Cached per `(subject, grade)` for the lifetime of the process; concurrent
- * callers share the same in-flight read.
- */
-export function getCurriculumText(subject: ExamSubject, grade: number): Promise<string> {
-  const key = `${subject}-${grade}`
-  const cached = cache.get(key)
-  if (cached !== undefined) return cached
-
-  const promise = loadCurriculumText(subject, grade)
-  cache.set(key, promise)
-  return promise
-}
-
-async function loadCurriculumText(subject: ExamSubject, grade: number): Promise<string> {
-  const path = curriculumMdPath(subject, grade)
-  try {
-    return await readFile(path, 'utf-8')
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-    console.warn(`[curriculum] missing ${path} — using PRD §8 fallback`)
-    return FALLBACK[SUBJECT_SLUG[subject]] ?? ''
-  }
-}
-
-/** Reset the in-memory cache. Test-only escape hatch. */
-export function __resetCurriculumCache(): void {
-  cache.clear()
+/** PRD §8 stub when the extracted corpus file is missing. */
+export function getCurriculumFallback(subject: ExamSubject): string {
+  return FALLBACK[SUBJECT_SLUG[subject]] ?? ''
 }
 
 // Keyed by subject only — Fase C CP is identical for K5 and K6 (PRD §1.4).
@@ -86,7 +54,7 @@ const FALLBACK: Record<string, string> = {
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
 `,
-  'ipas': `# IPAS — Fase C (Kurikulum Merdeka)
+  ipas: `# IPAS — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Memahami konsep IPA: Peserta didik mampu memahami konsep sains melalui eksplorasi dan eksperimen sederhana.
@@ -106,7 +74,7 @@ const FALLBACK: Record<string, string> = {
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
 `,
-  'matematika': `# Matematika - Fase C (Kurikulum Merdeka)
+  matematika: `# Matematika - Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Bilangan: Memahami bilangan cacah besar, faktor, kelipatan, pecahan, desimal, persen, dan operasi hitungnya dalam konteks sehari-hari.

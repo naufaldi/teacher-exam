@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
-import { Effect } from 'effect'
+import { assert, describe, it } from '@effect/vitest'
+import { Effect, Stream } from 'effect'
+import { vi } from 'vitest'
 import type { Question } from '@teacher-exam/shared'
 import { validateQuestionBatch } from '../ValidatorService'
-import type { AiService } from './AiService'
+import type { AiService } from '../AiService'
 import { AiGenerationError } from '../../errors'
 
 function makeQuestion(n: number, overrides: Partial<Question> = {}): Question {
@@ -26,114 +27,123 @@ function makeQuestion(n: number, overrides: Partial<Question> = {}): Question {
 }
 
 describe('validateQuestionBatch', () => {
-  it('merges curriculum validation with existing structural flags', async () => {
-    const aiService: AiService = {
-      generate: vi.fn(),
-      generateRaw: vi.fn(),
-      validateCurriculum: vi.fn(() =>
-        Effect.succeed([
-          { number: 1, status: 'valid', reason: 'Sesuai CP.' },
-          { number: 2, status: 'valid', reason: 'Sesuai CP.' },
-        ]),
-      ),
-      generateDiscussion: vi.fn(),
-      streamDiscussion: vi.fn(),
-    }
+  it.effect('merges curriculum validation with existing structural flags', () =>
+    Effect.gen(function* () {
+      const aiService: AiService = {
+        generate: vi.fn(),
+        generateRaw: vi.fn(),
+        validateCurriculum: vi.fn(() =>
+          Effect.succeed([
+            { number: 1, status: 'valid', reason: 'Sesuai CP.' },
+            { number: 2, status: 'valid', reason: 'Sesuai CP.' },
+          ]),
+        ),
+        generateDiscussion: vi.fn(),
+        streamDiscussion: vi.fn(() => Stream.succeed('')),
+      }
 
-    const updates = await validateQuestionBatch({
-      aiService,
-      exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
-      curriculumText: 'corpus',
-      questions: [
-        makeQuestion(1, { validationStatus: 'needs_review', validationReason: 'LaTeX invalid' }),
-        makeQuestion(2),
-      ],
-    })
+      const updates = yield* validateQuestionBatch({
+        aiService,
+        exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
+        curriculumText: 'corpus',
+        questions: [
+          makeQuestion(1, { validationStatus: 'needs_review', validationReason: 'LaTeX invalid' }),
+          makeQuestion(2),
+        ],
+      })
 
-    expect(updates).toEqual([
-      {
-        id: 'q-1',
-        validationStatus: 'needs_review',
-        validationReason: 'LaTeX invalid\nSesuai CP.',
-      },
-      {
-        id: 'q-2',
-        validationStatus: 'valid',
-        validationReason: 'Sesuai CP.',
-      },
-    ])
-  })
+      assert.deepStrictEqual(updates, [
+        {
+          id: 'q-1',
+          validationStatus: 'needs_review',
+          validationReason: 'LaTeX invalid\nSesuai CP.',
+        },
+        {
+          id: 'q-2',
+          validationStatus: 'valid',
+          validationReason: 'Sesuai CP.',
+        },
+      ])
+    }),
+  )
 
-  it('chunks large batches and respects concurrency limit', async () => {
-    const questions = Array.from({ length: 12 }, (_, i) => makeQuestion(i + 1))
-    let inFlight = 0
-    let maxInFlight = 0
+  it.effect('chunks large batches and respects concurrency limit', () =>
+    Effect.gen(function* () {
+      const questions = Array.from({ length: 12 }, (_, i) => makeQuestion(i + 1))
+      let inFlight = 0
+      let maxInFlight = 0
 
-    const aiService: AiService = {
-      generate: vi.fn(),
-      generateRaw: vi.fn(),
-      validateCurriculum: vi.fn(({ expectedCount }) => {
-        inFlight++
-        maxInFlight = Math.max(maxInFlight, inFlight)
-        return Effect.gen(function* () {
-          yield* Effect.promise(() => new Promise((r) => setTimeout(r, 10)))
-          inFlight--
-          return Array.from({ length: expectedCount }, (_, i) => ({
-            number: i + 1,
-            status: 'valid' as const,
-            reason: 'ok',
-          }))
-        })
-      }),
-      generateDiscussion: vi.fn(),
-      streamDiscussion: vi.fn(),
-    }
+      const aiService: AiService = {
+        generate: vi.fn(),
+        generateRaw: vi.fn(),
+        validateCurriculum: vi.fn(({ expectedCount }) => {
+          inFlight++
+          maxInFlight = Math.max(maxInFlight, inFlight)
+          return Effect.gen(function* () {
+            yield* Effect.promise(() => new Promise((r) => setTimeout(r, 10)))
+            inFlight--
+            return Array.from({ length: expectedCount }, (_, i) => ({
+              number: i + 1,
+              status: 'valid' as const,
+              reason: 'ok',
+            }))
+          })
+        }),
+        generateDiscussion: vi.fn(),
+        streamDiscussion: vi.fn(() => Stream.succeed('')),
+      }
 
-    const updates = await validateQuestionBatch({
-      aiService,
-      exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
-      curriculumText: 'corpus',
-      questions,
-    })
+      const updates = yield* validateQuestionBatch({
+        aiService,
+        exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
+        curriculumText: 'corpus',
+        questions,
+      })
 
-    expect(updates).toHaveLength(12)
-    expect(maxInFlight).toBeLessThanOrEqual(3)
-    expect((aiService.validateCurriculum as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3)
-  })
+      assert.strictEqual(updates.length, 12)
+      assert.isTrue(maxInFlight <= 3)
+      assert.strictEqual(
+        (aiService.validateCurriculum as ReturnType<typeof vi.fn>).mock.calls.length,
+        3,
+      )
+    }),
+  )
 
-  it('falls back to needs_review when a chunk fails', async () => {
-    let call = 0
-    const aiService: AiService = {
-      generate: vi.fn(),
-      generateRaw: vi.fn(),
-      validateCurriculum: vi.fn(({ expectedCount }) => {
-        call++
-        if (call === 2) {
-          return Effect.fail(new AiGenerationError({ cause: 'timeout' }))
-        }
-        return Effect.succeed(
-          Array.from({ length: expectedCount }, (_, i) => ({
-            number: i + 1,
-            status: 'valid' as const,
-            reason: 'ok',
-          })),
-        )
-      }),
-      generateDiscussion: vi.fn(),
-      streamDiscussion: vi.fn(),
-    }
+  it.effect('falls back to needs_review when a chunk fails', () =>
+    Effect.gen(function* () {
+      let call = 0
+      const aiService: AiService = {
+        generate: vi.fn(),
+        generateRaw: vi.fn(),
+        validateCurriculum: vi.fn(({ expectedCount }) => {
+          call++
+          if (call === 2) {
+            return Effect.fail(new AiGenerationError({ cause: 'timeout' }))
+          }
+          return Effect.succeed(
+            Array.from({ length: expectedCount }, (_, i) => ({
+              number: i + 1,
+              status: 'valid' as const,
+              reason: 'ok',
+            })),
+          )
+        }),
+        generateDiscussion: vi.fn(),
+        streamDiscussion: vi.fn(() => Stream.succeed('')),
+      }
 
-    const questions = Array.from({ length: 10 }, (_, i) => makeQuestion(i + 1))
-    const updates = await validateQuestionBatch({
-      aiService,
-      exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
-      curriculumText: 'corpus',
-      questions,
-    })
+      const questions = Array.from({ length: 10 }, (_, i) => makeQuestion(i + 1))
+      const updates = yield* validateQuestionBatch({
+        aiService,
+        exam: { subject: 'bahasa_indonesia', grade: 6, examType: 'formatif' },
+        curriculumText: 'corpus',
+        questions,
+      })
 
-    expect(updates).toHaveLength(10)
-    const failedChunk = updates.slice(5, 10)
-    expect(failedChunk.every((u) => u.validationStatus === 'needs_review')).toBe(true)
-    expect(failedChunk[0]?.validationReason).toContain('Validasi kurikulum gagal')
-  })
+      assert.strictEqual(updates.length, 10)
+      const failedChunk = updates.slice(5, 10)
+      assert.isTrue(failedChunk.every((u) => u.validationStatus === 'needs_review'))
+      assert.include(failedChunk[0]?.validationReason ?? '', 'Validasi kurikulum gagal')
+    }),
+  )
 })

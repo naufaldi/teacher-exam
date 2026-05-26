@@ -1,6 +1,6 @@
 import { HttpApiBuilder, HttpServerRequest, HttpServerResponse } from '@effect/platform'
 import { Effect } from 'effect'
-import { auth } from '../../lib/auth'
+import { AuthService } from '../services/auth-service'
 import {
   DevAuthForbiddenError,
   assertDevAuthAllowed,
@@ -27,15 +27,20 @@ export const DevAuthLive = HttpApiBuilder.group(TeacherExamApi, 'devAuth', (hand
       }
 
       const { email, password } = getDevCredentials()
-      const upstream = yield* Effect.tryPromise({
-        try: () =>
-          auth.api.signInEmail({
-            body: { email, password },
-            headers: request.headers,
-            asResponse: true,
-          }),
-        catch: () => new ApiForbidden({ error: 'Forbidden', message: 'Dev auth is not available' }),
-      })
+      const authService = yield* AuthService
+      const headers = new Headers()
+      for (const [key, value] of Object.entries(request.headers)) {
+        if (value !== undefined) {
+          headers.set(key, value)
+        }
+      }
+      const upstream = yield* authService
+        .signInEmail({ email, password, headers })
+        .pipe(
+          Effect.mapError(
+            () => new ApiForbidden({ error: 'Forbidden', message: 'Dev auth is not available' }),
+          ),
+        )
 
       return HttpServerResponse.fromWeb(upstream)
     }),

@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { Button, Input, Label, PaperCard } from '@teacher-exam/ui'
 import { GraduationCap, BookOpen, MapPin } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, unwrapApiEither } from '../lib/api'
 import type { ExamSubject, Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
 import { SUBJECT_OPTIONS } from '../lib/subjects'
 
@@ -24,7 +24,8 @@ function ProfilePage() {
   const [savedAt, setSavedAt]         = useState<Date | null>(null)
 
   useEffect(() => {
-    void api.me.get().then((p) => {
+    void api.me.get().then((result) => {
+      const p = unwrapApiEither(result)
       setProfile(p)
       setName(p.name)
       setSchool(p.school ?? '')
@@ -63,7 +64,7 @@ function ProfilePage() {
         gradesTaught:   grades,
         subjectsTaught: subjects,
       }
-      const updated = await api.me.update(payload)
+      const updated = unwrapApiEither(await api.me.update(payload))
       setProfile(updated)
       setSavedAt(new Date())
     } catch (err) {

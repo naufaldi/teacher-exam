@@ -3,6 +3,7 @@ import * as PgDrizzle from '@effect/sql-drizzle/Pg'
 import * as schema from '@teacher-exam/db/schema'
 import type { PgRemoteDatabase } from 'drizzle-orm/pg-proxy'
 import { PgClientLive } from './pg-client'
+import { AppConfigLive } from './app-config'
 
 export type AppDb = PgRemoteDatabase<typeof schema>
 
@@ -18,5 +19,6 @@ const PgDrizzleLayer = Layer.effect(
 
 export const DbLayer = PgDrizzleLayer.pipe(
   Layer.provideMerge(PgClientLive),
+  Layer.provide(AppConfigLive),
   Layer.orDie,
 )

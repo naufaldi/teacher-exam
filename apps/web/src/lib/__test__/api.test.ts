@@ -1,5 +1,6 @@
 import { describe, it, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { apiFetch, ApiError, RateLimitedError, api } from '../api.js'
+import { Either } from 'effect'
+import { apiFetch, ApiError, RateLimitedError, api, unwrapApiEither } from '../api.js'
 
 // Make apiFetch testable by exporting it — see implementation
 
@@ -171,7 +172,7 @@ describe('api.ai.generate', () => {
       reviewMode: 'fast' as const,
     }
 
-    const result = await api.ai.generate(input)
+    const result = unwrapApiEither(await api.ai.generate(input))
     expect(result.id).toBe('exam_1')
     expect(result.title).toBe('Bahasa Indonesia · Kelas 6 · Teks Narasi')
     expect(result.questions).toEqual([])
@@ -188,13 +189,13 @@ describe('api.ai.generate', () => {
       json: () => Promise.resolve({ ...VALID_EXAM_WITH_QUESTIONS, subject: 'matematika' }),
     })
 
-    await api.ai.generate({
+    unwrapApiEither(await api.ai.generate({
       subject: 'matematika',
       grade: 5,
       difficulty: 'sedang',
       topics: ['Pecahan, Desimal, dan Persen'],
       reviewMode: 'fast',
-    })
+    }))
 
     const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined
     expect(init?.body).toBe(JSON.stringify({
@@ -212,14 +213,14 @@ describe('api.ai.generate', () => {
       json: () => Promise.resolve({ invalid: 'shape' }),
     })
 
-    await expect(
-      api.ai.generate({
+    await expect(async () =>
+      unwrapApiEither(await api.ai.generate({
         subject: 'bahasa_indonesia' as const,
         grade: 6,
         difficulty: 'sedang' as const,
         topics: ['Teks Narasi'],
         reviewMode: 'fast' as const,
-      }),
+      })),
     ).rejects.toThrow()
   })
 
@@ -230,14 +231,14 @@ describe('api.ai.generate', () => {
       headers: { get: (h: string) => (h === 'Retry-After' ? '30' : null) },
     })
 
-    await expect(
-      api.ai.generate({
+    await expect(async () =>
+      unwrapApiEither(await api.ai.generate({
         subject: 'bahasa_indonesia' as const,
         grade: 6,
         difficulty: 'sedang' as const,
         topics: ['Teks Narasi'],
         reviewMode: 'fast' as const,
-      }),
+      })),
     ).rejects.toSatisfy((err: unknown) => err instanceof RateLimitedError && err.retryAfterSec === 30)
   })
 })
@@ -256,7 +257,7 @@ afterEach(() => {
 describe('api.exams.finalize', () => {
   test('POSTs to /api/exams/:id/finalize with credentials', async () => {
     mockFetch.mockResolvedValue(makeResponse({ id: 'E', status: 'final', questions: [] }))
-    const result = await api.exams.finalize('E')
+    const result = unwrapApiEither(await api.exams.finalize('E'))
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/exams/E/finalize',
       expect.objectContaining({ method: 'POST', credentials: 'include' }),
@@ -266,14 +267,14 @@ describe('api.exams.finalize', () => {
 
   test('throws ApiError on non-2xx response', async () => {
     mockFetch.mockResolvedValue(makeResponse({ error: 'Not all accepted', code: 'FINALIZE_NOT_ALLOWED' }, 422))
-    await expect(api.exams.finalize('E')).rejects.toMatchObject({ code: 'FINALIZE_NOT_ALLOWED', status: 422 })
+    await expect(async () => unwrapApiEither(await api.exams.finalize('E'))).rejects.toMatchObject({ code: 'FINALIZE_NOT_ALLOWED', status: 422 })
   })
 })
 
 describe('api.exams.validateCurriculum', () => {
   test('POSTs to /api/exams/:id/validate-curriculum', async () => {
     mockFetch.mockResolvedValue(makeResponse(VALID_EXAM_WITH_QUESTIONS))
-    const result = await api.exams.validateCurriculum('exam_1')
+    const result = unwrapApiEither(await api.exams.validateCurriculum('exam_1'))
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/exams/exam_1/validate-curriculum',
       expect.objectContaining({ method: 'POST', credentials: 'include' }),
@@ -290,7 +291,7 @@ describe('api.questions.patch', () => {
       correctAnswer: 'a', topic: null, difficulty: null, status: 'accepted',
       validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
     }))
-    const result = await api.questions.patch('Q', { status: 'accepted' })
+    const result = unwrapApiEither(await api.questions.patch('Q', { status: 'accepted' }))
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/questions/Q',
       expect.objectContaining({
@@ -304,7 +305,7 @@ describe('api.questions.patch', () => {
 
   test('throws ApiError on 404', async () => {
     mockFetch.mockResolvedValue(makeResponse({ error: 'Not found', code: 'NOT_FOUND' }, 404))
-    await expect(api.questions.patch('Q', { status: 'accepted' })).rejects.toMatchObject({ status: 404 })
+    await expect(async () => unwrapApiEither(await api.questions.patch('Q', { status: 'accepted' }))).rejects.toMatchObject({ status: 404 })
   })
 })
 
@@ -316,7 +317,7 @@ describe('api.questions.regenerate', () => {
       correctAnswer: 'b', topic: null, difficulty: null, status: 'pending',
       validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
     }))
-    const result = await api.questions.regenerate('Q', { hint: 'fokus sila ke-3' })
+    const result = unwrapApiEither(await api.questions.regenerate('Q', { hint: 'fokus sila ke-3' }))
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/questions/Q/regenerate',
       expect.objectContaining({
@@ -336,7 +337,7 @@ describe('api.questions.regenerate', () => {
       correctAnswer: 'b', topic: null, difficulty: null, status: 'pending',
       validationStatus: null, validationReason: null, createdAt: '2026-04-23T00:00:00.000Z',
     }))
-    await api.questions.regenerate('Q')
+    unwrapApiEither(await api.questions.regenerate('Q'))
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/questions/Q/regenerate',
       expect.objectContaining({ method: 'POST', body: JSON.stringify({}) }),
@@ -356,7 +357,7 @@ describe('api.exams.generateDiscussion', () => {
       json: () => Promise.resolve(examWithDiscussion),
     })
 
-    const result = await api.exams.generateDiscussion('exam_1')
+    const result = unwrapApiEither(await api.exams.generateDiscussion('exam_1'))
     expect(result.id).toBe('exam_1')
     expect(result.discussionMd).toContain('Jawaban Benar')
 
@@ -374,7 +375,7 @@ describe('api.exams.generateDiscussion', () => {
       json: () => Promise.resolve({ error: 'Discussion already exists', code: 'DISCUSSION_ALREADY_EXISTS' }),
     })
 
-    await expect(api.exams.generateDiscussion('exam_1')).rejects.toSatisfy((err: unknown) => {
+    await expect(async () => unwrapApiEither(await api.exams.generateDiscussion('exam_1'))).rejects.toSatisfy((err: unknown) => {
       if (!(err instanceof ApiError)) return false
       return err.status === 409 && err.code === 'DISCUSSION_ALREADY_EXISTS'
     })
@@ -393,7 +394,7 @@ describe('api.exams.share', () => {
         }),
     })
 
-    const result = await api.exams.share('exam_1')
+    const result = unwrapApiEither(await api.exams.share('exam_1'))
 
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/exams/exam_1/share',
@@ -410,7 +411,7 @@ describe('api.publicExams.get', () => {
       json: () => Promise.resolve(VALID_PUBLIC_EXAM_WITH_QUESTIONS),
     })
 
-    const result = await api.publicExams.get('share-abc123')
+    const result = unwrapApiEither(await api.publicExams.get('share-abc123'))
 
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/public/exams/share-abc123',

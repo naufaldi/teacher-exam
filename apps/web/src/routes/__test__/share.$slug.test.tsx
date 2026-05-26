@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentType } from 'react'
 import type { PublicExamDetailResponse } from '@teacher-exam/shared'
+import { mockApiResolvedValueOnce } from '../../lib/api-test-utils.js'
 
 const { mockPublicExamGet } = vi.hoisted(() => ({
   mockPublicExamGet: vi.fn(),
@@ -98,7 +99,7 @@ beforeEach(() => {
 
 describe('share/$slug route', () => {
   it('loader fetches the public exam by slug', async () => {
-    mockPublicExamGet.mockResolvedValueOnce(makePublicExam())
+    mockApiResolvedValueOnce(mockPublicExamGet, makePublicExam())
     const loader = (Route as unknown as { options: RouteOptions }).options.loader
 
     await loader({ params: { slug: 'share-abc123' } })
