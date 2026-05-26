@@ -36,7 +36,7 @@ Each milestone maps to a PRD:
 | PRD | Status | Milestones |
 |-----|--------|------------|
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | 🔄 In progress | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
+| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1 done | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started | M4 (Bank Soal + Exam Builder) |
 | [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started | M5 (Correction Depth) — includes `students` table + identity capture (D-1) |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
@@ -47,7 +47,7 @@ Each milestone maps to a PRD:
 
 | # | Milestone | Target | PRD | Status |
 |---|-----------|--------|-----|--------|
-| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | 🟡 Code complete, QA pending |
+| 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ⬜ Not started |
 | 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started |
@@ -71,8 +71,8 @@ Each milestone maps to a PRD:
 | 1.3 | Add `ipas`, `bahasa_inggris` to DB enum | Drizzle migration, `pnpm type-check` passes | Migration runs clean | ✅ |
 | 1.4 | Update shared schema + UI option arrays | Generate form shows 4 subjects | Browser verify: form renders | ✅ |
 | 1.5 | Add topics per subject (≥6 each) | Topics array populated in prompt config | `pnpm test` passes | ✅ |
-| 1.6 | Generate 50 soal per subject×grade | ≥90% pass guru review (no heavy edits) | Review sheet signed | ⬜ |
-| 1.7 | Browser verification | Generate → preview → cetak for IPAS + B.Inggris | No console errors/warnings | ⬜ |
+| 1.6 | Generate 50 soal per subject×grade | ≥90% pass guru review (no heavy edits) | Review sheet signed | ✅ |
+| 1.7 | Browser verification | Generate → preview → cetak for IPAS + B.Inggris | No console errors/warnings | ✅ |
 
 ### Done when
 

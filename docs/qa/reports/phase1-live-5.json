@@ -1,0 +1,214 @@
+{
+  "generatedAt": "2026-05-26T09:20:32.845Z",
+  "count": 5,
+  "results": [
+    {
+      "combo": {
+        "label": "IPAS K5",
+        "subject": "ipas",
+        "grade": 5,
+        "topics": [
+          "Cahaya dan Bunyi",
+          "Ekosistem dan Rantai Makanan",
+          "Magnet dan Listrik Sederhana",
+          "Siklus Air dan Perubahan Bumi",
+          "Sumber Daya Alam Indonesia"
+        ]
+      },
+      "httpStatus": 201,
+      "questionCount": 5,
+      "pass": 5,
+      "fail": 0,
+      "passPct": 100,
+      "samples": [
+        {
+          "number": 1,
+          "pass": true,
+          "reason": null,
+          "topic": "Cahaya dan Bunyi"
+        },
+        {
+          "number": 2,
+          "pass": true,
+          "reason": null,
+          "topic": "Ekosistem dan Rantai Makanan"
+        },
+        {
+          "number": 3,
+          "pass": true,
+          "reason": null,
+          "topic": "Magnet dan Listrik Sederhana"
+        },
+        {
+          "number": 4,
+          "pass": true,
+          "reason": null,
+          "topic": "Siklus Air dan Perubahan Bumi"
+        },
+        {
+          "number": 5,
+          "pass": true,
+          "reason": null,
+          "topic": "Sumber Daya Alam Indonesia"
+        }
+      ],
+      "error": null
+    },
+    {
+      "combo": {
+        "label": "IPAS K6",
+        "subject": "ipas",
+        "grade": 6,
+        "topics": [
+          "Tubuh Manusia dan Kesehatan",
+          "Energi dan Perubahannya",
+          "Bumi, Bulan, Matahari, dan Tata Surya",
+          "Cahaya dan Bunyi",
+          "Ekosistem dan Rantai Makanan"
+        ]
+      },
+      "httpStatus": 201,
+      "questionCount": 5,
+      "pass": 5,
+      "fail": 0,
+      "passPct": 100,
+      "samples": [
+        {
+          "number": 1,
+          "pass": true,
+          "reason": null,
+          "topic": "Tubuh Manusia dan Kesehatan"
+        },
+        {
+          "number": 2,
+          "pass": true,
+          "reason": null,
+          "topic": "Energi dan Perubahannya"
+        },
+        {
+          "number": 3,
+          "pass": true,
+          "reason": null,
+          "topic": "Bumi, Bulan, Matahari, dan Tata Surya"
+        },
+        {
+          "number": 4,
+          "pass": true,
+          "reason": null,
+          "topic": "Cahaya dan Bunyi"
+        },
+        {
+          "number": 5,
+          "pass": true,
+          "reason": null,
+          "topic": "Ekosistem dan Rantai Makanan"
+        }
+      ],
+      "error": null
+    },
+    {
+      "combo": {
+        "label": "B.Inggris K5",
+        "subject": "bahasa_inggris",
+        "grade": 5,
+        "topics": [
+          "Daily Activities",
+          "At School",
+          "Food and Drinks",
+          "My House and My Room",
+          "Animals Around Us"
+        ]
+      },
+      "httpStatus": 201,
+      "questionCount": 5,
+      "pass": 5,
+      "fail": 0,
+      "passPct": 100,
+      "samples": [
+        {
+          "number": 1,
+          "pass": true,
+          "reason": null,
+          "topic": "Daily Activities"
+        },
+        {
+          "number": 2,
+          "pass": true,
+          "reason": null,
+          "topic": "At School"
+        },
+        {
+          "number": 3,
+          "pass": true,
+          "reason": null,
+          "topic": "Food and Drinks"
+        },
+        {
+          "number": 4,
+          "pass": true,
+          "reason": null,
+          "topic": "My House and My Room"
+        },
+        {
+          "number": 5,
+          "pass": true,
+          "reason": null,
+          "topic": "Animals Around Us"
+        }
+      ],
+      "error": null
+    },
+    {
+      "combo": {
+        "label": "B.Inggris K6",
+        "subject": "bahasa_inggris",
+        "grade": 6,
+        "topics": [
+          "Past Experiences",
+          "Directions and Public Places",
+          "Stories and Moral Lessons",
+          "Health and Safety",
+          "Future Plans and Invitations"
+        ]
+      },
+      "httpStatus": 201,
+      "questionCount": 5,
+      "pass": 5,
+      "fail": 0,
+      "passPct": 100,
+      "samples": [
+        {
+          "number": 1,
+          "pass": true,
+          "reason": null,
+          "topic": "Past Experiences"
+        },
+        {
+          "number": 2,
+          "pass": true,
+          "reason": null,
+          "topic": "Directions and Public Places"
+        },
+        {
+          "number": 3,
+          "pass": true,
+          "reason": null,
+          "topic": "Stories and Moral Lessons"
+        },
+        {
+          "number": 4,
+          "pass": true,
+          "reason": null,
+          "topic": "Health and Safety"
+        },
+        {
+          "number": 5,
+          "pass": true,
+          "reason": null,
+          "topic": "Future Plans and Invitations"
+        }
+      ],
+      "error": null
+    }
+  ]
+}
