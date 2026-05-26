@@ -4,7 +4,6 @@ import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { Question } from '@teacher-exam/shared'
 import {
   getLoader,
   mockExamsGet,
@@ -25,7 +24,7 @@ describe('ReviewPage — Slow Track Tolak fuses with AI regenerate', () => {
     mockApiResolvedValueOnce(mockExamsGet, exam)
     await getLoader()({ deps: { examId: 'exam_slow' } })
 
-    const pending = deferred<Question>()
+    const pending = deferred<Awaited<ReturnType<typeof api.questions.regenerate>>>()
     mockQuestionsRegenerate.mockReturnValueOnce(pending.promise)
 
     renderReviewPage()

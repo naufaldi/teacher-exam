@@ -55,7 +55,7 @@ export function setUnauthorizedHandler(handler: AuthErrorHandler | null): void {
 }
 
 export function throwClientError(err: ApiClientFailure): never {
-  Match.value(err).pipe(
+  return Match.value(err).pipe(
     Match.tag('UnauthorizedClientError', (e) => {
       const legacy = new UnauthorizedError(e.message)
       if (onUnauthorized) onUnauthorized(e)
@@ -83,10 +83,10 @@ export function throwClientError(err: ApiClientFailure): never {
       })
     }),
     Match.exhaustive,
-  )
+  ) as never
 }
 
-export function unwrapApiEither<A>(result: Either.Either<ApiClientFailure, A>): A {
+export function unwrapApiEither<A>(result: Either.Either<A, ApiClientFailure>): A {
   if (Either.isLeft(result)) {
     throwClientError(result.left)
   }
@@ -96,7 +96,7 @@ export function unwrapApiEither<A>(result: Either.Either<ApiClientFailure, A>): 
 export async function apiFetchEither<T>(
   path: string,
   init?: RequestInit,
-): Promise<Either.Either<ApiClientFailure, T>> {
+): Promise<Either.Either<T, ApiClientFailure>> {
   const method = init?.method ?? 'GET'
   const t0 = performance.now()
   let res: Response
@@ -166,9 +166,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return unwrapApiEither(await apiFetchEither<T>(path, init))
 }
 
-function decodeEither<T>(schema: Schema.Schema<T>, raw: unknown): Either.Either<ApiClientFailure, T> {
+function decodeEither<T>(schema: Schema.Schema<T>, raw: unknown): Either.Either<T, ApiClientFailure> {
   const decoded = Schema.decodeUnknownEither(schema)(raw)
-  if (decoded._tag === 'Left') {
+  if (Either.isLeft(decoded)) {
     return Either.left(
       new DecodeClientError({ message: 'Invalid response from server' }),
     )
@@ -190,16 +190,20 @@ export const api = {
       }),
     remove: (id: string) => apiFetchEither<void>(`/exams/${id}`, { method: 'DELETE' }),
     duplicate: (id: string) => apiFetchEither<Exam>(`/exams/${id}/duplicate`, { method: 'POST' }),
-    share: async (id: string): Promise<Either.Either<ApiClientFailure, ExamShareResponse>> => {
+    share: async (id: string): Promise<Either.Either<ExamShareResponse, ApiClientFailure>> => {
       const raw = await apiFetchEither<unknown>(`/exams/${id}/share`, { method: 'POST' })
-      if (Either.isLeft(raw)) return raw
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamShareResponse, ApiClientFailure>
+      }
       return decodeEither(ExamShareResponseSchema, raw.right)
     },
     finalize: (id: string) =>
       apiFetchEither<ExamDetailResponse>(`/exams/${id}/finalize`, { method: 'POST' }),
-    validateCurriculum: async (id: string): Promise<Either.Either<ApiClientFailure, ExamWithQuestions>> => {
+    validateCurriculum: async (id: string): Promise<Either.Either<ExamWithQuestions, ApiClientFailure>> => {
       const raw = await apiFetchEither<unknown>(`/exams/${id}/validate-curriculum`, { method: 'POST' })
-      if (Either.isLeft(raw)) return raw
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamWithQuestions, ApiClientFailure>
+      }
       return decodeEither(ExamWithQuestionsSchema, raw.right)
     },
     generateDiscussion: (id: string) =>
@@ -208,7 +212,7 @@ export const api = {
       id: string,
       onDone: (exam: ExamDetailResponse) => void,
       onError: (message: string) => void,
-    ): Promise<Either.Either<ApiClientFailure, void>> => {
+    ): Promise<Either.Either<void, ApiClientFailure>> => {
       let response: Response
       try {
         response = await fetch(`${API_BASE}/exams/${id}/discussion`, {
@@ -278,12 +282,14 @@ export const api = {
     },
   },
   ai: {
-    generate: async (input: GenerateExamInput): Promise<Either.Either<ApiClientFailure, ExamWithQuestions>> => {
+    generate: async (input: GenerateExamInput): Promise<Either.Either<ExamWithQuestions, ApiClientFailure>> => {
       const raw = await apiFetchEither<unknown>('/ai/generate', {
         method: 'POST',
         body: JSON.stringify(input),
       })
-      if (Either.isLeft(raw)) return raw
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamWithQuestions, ApiClientFailure>
+      }
       return decodeEither(ExamWithQuestionsSchema, raw.right)
     },
   },
@@ -308,9 +314,11 @@ export const api = {
       }),
   },
   publicExams: {
-    get: async (slug: string): Promise<Either.Either<ApiClientFailure, PublicExamDetailResponse>> => {
+    get: async (slug: string): Promise<Either.Either<PublicExamDetailResponse, ApiClientFailure>> => {
       const raw = await apiFetchEither<unknown>(`/public/exams/${slug}`)
-      if (Either.isLeft(raw)) return raw
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PublicExamDetailResponse, ApiClientFailure>
+      }
       return decodeEither(PublicExamWithQuestionsSchema, raw.right)
     },
   },

@@ -1,10 +1,14 @@
-import { Either } from 'effect'
 import { beforeEach, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import React from 'react'
 import type { ExamWithQuestions } from '@teacher-exam/shared'
 import { examDraftStore } from '../../../lib/exam-draft-store.js'
 import { makeExamWithQuestions } from '../../../test/fixtures/exam.js'
+import {
+  mockApiImplementationOnce as mockApiImplementationOnceHelper,
+  mockApiResolvedValueOnce as mockApiResolvedValueOnceHelper,
+  type ApiMock,
+} from '../../../lib/api-test-utils.js'
 
 export type ReviewSearchParams = {
   mode: 'fast' | 'slow'
@@ -110,27 +114,15 @@ export async function seedReviewLoader(examId: string, exam?: ExamWithQuestions)
   await getLoader()({ deps: { examId } })
 }
 
-export function mockApiResolvedValueOnce<T>(
-  mock: { mockResolvedValueOnce: (value: unknown) => unknown },
-  value: T,
-) {
-  mock.mockResolvedValueOnce(Either.right(value))
+export function mockApiResolvedValueOnce(mock: ApiMock, value: unknown) {
+  mockApiResolvedValueOnceHelper(mock, value)
 }
 
 export function mockApiImplementationOnce<T, Args extends unknown[]>(
-  mock: { mockImplementationOnce: (fn: (...args: Args) => Promise<unknown>) => unknown },
+  mock: ApiMock,
   fn: (...args: Args) => Promise<T> | T,
 ) {
-  mock.mockImplementationOnce((...args: Args) =>
-    Promise.resolve(fn(...args)).then((result) =>
-      result !== null &&
-      typeof result === 'object' &&
-      '_tag' in result &&
-      (result._tag === 'Left' || result._tag === 'Right')
-        ? result
-        : Either.right(result),
-    ),
-  )
+  mockApiImplementationOnceHelper(mock, fn)
 }
 
 beforeEach(() => {

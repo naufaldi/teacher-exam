@@ -69,7 +69,7 @@ function ComparisonCard({
       <div className="overflow-x-auto [&_.katex]:whitespace-nowrap">
         <p className="text-caption text-text-tertiary mb-0.5">Pratinjau</p>
         <p className="text-text-primary">
-          <MathText text={preview} repair={repair} />
+          <MathText text={preview} repair={repair ?? true} />
         </p>
       </div>
     </div>

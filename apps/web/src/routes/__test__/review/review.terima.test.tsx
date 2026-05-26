@@ -1,3 +1,4 @@
+import { Either } from 'effect'
 import './setup.js'
 import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
 import { describe, it, expect, vi } from 'vitest'
@@ -91,21 +92,23 @@ describe('ReviewPage — Terima Semua partial failure reverts failed statuses', 
 
     const patchSpy = vi.spyOn(api.questions, 'patch').mockImplementation((id) => {
       if (id === 'q-2') return Promise.reject(new Error('Network error'))
-      return Promise.resolve({
-        _tag: 'mcq_single' as const,
-        id,
-        examId: 'exam_partial_fail',
-        number: 1,
-        text: 'Question',
-        options: { a: 'A', b: 'B', c: 'C', d: 'D' },
-        correct: 'a' as const,
-        topic: null,
-        difficulty: null,
-        status: 'accepted' as const,
-        validationStatus: null,
-        validationReason: null,
-        createdAt: new Date().toISOString(),
-      })
+      return Promise.resolve(
+        Either.right({
+          _tag: 'mcq_single' as const,
+          id,
+          examId: 'exam_partial_fail',
+          number: 1,
+          text: 'Question',
+          options: { a: 'A', b: 'B', c: 'C', d: 'D' },
+          correct: 'a' as const,
+          topic: null,
+          difficulty: null,
+          status: 'accepted' as const,
+          validationStatus: null,
+          validationReason: null,
+          createdAt: new Date().toISOString(),
+        }),
+      )
     })
 
     renderReviewPage()

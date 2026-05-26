@@ -1,48 +1,43 @@
 import { Either } from 'effect'
 
+type ApiMock = {
+  mockResolvedValueOnce?: (value: any) => unknown
+  mockResolvedValue?: (value: any) => unknown
+  mockImplementationOnce?: (fn: (...args: any[]) => any) => unknown
+}
+
 /** Wrap a mocked API return value for tests (api methods return Either). */
-export function apiOk<T>(value: T): Promise<typeof Either.right<T>> {
+export function apiOk<T>(value: T): Promise<Either.Either<T, never>> {
   return Promise.resolve(Either.right(value))
 }
 
-export function apiFail<T>(error: T): Promise<typeof Either.left<T>> {
+export function apiFail<E>(error: E): Promise<Either.Either<never, E>> {
   return Promise.resolve(Either.left(error))
 }
 
-export function mockApiResolvedValueOnce<T>(
-  mock: { mockResolvedValueOnce: (value: unknown) => unknown },
-  value: T,
-) {
-  mock.mockResolvedValueOnce(Either.right(value))
+export function mockApiResolvedValueOnce(mock: ApiMock, value: unknown) {
+  mock.mockResolvedValueOnce?.(Either.right(value))
 }
 
-export function mockApiResolvedValue<T>(
-  mock: { mockResolvedValue: (value: unknown) => unknown },
-  value: T,
-) {
-  mock.mockResolvedValue(Either.right(value))
+export function mockApiResolvedValue(mock: ApiMock, value: unknown) {
+  mock.mockResolvedValue?.(Either.right(value))
 }
 
-export function mockApiFailOnce<T>(
-  mock: { mockResolvedValueOnce: (value: unknown) => unknown },
-  error: T,
-) {
-  mock.mockResolvedValueOnce(Either.left(error))
+export function mockApiFailOnce(mock: ApiMock, error: unknown) {
+  mock.mockResolvedValueOnce?.(Either.left(error))
 }
 
 /** For vi.spyOn(...).mockResolvedValue — returns Either.right. */
-export function mockApiSpyResolvedValue<T>(
-  spy: { mockResolvedValue: (value: unknown) => unknown },
-  value: T,
-) {
-  return spy.mockResolvedValue(Either.right(value))
+export function mockApiSpyResolvedValue<T extends ApiMock>(mock: T, value: unknown): T {
+  mock.mockResolvedValue?.(Either.right(value))
+  return mock
 }
 
 export function mockApiImplementationOnce<T, Args extends unknown[]>(
-  mock: { mockImplementationOnce: (fn: (...args: Args) => Promise<unknown>) => unknown },
+  mock: ApiMock,
   fn: (...args: Args) => Promise<T> | T,
 ) {
-  mock.mockImplementationOnce((...args: Args) =>
+  mock.mockImplementationOnce?.(((...args: Args) =>
     Promise.resolve(fn(...args)).then((result) =>
       result !== null &&
       typeof result === 'object' &&
@@ -50,6 +45,7 @@ export function mockApiImplementationOnce<T, Args extends unknown[]>(
       (result._tag === 'Left' || result._tag === 'Right')
         ? result
         : Either.right(result),
-    ),
-  )
+    )) as (...args: any[]) => any)
 }
+
+export type { ApiMock }

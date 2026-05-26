@@ -10,6 +10,7 @@
     "db:migrate": "turbo run db:migrate --filter=@teacher-exam/db",
     "db:seed:dev": "pnpm --filter @teacher-exam/api db:seed:dev",
     "type-check": "turbo run type-check",
+    "ci:web": "pnpm --filter @teacher-exam/web build && pnpm --filter @teacher-exam/web test",
     "prepare": "effect-language-service patch"
   },
   "devDependencies": {
