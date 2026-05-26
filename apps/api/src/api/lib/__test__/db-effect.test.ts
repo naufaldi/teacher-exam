@@ -3,7 +3,7 @@ import { Effect } from 'effect'
 import { SqlError } from '@effect/sql/SqlError'
 import { runDb } from '../db-effect.js'
 import { ApiDatabaseError } from '../../errors/http.js'
-import { DbClient } from '../services/db.js'
+import { DbClient } from '../../services/db.js'
 import { Layer } from 'effect'
 
 describe('runDb', () => {

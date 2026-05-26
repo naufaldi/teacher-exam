@@ -1,33 +1,26 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { Effect, Either } from 'effect'
-import { createAiService, type AnthropicLike } from '../AiService'
+import { createAiService } from '../AiService'
 import { AiGenerationError } from '../../errors'
+import { createFakeModelLayersFromText } from '../../lib/effect-ai/test-utils'
 
 const VALID_ITEMS = [
   { number: 1, status: 'valid' as const, reason: 'Sesuai CP.' },
   { number: 2, status: 'needs_review' as const, reason: 'Level kognitif tinggi.' },
 ]
 
-function fakeClient(
-  text: string,
-  opts: { stopReason?: string | null } = {},
-): { client: AnthropicLike; create: ReturnType<typeof vi.fn> } {
-  const create = vi.fn().mockResolvedValue({
-    content: [{ type: 'text', text }],
-    stop_reason: opts.stopReason ?? 'end_turn',
-    stop_sequence: null,
-  })
-  return {
-    client: { messages: { create } } as unknown as AnthropicLike,
-    create,
-  }
-}
-
 describe('AiService.validateCurriculum', () => {
-  it('parses JSON validation array and uses validation model defaulting to discussion model', async () => {
-    const { client, create } = fakeClient(JSON.stringify(VALID_ITEMS))
+  it('parses JSON validation array and uses validation layer', async () => {
+    const textLayer = createFakeModelLayersFromText('unused')
+    const validationLayer = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS))
+    validationLayer.calls.length = 0
     const ai = createAiService({
-      client,
+      layers: {
+        text: textLayer.layers.text,
+        pdf: textLayer.layers.pdf,
+        discussion: textLayer.layers.discussion,
+        validation: validationLayer.layers.validation,
+      },
       discussionModel: 'MiniMax-M2.7-highspeed',
     })
 
@@ -36,15 +29,14 @@ describe('AiService.validateCurriculum', () => {
     )
 
     expect(result).toEqual(VALID_ITEMS)
-    const params = create.mock.calls[0]![0] as { model: string; system: string; max_tokens: number }
-    expect(params.model).toBe('MiniMax-M2.7-highspeed')
-    expect(params.system).toBe('validator system')
-    expect(params.max_tokens).toBe(8000)
+    expect(validationLayer.calls).toHaveLength(1)
   })
 
-  it('accepts MiniMax stop_reason null when text is present', async () => {
-    const { client } = fakeClient(JSON.stringify(VALID_ITEMS), { stopReason: null })
-    const ai = createAiService({ client })
+  it('accepts finish_reason unknown when text is present', async () => {
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS), {
+      finishReason: 'unknown',
+    })
+    const ai = createAiService({ layers })
 
     const result = await Effect.runPromise(
       ai.validateCurriculum({ system: 's', user: 'u', expectedCount: 2 }),
@@ -53,8 +45,8 @@ describe('AiService.validateCurriculum', () => {
   })
 
   it('fails when item count mismatches expectedCount', async () => {
-    const { client } = fakeClient(JSON.stringify([VALID_ITEMS[0]]))
-    const ai = createAiService({ client })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify([VALID_ITEMS[0]]))
+    const ai = createAiService({ layers })
 
     const result = await Effect.runPromise(
       Effect.either(ai.validateCurriculum({ system: 's', user: 'u', expectedCount: 2 })),

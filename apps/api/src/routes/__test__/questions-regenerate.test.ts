@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Effect } from 'effect'
-import type { AiService, AnthropicLike, GeneratedQuestion } from '../../services/AiService'
+import type { GeneratedQuestion } from '@teacher-exam/shared'
+import type { AiService } from '../../services/AiService'
 import { createAiService } from '../../services/AiService'
+import { createFakeModelLayersFromText } from '../../lib/effect-ai/test-utils'
 import { AiGenerationError } from '../../errors'
 
 vi.mock('drizzle-orm', () => ({
@@ -311,22 +313,8 @@ describe('POST /api/questions/:id/regenerate', () => {
       topic:          'Teks Narasi',
       difficulty:     'sedang',
     }]
-    const fakeAnthropic: AnthropicLike = {
-      messages: {
-        create: vi.fn()
-          .mockResolvedValueOnce({
-            content: [{ type: 'text', text: JSON.stringify(aiPayload) }],
-            stop_reason: 'end_turn',
-            stop_sequence: null,
-          })
-          .mockResolvedValueOnce({
-            content: [{ type: 'text', text: JSON.stringify([{ number: 1, status: 'valid', reason: 'Sesuai CP.' }]) }],
-            stop_reason: 'end_turn',
-            stop_sequence: null,
-          }),
-      },
-    }
-    const aiService = createAiService({ client: fakeAnthropic })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(aiPayload))
+    const aiService = createAiService({ layers })
     const app = buildTestApp(aiService)
 
     const res = await app.request('/api/questions/q-1/regenerate', {
@@ -361,16 +349,8 @@ describe('POST /api/questions/:id/regenerate', () => {
       topic:          'X',
       difficulty:     'sedang',
     }]
-    const fakeAnthropic: AnthropicLike = {
-      messages: {
-        create: vi.fn().mockResolvedValue({
-          content: [{ type: 'text', text: JSON.stringify(malformedPayload) }],
-          stop_reason: 'end_turn',
-          stop_sequence: null,
-        }),
-      },
-    }
-    const aiService = createAiService({ client: fakeAnthropic })
+    const { layers } = createFakeModelLayersFromText(JSON.stringify(malformedPayload))
+    const aiService = createAiService({ layers })
     const app = buildTestApp(aiService)
 
     const res = await app.request('/api/questions/q-1/regenerate', {
