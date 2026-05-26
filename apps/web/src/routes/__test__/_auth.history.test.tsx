@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { ToastProvider } from '@teacher-exam/ui'
 import type { Exam } from '@teacher-exam/shared'
 import { ApiError } from '../../lib/api.js'
+import { mockApiFailOnce, mockApiResolvedValueOnce } from '../../lib/api-test-utils.js'
 
 const { mockNavigate, mockClipboardWriteText } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -100,7 +101,7 @@ describe('HistoryPage', () => {
   })
 
   it('shows error state when api.exams.list() rejects', async () => {
-    mockApi.exams.list.mockRejectedValueOnce(
+    mockApiFailOnce(mockApi.exams.list, 
       new ApiError({ message: 'Server error', code: 'INTERNAL', status: 500 }),
     )
     renderHistoryPage()
@@ -110,7 +111,7 @@ describe('HistoryPage', () => {
   })
 
   it('shows retry button in error state', async () => {
-    mockApi.exams.list.mockRejectedValueOnce(
+    mockApiFailOnce(mockApi.exams.list, 
       new ApiError({ message: 'Network error', code: 'NETWORK', status: 503 }),
     )
     renderHistoryPage()
@@ -120,7 +121,7 @@ describe('HistoryPage', () => {
   })
 
   it('shows truly-empty state when api returns empty array', async () => {
-    mockApi.exams.list.mockResolvedValueOnce([])
+    mockApiResolvedValueOnce(mockApi.exams.list, [])
     renderHistoryPage()
     await waitFor(() => {
       expect(screen.getByText(/Belum ada lembar tersimpan/i)).toBeInTheDocument()
@@ -132,7 +133,7 @@ describe('HistoryPage', () => {
       makeExam({ id: 'exam-1', title: 'Ujian BI Kelas 5', status: 'final' }),
       makeExam({ id: 'exam-2', title: 'Draft Matematika', status: 'draft' }),
     ]
-    mockApi.exams.list.mockResolvedValueOnce(exams)
+    mockApiResolvedValueOnce(mockApi.exams.list, exams)
     renderHistoryPage()
     await waitFor(() => {
       expect(screen.getByText('Ujian BI Kelas 5')).toBeInTheDocument()
@@ -142,7 +143,7 @@ describe('HistoryPage', () => {
 
   it('filters history by IPAS subject', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'ipas-exam', title: 'Ujian IPAS', subject: 'ipas' }),
       makeExam({ id: 'bi-exam', title: 'Ujian BI', subject: 'bahasa_indonesia' }),
     ])
@@ -158,7 +159,7 @@ describe('HistoryPage', () => {
 
   it('filters history by Bahasa Inggris subject', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'bing-exam', title: 'Ujian B.Inggris', subject: 'bahasa_inggris' }),
       makeExam({ id: 'ppkn-exam', title: 'Ujian PPKN', subject: 'pendidikan_pancasila' }),
     ])
@@ -173,7 +174,7 @@ describe('HistoryPage', () => {
   })
 
   it('shows preview/correction actions for final exams', async () => {
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-final', status: 'final' }),
     ])
     renderHistoryPage()
@@ -189,7 +190,7 @@ describe('HistoryPage', () => {
   })
 
   it('shows edit/duplicate actions for draft exams', async () => {
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-draft', status: 'draft' }),
     ])
     renderHistoryPage()
@@ -205,7 +206,7 @@ describe('HistoryPage', () => {
 
   it('draft Edit opens the existing exam in review with examId and mode', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-draft-slow', status: 'draft', reviewMode: 'slow' }),
     ])
     renderHistoryPage()
@@ -220,7 +221,7 @@ describe('HistoryPage', () => {
 
   it('final exam title opens preview with examId', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-final-title', status: 'final', title: 'Final Bahasa Indonesia' }),
     ])
     renderHistoryPage()
@@ -235,7 +236,7 @@ describe('HistoryPage', () => {
 
   it('draft exam title opens review with examId and mode', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-draft-title', status: 'draft', title: 'Draft Pancasila', reviewMode: 'slow' }),
     ])
     renderHistoryPage()
@@ -251,7 +252,7 @@ describe('HistoryPage', () => {
   it('clicking Hapus lembar opens confirm dialog', async () => {
     const user = userEvent.setup()
     const exams = [makeExam({ id: 'exam-1', status: 'final' })]
-    mockApi.exams.list.mockResolvedValueOnce(exams)
+    mockApiResolvedValueOnce(mockApi.exams.list, exams)
     renderHistoryPage()
 
     await waitFor(() => {
@@ -276,8 +277,8 @@ describe('HistoryPage', () => {
   it('confirming delete calls api.exams.remove and removes exam from list', async () => {
     const user = userEvent.setup()
     const exams = [makeExam({ id: 'exam-1', status: 'final', title: 'Ujian BI' })]
-    mockApi.exams.list.mockResolvedValueOnce(exams)
-    mockApi.exams.remove.mockResolvedValueOnce(undefined)
+    mockApiResolvedValueOnce(mockApi.exams.list, exams)
+    mockApiResolvedValueOnce(mockApi.exams.remove, undefined)
     renderHistoryPage()
 
     await waitFor(() => {
@@ -306,10 +307,10 @@ describe('HistoryPage', () => {
 
   it('copies a public share link for final exams', async () => {
     const user = userEvent.setup()
-    mockApi.exams.list.mockResolvedValueOnce([
+    mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: 'exam-share', status: 'final', title: 'Final untuk Dibagikan' }),
     ])
-    mockApi.exams.share.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockApi.exams.share, {
       slug: 'share-abc123',
       publicUrlPath: '/share/share-abc123',
       publishedAt: '2026-05-08T00:00:00.000Z',

@@ -1,4 +1,5 @@
 import './setup.js'
+import { Either } from 'effect'
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,7 +9,7 @@ import {
   mockQuestionsRegenerate,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { Route } from '../../_auth.review.js'
 import { makeExamWithQuestions } from './fixtures.js'
 
@@ -17,7 +18,7 @@ describe('ReviewPage — generation salvage', () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_salvage_fast' })
     const exam = makeExamWithQuestions('exam_salvage_fast')
     const first = exam.questions[0]!
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       generationIncomplete: true,
       failedQuestionNumbers: [1],
@@ -47,7 +48,7 @@ describe('ReviewPage — generation salvage', () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_salvage_loading' })
     const exam = makeExamWithQuestions('exam_salvage_loading')
     const first = exam.questions[0]!
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       generationIncomplete: true,
       failedQuestionNumbers: [1],
@@ -79,14 +80,16 @@ describe('ReviewPage — generation salvage', () => {
 
     expect(screen.getByTestId('fast-regenerate-1')).toHaveTextContent('Meregenerate…')
 
-    resolveRegenerate({
-      ...first,
-      generationFailed: undefined,
-      text: 'Soal baru setelah regenerate',
-      validationStatus: null,
-      validationReason: null,
-      status: 'pending',
-    })
+    resolveRegenerate(
+      Either.right({
+        ...first,
+        generationFailed: undefined,
+        text: 'Soal baru setelah regenerate',
+        validationStatus: null,
+        validationReason: null,
+        status: 'pending',
+      }),
+    )
 
     await waitFor(() => {
       expect(screen.queryByTestId('fast-regenerate-1')).not.toBeInTheDocument()
@@ -98,7 +101,7 @@ describe('ReviewPage — generation salvage', () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_salvage_preview' })
     const exam = makeExamWithQuestions('exam_salvage_preview')
     const first = exam.questions[0]!
-    mockExamsGet.mockResolvedValueOnce({
+    mockApiResolvedValueOnce(mockExamsGet, {
       ...exam,
       generationIncomplete: true,
       failedQuestionNumbers: [1],

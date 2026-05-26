@@ -5,6 +5,7 @@ import { Effect, Layer } from 'effect'
 import { AiGenerationError } from '../../errors'
 import { mapAiError, type ProviderErrorContext } from './errors'
 import { logGenerateTextFailure, logGenerateTextSuccess } from './logging'
+import { withAiSpan } from '../../api/telemetry'
 
 export function isSuccessfulFinishReason(
   finishReason: Response.FinishReason,
@@ -30,53 +31,56 @@ export interface RunGenerateTextInput {
 export function runGenerateText(
   input: RunGenerateTextInput,
 ): Effect.Effect<string, AiGenerationError> {
-  return Effect.gen(function* () {
-    const t0 = Date.now()
-    const response = yield* LanguageModel.generateText({
-      prompt: input.prompt,
-    }).pipe(
-      Effect.mapError((error) => mapAiError(error, input.errorContext)),
-      Effect.provide(input.modelLayer),
-    )
+  return withAiSpan(
+    input.logEvent,
+    Effect.gen(function* () {
+      const t0 = Date.now()
+      const response = yield* LanguageModel.generateText({
+        prompt: input.prompt,
+      }).pipe(
+        Effect.mapError((error) => mapAiError(error, input.errorContext)),
+        Effect.provide(input.modelLayer),
+      )
 
-    const durationMs = Date.now() - t0
-    const assistantText = response.text
-    const hasAssistantText = assistantText.length > 0
-    const finishReason = response.finishReason
+      const durationMs = Date.now() - t0
+      const assistantText = response.text
+      const hasAssistantText = assistantText.length > 0
+      const finishReason = response.finishReason
 
-    if (!isSuccessfulFinishReason(finishReason, hasAssistantText)) {
-      const message = `AI returned incomplete output (finish_reason: ${finishReason})`
-      logGenerateTextFailure({
+      if (!isSuccessfulFinishReason(finishReason, hasAssistantText)) {
+        const message = `AI returned incomplete output (finish_reason: ${finishReason})`
+        logGenerateTextFailure({
+          model: input.model,
+          event: input.logEvent,
+          durationMs,
+          finishReason,
+          message,
+        })
+        return yield* Effect.fail(new AiGenerationError({ cause: message }))
+      }
+
+      if (!hasAssistantText) {
+        logGenerateTextFailure({
+          model: input.model,
+          event: input.logEvent,
+          durationMs,
+          finishReason,
+          message: 'no assistant text block',
+        })
+        return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned no text block' }))
+      }
+
+      logGenerateTextSuccess({
         model: input.model,
         event: input.logEvent,
         durationMs,
         finishReason,
-        message,
+        usage: response.usage,
       })
-      return yield* Effect.fail(new AiGenerationError({ cause: message }))
-    }
 
-    if (!hasAssistantText) {
-      logGenerateTextFailure({
-        model: input.model,
-        event: input.logEvent,
-        durationMs,
-        finishReason,
-        message: 'no assistant text block',
-      })
-      return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned no text block' }))
-    }
-
-    logGenerateTextSuccess({
-      model: input.model,
-      event: input.logEvent,
-      durationMs,
-      finishReason,
-      usage: response.usage,
-    })
-
-    return assistantText
-  })
+      return assistantText
+    }),
+  )
 }
 
 export function buildGenerateTextResponse(

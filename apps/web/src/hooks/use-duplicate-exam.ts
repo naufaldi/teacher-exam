@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useToast } from '@teacher-exam/ui'
 import type { Exam } from '@teacher-exam/shared'
-import { api, ApiError } from '../lib/api.js'
+import { api, ApiError, unwrapApiEither } from '../lib/api.js'
 
 export function useDuplicateExam() {
   const navigate = useNavigate()
@@ -23,7 +23,7 @@ export function useDuplicateExam() {
     if (!confirmingExam) return
     setIsPending(true)
     try {
-      const newExam = await api.exams.duplicate(confirmingExam.id)
+      const newExam = unwrapApiEither(await api.exams.duplicate(confirmingExam.id))
       await router.invalidate()
       setConfirmingExam(null)
       void navigate({ to: '/review', search: { examId: newExam.id, mode: newExam.reviewMode } })

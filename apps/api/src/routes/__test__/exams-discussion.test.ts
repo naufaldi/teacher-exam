@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Effect } from 'effect'
+import { Effect, Stream } from 'effect'
 import type { AiService } from '../../services/AiService'
+import { AiGenerationError } from '../../errors'
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
@@ -30,8 +31,8 @@ function makeFakeAiService(opts: { discussion?: string; fail?: boolean } = {}): 
         : Effect.succeed(md),
     ),
     streamDiscussion: opts.fail
-      ? async function* () { throw new Error('AI error') }
-      : async function* () { yield md },
+      ? () => Stream.fail(new AiGenerationError({ cause: 'AI error' }))
+      : () => Stream.succeed(md),
   } as unknown as AiService
 }
 

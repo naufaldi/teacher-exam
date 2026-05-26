@@ -1,3 +1,4 @@
+import { Either } from 'effect'
 import { beforeEach, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import React from 'react'
@@ -11,7 +12,7 @@ export type ReviewSearchParams = {
   examId?: string
 }
 
-const { mockNavigate, mockToast, getSearchParams, setSearchParams } = vi.hoisted(() => {
+const { mockNavigate, mockToast, getSearchParams, setSearchParams, reviewTestCtx } = vi.hoisted(() => {
   let mockSearchParams: ReviewSearchParams = { mode: 'fast' }
   return {
     mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
@@ -20,6 +21,7 @@ const { mockNavigate, mockToast, getSearchParams, setSearchParams } = vi.hoisted
     setSearchParams: (params: ReviewSearchParams) => {
       mockSearchParams = params
     },
+    reviewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined },
   }
 })
 
@@ -30,7 +32,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: () => (opts: Record<string, unknown>) => ({
       options: opts,
       useSearch: () => getSearchParams(),
-      useLoaderData: () => undefined,
+      useLoaderData: () => reviewTestCtx.mockLoaderData,
     }),
     useNavigate: () => mockNavigate,
     useSearch: () => getSearchParams(),
@@ -91,7 +93,11 @@ export function getReviewSearch(): ReviewSearchParams {
 }
 
 export function getLoader() {
-  return (Route as unknown as { options: RouteOptions }).options.loader!
+  const loader = (Route as unknown as { options: RouteOptions }).options.loader!
+  return async (ctx: { deps: Record<string, unknown> }) => {
+    reviewTestCtx.mockLoaderData = (await loader(ctx)) as ExamWithQuestions
+    return reviewTestCtx.mockLoaderData
+  }
 }
 
 export function renderReviewPage() {
@@ -100,13 +106,37 @@ export function renderReviewPage() {
 }
 
 export async function seedReviewLoader(examId: string, exam?: ExamWithQuestions) {
-  mockExamsGet.mockResolvedValueOnce(exam ?? makeExamWithQuestions(examId))
+  mockApiResolvedValueOnce(mockExamsGet, exam ?? makeExamWithQuestions(examId))
   await getLoader()({ deps: { examId } })
+}
+
+export function mockApiResolvedValueOnce<T>(
+  mock: { mockResolvedValueOnce: (value: unknown) => unknown },
+  value: T,
+) {
+  mock.mockResolvedValueOnce(Either.right(value))
+}
+
+export function mockApiImplementationOnce<T, Args extends unknown[]>(
+  mock: { mockImplementationOnce: (fn: (...args: Args) => Promise<unknown>) => unknown },
+  fn: (...args: Args) => Promise<T> | T,
+) {
+  mock.mockImplementationOnce((...args: Args) =>
+    Promise.resolve(fn(...args)).then((result) =>
+      result !== null &&
+      typeof result === 'object' &&
+      '_tag' in result &&
+      (result._tag === 'Left' || result._tag === 'Right')
+        ? result
+        : Either.right(result),
+    ),
+  )
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   mockNavigate.mockResolvedValue(undefined)
   examDraftStore.reset()
+  reviewTestCtx.mockLoaderData = undefined
   setSearchParams({ mode: 'fast' })
 })

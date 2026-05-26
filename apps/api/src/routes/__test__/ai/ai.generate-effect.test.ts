@@ -4,6 +4,7 @@ import { db } from '@teacher-exam/db'
 import { generateExam } from '../../../lib/ai-generate.js'
 import { DbClient } from '../../../api/services/db.js'
 import { TestSqlLayer } from '../../../api/services/test-db.js'
+import { TestCurriculumLayer } from '../../../api/services/curriculum-service.js'
 import { Layer } from 'effect'
 import { makeChain, makeExamRow, makeQuestionRow } from '../helpers.js'
 import { fakeAiService, FAKE_AI_QUESTIONS, VALID_BODY } from './ai-setup.js'
@@ -34,6 +35,7 @@ describe('generateExam Effect integration', () => {
         Effect.provide(Layer.mergeAll(
           Layer.succeed(DbClient, db as never),
           TestSqlLayer,
+          TestCurriculumLayer(),
         )),
       ),
     )

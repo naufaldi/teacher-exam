@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Effect } from 'effect'
+import { Effect, Stream } from 'effect'
 import type { GeneratedQuestion } from '@teacher-exam/shared'
 import type { AiService } from '../../services/AiService'
 import { createAiService } from '../../services/AiService'
@@ -12,9 +12,6 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ op: 'and', args })),
 }))
 
-vi.mock('../../lib/curriculum', () => ({
-  getCurriculumText: vi.fn(async () => 'mock curriculum text'),
-}))
 
 import { db } from '@teacher-exam/db'
 import { makeChain, makeQuestionRow, makeExamRow } from './helpers.js'
@@ -56,7 +53,7 @@ function makeFakeAiService(overrides: Partial<AiService> = {}): AiService {
       ),
     ),
     generateDiscussion: vi.fn(),
-    streamDiscussion: vi.fn(),
+    streamDiscussion: vi.fn(() => Stream.succeed('')),
     ...overrides,
   }
 }

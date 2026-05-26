@@ -9,14 +9,14 @@ import {
   mockToast,
   renderReviewPage,
   setReviewSearch,
-} from './setup.js'
+  mockApiResolvedValueOnce} from './setup.js'
 import { makeExamWithQuestions } from '../../../test/fixtures/exam.js'
 import { makeExamWithValidation } from './fixtures.js'
 
 describe('ReviewPage — optional Periksa kurikulum', () => {
   it('shows Periksa kurikulum when no validationStatus yet', async () => {
     setReviewSearch({ mode: 'fast', examId: 'exam_v' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_v'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_v'))
     await getLoader()({ deps: { examId: 'exam_v' } })
 
     renderReviewPage()
@@ -28,11 +28,11 @@ describe('ReviewPage — optional Periksa kurikulum', () => {
   it('calls validateCurriculum and updates badges on success', async () => {
     const user = userEvent.setup()
     setReviewSearch({ mode: 'fast', examId: 'exam_v2' })
-    mockExamsGet.mockResolvedValueOnce(makeExamWithQuestions('exam_v2'))
+    mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('exam_v2'))
     await getLoader()({ deps: { examId: 'exam_v2' } })
 
     const validated = makeExamWithValidation('exam_v2')
-    mockExamsValidateCurriculum.mockResolvedValueOnce(validated)
+    mockApiResolvedValueOnce(mockExamsValidateCurriculum, validated)
 
     renderReviewPage()
 

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { Button, Input, Label, PaperCard } from '@teacher-exam/ui'
 import { GraduationCap, BookOpen } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, unwrapApiEither } from '../lib/api'
 import { authClient } from '../lib/auth-client'
 import type { ExamSubject, Grade, UpdateProfileInput, UserProfile } from '@teacher-exam/shared'
 import { SUBJECT_OPTIONS } from '../lib/subjects'
@@ -26,7 +26,8 @@ function OnboardingPage() {
   const [error, setError]             = useState<string | null>(null)
 
   useEffect(() => {
-    void api.me.get().then((p) => {
+    void api.me.get().then((result) => {
+      const p = unwrapApiEither(result)
       setProfile(p)
       setSchool(p.school ?? '')
       setUsername(p.username)
@@ -62,7 +63,7 @@ function OnboardingPage() {
         gradesTaught:   grades,
         subjectsTaught: subjects,
       }
-      await api.me.update(payload)
+      unwrapApiEither(await api.me.update(payload))
       await authClient.getSession({ query: { disableCookieCache: true } })
       await navigate({ to: '/dashboard' })
     } catch (err) {

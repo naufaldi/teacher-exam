@@ -30,7 +30,7 @@ import {
 import type { ExamType, Question, UpdateExamInput } from '@teacher-exam/shared'
 import { RegenerateBatchDialog } from '../components/review/regenerate-batch-dialog.js'
 import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
-import { api } from '../lib/api.js'
+import { api, unwrapApiEither } from '../lib/api.js'
 import { matchQuestion } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
@@ -67,7 +67,7 @@ export const Route = createFileRoute('/_auth/review')({
   loader: async ({ deps }) => {
     const { examId } = deps
     if (!examId) throw redirect({ to: '/dashboard' })
-    const exam = await api.exams.get(examId)
+    const exam = unwrapApiEither(await api.exams.get(examId))
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({
@@ -218,7 +218,7 @@ function ReviewPage() {
   const persistMetaField = useCallback(async (patch: Partial<UpdateExamInput>) => {
     if (!examId) return
     try {
-      await api.exams.patch(examId, patch)
+      unwrapApiEither(await api.exams.patch(examId, patch))
     } catch (err) {
       toast({
         variant: 'error',
@@ -327,7 +327,7 @@ function ReviewPage() {
     examDraftStore.replaceQuestion(updated.id, updated)
     setEditedIds((prev) => new Set(prev).add(updated.id))
     try {
-      const server = await api.questions.patch(updated.id, diff as Parameters<typeof api.questions.patch>[1])
+      const server = unwrapApiEither(await api.questions.patch(updated.id, diff as Parameters<typeof api.questions.patch>[1]))
       examDraftStore.replaceQuestion(server.id, server)
       toast({
         variant: 'success',
@@ -382,7 +382,7 @@ function ReviewPage() {
     clearNewBadge(id)
     setQuestionStatuses((p) => ({ ...p, [id]: status }))
     try {
-      await api.questions.patch(id, { status })
+      unwrapApiEither(await api.questions.patch(id, { status }))
     } catch (err) {
       setQuestionStatuses((p) => ({ ...p, [id]: prev }))
       toast({
@@ -432,7 +432,7 @@ function ReviewPage() {
       description: `Memeriksa ${count} soal (bisa ~2 menit).`,
     })
     try {
-      const updated = await api.exams.validateCurriculum(examId)
+      const updated = unwrapApiEither(await api.exams.validateCurriculum(examId))
       examDraftStore.setQuestions([...updated.questions])
       const flagged = updated.questions.filter((q) =>
         needsCurriculumReview(q.validationStatus),
@@ -507,7 +507,7 @@ function ReviewPage() {
   const handleRegenerateOne = async (id: string, hint?: string): Promise<boolean> => {
     setRegeneratingIds((prev) => new Set(prev).add(id))
     try {
-      const server = await api.questions.regenerate(id, hint !== undefined ? { hint } : {})
+      const server = unwrapApiEither(await api.questions.regenerate(id, hint !== undefined ? { hint } : {}))
       examDraftStore.updateQuestion(id, server)
       setQuestionStatuses((prev) => ({
         ...prev,
@@ -556,7 +556,7 @@ function ReviewPage() {
       ...Object.fromEntries(pending.map((q) => [q.id, 'accepted' as const])),
     }))
     const results = await Promise.allSettled(
-      pending.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+      pending.map((q) => api.questions.patch(q.id, { status: 'accepted' }).then(unwrapApiEither)),
     )
     const failedIds = pending
       .filter((_, i) => results[i]?.status === 'rejected')
@@ -592,11 +592,11 @@ function ReviewPage() {
         const toSync = draft.questions.filter((q) => (q.status as string) !== 'accepted')
         if (toSync.length > 0) {
           await Promise.allSettled(
-            toSync.map((q) => api.questions.patch(q.id, { status: 'accepted' })),
+            toSync.map((q) => api.questions.patch(q.id, { status: 'accepted' }).then(unwrapApiEither)),
           )
         }
       }
-      await api.exams.finalize(examId)
+      unwrapApiEither(await api.exams.finalize(examId))
       void navigate({ to: '/preview', search: { examId } })
     } catch (err) {
       const code = err != null && typeof err === 'object' && 'code' in err

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Button, Badge } from '@teacher-exam/ui'
-import { api } from '../lib/api.js'
+import { api, unwrapApiEither } from '../lib/api.js'
 import { computeStats, computeWeeklyActivity, getRecentSheets } from '../lib/dashboard-selectors.js'
 import { StatSummary } from '../components/dashboard/stat-summary.js'
 import { MiniPaperPreview } from '../components/dashboard/mini-paper-preview.js'
@@ -23,7 +23,7 @@ import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../lib/feature-flags.js'
 
 export const Route = createFileRoute('/_auth/dashboard')({
-  loader: async () => ({ exams: await api.exams.list() }),
+  loader: async () => ({ exams: unwrapApiEither(await api.exams.list()) }),
   pendingComponent: DashboardSkeleton,
   errorComponent: DashboardError,
   component: DashboardPage,

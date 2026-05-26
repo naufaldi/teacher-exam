@@ -14,7 +14,7 @@ import {
   type StatusFilter,
   type SubjectFilter,
 } from '../components/history/index.js'
-import { api, ApiError } from '../lib/api.js'
+import { api, ApiError, unwrapApiEither } from '../lib/api.js'
 import { DuplicateConfirmDialog } from '../components/dashboard/duplicate-confirm-dialog.js'
 import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
 
@@ -76,8 +76,8 @@ function HistoryPage() {
     setError(null)
     api.exams
       .list()
-      .then((data) => {
-        setExams(data)
+      .then((result) => {
+        setExams(unwrapApiEither(result))
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -93,7 +93,7 @@ function HistoryPage() {
 
   async function handleDelete(id: string) {
     try {
-      await api.exams.remove(id)
+      unwrapApiEither(await api.exams.remove(id))
       setExams((prev) => prev.filter((e) => e.id !== id))
       toast({ variant: 'success', title: 'Lembar berhasil dihapus' })
     } catch (err: unknown) {
@@ -104,7 +104,7 @@ function HistoryPage() {
 
   async function handleShare(exam: Exam) {
     try {
-      const share = await api.exams.share(exam.id)
+      const share = unwrapApiEither(await api.exams.share(exam.id))
       const publicUrl = `${window.location.origin}${share.publicUrlPath}`
       await window.navigator.clipboard.writeText(publicUrl)
       toast({ variant: 'success', title: 'Link publik berhasil disalin' })

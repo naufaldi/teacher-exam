@@ -1,5 +1,7 @@
 import { HttpApiBuilder } from '@effect/platform'
-import { startDatabase, disposeDatabase } from './api/services/bootstrap-db'
+import { Effect } from 'effect'
+import { startDatabase, disposeDatabase, databaseRuntime } from './api/services/bootstrap-db'
+import { setAuthEffectRunner } from './api/services/auth-service'
 import { initAuth } from './lib/auth'
 import { resolveApiPort } from './lib/auth-origins'
 import { assertDevAuthNotEnabledInProduction } from './lib/dev-auth'
@@ -31,6 +33,7 @@ process.on('unhandledRejection', (reason) => {
 
 async function main() {
   const db = await startDatabase()
+  setAuthEffectRunner((effect) => databaseRuntime.runPromise(effect))
   initAuth(db)
 
   const port = resolveApiPort()

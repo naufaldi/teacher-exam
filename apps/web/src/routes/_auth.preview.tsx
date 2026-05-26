@@ -17,7 +17,7 @@ import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
 import { MarkdownMath } from '../components/markdown-math.js'
 import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
-import { api } from '../lib/api.js'
+import { api, unwrapApiEither } from '../lib/api.js'
 import { subjectMetaFor } from '../lib/subjects.js'
 
 export const Route = createFileRoute('/_auth/preview')({
@@ -29,7 +29,7 @@ export const Route = createFileRoute('/_auth/preview')({
   loaderDeps: ({ search }) => ({ examId: search.examId }),
   loader: async ({ deps }) => {
     if (!deps.examId) throw redirect({ to: '/dashboard' })
-    const exam = await api.exams.get(deps.examId)
+    const exam = unwrapApiEither(await api.exams.get(deps.examId))
     examDraftStore.setQuestions([...exam.questions])
     examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
     examDraftStore.setConfig({

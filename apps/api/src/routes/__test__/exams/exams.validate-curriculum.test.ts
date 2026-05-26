@@ -6,9 +6,6 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ op: 'and', args })),
 }))
 
-vi.mock('../../../lib/curriculum.js', () => ({
-  getCurriculumText: vi.fn(() => Promise.resolve('# stub curriculum')),
-}))
 
 import { db } from '@teacher-exam/db'
 import type { AiService } from '../../../services/AiService.js'

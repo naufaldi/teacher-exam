@@ -32,6 +32,7 @@ vi.mock('../../lib/api', async (importOriginal) => {
   }
 })
 
+import { apiOk } from '../../lib/api-test-utils.js'
 import { useDuplicateExam } from '../use-duplicate-exam.js'
 
 const makeExam = (overrides: Partial<Exam> = {}): Exam => ({
@@ -84,7 +85,7 @@ describe('useDuplicateExam', () => {
 
   it('confirm calls api.exams.duplicate and navigates to /review on success', async () => {
     const newExam = makeExam({ id: 'new-exam-1', reviewMode: 'fast' })
-    mockDuplicate.mockResolvedValue(newExam)
+    mockDuplicate.mockImplementation(() => apiOk(newExam))
 
     const { result } = renderHook(() => useDuplicateExam())
     act(() => { result.current.openFor(makeExam({ id: 'exam-1' })) })

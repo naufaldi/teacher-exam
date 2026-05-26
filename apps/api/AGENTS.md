@@ -75,4 +75,4 @@ Inherits the root **Effect-TS Code Style (Mandatory)** rules. API-specific addit
 1. **MUST** follow the root Effect-TS Code Style rules.
 2. **MUST NOT** use tacit style or `flow`.
 3. **MUST** use `DbClient` from `api/services/db.ts` for all Drizzle access; map queries with `runDb()` in `api/lib/db-effect.ts` (maps `SqlError` → `ApiDatabaseError`). Use `SqlClient.withTransaction` for transactions — not `db.transaction()`.
-4. **MUST** register service tags in `api/server.ts` Layer composition.
+4. **MUST** register service tags in [`layers/AppLayer.ts`](apps/api/src/layers/AppLayer.ts) Layer composition (`AppConfig`, `AuthService`, `CurriculumService`, `DbClient`, `AiClient`, optional OpenTelemetry).

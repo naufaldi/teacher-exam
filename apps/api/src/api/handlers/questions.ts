@@ -5,7 +5,7 @@ import { exams, questions } from '@teacher-exam/db'
 import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../../lib/question-mapper'
-import { getCurriculumText } from '../../lib/curriculum'
+import { CurriculumService } from '../services/curriculum-service'
 import { validateGeneratedQuestionLatex } from '../../lib/latex-validator.js'
 import { normalizeMatematikaLatexField } from '../../lib/normalize-matematika-latex.js'
 import { buildRegeneratePrompt } from '../../lib/prompt'
@@ -219,10 +219,12 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
 
         const siblingTexts = siblingRows.map((r) => r.text)
         const isMatematika = exam.subject === 'matematika'
-        const curriculumText = yield* Effect.tryPromise({
-          try: () => getCurriculumText(exam.subject, exam.grade),
-          catch: () => new ApiDatabaseError({ error: 'Curriculum lookup failed', code: 'DATABASE_ERROR' }),
-        })
+        const curriculum = yield* CurriculumService
+        const curriculumText = yield* curriculum.getText(exam.subject, exam.grade).pipe(
+          Effect.mapError(
+            () => new ApiDatabaseError({ error: 'Curriculum lookup failed', code: 'DATABASE_ERROR' }),
+          ),
+        )
         const { system, user } = buildRegeneratePrompt({
           grade: exam.grade,
           subjectLabel: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,

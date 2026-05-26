@@ -46,13 +46,10 @@ describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
     return insertChain
   }
 
-  it('calls buildExamPrompt with ipas and getCurriculumText subject', async () => {
+  it('calls buildExamPrompt with ipas curriculum text', async () => {
     setupPhase1Mocks()
     const buildMock = buildExamPrompt as Mock
     buildMock.mockClear()
-    const { getCurriculumText } = await import('../../../lib/curriculum.js')
-    const curriculumMock = getCurriculumText as Mock
-    curriculumMock.mockClear()
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -67,9 +64,12 @@ describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
     })
 
     expect(res.status).toBe(201)
-    expect(curriculumMock).toHaveBeenCalledWith('ipas', 5)
     expect(buildMock).toHaveBeenCalledWith(
-      expect.objectContaining({ examSubject: 'ipas', subjectLabel: 'IPAS' }),
+      expect.objectContaining({
+        examSubject: 'ipas',
+        subjectLabel: 'IPAS',
+        curriculumText: 'mock curriculum text',
+      }),
     )
   })
 

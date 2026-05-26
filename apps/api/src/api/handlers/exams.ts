@@ -1,5 +1,5 @@
 import { HttpApiBuilder } from '@effect/platform'
-import { Effect, Schema, Match, Layer } from 'effect'
+import { Effect, Schema, Match } from 'effect'
 import { SqlClient } from '@effect/sql/SqlClient'
 import { eq, and, desc } from 'drizzle-orm'
 import { exams, questions } from '@teacher-exam/db'
@@ -22,6 +22,7 @@ import { CurrentUser } from '../middleware/auth'
 import { runDb } from '../lib/db-effect'
 import { DbClient } from '../services/db'
 import { AiClient } from '../services/ai'
+import { runDiscussionSse } from '../lib/sse-discussion'
 
 export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers) =>
   handlers
@@ -454,67 +455,19 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
           questions: questionRows.map((q) => rowToQuestion(q)),
         })
 
-        return new Response(
-          new ReadableStream<Uint8Array>({
-            async start(controller) {
-              const encoder = new TextEncoder()
-              const writeSse = (event: string, data: string) => {
-                controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
-              }
-
-              const heartbeat = setInterval(() => {
-                writeSse('ping', '')
-              }, 25_000)
-
-              try {
-                let discussionMd = ''
-                for await (const chunk of aiService.streamDiscussion({ system, user })) {
-                  discussionMd += chunk
-                }
-
-                clearInterval(heartbeat)
-
-                const updated = await Effect.runPromise(
-                  Effect.gen(function* () {
-                    yield* runDb(
-                      db
-                        .update(exams)
-                        .set({ discussionMd, updatedAt: new Date() })
-                        .where(and(eq(exams.id, id), eq(exams.userId, userId))),
-                    )
-                    return yield* fetchExamWithQuestions(id)
-                  }).pipe(Effect.provide(Layer.succeed(DbClient, db))),
-                )
-
-                writeSse('done', JSON.stringify(updated ?? { error: 'Failed to retrieve updated exam' }))
-              } catch (err) {
-                clearInterval(heartbeat)
-                const fromCause = (e: unknown): string => {
-                  if (e && typeof e === 'object' && 'cause' in e) {
-                    const c = (e as { cause: unknown }).cause
-                    if (typeof c === 'string' && c.length > 0) return c
-                    if (c && typeof c === 'object' && 'cause' in c) {
-                      const inner = (c as { cause: unknown }).cause
-                      if (typeof inner === 'string' && inner.length > 0) return inner
-                    }
-                  }
-                  return ''
-                }
-                const baseMessage = err instanceof Error && err.message ? err.message : fromCause(err)
-                const message = baseMessage || 'AI generation failed'
-                writeSse('error', JSON.stringify({ message }))
-              } finally {
-                controller.close()
-              }
-            },
-          }),
-          {
-            headers: {
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              Connection: 'keep-alive',
-            },
-          },
+        return runDiscussionSse(
+          aiService.streamDiscussion({ system, user }),
+          (discussionMd) =>
+            Effect.gen(function* () {
+              yield* runDb(
+                db
+                  .update(exams)
+                  .set({ discussionMd, updatedAt: new Date() })
+                  .where(and(eq(exams.id, id), eq(exams.userId, userId))),
+              )
+              const updated = yield* fetchExamWithQuestions(id)
+              return JSON.stringify(updated ?? { error: 'Failed to retrieve updated exam' })
+            }),
         )
       }),
     ),
