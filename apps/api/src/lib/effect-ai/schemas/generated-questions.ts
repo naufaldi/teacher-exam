@@ -22,20 +22,17 @@ const GeneratedMcqCommonFields = {
   option_d: Schema.NonEmptyString,
 } as const
 
-export const GeneratedMcqSingleAiSchema = Schema.Struct({
-  _tag: Schema.Literal('mcq_single'),
+export const GeneratedMcqSingleAiSchema = Schema.TaggedStruct('mcq_single', {
   ...GeneratedMcqCommonFields,
   correct_answer: AnswerLetterSchema,
 })
 
-export const GeneratedMcqMultiAiSchema = Schema.Struct({
-  _tag: Schema.Literal('mcq_multi'),
+export const GeneratedMcqMultiAiSchema = Schema.TaggedStruct('mcq_multi', {
   ...GeneratedMcqCommonFields,
   correct_answers: MultiAnswerSchema,
 })
 
-export const GeneratedTrueFalseAiSchema = Schema.Struct({
-  _tag: Schema.Literal('true_false'),
+export const GeneratedTrueFalseAiSchema = Schema.TaggedStruct('true_false', {
   ...GeneratedBaseFields,
   statements: Schema.Array(
     Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal('B', 'S') }),

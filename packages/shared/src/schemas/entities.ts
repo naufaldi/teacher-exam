@@ -57,24 +57,21 @@ const QuestionCommonFields = {
   createdAt:        Schema.String,
 } as const
 
-export const McqSingleQuestionSchema = Schema.Struct({
-  _tag:    Schema.Literal('mcq_single'),
+export const McqSingleQuestionSchema = Schema.TaggedStruct('mcq_single', {
   ...QuestionCommonFields,
   options: Options4Schema,
   correct: AnswerLetterSchema,
 })
 export type McqSingleQuestion = typeof McqSingleQuestionSchema.Type
 
-export const McqMultiQuestionSchema = Schema.Struct({
-  _tag:    Schema.Literal('mcq_multi'),
+export const McqMultiQuestionSchema = Schema.TaggedStruct('mcq_multi', {
   ...QuestionCommonFields,
   options: Options4Schema,
   correct: MultiAnswerSchema,
 })
 export type McqMultiQuestion = typeof McqMultiQuestionSchema.Type
 
-export const TrueFalseQuestionSchema = Schema.Struct({
-  _tag:       Schema.Literal('true_false'),
+export const TrueFalseQuestionSchema = Schema.TaggedStruct('true_false', {
   ...QuestionCommonFields,
   statements: Schema.Array(
     Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Boolean })
@@ -184,20 +181,17 @@ const GeneratedMcqCommonFields = {
   option_d: Schema.NonEmptyString,
 } as const
 
-const GeneratedMcqSingleSchema = Schema.Struct({
-  _tag:           Schema.Literal('mcq_single'),
+const GeneratedMcqSingleSchema = Schema.TaggedStruct('mcq_single', {
   ...GeneratedMcqCommonFields,
   correct_answer: AnswerLetterSchema,
 })
 
-const GeneratedMcqMultiSchema = Schema.Struct({
-  _tag:            Schema.Literal('mcq_multi'),
+const GeneratedMcqMultiSchema = Schema.TaggedStruct('mcq_multi', {
   ...GeneratedMcqCommonFields,
   correct_answers: MultiAnswerSchema,
 })
 
-const GeneratedTrueFalseSchema = Schema.Struct({
-  _tag:       Schema.Literal('true_false'),
+const GeneratedTrueFalseSchema = Schema.TaggedStruct('true_false', {
   ...GeneratedBaseFields,
   statements: Schema.Array(
     Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal('B', 'S') })
