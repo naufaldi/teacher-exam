@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "curriculum:extract": "node --env-file-if-exists=../../.env --import tsx/esm scripts/extract-curriculum.ts",
     "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts",
+    "qa:phase1": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-phase1-sampling.ts",
     "db:seed:dev": "node --env-file-if-exists=../../.env --import tsx/esm scripts/seed-dev-guru.ts"
   },
   "dependencies": {

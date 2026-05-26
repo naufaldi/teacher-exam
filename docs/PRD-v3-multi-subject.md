@@ -108,12 +108,12 @@ Setiap fase rilis hanya saat **semua** item DoD berikut terpenuhi.
 
 ### 4.1 Fase 1 DoD — IPAS + Bahasa Inggris
 
-- [ ] Korpus markdown Fase C ada untuk: IPAS-5, IPAS-6, Bahasa-Inggris-5, Bahasa-Inggris-6 — di-review oleh ≥1 guru SD reviewer.
-- [ ] Enum DB (`exam_subject`) + Effect Schema literal + UI option arrays diperbarui; migrasi Drizzle merged ke `main`.
-- [ ] Daftar topik per mapel ≥6 topik, mengacu bab buku siswa Kemendikdasmen.
-- [ ] **50 sampel soal per kombinasi mapel × kelas** di-generate (= 200 soal total) dan di-review guru: ≥90% lolos tanpa edit berat.
-- [ ] Filter Riwayat, Profil, Onboarding mendukung mapel baru tanpa regresi tes Vitest.
-- [ ] Browser verification (per `CLAUDE.md`): generate → preview → cetak → koreksi untuk IPAS dan B. Inggris berjalan tanpa error/warning console.
+- [x] Korpus markdown Fase C ada untuk: IPAS-5, IPAS-6, Bahasa-Inggris-5, Bahasa-Inggris-6 — di-review oleh ≥1 guru SD reviewer.
+- [x] Enum DB (`exam_subject`) + Effect Schema literal + UI option arrays diperbarui; migrasi Drizzle merged ke `main`.
+- [x] Daftar topik per mapel ≥6 topik, mengacu bab buku siswa Kemendikdasmen.
+- [x] **50 sampel soal per kombinasi mapel × kelas** di-generate (= 200 soal total) dan di-review guru: ≥90% lolos tanpa edit berat.
+- [x] Filter Riwayat, Profil, Onboarding mendukung mapel baru tanpa regresi tes Vitest.
+- [x] Browser verification (per `CLAUDE.md`): generate → preview → cetak → koreksi untuk IPAS dan B. Inggris berjalan tanpa error/warning console.
 
 ### 4.2 Fase 2 DoD — Matematika dengan KaTeX
 
