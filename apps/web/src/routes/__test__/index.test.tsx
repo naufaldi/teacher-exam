@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -22,6 +22,19 @@ vi.mock('@tanstack/react-router', () => ({
     useSearch: () => mockSearch,
   }),
   useNavigate: () => mockNavigate,
+  Link: ({
+    children,
+    to,
+    className,
+  }: {
+    children: ReactNode
+    to?: unknown
+    className?: string
+  }) => (
+    <a href={typeof to === 'string' ? to : '#'} className={className}>
+      {children}
+    </a>
+  ),
   redirect: (opts: Record<string, unknown>) => {
     const err = new Error('redirect') as Error & Record<string, unknown>
     err.isRedirect = true
