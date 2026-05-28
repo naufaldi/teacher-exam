@@ -8,11 +8,13 @@ import { ExamsGroup } from './groups/exams'
 import { QuestionsGroup } from './groups/questions'
 import { AiGroup } from './groups/ai'
 import { BankGroup } from './groups/bank'
+import { BankPublicGroup } from './groups/bank-public'
 
 export const TeacherExamApi = HttpApi.make('TeacherExamApi')
   .add(HealthGroup)
   .add(DevAuthGroup)
   .add(PublicExamsGroup)
+  .add(BankPublicGroup)
   .add(MeGroup)
   .add(ExamsGroup)
   .add(QuestionsGroup)

@@ -8,6 +8,7 @@ import { ExamsLive } from '../handlers/exams'
 import { QuestionsLive } from '../handlers/questions'
 import { AiLive } from '../handlers/ai'
 import { BankLive } from '../handlers/bank'
+import { BankPublicLive } from '../handlers/bank-public'
 import { TeacherExamApi } from '../definition'
 import { BankServiceLive } from '../services/bank-service'
 import { createCorsLayer } from '../cors'
@@ -22,6 +23,10 @@ import {
   GlobalRateLimitLive,
   createTestGlobalRateLimitLive,
 } from '../middleware/rate-limit'
+import {
+  PublicBankIpRateLimitLive,
+  createTestPublicBankIpRateLimitLive,
+} from '../middleware/ip-rate-limit'
 import { attachRateLimitHeaders } from '../lib/rate-limit-response'
 import { db } from '@teacher-exam/db'
 import type { AppDb } from '../services/db'
@@ -52,11 +57,16 @@ const HandlerLayers = Layer.mergeAll(
   QuestionsLive,
   AiLive,
   BankLive,
+  BankPublicLive,
 )
 
 function createMiddlewareLayer(opts: {
   userId?: string
   rateLimit?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
+  publicBankRateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
@@ -68,8 +78,11 @@ function createMiddlewareLayer(opts: {
   const rateLayer = opts.rateLimit
     ? createTestGlobalRateLimitLive(opts.rateLimit)
     : GlobalRateLimitLive
+  const publicBankRateLayer = opts.publicBankRateLimit
+    ? createTestPublicBankIpRateLimitLive(opts.publicBankRateLimit)
+    : PublicBankIpRateLimitLive
 
-  return Layer.mergeAll(authMiddlewareLayer, rateLayer, AiGenerateRateLimitLive)
+  return Layer.mergeAll(authMiddlewareLayer, rateLayer, AiGenerateRateLimitLive, publicBankRateLayer)
 }
 
 const TestDbLayer = createTestDbLayer(db as unknown as AppDb)
@@ -82,6 +95,10 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  publicBankRateLimit?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
   authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
   curriculumLayer?: Layer.Layer<CurriculumService>
 } = {}) {
@@ -91,6 +108,9 @@ export function createHttpApiTestLayer(opts: {
       createMiddlewareLayer({
         ...(opts.userId !== undefined ? { userId: opts.userId } : {}),
         ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
+        ...(opts.publicBankRateLimit !== undefined
+          ? { publicBankRateLimit: opts.publicBankRateLimit }
+          : {}),
         ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {}),
       }),
     ),

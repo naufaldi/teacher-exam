@@ -1,9 +1,9 @@
 import { HttpApiBuilder } from '@effect/platform'
 import { Effect } from 'effect'
 import { TeacherExamApi } from '../definition'
-import { ApiNotFound } from '../errors/http'
+import { ApiNotFound, ApiValidationError422 } from '../errors/http'
 import { CurrentUser } from '../middleware/auth'
-import { BankNotFoundError, BankSaveError, BankService } from '../services/bank-service'
+import { BankNotFoundError, BankSaveError, BankBuildError, BankService } from '../services/bank-service'
 
 export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) =>
   handlers
@@ -60,6 +60,24 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) 
               new ApiNotFound({
                 error: `Bank question ${e.id} not found`,
                 code: 'NOT_FOUND',
+              }),
+            ),
+        }),
+      ),
+    )
+    .handle('buildExamFromBank', ({ payload }) =>
+      Effect.gen(function* () {
+        const { userId } = yield* CurrentUser
+        const bankService = yield* BankService
+        return yield* bankService.buildExam(userId, payload)
+      }).pipe(
+        Effect.catchTags({
+          BankBuildError: (e) =>
+            Effect.fail(
+              new ApiValidationError422({
+                error: 'Validation failed',
+                code: 'VALIDATION_ERROR',
+                details: e.message,
               }),
             ),
         }),

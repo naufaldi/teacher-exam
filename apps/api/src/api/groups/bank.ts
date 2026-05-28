@@ -2,6 +2,8 @@ import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from '@effect/platform'
 import {
   BankQuestionSchema,
   BrowseBankUrlParamsSchema,
+  BuildExamFromBankInputSchema,
+  BuildExamFromBankResponseSchema,
   PaginatedBankResponseSchema,
   SaveToBankInputSchema,
   UpdateBankQuestionInputSchema,
@@ -36,6 +38,12 @@ export const BankGroup = HttpApiGroup.make('bank')
     HttpApiEndpoint.del('removeBankQuestion')`/bank/${idParam}`
       .addSuccess(Schema.Void)
       .addError(ApiNotFound, { status: 404 }),
+  )
+  .add(
+    HttpApiEndpoint.post('buildExamFromBank', '/bank/build-exam')
+      .setPayload(BuildExamFromBankInputSchema)
+      .addSuccess(BuildExamFromBankResponseSchema, { status: 201 })
+      .addError(ApiValidationError422, { status: 422 }),
   )
   .middleware(Authorization)
   .middleware(GlobalRateLimit)

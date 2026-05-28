@@ -16,8 +16,9 @@ import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
 import { MarkdownMath } from '../components/markdown-math.js'
-import type { ExamDetailResponse, ExamType, Question } from '@teacher-exam/shared'
+import type { ExamDetailResponse, ExamType, Question, SaveToBankInput } from '@teacher-exam/shared'
 import { api, unwrapApiEither } from '../lib/api.js'
+import { SaveToBankButton } from '../components/bank/save-to-bank-button.js'
 import { subjectMetaFor } from '../lib/subjects.js'
 
 export const Route = createFileRoute('/_auth/preview')({
@@ -158,6 +159,23 @@ function PreviewPage() {
           </Button>
         </div>
       </div>
+
+      {(tab === 'soal' || tab === 'semua') && questions.length > 0 ? (
+        <div
+          data-screen-only
+          data-no-print
+          className="rounded-md border border-border-default bg-bg-surface p-4 flex flex-wrap gap-2 items-center"
+        >
+          <span className="text-body-sm text-text-secondary mr-2">Simpan ke bank:</span>
+          {questions.map((q) => (
+            <SaveToBankButton
+              key={q.id}
+              questionId={q.id as SaveToBankInput['questionId']}
+              assumeSaved={q.status === 'accepted'}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {/* Print scope CSS */}
       <style>{`

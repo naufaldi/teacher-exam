@@ -17,15 +17,21 @@ import type {
   BankQuestion,
   BrowseBankQuery,
   PaginatedBankResponse,
+  PaginatedPublicBankResponse,
+  PublicBankQuestion,
   UpdateBankQuestionInput,
   SaveToBankInput,
+  BuildExamFromBankInput,
+  BuildExamFromBankResponse,
 } from '@teacher-exam/shared'
 import {
   ExamShareResponseSchema,
   ExamWithQuestionsSchema,
   PublicExamWithQuestionsSchema,
   PaginatedBankResponseSchema,
+  PaginatedPublicBankResponseSchema,
   BankQuestionSchema,
+  BuildExamFromBankResponseSchema,
 } from '@teacher-exam/shared'
 import { devLog } from './dev-log.js'
 import {
@@ -184,6 +190,21 @@ function decodeEither<A, I>(
     )
   }
   return Either.right(decoded.right)
+}
+
+function buildBankQueryParams(query: BrowseBankQuery = {}): string {
+  const params = new URLSearchParams()
+  if (query.subject) params.set('subject', query.subject)
+  if (query.grade !== undefined) params.set('grade', String(query.grade))
+  if (query.difficulty) params.set('difficulty', query.difficulty)
+  if (query.topic) params.set('topic', query.topic)
+  if (query.type) params.set('type', query.type)
+  if (query.author) params.set('author', query.author)
+  if (query.search) params.set('search', query.search)
+  if (query.sort) params.set('sort', query.sort)
+  if (query.page !== undefined) params.set('page', String(query.page))
+  if (query.limit !== undefined) params.set('limit', String(query.limit))
+  return params.toString()
 }
 
 export const api = {
@@ -346,20 +367,34 @@ export const api = {
     browse: async (
       query: BrowseBankQuery = {},
     ): Promise<Either.Either<PaginatedBankResponse, ApiClientFailure>> => {
-      const params = new URLSearchParams()
-      if (query.subject) params.set('subject', query.subject)
-      if (query.grade !== undefined) params.set('grade', String(query.grade))
-      if (query.difficulty) params.set('difficulty', query.difficulty)
-      if (query.topic) params.set('topic', query.topic)
-      if (query.search) params.set('search', query.search)
-      if (query.page !== undefined) params.set('page', String(query.page))
-      if (query.limit !== undefined) params.set('limit', String(query.limit))
-      const qs = params.toString()
+      const qs = buildBankQueryParams(query)
       const raw = await apiFetchEither<unknown>(`/bank${qs ? `?${qs}` : ''}`)
       if (Either.isLeft(raw)) {
         return raw as Either.Either<PaginatedBankResponse, ApiClientFailure>
       }
       return decodeEither(PaginatedBankResponseSchema, raw.right)
+    },
+    browsePublic: async (
+      query: BrowseBankQuery = {},
+    ): Promise<Either.Either<PaginatedPublicBankResponse, ApiClientFailure>> => {
+      const qs = buildBankQueryParams(query)
+      const raw = await apiFetchEither<unknown>(`/bank/public${qs ? `?${qs}` : ''}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PaginatedPublicBankResponse, ApiClientFailure>
+      }
+      return decodeEither(PaginatedPublicBankResponseSchema, raw.right)
+    },
+    buildExam: async (
+      input: BuildExamFromBankInput,
+    ): Promise<Either.Either<BuildExamFromBankResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>('/bank/build-exam', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<BuildExamFromBankResponse, ApiClientFailure>
+      }
+      return decodeEither(BuildExamFromBankResponseSchema, raw.right)
     },
     update: async (
       id: string,

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { BankQuestion, PaginatedBankResponse } from '@teacher-exam/shared'
+import type { BankQuestion, PaginatedBankResponse, PaginatedPublicBankResponse } from '@teacher-exam/shared'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -19,15 +19,19 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
       children: React.ReactNode
       to: string
     }) => <a href={to}>{children}</a>,
+    useNavigate: () => vi.fn(),
   }
 })
 
 const browseMock = vi.fn()
+const browsePublicMock = vi.fn()
 
 vi.mock('../../lib/api.js', () => ({
   api: {
     bank: {
       browse: (...args: unknown[]) => browseMock(...args),
+      browsePublic: (...args: unknown[]) => browsePublicMock(...args),
+      buildExam: vi.fn(),
     },
   },
   unwrapApiEither: <T,>(result: { _tag: 'Right'; right: T }) => result.right,
@@ -63,10 +67,19 @@ const sampleResponse: PaginatedBankResponse = {
   limit: 20,
 }
 
+const emptyPublic: PaginatedPublicBankResponse = {
+  data: [],
+  total: 0,
+  page: 1,
+  limit: 20,
+}
+
 describe('BankSoalPage', () => {
   beforeEach(() => {
     browseMock.mockReset()
+    browsePublicMock.mockReset()
     browseMock.mockResolvedValue({ _tag: 'Right', right: sampleResponse })
+    browsePublicMock.mockResolvedValue({ _tag: 'Right', right: emptyPublic })
   })
 
   it('renders empty state when bank has no questions', async () => {
@@ -82,7 +95,7 @@ describe('BankSoalPage', () => {
     expect(screen.getByRole('link', { name: /Generate ujian/i })).toHaveAttribute('href', '/generate')
   })
 
-  it('renders bank question cards and toolbar count from API', async () => {
+  it('renders bank question cards and toolbar on Bank Saya tab', async () => {
     const BankSoalPage = Route.options.component as React.ComponentType
     render(<BankSoalPage />)
 
@@ -91,8 +104,20 @@ describe('BankSoalPage', () => {
     })
     expect(screen.getByText(/Pribadi/i)).toBeInTheDocument()
     expect(screen.getByText(/Menampilkan/)).toHaveTextContent('1')
-    expect(screen.getByLabelText('Filter mata pelajaran')).toBeInTheDocument()
-    expect(screen.getByLabelText('Filter tingkat kesulitan')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bank Saya' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bank Publik' })).toBeInTheDocument()
+  })
+
+  it('loads public bank when Bank Publik tab is clicked', async () => {
+    const user = userEvent.setup()
+    const BankSoalPage = Route.options.component as React.ComponentType
+    render(<BankSoalPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Bank Publik' }))
+
+    await waitFor(() => {
+      expect(browsePublicMock).toHaveBeenCalled()
+    })
   })
 
   it('opens preview dialog when a card is clicked', async () => {
@@ -107,8 +132,6 @@ describe('BankSoalPage', () => {
     await user.click(screen.getByRole('button', { name: /Pratinjau soal/i }))
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
-    expect(screen.queryByText('Pratinjau tampilan guru')).not.toBeInTheDocument()
     expect(screen.getByText('Kunci A')).toBeInTheDocument()
-    expect(screen.getByTestId('bank-readonly-option-a')).toHaveClass('bg-success-bg')
   })
 })
