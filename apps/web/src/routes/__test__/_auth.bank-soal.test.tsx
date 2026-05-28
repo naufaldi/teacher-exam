@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { BankQuestion, PaginatedBankResponse } from '@teacher-exam/shared'
 
@@ -81,7 +82,7 @@ describe('BankSoalPage', () => {
     expect(screen.getByRole('link', { name: /Generate ujian/i })).toHaveAttribute('href', '/generate')
   })
 
-  it('renders bank question cards from API', async () => {
+  it('renders bank question cards and toolbar count from API', async () => {
     const BankSoalPage = Route.options.component as React.ComponentType
     render(<BankSoalPage />)
 
@@ -89,6 +90,25 @@ describe('BankSoalPage', () => {
       expect(screen.getByText('Apa itu energi?')).toBeInTheDocument()
     })
     expect(screen.getByText(/Pribadi/i)).toBeInTheDocument()
-    expect(screen.getByText(/1 soal di bank Anda/i)).toBeInTheDocument()
+    expect(screen.getByText(/Menampilkan/)).toHaveTextContent('1')
+    expect(screen.getByLabelText('Filter mata pelajaran')).toBeInTheDocument()
+    expect(screen.getByLabelText('Filter tingkat kesulitan')).toBeInTheDocument()
+  })
+
+  it('opens preview dialog when a card is clicked', async () => {
+    const user = userEvent.setup()
+    const BankSoalPage = Route.options.component as React.ComponentType
+    render(<BankSoalPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Apa itu energi?')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /Pratinjau soal/i }))
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.queryByText('Pratinjau tampilan guru')).not.toBeInTheDocument()
+    expect(screen.getByText('Kunci A')).toBeInTheDocument()
+    expect(screen.getByTestId('bank-readonly-option-a')).toHaveClass('bg-success-bg')
   })
 })

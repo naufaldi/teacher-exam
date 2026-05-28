@@ -1,6 +1,7 @@
 import { Search, X, ArrowUpDown } from 'lucide-react'
 import type { ExamSubject } from '@teacher-exam/shared'
 import { SUBJECT_OPTIONS } from '../../lib/subjects'
+import { FILTER_SEARCH_CLASS, SELECT_CLASS, SELECT_CHEVRON } from '../shared/filter-select-styles.js'
 
 export type StatusFilter = 'all' | 'final' | 'draft'
 export type SubjectFilter = 'all' | ExamSubject
@@ -56,12 +57,6 @@ const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
   { value: 'terlama', label: 'Terlama' },
   { value: 'judul', label: 'Judul (A–Z)' },
 ]
-
-const SELECT_CLASS =
-  'h-9 rounded-sm border border-border-default bg-bg-surface px-3 pr-8 text-body-sm text-text-primary font-medium transition-colors duration-[120ms] hover:bg-kertas-50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 appearance-none bg-no-repeat bg-[length:14px] bg-[position:right_10px_center]'
-
-const SELECT_CHEVRON =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")"
 
 function HistoryToolbar({
   status,
@@ -161,7 +156,7 @@ function HistoryToolbar({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Cari judul atau topik…"
-              className="h-9 w-[240px] rounded-sm border border-border-default bg-bg-surface pl-9 pr-3 text-body-sm text-text-primary placeholder:text-text-tertiary transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40"
+              className={FILTER_SEARCH_CLASS}
             />
           </div>
 

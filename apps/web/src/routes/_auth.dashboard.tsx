@@ -101,8 +101,8 @@ const ACTION_CARDS = [
     icon: BookOpen,
     title: 'Bank Soal',
     description:
-      'Pratinjau halaman Bank Soal — simpan dan susun ulang soal dari koleksi pribadi (fitur penuh menyusul).',
-    cta: 'Lihat pratinjau',
+      'Soal dari generate otomatis tersimpan di bank. Bagikan ujian dari Riwayat untuk mempublikasikan soal terkait.',
+    cta: 'Buka bank soal',
     kbd: null,
     cardBg: 'bg-bg-surface border-border-default',
     disabled: false,

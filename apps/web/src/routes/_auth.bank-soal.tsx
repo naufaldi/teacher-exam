@@ -1,60 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { BookOpen, Globe, Lock, Search } from 'lucide-react'
-import type { BankQuestion, BrowseBankQuery, ExamDifficulty, ExamSubject } from '@teacher-exam/shared'
-import { SUBJECT_LABEL } from '@teacher-exam/shared'
-import { Badge, Button, EmptyState, Input, LoadingSpinner } from '@teacher-exam/ui'
+import type { BankQuestion, BrowseBankQuery } from '@teacher-exam/shared'
+import { BookOpen } from 'lucide-react'
+import { Button, EmptyState, LoadingSpinner, PageHeader } from '@teacher-exam/ui'
+import { BankQuestionCard } from '../components/bank/bank-question-card.js'
+import { BankQuestionPreviewDialog } from '../components/bank/bank-question-preview-dialog.js'
+import {
+  BankToolbar,
+  type BankDifficultyFilter,
+  type BankGradeFilter,
+  type BankSubjectFilter,
+} from '../components/bank/bank-toolbar.js'
 import { api, unwrapApiEither } from '../lib/api.js'
 
 export const Route = createFileRoute('/_auth/bank-soal')({
   component: BankSoalPage,
 })
-
-const SUBJECT_OPTIONS: Array<{ value: '' | ExamSubject; label: string }> = [
-  { value: '', label: 'Semua mapel' },
-  { value: 'bahasa_indonesia', label: SUBJECT_LABEL.bahasa_indonesia },
-  { value: 'pendidikan_pancasila', label: SUBJECT_LABEL.pendidikan_pancasila },
-  { value: 'ipas', label: SUBJECT_LABEL.ipas },
-  { value: 'bahasa_inggris', label: SUBJECT_LABEL.bahasa_inggris },
-  { value: 'matematika', label: SUBJECT_LABEL.matematika },
-]
-
-const DIFFICULTY_OPTIONS: Array<{ value: '' | ExamDifficulty; label: string }> = [
-  { value: '', label: 'Semua tingkat' },
-  { value: 'mudah', label: 'Mudah' },
-  { value: 'sedang', label: 'Sedang' },
-  { value: 'sulit', label: 'Sulit' },
-  { value: 'campuran', label: 'Campuran' },
-]
-
-function BankQuestionCard({ item }: { item: BankQuestion }) {
-  return (
-    <article className="rounded-xl border border-border-default bg-surface p-4 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <Badge variant="secondary">{SUBJECT_LABEL[item.subject]}</Badge>
-        <Badge variant="secondary">Kelas {item.grade}</Badge>
-        <Badge variant="pill">{item.difficulty}</Badge>
-        {item.isPublic ? (
-          <Badge variant="success">
-            <Globe size={12} className="mr-1 inline" />
-            Publik
-          </Badge>
-        ) : (
-          <Badge variant="secondary">
-            <Lock size={12} className="mr-1 inline" />
-            Pribadi
-          </Badge>
-        )}
-      </div>
-      <p className="text-sm text-primary leading-relaxed line-clamp-4">{item.text}</p>
-      {item.topics.length > 0 ? (
-        <p className="mt-3 text-xs text-tertiary">
-          Topik: {item.topics.join(', ')}
-        </p>
-      ) : null}
-    </article>
-  )
-}
 
 function BankSoalPage() {
   const [items, setItems] = useState<BankQuestion[]>([])
@@ -64,9 +25,10 @@ function BankSoalPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [subject, setSubject] = useState<'' | ExamSubject>('')
-  const [grade, setGrade] = useState<'' | '5' | '6'>('')
-  const [difficulty, setDifficulty] = useState<'' | ExamDifficulty>('')
+  const [subject, setSubject] = useState<BankSubjectFilter>('')
+  const [grade, setGrade] = useState<BankGradeFilter>('')
+  const [difficulty, setDifficulty] = useState<BankDifficultyFilter>('')
+  const [previewItem, setPreviewItem] = useState<BankQuestion | null>(null)
 
   const query = useMemo((): BrowseBankQuery => {
     return {
@@ -78,6 +40,8 @@ function BankSoalPage() {
       ...(search.trim() ? { search: search.trim() } : {}),
     }
   }, [subject, grade, difficulty, search, page, limit])
+
+  const isFiltered = Boolean(subject || grade || difficulty || search.trim())
 
   const loadBank = useCallback(() => {
     setLoading(true)
@@ -103,73 +67,47 @@ function BankSoalPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
 
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-primary">
-          <BookOpen size={22} />
-          <h1 className="text-2xl font-semibold">Bank Soal</h1>
-        </div>
-        <p className="text-sm text-secondary">
-          Soal yang diterima dari generate otomatis tersimpan di sini. Bagikan ujian dari Riwayat untuk
-          memublikasikan soal terkait.
-        </p>
-      </header>
+  const handleResetFilters = () => {
+    setPage(1)
+    setSearch('')
+    setSubject('')
+    setGrade('')
+    setDifficulty('')
+  }
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="md:col-span-2 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setPage(1)
-              setSearch(e.target.value)
-            }}
-            placeholder="Cari teks soal..."
-            className="pl-9"
-          />
-        </div>
-        <select
-          value={subject}
-          onChange={(e) => {
-            setPage(1)
-            setSubject(e.target.value as '' | ExamSubject)
-          }}
-          className="h-10 rounded-lg border border-border-default bg-surface px-3 text-sm"
-        >
-          {SUBJECT_OPTIONS.map((option) => (
-            <option key={option.label} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={grade}
-          onChange={(e) => {
-            setPage(1)
-            setGrade(e.target.value as '' | '5' | '6')
-          }}
-          className="h-10 rounded-lg border border-border-default bg-surface px-3 text-sm"
-        >
-          <option value="">Semua kelas</option>
-          <option value="5">Kelas 5</option>
-          <option value="6">Kelas 6</option>
-        </select>
-        <select
-          value={difficulty}
-          onChange={(e) => {
-            setPage(1)
-            setDifficulty(e.target.value as '' | ExamDifficulty)
-          }}
-          className="h-10 rounded-lg border border-border-default bg-surface px-3 text-sm md:col-span-2"
-        >
-          {DIFFICULTY_OPTIONS.map((option) => (
-            <option key={option.label} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Bank Soal"
+        subtitle="Soal yang diterima dari generate otomatis tersimpan di sini. Bagikan ujian dari Riwayat untuk memublikasikan soal terkait."
+      />
+
+      <BankToolbar
+        search={search}
+        subject={subject}
+        grade={grade}
+        difficulty={difficulty}
+        isFiltered={isFiltered}
+        matchCount={items.length}
+        totalCount={total}
+        onSearchChange={(value) => {
+          setPage(1)
+          setSearch(value)
+        }}
+        onSubjectChange={(value) => {
+          setPage(1)
+          setSubject(value)
+        }}
+        onGradeChange={(value) => {
+          setPage(1)
+          setGrade(value)
+        }}
+        onDifficultyChange={(value) => {
+          setPage(1)
+          setDifficulty(value)
+        }}
+        onReset={handleResetFilters}
+      />
 
       {loading ? (
         <div className="flex justify-center py-16">
@@ -204,10 +142,13 @@ function BankSoalPage() {
 
       {!loading && !error && items.length > 0 ? (
         <>
-          <p className="text-sm text-secondary">{total} soal di bank Anda</p>
           <div className="grid gap-4">
             {items.map((item) => (
-              <BankQuestionCard key={item.id} item={item} />
+              <BankQuestionCard
+                key={item.id}
+                item={item}
+                onSelect={(selected) => setPreviewItem(selected)}
+              />
             ))}
           </div>
           {totalPages > 1 ? (
@@ -220,7 +161,7 @@ function BankSoalPage() {
               >
                 Sebelumnya
               </Button>
-              <span className="text-sm text-secondary">
+              <span className="text-body-sm text-text-secondary">
                 Halaman {page} / {totalPages}
               </span>
               <Button
@@ -235,6 +176,12 @@ function BankSoalPage() {
           ) : null}
         </>
       ) : null}
+
+      <BankQuestionPreviewDialog
+        item={previewItem}
+        open={previewItem !== null}
+        onClose={() => setPreviewItem(null)}
+      />
     </div>
   )
 }
