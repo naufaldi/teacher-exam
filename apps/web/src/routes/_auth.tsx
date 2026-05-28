@@ -9,6 +9,7 @@ import { useThrottle } from '../lib/use-throttle'
 const NAV_LINKS = [
   { to: '/dashboard' as const, label: 'Dashboard' },
   { to: '/history' as const, label: 'Riwayat' },
+  { to: '/bank-soal' as const, label: 'Bank Soal' },
   { to: '/generate' as const, label: 'Generate' },
 ] as const
 

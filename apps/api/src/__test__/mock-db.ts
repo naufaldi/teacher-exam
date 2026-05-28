@@ -6,10 +6,12 @@ const CHAIN_METHODS = [
   'where',
   'orderBy',
   'limit',
+  'offset',
   'set',
   'values',
   'innerJoin',
   'returning',
+  'onConflictDoNothing',
 ] as const
 
 export function makeQueryEffect<T>(result: T) {
@@ -53,6 +55,22 @@ export function createMockDbModule() {
       examId: 'questions.examId',
       number: 'questions.number',
       id: 'questions.id',
+      text: 'questions.text',
+      status: 'questions.status',
+    },
+    bankQuestions: {
+      id: 'bank_questions.id',
+      userId: 'bank_questions.userId',
+      questionId: 'bank_questions.questionId',
+      subject: 'bank_questions.subject',
+      grade: 'bank_questions.grade',
+      topics: 'bank_questions.topics',
+      difficulty: 'bank_questions.difficulty',
+      type: 'bank_questions.type',
+      payload: 'bank_questions.payload',
+      isPublic: 'bank_questions.isPublic',
+      usageCount: 'bank_questions.usageCount',
+      createdAt: 'bank_questions.createdAt',
     },
     user: {
       id: 'user.id',

@@ -10,12 +10,14 @@ import { MeLive } from '../api/handlers/me'
 import { ExamsLive } from '../api/handlers/exams'
 import { QuestionsLive } from '../api/handlers/questions'
 import { AiLive } from '../api/handlers/ai'
+import { BankLive } from '../api/handlers/bank'
 import { getSharedDatabaseLayer } from '../api/services/bootstrap-db'
 import { CurriculumServiceLive } from '../api/services/curriculum-service'
 import { AppConfigLive } from '../api/services/app-config'
 import { AuthServiceLive } from '../api/services/auth-service'
 import { createTelemetryLayer } from '../api/telemetry'
 import { AiLayer } from '../api/services/ai'
+import { BankServiceLive } from '../api/services/bank-service'
 import { AuthorizationLive } from '../api/middleware/auth'
 import { AiGenerateRateLimitLive, GlobalRateLimitLive } from '../api/middleware/rate-limit'
 
@@ -24,6 +26,7 @@ const CoreLive = Layer.mergeAll(
   NodeContext.layer,
   getSharedDatabaseLayer(),
   AuthServiceLive,
+  BankServiceLive,
 )
 
 const MiddlewareLive = Layer.mergeAll(
@@ -45,6 +48,7 @@ const HandlersLive = Layer.mergeAll(
   ExamsLive,
   QuestionsLive,
   AiLive,
+  BankLive,
 )
 
 const ApiLive = HttpApiBuilder.api(TeacherExamApi).pipe(

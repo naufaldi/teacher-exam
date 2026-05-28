@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { Effect, Stream } from 'effect'
 import type { AiService, GeneratedQuestion } from '../../../services/AiService.js'
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
-  and: vi.fn((...args) => ({ op: 'and', args })),
-  desc: vi.fn((col) => ({ op: 'desc', col })),
-}))
+vi.mock('drizzle-orm', async () => {
+  const { createDrizzleOrmMock } = await import('../drizzle-mock.js')
+  return createDrizzleOrmMock()
+})
 
 vi.mock('../../../lib/prompt.js', () => ({
   buildExamPrompt: vi.fn(() => ({ system: 'mock system', user: 'mock user' })),
@@ -100,6 +99,31 @@ function buildTestApp() {
   return buildHttpApiTestApp({ userId: 'test-user-id', aiService: fakeAiService })
 }
 
+function mockGenerateDbSelects(opts: {
+  examRow: Record<string, unknown>
+  questionRows: ReadonlyArray<Record<string, unknown>>
+  reviewMode?: 'fast' | 'slow'
+}) {
+  const reviewMode =
+    opts.reviewMode ??
+    (typeof opts.examRow['reviewMode'] === 'string'
+      ? (opts.examRow['reviewMode'] as 'fast' | 'slow')
+      : 'fast')
+
+  let selectCount = 0
+  ;(db.select as Mock).mockImplementation(() => {
+    selectCount++
+    if (reviewMode === 'fast') {
+      if (selectCount === 1) return makeChain([...opts.questionRows])
+      if (selectCount === 2) return makeChain([opts.examRow])
+      if (selectCount === 3) return makeChain([opts.examRow])
+      return makeChain([...opts.questionRows])
+    }
+    if (selectCount === 1) return makeChain([opts.examRow])
+    return makeChain([...opts.questionRows])
+  })
+}
+
 export {
   buildTestApp,
   buildUnauthApp,
@@ -107,6 +131,7 @@ export {
   fakeGenerateRawJson,
   makeExamRow,
   makeFakeQuestion,
+  mockGenerateDbSelects,
   VALID_BODY,
   FAKE_AI_QUESTIONS,
   db,

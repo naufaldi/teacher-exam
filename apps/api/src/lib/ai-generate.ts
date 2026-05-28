@@ -23,6 +23,7 @@ import { parseGeneratedQuestions, type ParsedItemFailure } from './parse-generat
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from './db-errors'
 import { normalizeGeneratedQuestionLatexFields, normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
 import { DbClient } from '../api/services/db'
+import { BankService } from '../api/services/bank-service'
 import { runDb } from '../api/lib/db-effect'
 
 const PLACEHOLDER_STUB_TEXT =
@@ -315,7 +316,7 @@ export function generateExam(
 ): Effect.Effect<
   GenerateExamResult,
   AiGenerationError | ApiDatabaseError | CurriculumReadError,
-  DbClient | SqlClient | CurriculumService
+  DbClient | SqlClient | CurriculumService | BankService
 > {
   return Effect.gen(function* () {
     const handlerT0 = Date.now()
@@ -443,6 +444,13 @@ export function generateExam(
         _tag: 'database_error',
         message: err instanceof Error ? err.message : 'Database error',
       }
+    }
+
+    if (input.reviewMode === 'fast') {
+      yield* Effect.gen(function* () {
+        const bankService = yield* BankService
+        yield* bankService.autoSaveAccepted(userId, examId)
+      }).pipe(Effect.catchAll(() => Effect.void))
     }
 
     const result = yield* fetchExamWithQuestions(examId)

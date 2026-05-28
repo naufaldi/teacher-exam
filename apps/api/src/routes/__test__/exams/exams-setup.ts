@@ -1,11 +1,10 @@
 import { vi } from 'vitest'
 import { QuestionSchema } from '@teacher-exam/shared'
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
-  and: vi.fn((...args) => ({ op: 'and', args })),
-  desc: vi.fn((col) => ({ op: 'desc', col })),
-}))
+vi.mock('drizzle-orm', async () => {
+  const { createDrizzleOrmMock } = await import('../drizzle-mock.js')
+  return createDrizzleOrmMock()
+})
 
 import { db } from '@teacher-exam/db'
 import { makeChain, makeQuestionRow } from '../helpers.js'

@@ -10,6 +10,7 @@ import {
   FAKE_AI_QUESTIONS,
   makeExamRow,
   makeFakeQuestion,
+  mockGenerateDbSelects,
   VALID_BODY,
 } from './ai-setup.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
@@ -40,12 +41,8 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       )
       const insertChain = makeChain([])
       ;(db.insert as Mock).mockReturnValue(insertChain)
-      let selectCount = 0
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([examRow])
-        return makeChain(questionRows)
-      })
+      mockGenerateDbSelects({ examRow, questionRows })
+      return { examRow, questionRows, insertChain }
     }
 
     it('uses input.totalSoal when provided (sas, totalSoal: 30)', async () => {
@@ -98,12 +95,7 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       const questionRows = Array.from({ length: 20 }, (_, i) =>
         makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
       )
-      let selectCount = 0
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([examRow])
-        return makeChain(questionRows)
-      })
+      mockGenerateDbSelects({ examRow, questionRows })
 
       const buildMock = buildExamPrompt as Mock
       buildMock.mockClear()
@@ -130,12 +122,7 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       const questionRows = Array.from({ length: 25 }, (_, i) =>
         makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
       )
-      let selectCount = 0
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([examRow])
-        return makeChain(questionRows)
-      })
+      mockGenerateDbSelects({ examRow, questionRows })
       ;(fakeAiService.generateRaw as Mock).mockReturnValueOnce(
         Effect.succeed(JSON.stringify(Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)))),
       )
@@ -165,12 +152,7 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       const questionRows = Array.from({ length: 25 }, (_, i) =>
         makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
       )
-      let selectCount = 0
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([examRow])
-        return makeChain(questionRows)
-      })
+      mockGenerateDbSelects({ examRow, questionRows })
       ;(fakeAiService.generateRaw as Mock).mockReturnValueOnce(
         Effect.succeed(JSON.stringify(Array.from({ length: 25 }, (_, i) => makeFakeQuestion(i + 1)))),
       )
@@ -239,12 +221,7 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       const questionRows = Array.from({ length: 5 }, (_, i) =>
         makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
       )
-      let selectCount = 0
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([examRow])
-        return makeChain(questionRows)
-      })
+      mockGenerateDbSelects({ examRow, questionRows })
 
       const insertChain = makeChain([])
       ;(db.insert as Mock).mockReturnValue(insertChain)
@@ -295,12 +272,7 @@ describe('POST /api/ai/generate — composition & totalSoal', () => {
       return chain
     })
 
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     await app.request('/api/ai/generate', {

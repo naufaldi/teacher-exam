@@ -149,6 +149,10 @@ describe('AuthLayout', () => {
       'href',
       '/history',
     )
+    expect(screen.getByRole('link', { name: 'Bank Soal' })).toHaveAttribute(
+      'href',
+      '/bank-soal',
+    )
     expect(screen.getByRole('link', { name: 'Generate' })).toHaveAttribute(
       'href',
       '/generate',

@@ -2,7 +2,7 @@ import { HttpApiBuilder } from '@effect/platform'
 import { Effect, Either, Schema, Match } from 'effect'
 import { eq, and, ne } from 'drizzle-orm'
 import { exams, questions } from '@teacher-exam/db'
-import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject } from '@teacher-exam/shared'
+import { UpdateQuestionInputSchema, RegenerateQuestionInputSchema, SUBJECT_LABEL, type ExamSubject, type SaveToBankInput } from '@teacher-exam/shared'
 import type { McqSingleQuestion, McqMultiQuestion, TrueFalseQuestion } from '@teacher-exam/shared'
 import { rowToQuestion, questionToRow } from '../../lib/question-mapper'
 import { CurriculumService } from '../services/curriculum-service'
@@ -21,6 +21,7 @@ import { CurrentUser } from '../middleware/auth'
 import { runDb } from '../lib/db-effect'
 import { DbClient } from '../services/db'
 import { AiClient } from '../services/ai'
+import { BankService } from '../services/bank-service'
 
 export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (handlers) =>
   handlers
@@ -169,6 +170,19 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, 'questions', (
             new ApiDatabaseError({ error: 'Question disappeared', code: 'DATABASE_ERROR' }),
           )
         }
+
+        if (
+          input.status === 'accepted' &&
+          existingQuestion.status !== 'accepted'
+        ) {
+          yield* Effect.gen(function* () {
+            const bankService = yield* BankService
+            yield* bankService.saveQuestion(userId, {
+              questionId: id as SaveToBankInput['questionId'],
+            })
+          }).pipe(Effect.catchAll(() => Effect.void))
+        }
+
         return rowToQuestion(updated)
       }),
     )

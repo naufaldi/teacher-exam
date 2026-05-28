@@ -22,6 +22,7 @@ import { CurrentUser } from '../middleware/auth'
 import { runDb } from '../lib/db-effect'
 import { DbClient } from '../services/db'
 import { AiClient } from '../services/ai'
+import { BankService } from '../services/bank-service'
 import { runDiscussionSse } from '../lib/sse-discussion'
 
 export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers) =>
@@ -310,6 +311,11 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, 'exams', (handlers
             })
             .where(and(eq(exams.id, id), eq(exams.userId, userId))),
         )
+
+        yield* Effect.gen(function* () {
+          const bankService = yield* BankService
+          yield* bankService.propagatePublish(userId, id)
+        }).pipe(Effect.catchAll(() => Effect.void))
 
         const result: ExamShareResponse = {
           slug,

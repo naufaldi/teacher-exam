@@ -8,6 +8,7 @@ import {
   fakeAiService,
   FAKE_AI_QUESTIONS,
   makeExamRow,
+  mockGenerateDbSelects,
   VALID_BODY,
 } from './ai-setup.js'
 import { makeChain, makeQuestionRow } from '../helpers.js'
@@ -37,12 +38,7 @@ describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
     return insertChain
   }
 
@@ -109,12 +105,7 @@ describe('POST /api/ai/generate — multi-topic', () => {
     const questionRows = Array.from({ length: 20 }, (_, i) =>
       makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
     )
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
 
