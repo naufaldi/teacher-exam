@@ -11,6 +11,7 @@ import {
   FAKE_AI_QUESTIONS,
   makeExamRow,
   makeFakeQuestion,
+  mockGenerateDbSelects,
   VALID_BODY,
 } from './ai-setup.js'
 import { buildHttpApiTestApp } from '../http-api-setup.js'
@@ -76,12 +77,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -117,12 +113,7 @@ describe('POST /api/ai/generate', () => {
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
 
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -141,7 +132,7 @@ describe('POST /api/ai/generate', () => {
     expect((body['questions'] as unknown[]).length).toBe(20)
     expect(((body['questions'] as Record<string, unknown>[])[0] ?? {})['number']).toBe(1)
     expect(db.insert).toHaveBeenCalled()
-    expect(db.insert).toHaveBeenCalledTimes(2)
+    expect(db.insert).toHaveBeenCalledTimes(3)
   })
 
   it('inserts questions with status=accepted when reviewMode is fast', async () => {
@@ -152,12 +143,7 @@ describe('POST /api/ai/generate', () => {
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     await app.request('/api/ai/generate', {
@@ -179,12 +165,7 @@ describe('POST /api/ai/generate', () => {
 
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows, reviewMode: 'slow' })
 
     const app = buildTestApp()
     await app.request('/api/ai/generate', {
@@ -213,12 +194,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -254,12 +230,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -290,12 +261,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -327,12 +293,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {
@@ -359,12 +320,7 @@ describe('POST /api/ai/generate', () => {
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
-    let selectCount = 0
-    ;(db.select as Mock).mockImplementation(() => {
-      selectCount++
-      if (selectCount === 1) return makeChain([examRow])
-      return makeChain(questionRows)
-    })
+    mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
     const res = await app.request('/api/ai/generate', {

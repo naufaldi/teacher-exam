@@ -7,7 +7,9 @@ import { MeLive } from '../handlers/me'
 import { ExamsLive } from '../handlers/exams'
 import { QuestionsLive } from '../handlers/questions'
 import { AiLive } from '../handlers/ai'
+import { BankLive } from '../handlers/bank'
 import { TeacherExamApi } from '../definition'
+import { BankServiceLive } from '../services/bank-service'
 import { createCorsLayer } from '../cors'
 import { DbLayer } from '../services/db'
 import { createTestDbLayer, TestSqlLayer } from '../services/test-db'
@@ -49,6 +51,7 @@ const HandlerLayers = Layer.mergeAll(
   ExamsLive,
   QuestionsLive,
   AiLive,
+  BankLive,
 )
 
 function createMiddlewareLayer(opts: {
@@ -99,6 +102,7 @@ export function createHttpApiTestLayer(opts: {
     TestDbLayer,
     TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
+    BankServiceLive,
     opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,
     HttpServer.layerContext,

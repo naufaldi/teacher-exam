@@ -8,7 +8,6 @@ import { assertDevAuthNotEnabledInProduction } from './lib/dev-auth'
 import { logError, logInfo } from './lib/server-log'
 import { attachRateLimitHeaders } from './api/lib/rate-limit-response'
 import { createBridgeServer } from './api/bridge/create-bridge-server'
-import { createWebHandlerLayer } from './api/server'
 import { withHttpSpan } from './api/telemetry'
 
 process.on('uncaughtException', (err) => {
@@ -37,6 +36,7 @@ async function main() {
   setAuthEffectRunner((effect) => databaseRuntime.runPromise(effect))
   initAuth(db)
 
+  const { createWebHandlerLayer } = await import('./api/server.js')
   const port = resolveApiPort()
   const webLayer = createWebHandlerLayer()
   const runtime = ManagedRuntime.make(webLayer)

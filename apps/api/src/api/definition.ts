@@ -7,6 +7,7 @@ import { MeGroup } from './groups/me'
 import { ExamsGroup } from './groups/exams'
 import { QuestionsGroup } from './groups/questions'
 import { AiGroup } from './groups/ai'
+import { BankGroup } from './groups/bank'
 
 export const TeacherExamApi = HttpApi.make('TeacherExamApi')
   .add(HealthGroup)
@@ -16,5 +17,6 @@ export const TeacherExamApi = HttpApi.make('TeacherExamApi')
   .add(ExamsGroup)
   .add(QuestionsGroup)
   .add(AiGroup)
+  .add(BankGroup)
   .addError(ApiDatabaseError, { status: 500 })
   .prefix('/api')

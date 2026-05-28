@@ -14,11 +14,18 @@ import type {
   UpdateQuestionInput,
   QuestionResponse,
   RegenerateQuestionInput,
+  BankQuestion,
+  BrowseBankQuery,
+  PaginatedBankResponse,
+  UpdateBankQuestionInput,
+  SaveToBankInput,
 } from '@teacher-exam/shared'
 import {
   ExamShareResponseSchema,
   ExamWithQuestionsSchema,
   PublicExamWithQuestionsSchema,
+  PaginatedBankResponseSchema,
+  BankQuestionSchema,
 } from '@teacher-exam/shared'
 import { devLog } from './dev-log.js'
 import {
@@ -166,7 +173,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return unwrapApiEither(await apiFetchEither<T>(path, init))
 }
 
-function decodeEither<T>(schema: Schema.Schema<T>, raw: unknown): Either.Either<T, ApiClientFailure> {
+function decodeEither<A, I>(
+  schema: Schema.Schema<A, I, never>,
+  raw: unknown,
+): Either.Either<A, ApiClientFailure> {
   const decoded = Schema.decodeUnknownEither(schema)(raw)
   if (Either.isLeft(decoded)) {
     return Either.left(
@@ -321,5 +331,49 @@ export const api = {
       }
       return decodeEither(PublicExamWithQuestionsSchema, raw.right)
     },
+  },
+  bank: {
+    save: async (input: SaveToBankInput): Promise<Either.Either<BankQuestion, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>('/bank', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<BankQuestion, ApiClientFailure>
+      }
+      return decodeEither(BankQuestionSchema, raw.right)
+    },
+    browse: async (
+      query: BrowseBankQuery = {},
+    ): Promise<Either.Either<PaginatedBankResponse, ApiClientFailure>> => {
+      const params = new URLSearchParams()
+      if (query.subject) params.set('subject', query.subject)
+      if (query.grade !== undefined) params.set('grade', String(query.grade))
+      if (query.difficulty) params.set('difficulty', query.difficulty)
+      if (query.topic) params.set('topic', query.topic)
+      if (query.search) params.set('search', query.search)
+      if (query.page !== undefined) params.set('page', String(query.page))
+      if (query.limit !== undefined) params.set('limit', String(query.limit))
+      const qs = params.toString()
+      const raw = await apiFetchEither<unknown>(`/bank${qs ? `?${qs}` : ''}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PaginatedBankResponse, ApiClientFailure>
+      }
+      return decodeEither(PaginatedBankResponseSchema, raw.right)
+    },
+    update: async (
+      id: string,
+      body: UpdateBankQuestionInput,
+    ): Promise<Either.Either<BankQuestion, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/bank/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<BankQuestion, ApiClientFailure>
+      }
+      return decodeEither(BankQuestionSchema, raw.right)
+    },
+    remove: (id: string) => apiFetchEither<void>(`/bank/${id}`, { method: 'DELETE' }),
   },
 }
