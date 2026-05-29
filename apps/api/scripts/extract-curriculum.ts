@@ -2,7 +2,7 @@ import type { LanguageModel } from "@effect/ai"
 import { NodeRuntime } from "@effect/platform-node"
 import type { ExamSubject } from "@teacher-exam/shared"
 import type { Layer } from "effect"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
@@ -24,6 +24,19 @@ import { extractPageRange, loadPdfDocument, planChunks } from "./lib/pdf-split.j
 const MODEL = "claude-opus-4-7"
 const MAX_TOKENS = 8192
 const MIN_RETRY_PAGES = 5
+
+class CurriculumExtractConfigError extends Data.TaggedError("CurriculumExtractConfigError")<{
+  message: string
+}> {}
+
+class CurriculumExtractBookError extends Data.TaggedError("CurriculumExtractBookError")<{
+  message: string
+}> {}
+
+class CurriculumExtractRunError extends Data.TaggedError("CurriculumExtractRunError")<{
+  message: string
+  failed: ReadonlyArray<{ slug: string; error: string }>
+}> {}
 
 interface BookSpec {
   slug: string
@@ -403,14 +416,18 @@ const main = Effect.gen(function*() {
   const apiKey = process.env["ANTHROPIC_API_KEY"]
   if (!apiKey || apiKey.includes("your-api-key")) {
     return yield* Effect.die(
-      new Error("ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running.")
+      new CurriculumExtractConfigError({
+        message: "ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running."
+      })
     )
   }
   const { bookFilter } = parseArgs(process.argv.slice(2))
   const targets = bookFilter ? BOOKS.filter((b) => b.slug === bookFilter) : BOOKS
   if (targets.length === 0) {
     return yield* Effect.die(
-      new Error(`unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(", ")}`)
+      new CurriculumExtractConfigError({
+        message: `unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(", ")}`
+      })
     )
   }
 
@@ -429,7 +446,7 @@ const main = Effect.gen(function*() {
   for (const book of targets) {
     yield* Effect.tryPromise({
       try: () => extractBook(pdfModelLayer, book),
-      catch: (error: unknown) => new Error(errorMessage(error))
+      catch: (error: unknown) => new CurriculumExtractBookError({ message: errorMessage(error) })
     }).pipe(
       Effect.catchAll((err) =>
         Effect.sync(() => {
@@ -445,7 +462,12 @@ const main = Effect.gen(function*() {
       console.error(`\n${failed.length} book(s) failed: ${failed.map((f) => f.slug).join(", ")}`)
       console.error("Cached chunks were preserved — re-run to resume.")
     })
-    return yield* Effect.die(new Error(`${failed.length} book(s) failed`))
+    return yield* Effect.die(
+      new CurriculumExtractRunError({
+        message: `${failed.length} book(s) failed`,
+        failed
+      })
+    )
   }
   yield* Effect.sync(() => {
     console.log("done.")

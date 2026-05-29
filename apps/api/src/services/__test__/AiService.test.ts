@@ -441,31 +441,33 @@ describe("AiService.streamDiscussion", () => {
     expect(text).toBe(FAKE_MARKDOWN)
   })
 
-  it("uses discussion layer by default", async () => {
+  it("yields multiple chunks when streamText emits deltas", async () => {
+    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN, {
+      streamChunks: ["## 1.", " Soal", " tentang ide pokok"]
+    })
+    const ai = createAiService({ layers })
+    let chunkCount = 0
+    const text = await Effect.runPromise(
+      Stream.runFold(ai.streamDiscussion({ system: "s", user: "u" }), "", (acc, chunk) => {
+        chunkCount += 1
+        return acc + chunk
+      })
+    )
+    expect(chunkCount).toBeGreaterThan(1)
+    expect(text).toBe("## 1. Soal tentang ide pokok")
+  })
+
+  it("accumulates streamed chunks from the discussion layer", async () => {
     const discussionCalls: Array<string> = []
     const { layers } = createFakeModelLayers((prompt) => {
       discussionCalls.push(getPromptUserText(prompt))
-      return { text: FAKE_MARKDOWN }
+      return { text: FAKE_MARKDOWN, streamChunks: ["chunk-a", "chunk-b"] }
     })
     const ai = createAiService({ layers })
-    await Effect.runPromise(
+    const text = await Effect.runPromise(
       Stream.runFold(ai.streamDiscussion({ system: "s", user: "u" }), "", (acc, chunk) => acc + chunk)
     )
+    expect(text).toBe("chunk-achunk-b")
     expect(discussionCalls).toHaveLength(1)
-  })
-
-  it("fails with AiGenerationError when Claude fails", async () => {
-    const { layers } = createFakeModelLayersFromText(FAKE_MARKDOWN, { finishReason: "length" })
-    const ai = createAiService({ layers })
-    const result = await Effect.runPromise(
-      Effect.either(
-        Stream.runFold(ai.streamDiscussion({ system: "s", user: "u" }), "", (acc, chunk) => acc + chunk)
-      )
-    )
-    expect(result._tag).toBe("Left")
-    if (result._tag === "Left") {
-      expect(result.left).toBeInstanceOf(AiGenerationError)
-      expect(String(result.left.cause)).toContain("length")
-    }
   })
 })

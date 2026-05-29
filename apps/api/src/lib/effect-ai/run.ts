@@ -2,7 +2,7 @@ import type { AiError, Prompt } from "@effect/ai"
 import { LanguageModel } from "@effect/ai"
 import { GenerateObjectResponse, GenerateTextResponse } from "@effect/ai/LanguageModel"
 import * as Response from "@effect/ai/Response"
-import { Effect } from "effect"
+import { Effect, Option, Stream } from "effect"
 import type { Layer, Schema } from "effect"
 import { withAiSpan } from "../../api/telemetry"
 import { AiGenerationError } from "../../errors"
@@ -91,6 +91,18 @@ export function runGenerateText(
 
       return assistantText
     })
+  )
+}
+
+export function runStreamText(
+  input: RunGenerateTextInput
+): Stream.Stream<string, AiGenerationError> {
+  return LanguageModel.streamText({
+    prompt: input.prompt
+  }).pipe(
+    Stream.mapError((error) => mapAiError(error, input.errorContext)),
+    Stream.filterMap((part) => part.type === "text-delta" ? Option.some(part.delta) : Option.none()),
+    Stream.provideLayer(input.modelLayer)
   )
 }
 

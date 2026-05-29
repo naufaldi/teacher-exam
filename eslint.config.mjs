@@ -147,13 +147,17 @@ export default [
     }
   },
   {
-    files: ["apps/api/src/**/*", "packages/shared/src/**/*"],
+    files: ["apps/api/src/**/*", "packages/shared/src/**/*", "apps/web/src/**/*"],
     rules: {
       "no-console": "error"
     }
   },
   {
-    files: ["apps/api/src/lib/server-log.ts", "apps/api/src/api/bridge/create-bridge-server.ts"],
+    files: [
+      "apps/api/src/lib/server-log.ts",
+      "apps/api/src/api/bridge/create-bridge-server.ts",
+      "apps/web/src/lib/dev-log.ts"
+    ],
     rules: {
       "no-console": "off"
     }
