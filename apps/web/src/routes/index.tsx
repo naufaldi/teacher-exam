@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, isRedirect, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, isRedirect, redirect, useNavigate, Link } from '@tanstack/react-router'
 import { PaperCard } from '@teacher-exam/ui'
 import { BookOpen, Check, Printer, AlertCircle } from 'lucide-react'
 import { signIn, getSession } from '../lib/auth-client'
@@ -185,6 +185,13 @@ function LoginPage() {
                 </li>
               ))}
             </ul>
+
+            <Link
+              to="/bank-soal-publik"
+              className="text-body-sm font-medium text-primary-700 hover:text-primary-800 transition-colors pt-2 inline-block"
+            >
+              Lihat bank soal publik →
+            </Link>
           </div>
         </div>
 

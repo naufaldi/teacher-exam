@@ -128,3 +128,22 @@ describe('DELETE /api/bank/:id', () => {
     expect(res.status).toBe(204)
   })
 })
+
+describe('POST /api/bank/build-exam', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 422 when fewer than 5 questions', async () => {
+    const app = buildTestApp()
+    const res = await app.request('/api/bank/build-exam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bankQuestionIds: ['a', 'b', 'c', 'd'],
+        metadata: { subject: 'ipas', grade: 5 },
+      }),
+    })
+    expect(res.status).toBe(400)
+  })
+})

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as BankSoalPublikRouteImport } from './routes/bank-soal-publik'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShareSlugRouteImport } from './routes/share.$slug'
@@ -23,6 +24,11 @@ import { Route as AuthBankSoalRouteImport } from './routes/_auth.bank-soal'
 import { Route as AuthHelpNotasiMatematikaRouteImport } from './routes/_auth.help.notasi-matematika'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
+const BankSoalPublikRoute = BankSoalPublikRouteImport.update({
+  id: '/bank-soal-publik',
+  path: '/bank-soal-publik',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -91,6 +97,7 @@ const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bank-soal-publik': typeof BankSoalPublikRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bank-soal-publik': typeof BankSoalPublikRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/bank-soal-publik': typeof BankSoalPublikRoute
   '/_auth/bank-soal': typeof AuthBankSoalRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/generate': typeof AuthGenerateRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/bank-soal-publik'
     | '/bank-soal'
     | '/dashboard'
     | '/generate'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/bank-soal-publik'
     | '/bank-soal'
     | '/dashboard'
     | '/generate'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_auth'
+    | '/bank-soal-publik'
     | '/_auth/bank-soal'
     | '/_auth/dashboard'
     | '/_auth/generate'
@@ -182,11 +194,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  BankSoalPublikRoute: typeof BankSoalPublikRoute
   ShareSlugRoute: typeof ShareSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/bank-soal-publik': {
+      id: '/bank-soal-publik'
+      path: '/bank-soal-publik'
+      fullPath: '/bank-soal-publik'
+      preLoaderRoute: typeof BankSoalPublikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -312,6 +332,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  BankSoalPublikRoute: BankSoalPublikRoute,
   ShareSlugRoute: ShareSlugRoute,
 }
 export const routeTree = rootRouteImport

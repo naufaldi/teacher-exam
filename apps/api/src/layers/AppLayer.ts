@@ -11,6 +11,7 @@ import { ExamsLive } from '../api/handlers/exams'
 import { QuestionsLive } from '../api/handlers/questions'
 import { AiLive } from '../api/handlers/ai'
 import { BankLive } from '../api/handlers/bank'
+import { BankPublicLive } from '../api/handlers/bank-public'
 import { getSharedDatabaseLayer } from '../api/services/bootstrap-db'
 import { CurriculumServiceLive } from '../api/services/curriculum-service'
 import { AppConfigLive } from '../api/services/app-config'
@@ -20,6 +21,7 @@ import { AiLayer } from '../api/services/ai'
 import { BankServiceLive } from '../api/services/bank-service'
 import { AuthorizationLive } from '../api/middleware/auth'
 import { AiGenerateRateLimitLive, GlobalRateLimitLive } from '../api/middleware/rate-limit'
+import { PublicBankIpRateLimitLive } from '../api/middleware/ip-rate-limit'
 
 const CoreLive = Layer.mergeAll(
   AppConfigLive,
@@ -33,6 +35,7 @@ const MiddlewareLive = Layer.mergeAll(
   AuthorizationLive,
   GlobalRateLimitLive,
   AiGenerateRateLimitLive,
+  PublicBankIpRateLimitLive,
 ).pipe(Layer.provideMerge(CoreLive))
 
 const SupportingLive = Layer.mergeAll(
@@ -49,6 +52,7 @@ const HandlersLive = Layer.mergeAll(
   QuestionsLive,
   AiLive,
   BankLive,
+  BankPublicLive,
 )
 
 const ApiLive = HttpApiBuilder.api(TeacherExamApi).pipe(

@@ -15,10 +15,12 @@ describe('bank schemas', () => {
     expect(Either.isRight(decoded)).toBe(true)
   })
 
-  it('decodes BrowseBankQuery with optional filters', () => {
+  it('decodes BrowseBankQuery with sort and type filters', () => {
     const decoded = Schema.decodeUnknownEither(BrowseBankQuerySchema)({
       subject: 'ipas',
       grade: 5,
+      sort: 'terpopuler',
+      type: 'mcq_single',
       page: 1,
       limit: 20,
     })
@@ -26,7 +28,6 @@ describe('bank schemas', () => {
   })
 
   it('decodes PaginatedBankResponse', () => {
-    const decoded = Schema.decodeUnknownEither(PaginatedBankResponseSchema)({
       data: [
         {
           id: 'bank-1',

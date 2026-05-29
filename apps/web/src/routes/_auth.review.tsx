@@ -35,6 +35,8 @@ import { matchQuestion } from '../lib/question-render.js'
 import { FigureSvg } from '../components/figure-svg.js'
 import { MathText } from '../components/math-text.js'
 import { QuestionEditDialog } from '../components/review/question-edit-dialog.js'
+import { SaveToBankButton } from '../components/bank/save-to-bank-button.js'
+import type { SaveToBankInput } from '@teacher-exam/shared'
 import { TolakRegenerateDialog } from '../components/review/tolak-regenerate-dialog.js'
 import { RegenerateConfirmDialog } from '../components/review/regenerate-confirm-dialog.js'
 import { SwitchModeDialog } from '../components/review/switch-mode-dialog.js'
@@ -759,6 +761,10 @@ function ReviewPage() {
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
+                    <SaveToBankButton
+                      questionId={q.id as SaveToBankInput['questionId']}
+                      assumeSaved
+                    />
                   </>
                 )}
               </div>
@@ -1026,6 +1032,10 @@ function ReviewPage() {
                               </>
                             )),
                           )}
+                          <SaveToBankButton
+                            questionId={q.id as SaveToBankInput['questionId']}
+                            assumeSaved={status === 'accepted'}
+                          />
                         </div>
                       </>
                     )}

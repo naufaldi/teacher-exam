@@ -1,4 +1,4 @@
-import type { BankQuestion } from '@teacher-exam/shared'
+import type { BankQuestion, PublicBankQuestion } from '@teacher-exam/shared'
 import {
   Button,
   Dialog,
@@ -12,13 +12,15 @@ import { BankQuestionReadonlyBody } from './bank-question-readonly-body.js'
 import { QuestionMetaBadges } from '../shared/question-meta-badges.js'
 
 interface BankQuestionPreviewDialogProps {
-  item: BankQuestion | null
+  item: BankQuestion | PublicBankQuestion | null
   open: boolean
   onClose: () => void
 }
 
 function BankQuestionPreviewDialog({ item, open, onClose }: BankQuestionPreviewDialogProps) {
   if (!item) return null
+
+  const isPublic = 'isPublic' in item ? item.isPublic : true
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose() }}>
@@ -32,7 +34,7 @@ function BankQuestionPreviewDialog({ item, open, onClose }: BankQuestionPreviewD
           subject={item.subject}
           grade={item.grade}
           difficulty={item.difficulty}
-          isPublic={item.isPublic}
+          isPublic={isPublic}
           topics={item.topics}
           showTopicCaption
         />

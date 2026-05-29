@@ -1,5 +1,5 @@
 import { Search, X } from 'lucide-react'
-import type { ExamDifficulty, ExamSubject } from '@teacher-exam/shared'
+import type { BankSort, ExamDifficulty, ExamSubject, QuestionType } from '@teacher-exam/shared'
 import { SUBJECT_OPTIONS } from '../../lib/subjects.js'
 import {
   FILTER_SEARCH_CLASS,
@@ -10,12 +10,19 @@ import {
 export type BankSubjectFilter = '' | ExamSubject
 export type BankGradeFilter = '' | '5' | '6'
 export type BankDifficultyFilter = '' | ExamDifficulty
+export type BankTypeFilter = '' | QuestionType
+export type BankSortFilter = BankSort
 
 interface BankToolbarProps {
   search: string
   subject: BankSubjectFilter
   grade: BankGradeFilter
   difficulty: BankDifficultyFilter
+  topic: string
+  type: BankTypeFilter
+  author: string
+  sort: BankSortFilter
+  showAuthorFilter?: boolean
   isFiltered: boolean
   matchCount: number
   totalCount: number
@@ -23,6 +30,10 @@ interface BankToolbarProps {
   onSubjectChange: (value: BankSubjectFilter) => void
   onGradeChange: (value: BankGradeFilter) => void
   onDifficultyChange: (value: BankDifficultyFilter) => void
+  onTopicChange: (value: string) => void
+  onTypeChange: (value: BankTypeFilter) => void
+  onAuthorChange: (value: string) => void
+  onSortChange: (value: BankSortFilter) => void
   onReset: () => void
 }
 
@@ -45,11 +56,29 @@ const DIFFICULTY_OPTIONS: Array<{ value: BankDifficultyFilter; label: string }> 
   { value: 'campuran', label: 'Campuran' },
 ]
 
+const TYPE_OPTIONS: Array<{ value: BankTypeFilter; label: string }> = [
+  { value: '', label: 'Semua tipe' },
+  { value: 'mcq_single', label: 'Pilihan ganda' },
+  { value: 'mcq_multi', label: 'Pilihan ganda kompleks' },
+  { value: 'true_false', label: 'Benar/Salah' },
+]
+
+const SORT_OPTIONS: Array<{ value: BankSortFilter; label: string }> = [
+  { value: 'terbaru', label: 'Terbaru' },
+  { value: 'terpopuler', label: 'Terpopuler' },
+  { value: 'kesulitan', label: 'Kesulitan' },
+]
+
 function BankToolbar({
   search,
   subject,
   grade,
   difficulty,
+  topic,
+  type,
+  author,
+  sort,
+  showAuthorFilter = false,
   isFiltered,
   matchCount,
   totalCount,
@@ -57,6 +86,10 @@ function BankToolbar({
   onSubjectChange,
   onGradeChange,
   onDifficultyChange,
+  onTopicChange,
+  onTypeChange,
+  onAuthorChange,
+  onSortChange,
   onReset,
 }: BankToolbarProps) {
   return (
@@ -105,6 +138,15 @@ function BankToolbar({
           ))}
         </select>
 
+        <input
+          type="text"
+          value={topic}
+          onChange={(e) => onTopicChange(e.target.value)}
+          placeholder="Topik..."
+          className={`${SELECT_CLASS} min-w-[120px]`}
+          aria-label="Filter topik"
+        />
+
         <select
           value={difficulty}
           onChange={(e) => onDifficultyChange(e.target.value as BankDifficultyFilter)}
@@ -114,6 +156,45 @@ function BankToolbar({
         >
           {DIFFICULTY_OPTIONS.map((opt) => (
             <option key={opt.label} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={type}
+          onChange={(e) => onTypeChange(e.target.value as BankTypeFilter)}
+          className={SELECT_CLASS}
+          style={{ backgroundImage: SELECT_CHEVRON }}
+          aria-label="Filter tipe soal"
+        >
+          {TYPE_OPTIONS.map((opt) => (
+            <option key={opt.label} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        {showAuthorFilter ? (
+          <input
+            type="text"
+            value={author}
+            onChange={(e) => onAuthorChange(e.target.value)}
+            placeholder="Penulis..."
+            className={`${SELECT_CLASS} min-w-[120px]`}
+            aria-label="Filter penulis"
+          />
+        ) : null}
+
+        <select
+          value={sort}
+          onChange={(e) => onSortChange(e.target.value as BankSortFilter)}
+          className={SELECT_CLASS}
+          style={{ backgroundImage: SELECT_CHEVRON }}
+          aria-label="Urutkan"
+        >
+          {SORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
