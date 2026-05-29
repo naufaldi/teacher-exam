@@ -28,6 +28,7 @@ describe('bank schemas', () => {
   })
 
   it('decodes PaginatedBankResponse', () => {
+    const decoded = Schema.decodeUnknownEither(PaginatedBankResponseSchema)({
       data: [
         {
           id: 'bank-1',
