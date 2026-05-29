@@ -1,25 +1,27 @@
-import { Schema } from 'effect'
-
+import { Schema } from "effect"
 // ── Enums ──────────────────────────────────────────────────
 export const ExamSubjectSchema = Schema.Literal(
-  'bahasa_indonesia',
-  'pendidikan_pancasila',
-  'ipas',
-  'bahasa_inggris',
-  'matematika',
+  "bahasa_indonesia",
+  "pendidikan_pancasila",
+  "ipas",
+  "bahasa_inggris",
+  "matematika"
 )
 export type ExamSubject = typeof ExamSubjectSchema.Type
 
 export const SUBJECT_LABEL: Record<ExamSubject, string> = {
-  bahasa_indonesia: 'Bahasa Indonesia',
-  pendidikan_pancasila: 'Pendidikan Pancasila',
-  ipas: 'IPAS',
-  bahasa_inggris: 'Bahasa Inggris',
-  matematika: 'Matematika',
+  bahasa_indonesia: "Bahasa Indonesia",
+  pendidikan_pancasila: "Pendidikan Pancasila",
+  ipas: "IPAS",
+  bahasa_inggris: "Bahasa Inggris",
+  matematika: "Matematika"
 }
 
 export const ExamDifficultySchema = Schema.Literal(
-  'mudah', 'sedang', 'sulit', 'campuran',
+  "mudah",
+  "sedang",
+  "sulit",
+  "campuran"
 )
 export type ExamDifficulty = typeof ExamDifficultySchema.Type
 
@@ -29,11 +31,11 @@ export type ExamDifficulty = typeof ExamDifficultySchema.Type
  * to 'tka' at read-time.
  */
 export const ExamTypeSchema = Schema.Literal(
-  'latihan',
-  'formatif',
-  'sts',
-  'sas',
-  'tka',
+  "latihan",
+  "formatif",
+  "sts",
+  "sas",
+  "tka"
 )
 export type ExamType = typeof ExamTypeSchema.Type
 
@@ -41,33 +43,35 @@ export type ExamType = typeof ExamTypeSchema.Type
  * Cognitive level (Bloom). Optional on AI response in MVP — fully validated
  * post-generation in polish phase.
  */
-export const CognitiveLevelSchema = Schema.Literal('C1', 'C2', 'C3', 'C4')
+export const CognitiveLevelSchema = Schema.Literal("C1", "C2", "C3", "C4")
 export type CognitiveLevel = typeof CognitiveLevelSchema.Type
 
-export const ReviewModeSchema = Schema.Literal('fast', 'slow')
+export const ReviewModeSchema = Schema.Literal("fast", "slow")
 export type ReviewMode = typeof ReviewModeSchema.Type
 
-export const ExamStatusSchema = Schema.Literal('draft', 'final')
+export const ExamStatusSchema = Schema.Literal("draft", "final")
 export type ExamStatus = typeof ExamStatusSchema.Type
 
-export const AnswerSchema = Schema.Literal('a', 'b', 'c', 'd')
+export const AnswerSchema = Schema.Literal("a", "b", "c", "d")
 export type Answer = typeof AnswerSchema.Type
 
-export const AnswerLetterSchema = Schema.Literal('a', 'b', 'c', 'd')
+export const AnswerLetterSchema = Schema.Literal("a", "b", "c", "d")
 export type AnswerLetter = typeof AnswerLetterSchema.Type
 
 export const MultiAnswerSchema = Schema.Array(AnswerLetterSchema).pipe(
   Schema.minItems(2),
   Schema.maxItems(3),
-  Schema.filter((xs) => new Set(xs).size === xs.length, { message: () => 'MultiAnswer must contain unique letters (no duplicates allowed)' }),
+  Schema.filter((xs) => new Set(xs).size === xs.length, {
+    message: () => "MultiAnswer must contain unique letters (no duplicates allowed)"
+  })
 )
 export type MultiAnswer = typeof MultiAnswerSchema.Type
 
-export const QuestionTypeSchema = Schema.Literal('mcq_single', 'mcq_multi', 'true_false')
+export const QuestionTypeSchema = Schema.Literal("mcq_single", "mcq_multi", "true_false")
 export type QuestionType = typeof QuestionTypeSchema.Type
 
-export const QuestionStatusSchema = Schema.Literal('pending', 'accepted', 'rejected')
+export const QuestionStatusSchema = Schema.Literal("pending", "accepted", "rejected")
 export type QuestionStatus = typeof QuestionStatusSchema.Type
 
-export const ValidationStatusSchema = Schema.Literal('valid', 'needs_review', 'invalid')
+export const ValidationStatusSchema = Schema.Literal("valid", "needs_review", "invalid")
 export type ValidationStatus = typeof ValidationStatusSchema.Type

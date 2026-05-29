@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
-import type { FigureSpec } from '@teacher-exam/shared'
-import { renderFigureSvg } from '../lib/figure-renderer.js'
+import type { FigureSpec } from "@teacher-exam/shared"
+import type { ReactNode } from "react"
+import { renderFigureSvg } from "../lib/figure-renderer.js"
 
 type FigureSvgProps = {
   figure: FigureSpec

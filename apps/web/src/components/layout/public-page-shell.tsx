@@ -1,6 +1,6 @@
-import { Link } from '@tanstack/react-router'
-import { Button } from '@teacher-exam/ui'
-import { BookOpen } from 'lucide-react'
+import { Link } from "@tanstack/react-router"
+import { Button } from "@teacher-exam/ui"
+import { BookOpen } from "lucide-react"
 
 interface PublicPageShellProps {
   children: React.ReactNode

@@ -1,46 +1,47 @@
-import { Effect, Either, Schema, Match } from 'effect'
-import { SqlClient } from '@effect/sql/SqlClient'
-import { exams, questions } from '@teacher-exam/db'
+import { SqlClient } from "@effect/sql/SqlClient"
+import { exams, questions } from "@teacher-exam/db"
 import {
-  normalizeExamType,
-  formatExamTitle,
-  SUBJECT_LABEL,
+  ExamIdSchema,
   FigureSpecSchema,
-} from '@teacher-exam/shared'
-import type { FigureSpec, GeneratedQuestion, Question } from '@teacher-exam/shared'
-import type { GenerateExamInput } from '@teacher-exam/shared'
-import { CurriculumService, CurriculumReadError } from '../api/services/curriculum-service'
-import { logAiEvent } from './ai-log'
-import { EXAM_TYPE_PROFILE, resolveComposition } from './exam-type-profile'
-import { buildExamPrompt } from './prompt'
-import { fetchExamWithQuestions } from './exams-query'
-import { questionToRow } from './question-mapper'
-import { validateGeneratedQuestionLatex, type LatexValidationResult } from './latex-validator'
-import { type AiService } from '../services/AiService'
-import { AiGenerationError } from '../errors'
-import { ApiDatabaseError } from '../api/errors/http'
-import { parseGeneratedQuestions, type ParsedItemFailure } from './parse-generated-questions'
-import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from './db-errors'
-import { normalizeGeneratedQuestionLatexFields, normalizeMatematikaLatexField } from './normalize-matematika-latex.js'
-import { DbClient } from '../api/services/db'
-import { BankService } from '../api/services/bank-service'
-import { runDb } from '../api/lib/db-effect'
+  formatExamTitle,
+  normalizeExamType,
+  QuestionIdSchema,
+  SUBJECT_LABEL
+} from "@teacher-exam/shared"
+import type { FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
+import { Effect, Either, Match, Schema } from "effect"
+import type { ApiDatabaseError } from "../api/errors/http"
+import { runDb } from "../api/lib/db-effect"
+import { BankService } from "../api/services/bank-service"
+import type { CurriculumReadError } from "../api/services/curriculum-service"
+import { CurriculumService } from "../api/services/curriculum-service"
+import { DbClient } from "../api/services/db"
+import { AiGenerationError } from "../errors"
+import { type AiService } from "../services/AiService"
+import { logAiEvent } from "./ai-log"
+import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
+import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
+import { fetchExamWithQuestions } from "./exams-query"
+import { type LatexValidationResult, validateGeneratedQuestionLatex } from "./latex-validator"
+import { normalizeGeneratedQuestionLatexFields } from "./normalize-matematika-latex.js"
+import { type ParsedItemFailure, parseGeneratedQuestions } from "./parse-generated-questions"
+import { buildExamPrompt } from "./prompt"
+import { questionToRow } from "./question-mapper"
 
-const PLACEHOLDER_STUB_TEXT =
-  'Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang.'
+const PLACEHOLDER_STUB_TEXT = "Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang."
 
 function makeFakeQuestionShape(number: number): GeneratedQuestion {
   return {
-    _tag: 'mcq_single',
+    _tag: "mcq_single",
     number,
     text: `Soal simulasi ${number}`,
-    option_a: 'A',
-    option_b: 'B',
-    option_c: 'C',
-    option_d: 'D',
-    correct_answer: 'a',
-    topic: 'Simulasi',
-    difficulty: 'mudah',
+    option_a: "A",
+    option_b: "B",
+    option_c: "C",
+    option_d: "D",
+    correct_answer: "a",
+    topic: "Simulasi",
+    difficulty: "mudah"
   }
 }
 
@@ -56,50 +57,50 @@ function convertGeneratedToQuestion(
     id: string
     examId: string
     number: number
-    status: 'accepted' | 'pending'
+    status: "accepted" | "pending"
     createdAt: Date
     generationFailed?: boolean
   },
-  latexResult: LatexValidationResult = { _tag: 'valid' },
+  latexResult: LatexValidationResult = { _tag: "valid" }
 ): Question {
   const figureResult = decodeGeneratedFigure(q.figure)
-  const latexReason = latexResult._tag === 'invalid'
+  const latexReason = latexResult._tag === "invalid"
     ? `LaTeX validation failed: ${latexResult.reason}`
     : null
   const validationReasons = [figureResult.reason, latexReason].filter((reason): reason is string => reason !== null)
   const common = {
-    id: meta.id,
-    examId: meta.examId,
+    id: Schema.decodeSync(QuestionIdSchema)(meta.id),
+    examId: Schema.decodeSync(ExamIdSchema)(meta.examId),
     number: meta.number,
     text: q.text,
     topic: q.topic ?? null,
     difficulty: q.difficulty ?? null,
     status: meta.status,
-    validationStatus: validationReasons.length > 0 ? 'needs_review' as const : null,
-    validationReason: validationReasons.length > 0 ? validationReasons.join('\n') : null,
+    validationStatus: validationReasons.length > 0 ? "needs_review" as const : null,
+    validationReason: validationReasons.length > 0 ? validationReasons.join("\n") : null,
     ...(meta.generationFailed === true ? { generationFailed: true as const } : {}),
     figure: figureResult.figure,
-    createdAt: meta.createdAt.toISOString(),
+    createdAt: meta.createdAt.toISOString()
   }
   const result = Match.value(q).pipe(
-    Match.tag('mcq_single', (x) => ({
+    Match.tag("mcq_single", (x) => ({
       ...common,
-      _tag: 'mcq_single' as const,
+      _tag: "mcq_single" as const,
       options: { a: x.option_a, b: x.option_b, c: x.option_c, d: x.option_d },
-      correct: x.correct_answer,
+      correct: x.correct_answer
     })),
-    Match.tag('mcq_multi', (x) => ({
+    Match.tag("mcq_multi", (x) => ({
       ...common,
-      _tag: 'mcq_multi' as const,
+      _tag: "mcq_multi" as const,
       options: { a: x.option_a, b: x.option_b, c: x.option_c, d: x.option_d },
-      correct: x.correct_answers,
+      correct: x.correct_answers
     })),
-    Match.tag('true_false', (x) => ({
+    Match.tag("true_false", (x) => ({
       ...common,
-      _tag: 'true_false' as const,
-      statements: x.statements.map((s) => ({ text: s.text, answer: s.answer === 'B' })),
+      _tag: "true_false" as const,
+      statements: x.statements.map((s) => ({ text: s.text, answer: s.answer === "B" }))
     })),
-    Match.exhaustive,
+    Match.exhaustive
   )
   return result
 }
@@ -107,35 +108,35 @@ function convertGeneratedToQuestion(
 function failureReasonForNumber(
   number: number,
   failed: ReadonlyArray<ParsedItemFailure>,
-  missingNumbers: ReadonlyArray<number>,
+  missingNumbers: ReadonlyArray<number>
 ): string {
   const failAtNumber = failed.find((f) => f.index + 1 === number)
   if (failAtNumber) return failAtNumber.error
-  if (missingNumbers.includes(number)) return 'Soal tidak ada dalam output AI.'
-  return 'Soal gagal divalidasi.'
+  if (missingNumbers.includes(number)) return "Soal tidak ada dalam output AI."
+  return "Soal gagal divalidasi."
 }
 
 function makePlaceholderQuestion(
   examId: string,
   number: number,
   createdAt: Date,
-  reason: string,
+  reason: string
 ): Question {
   return {
-    id: crypto.randomUUID(),
-    examId,
+    id: Schema.decodeSync(QuestionIdSchema)(crypto.randomUUID()),
+    examId: Schema.decodeSync(ExamIdSchema)(examId),
     number,
     text: PLACEHOLDER_STUB_TEXT,
     topic: null,
     difficulty: null,
-    status: 'pending',
-    validationStatus: 'needs_review',
+    status: "pending",
+    validationStatus: "needs_review",
     validationReason: reason,
     generationFailed: true,
-    _tag: 'mcq_single',
-    options: { a: '—', b: '—', c: '—', d: '—' },
-    correct: 'a',
-    createdAt: createdAt.toISOString(),
+    _tag: "mcq_single",
+    options: { a: "—", b: "—", c: "—", d: "—" },
+    correct: "a",
+    createdAt: createdAt.toISOString()
   }
 }
 
@@ -146,10 +147,10 @@ async function generateWithSalvage(
     user: string
     expectedCount: number
     shouldValidateLatex: boolean
-    reviewMode: 'fast' | 'slow'
+    reviewMode: "fast" | "slow"
     examId: string
     createdAt: Date
-  },
+  }
 ): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
   const maxAttempts = request.shouldValidateLatex ? 3 : 1
   let lastSalvage:
@@ -162,29 +163,29 @@ async function generateWithSalvage(
     | null = null
   let lastParseError: AiGenerationError | null = null
 
-  const devSimulateSalvage = process.env['DEV_SIMULATE_SALVAGE'] === '1'
+  const devSimulateSalvage = process.env["DEV_SIMULATE_SALVAGE"] === "1"
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const rawResult = devSimulateSalvage
       ? Either.right(
-          JSON.stringify(
-            Array.from({ length: request.expectedCount }, (_, i) => {
-              const n = i + 1
-              if (n === request.expectedCount) {
-                return { ...makeFakeQuestionShape(n), correct_answer: 'z' }
-              }
-              return makeFakeQuestionShape(n)
-            }),
-          ),
+        JSON.stringify(
+          Array.from({ length: request.expectedCount }, (_, i) => {
+            const n = i + 1
+            if (n === request.expectedCount) {
+              return { ...makeFakeQuestionShape(n), correct_answer: "z" }
+            }
+            return makeFakeQuestionShape(n)
+          })
         )
+      )
       : await Effect.runPromise(
-          Effect.either(
-            aiService.generateRaw({
-              system: request.system,
-              user: request.user,
-            }),
-          ),
+        Effect.either(
+          aiService.generateRaw({
+            system: request.system,
+            user: request.user
+          })
         )
+      )
     if (Either.isLeft(rawResult)) return Either.left(rawResult.left)
 
     const parsed = parseGeneratedQuestions(rawResult.right, request.expectedCount)
@@ -193,52 +194,51 @@ async function generateWithSalvage(
       continue
     }
 
-    const { valid, failed, missingNumbers } = parsed.right
+    const { failed, missingNumbers, valid } = parsed.right
     const latexByNumber = new Map<number, LatexValidationResult>()
     for (const question of valid) {
       latexByNumber.set(
         question.number,
         request.shouldValidateLatex
           ? validateGeneratedQuestionLatex(question)
-          : { _tag: 'valid' },
+          : { _tag: "valid" }
       )
     }
 
-    const hasInvalidLatex = [...latexByNumber.values()].some((r) => r._tag === 'invalid')
+    const hasInvalidLatex = [...latexByNumber.values()].some((r) => r._tag === "invalid")
     lastSalvage = { valid, failed, missingNumbers, latexByNumber }
     if (!hasInvalidLatex) break
   }
 
   if (!lastSalvage) {
     if (lastParseError) return Either.left(lastParseError)
-    return Either.left(new AiGenerationError({ cause: 'AI generation produced no output' }))
+    return Either.left(new AiGenerationError({ cause: "AI generation produced no output" }))
   }
 
   const validNumbers = new Set(lastSalvage.valid.map((q) => q.number))
-  const failedQuestionNumbers: number[] = []
+  const failedQuestionNumbers: Array<number> = []
   for (let n = 1; n <= request.expectedCount; n++) {
     if (!validNumbers.has(n)) failedQuestionNumbers.push(n)
   }
   const generationIncomplete = failedQuestionNumbers.length > 0
 
   if (lastSalvage.valid.length === 0 && failedQuestionNumbers.length === 0) {
-    return Either.left(new AiGenerationError({ cause: 'AI generation produced no valid questions' }))
+    return Either.left(new AiGenerationError({ cause: "AI generation produced no valid questions" }))
   }
 
-  logAiEvent('api.ai.generate.salvage', 'warn', {
-    path: '/api/ai/generate',
+  logAiEvent("api.ai.generate.salvage", "warn", {
+    path: "/api/ai/generate",
     valid: lastSalvage.valid.length,
     failedItems: lastSalvage.failed.length,
     missing: lastSalvage.missingNumbers.length,
-    gaps: failedQuestionNumbers.length,
+    gaps: failedQuestionNumbers.length
   })
 
-  const statusForValid: 'accepted' | 'pending' =
-    request.reviewMode === 'fast' ? 'accepted' : 'pending'
+  const statusForValid: "accepted" | "pending" = request.reviewMode === "fast" ? "accepted" : "pending"
 
   const byNumber = new Map<number, Question>()
   for (const q of lastSalvage.valid) {
-    const latex = lastSalvage.latexByNumber.get(q.number) ?? { _tag: 'valid' as const }
+    const latex = lastSalvage.latexByNumber.get(q.number) ?? { _tag: "valid" as const }
     const stored = request.shouldValidateLatex ? normalizeGeneratedQuestionLatexFields(q) : q
     byNumber.set(
       q.number,
@@ -249,10 +249,10 @@ async function generateWithSalvage(
           examId: request.examId,
           number: q.number,
           status: statusForValid,
-          createdAt: request.createdAt,
+          createdAt: request.createdAt
         },
-        latex,
-      ),
+        latex
+      )
     )
   }
 
@@ -264,12 +264,12 @@ async function generateWithSalvage(
         request.examId,
         number,
         request.createdAt,
-        failureReasonForNumber(number, lastSalvage.failed, lastSalvage.missingNumbers),
-      ),
+        failureReasonForNumber(number, lastSalvage.failed, lastSalvage.missingNumbers)
+      )
     )
   }
 
-  const questions: Question[] = []
+  const questions: Array<Question> = []
   for (let n = 1; n <= request.expectedCount; n++) {
     const row = byNumber.get(n)
     if (row) questions.push(row)
@@ -278,13 +278,13 @@ async function generateWithSalvage(
   return Either.right({
     questions,
     generationIncomplete,
-    failedQuestionNumbers,
+    failedQuestionNumbers
   })
 }
 
 function decodeGeneratedFigure(raw: unknown): {
   figure: FigureSpec | null
-  status: 'needs_review' | null
+  status: "needs_review" | null
   reason: string | null
 } {
   if (raw === undefined || raw === null) {
@@ -298,36 +298,36 @@ function decodeGeneratedFigure(raw: unknown): {
 
   return {
     figure: null,
-    status: 'needs_review',
-    reason: `FigureSpec validation failed; diagram was removed: ${String(decoded.left)}`,
+    status: "needs_review",
+    reason: `FigureSpec validation failed; diagram was removed: ${String(decoded.left)}`
   }
 }
 
 export type GenerateExamResult =
-  | { readonly _tag: 'success'; readonly body: Record<string, unknown>; readonly status: 201 }
-  | { readonly _tag: 'ai_error'; readonly message: string }
-  | { readonly _tag: 'database_error'; readonly message: string }
-  | { readonly _tag: 'validation_error'; readonly details: string }
+  | { readonly _tag: "success"; readonly body: Record<string, unknown>; readonly status: 201 }
+  | { readonly _tag: "ai_error"; readonly message: string }
+  | { readonly _tag: "database_error"; readonly message: string }
+  | { readonly _tag: "validation_error"; readonly details: string }
 
 export function generateExam(
   userId: string,
   input: GenerateExamInput,
-  aiService: AiService,
+  aiService: AiService
 ): Effect.Effect<
   GenerateExamResult,
   AiGenerationError | ApiDatabaseError | CurriculumReadError,
   DbClient | SqlClient | CurriculumService | BankService
 > {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const handlerT0 = Date.now()
-    const examType = normalizeExamType(input.examType ?? 'formatif')
+    const examType = normalizeExamType(input.examType ?? "formatif")
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
     let composition: ReturnType<typeof resolveComposition>
     try {
       composition = resolveComposition(examType, totalSoal, input.composition)
     } catch (err) {
-      return { _tag: 'validation_error', details: (err as Error).message }
+      return { _tag: "validation_error", details: (err as Error).message }
     }
 
     const curriculum = yield* CurriculumService
@@ -343,7 +343,7 @@ export function generateExam(
       composition,
       curriculumText,
       classContext: input.classContext,
-      exampleQuestions: input.exampleQuestions,
+      exampleQuestions: input.exampleQuestions
     })
 
     const title = formatExamTitle({
@@ -351,7 +351,7 @@ export function generateExam(
       grade: input.grade,
       examType,
       examDate: null,
-      topics: [...input.topics],
+      topics: [...input.topics]
     })
     const examId = crypto.randomUUID()
     const now = new Date()
@@ -362,20 +362,20 @@ export function generateExam(
           system,
           user,
           expectedCount: totalSoal,
-          shouldValidateLatex: input.subject === 'matematika',
+          shouldValidateLatex: input.subject === "matematika",
           reviewMode: input.reviewMode,
           examId,
-          createdAt: now,
+          createdAt: now
         }),
-      catch: (cause) => new AiGenerationError({ cause }),
+      catch: (cause) => new AiGenerationError({ cause })
     })
     if (Either.isLeft(generated)) {
       const err = generated.left
-      logAiEvent('api.ai.generate', 'warn', {
-        path: '/api/ai/generate',
-        message: String((err as { cause?: unknown }).cause),
+      logAiEvent("api.ai.generate", "warn", {
+        path: "/api/ai/generate",
+        message: String((err as { cause?: unknown }).cause)
       })
-      return { _tag: 'ai_error', message: String((err as { cause?: unknown }).cause) }
+      return { _tag: "ai_error", message: String((err as { cause?: unknown }).cause) }
     }
 
     const insertedQuestions = [...generated.right.questions]
@@ -386,7 +386,7 @@ export function generateExam(
     const sql = yield* SqlClient
 
     const insertTransaction = sql.withTransaction(
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         yield* runDb(
           db.insert(exams).values({
             id: examId,
@@ -397,12 +397,12 @@ export function generateExam(
             difficulty: input.difficulty,
             topics: [...input.topics],
             reviewMode: input.reviewMode,
-            status: 'draft',
+            status: "draft",
             examType,
             classContext: input.classContext ?? null,
             createdAt: now,
-            updatedAt: now,
-          }),
+            updatedAt: now
+          })
         )
 
         yield* runDb(
@@ -426,28 +426,28 @@ export function generateExam(
                 optionC: rowFields.optionC,
                 optionD: rowFields.optionD,
                 correctAnswer: rowFields.correctAnswer,
-                payload: rowFields.payload,
+                payload: rowFields.payload
               }
-            }),
-          ),
+            })
+          )
         )
-      }),
+      })
     )
 
     const insertResult = yield* Effect.either(insertTransaction)
-    if (insertResult._tag === 'Left') {
+    if (insertResult._tag === "Left") {
       const err = insertResult.left
       if (isExamSubjectEnumMismatch(err)) {
-        return { _tag: 'database_error', message: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE }
+        return { _tag: "database_error", message: EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE }
       }
       return {
-        _tag: 'database_error',
-        message: err instanceof Error ? err.message : 'Database error',
+        _tag: "database_error",
+        message: err instanceof Error ? err.message : "Database error"
       }
     }
 
-    if (input.reviewMode === 'fast') {
-      yield* Effect.gen(function* () {
+    if (input.reviewMode === "fast") {
+      yield* Effect.gen(function*() {
         const bankService = yield* BankService
         yield* bankService.autoSaveAccepted(userId, examId)
       }).pipe(Effect.catchAll(() => Effect.void))
@@ -455,23 +455,23 @@ export function generateExam(
 
     const result = yield* fetchExamWithQuestions(examId)
     if (!result) {
-      return { _tag: 'database_error', message: 'Failed to retrieve generated exam' }
+      return { _tag: "database_error", message: "Failed to retrieve generated exam" }
     }
 
-    logAiEvent('api.ai.generate', 'info', {
-      path: '/api/ai/generate',
+    logAiEvent("api.ai.generate", "info", {
+      path: "/api/ai/generate",
       examId,
       questionCount: insertedQuestions.length,
-      durationMs: Date.now() - handlerT0,
+      durationMs: Date.now() - handlerT0
     })
 
     return {
-      _tag: 'success',
+      _tag: "success",
       status: 201,
       body: {
         ...result,
-        ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {}),
-      },
+        ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {})
+      }
     }
   })
 }

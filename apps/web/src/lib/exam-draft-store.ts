@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react'
-import type { ExamSubject, ExamType, Question } from '@teacher-exam/shared'
+import type { ExamSubject, ExamType, Question } from "@teacher-exam/shared"
+import { useSyncExternalStore } from "react"
 
 /**
  * In-memory draft of the exam currently being created/reviewed.
@@ -17,36 +17,36 @@ export interface ExamDraftMetadata {
 }
 
 export interface ExamDraft {
-  questions: Question[]
+  questions: Array<Question>
   metadata: ExamDraftMetadata
-  reviewMode: 'fast' | 'slow'
+  reviewMode: "fast" | "slow"
   subject: ExamSubject
   grade: number
   topic: string
   /** Optional teacher-provided steering context (PRD §8.7). */
   classContext: string
   generationIncomplete: boolean
-  failedQuestionNumbers: number[]
+  failedQuestionNumbers: Array<number>
 }
 
 function makeInitialDraft(): ExamDraft {
   return {
     questions: [],
     metadata: {
-      schoolName: '',
-      academicYear: '',
-      examType: 'formatif',
-      examDate: '',
+      schoolName: "",
+      academicYear: "",
+      examType: "formatif",
+      examDate: "",
       durationMinutes: 60,
-      instructions: '',
+      instructions: ""
     },
-    reviewMode: 'fast',
-    subject: 'bahasa_indonesia',
+    reviewMode: "fast",
+    subject: "bahasa_indonesia",
     grade: 6,
-    topic: '',
-    classContext: '',
+    topic: "",
+    classContext: "",
     generationIncomplete: false,
-    failedQuestionNumbers: [],
+    failedQuestionNumbers: []
   }
 }
 
@@ -74,7 +74,7 @@ export const examDraftStore = {
     emit()
   },
 
-  setQuestions(questions: Question[]) {
+  setQuestions(questions: Array<Question>) {
     state = { ...state, questions }
     emit()
   },
@@ -82,7 +82,7 @@ export const examDraftStore = {
   updateQuestion(id: string, replacement: Question) {
     state = {
       ...state,
-      questions: state.questions.map((q) => (q.id === id ? replacement : q)),
+      questions: state.questions.map((q) => (q.id === id ? replacement : q))
     }
     emit()
   },
@@ -90,7 +90,7 @@ export const examDraftStore = {
   replaceQuestion(id: string, replacement: Question) {
     state = {
       ...state,
-      questions: state.questions.map((q) => (q.id === id ? replacement : q)),
+      questions: state.questions.map((q) => (q.id === id ? replacement : q))
     }
     emit()
   },
@@ -100,14 +100,14 @@ export const examDraftStore = {
     emit()
   },
 
-  setReviewMode(mode: 'fast' | 'slow') {
+  setReviewMode(mode: "fast" | "slow") {
     state = { ...state, reviewMode: mode }
     emit()
   },
 
   setGenerationState(patch: {
     generationIncomplete?: boolean
-    failedQuestionNumbers?: number[]
+    failedQuestionNumbers?: Array<number>
   }) {
     state = {
       ...state,
@@ -116,17 +116,17 @@ export const examDraftStore = {
         : {}),
       ...(patch.failedQuestionNumbers !== undefined
         ? { failedQuestionNumbers: patch.failedQuestionNumbers }
-        : {}),
+        : {})
     }
     emit()
   },
 
   setConfig(
     patch: Partial<
-      Pick<ExamDraft, 'subject' | 'grade' | 'topic' | 'classContext'> & {
+      Pick<ExamDraft, "subject" | "grade" | "topic" | "classContext"> & {
         examType: ExamType
       }
-    >,
+    >
   ) {
     const { examType, ...rest } = patch
     state = {
@@ -134,10 +134,10 @@ export const examDraftStore = {
       ...rest,
       ...(examType !== undefined
         ? { metadata: { ...state.metadata, examType } }
-        : {}),
+        : {})
     }
     emit()
-  },
+  }
 }
 
 /**

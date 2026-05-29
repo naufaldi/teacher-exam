@@ -1,80 +1,80 @@
-import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { TopicMultiSelect } from '../topic-multi-select'
+import { fireEvent, render, screen } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
+import { TopicMultiSelect } from "../topic-multi-select"
 
-const OPTIONS = ['Teks Narasi', 'Puisi', 'Kosakata', 'Gaya Bahasa', 'Cerpen'] as const
+const OPTIONS = ["Teks Narasi", "Puisi", "Kosakata", "Gaya Bahasa", "Cerpen"] as const
 
-describe('TopicMultiSelect', () => {
-  it('shows placeholder when nothing selected', () => {
+describe("TopicMultiSelect", () => {
+  it("shows placeholder when nothing selected", () => {
     render(
-      <TopicMultiSelect options={OPTIONS} selected={[]} onChange={vi.fn()} />,
+      <TopicMultiSelect options={OPTIONS} selected={[]} onChange={vi.fn()} />
     )
-    expect(screen.getByText('Pilih topik...')).toBeInTheDocument()
+    expect(screen.getByText("Pilih topik...")).toBeInTheDocument()
   })
 
-  it('shows selected topics as pills', () => {
+  it("shows selected topics as pills", () => {
     render(
-      <TopicMultiSelect options={OPTIONS} selected={['Puisi', 'Kosakata']} onChange={vi.fn()} />,
+      <TopicMultiSelect options={OPTIONS} selected={["Puisi", "Kosakata"]} onChange={vi.fn()} />
     )
-    expect(screen.getByText('Puisi')).toBeInTheDocument()
-    expect(screen.getByText('Kosakata')).toBeInTheDocument()
+    expect(screen.getByText("Puisi")).toBeInTheDocument()
+    expect(screen.getByText("Kosakata")).toBeInTheDocument()
   })
 
-  it('calls onChange with item removed when pill × clicked', () => {
+  it("calls onChange with item removed when pill × clicked", () => {
     const onChange = vi.fn()
     render(
-      <TopicMultiSelect options={OPTIONS} selected={['Puisi', 'Kosakata']} onChange={onChange} />,
+      <TopicMultiSelect options={OPTIONS} selected={["Puisi", "Kosakata"]} onChange={onChange} />
     )
-    fireEvent.click(screen.getByLabelText('Hapus topik: Puisi'))
-    expect(onChange).toHaveBeenCalledWith(['Kosakata'])
+    fireEvent.click(screen.getByLabelText("Hapus topik: Puisi"))
+    expect(onChange).toHaveBeenCalledWith(["Kosakata"])
   })
 
-  it('calls onChange with item added when option clicked', () => {
+  it("calls onChange with item added when option clicked", () => {
     const onChange = vi.fn()
     const { getByRole } = render(
-      <TopicMultiSelect options={OPTIONS} selected={['Puisi']} onChange={onChange} />,
+      <TopicMultiSelect options={OPTIONS} selected={["Puisi"]} onChange={onChange} />
     )
     // Open popover
-    fireEvent.click(getByRole('combobox'))
-    fireEvent.click(screen.getByText('Teks Narasi'))
-    expect(onChange).toHaveBeenCalledWith(['Puisi', 'Teks Narasi'])
+    fireEvent.click(getByRole("combobox"))
+    fireEvent.click(screen.getByText("Teks Narasi"))
+    expect(onChange).toHaveBeenCalledWith(["Puisi", "Teks Narasi"])
   })
 
-  it('does not call onChange when clicking disabled option at maxItems', () => {
+  it("does not call onChange when clicking disabled option at maxItems", () => {
     const onChange = vi.fn()
     const { getByRole } = render(
       <TopicMultiSelect
         options={OPTIONS}
-        selected={['Puisi', 'Kosakata']}
+        selected={["Puisi", "Kosakata"]}
         onChange={onChange}
         maxItems={2}
-      />,
+      />
     )
-    fireEvent.click(getByRole('combobox'))
-    fireEvent.click(screen.getByText('Teks Narasi'))
+    fireEvent.click(getByRole("combobox"))
+    fireEvent.click(screen.getByText("Teks Narasi"))
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it('shows max notice when at maxItems', () => {
+  it("shows max notice when at maxItems", () => {
     const { getByRole } = render(
       <TopicMultiSelect
         options={OPTIONS}
-        selected={['Puisi', 'Kosakata']}
+        selected={["Puisi", "Kosakata"]}
         onChange={vi.fn()}
         maxItems={2}
-      />,
+      />
     )
-    fireEvent.click(getByRole('combobox'))
-    expect(screen.getByText('Maksimal 2 topik dipilih.')).toBeInTheDocument()
+    fireEvent.click(getByRole("combobox"))
+    expect(screen.getByText("Maksimal 2 topik dipilih.")).toBeInTheDocument()
   })
 
-  it('calls onCustom and closes popover when custom option clicked', () => {
+  it("calls onCustom and closes popover when custom option clicked", () => {
     const onCustom = vi.fn()
     const { getByRole } = render(
-      <TopicMultiSelect options={OPTIONS} selected={[]} onChange={vi.fn()} onCustom={onCustom} />,
+      <TopicMultiSelect options={OPTIONS} selected={[]} onChange={vi.fn()} onCustom={onCustom} />
     )
-    fireEvent.click(getByRole('combobox'))
-    fireEvent.click(screen.getByText('Lainnya (ketik sendiri)...'))
+    fireEvent.click(getByRole("combobox"))
+    fireEvent.click(screen.getByText("Lainnya (ketik sendiri)..."))
     expect(onCustom).toHaveBeenCalled()
   })
 })

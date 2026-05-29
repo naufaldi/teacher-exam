@@ -1,51 +1,44 @@
-import { HttpApiBuilder, HttpServer } from '@effect/platform'
-import { Effect, Layer, Stream } from 'effect'
-import { HealthLive } from '../handlers/health'
-import { DevAuthLive } from '../handlers/dev-auth'
-import { PublicExamsLive } from '../handlers/public-exams'
-import { MeLive } from '../handlers/me'
-import { ExamsLive } from '../handlers/exams'
-import { QuestionsLive } from '../handlers/questions'
-import { AiLive } from '../handlers/ai'
-import { BankLive } from '../handlers/bank'
-import { BankPublicLive } from '../handlers/bank-public'
-import { TeacherExamApi } from '../definition'
-import { BankServiceLive } from '../services/bank-service'
-import { createCorsLayer } from '../cors'
-import { DbLayer } from '../services/db'
-import { createTestDbLayer, TestSqlLayer } from '../services/test-db'
-import { TestAiLayer, type AiClient } from '../services/ai'
-import { TestCurriculumLayer, type CurriculumService } from '../services/curriculum-service'
-import { TestAuthServiceLayer, AuthServiceLive } from '../services/auth-service'
-import { AuthorizationLive, TestAuthorizationLive } from '../middleware/auth'
-import {
-  AiGenerateRateLimitLive,
-  GlobalRateLimitLive,
-  createTestGlobalRateLimitLive,
-} from '../middleware/rate-limit'
-import {
-  PublicBankIpRateLimitLive,
-  createTestPublicBankIpRateLimitLive,
-} from '../middleware/ip-rate-limit'
-import { attachRateLimitHeaders } from '../lib/rate-limit-response'
-import { db } from '@teacher-exam/db'
-import type { AppDb } from '../services/db'
+import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
+import * as HttpServer from "@effect/platform/HttpServer"
+import { db } from "@teacher-exam/db"
+import { Effect, Layer, Stream } from "effect"
+import { createCorsLayer } from "../cors"
+import { TeacherExamApi } from "../definition"
+import { AiLive } from "../handlers/ai"
+import { BankLive } from "../handlers/bank"
+import { BankPublicLive } from "../handlers/bank-public"
+import { DevAuthLive } from "../handlers/dev-auth"
+import { ExamsLive } from "../handlers/exams"
+import { HealthLive } from "../handlers/health"
+import { MeLive } from "../handlers/me"
+import { PublicExamsLive } from "../handlers/public-exams"
+import { QuestionsLive } from "../handlers/questions"
+import { attachRateLimitHeaders } from "../lib/rate-limit-response"
+import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
+import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
+import { AiGenerateRateLimitLive, createTestGlobalRateLimitLive, GlobalRateLimitLive } from "../middleware/rate-limit"
+import { type AiClient, TestAiLayer } from "../services/ai"
+import { AuthServiceLive } from "../services/auth-service"
+import { BankServiceLive } from "../services/bank-service"
+import { type CurriculumService, TestCurriculumLayer } from "../services/curriculum-service"
+import type { AppDb } from "../services/db"
+import { createTestDbLayer, TestSqlLayer } from "../services/test-db"
 
-import type { AiService } from '../../services/AiService'
+import type { AiService } from "../../services/AiService"
 
 const defaultTestAiService: AiService = {
   generate: () => Effect.succeed([]),
-  generateRaw: () => Effect.succeed('[]'),
+  generateRaw: () => Effect.succeed("[]"),
   validateCurriculum: ({ expectedCount }) =>
     Effect.succeed(
       Array.from({ length: expectedCount }, (_, i) => ({
         number: i + 1,
-        status: 'valid' as const,
-        reason: 'Sesuai CP.',
-      })),
+        status: "valid" as const,
+        reason: "Sesuai CP."
+      }))
     ),
-  generateDiscussion: () => Effect.succeed(''),
-  streamDiscussion: () => Stream.succeed(''),
+  generateDiscussion: () => Effect.succeed(""),
+  streamDiscussion: () => Stream.succeed("")
 }
 
 const HandlerLayers = Layer.mergeAll(
@@ -57,7 +50,7 @@ const HandlerLayers = Layer.mergeAll(
   QuestionsLive,
   AiLive,
   BankLive,
-  BankPublicLive,
+  BankPublicLive
 )
 
 function createMiddlewareLayer(opts: {
@@ -70,7 +63,7 @@ function createMiddlewareLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
+  authLayer?: Layer.Layer<import("../services/auth-service").AuthService>
 }) {
   const authMiddlewareLayer = opts.userId
     ? TestAuthorizationLive(opts.userId)
@@ -99,7 +92,7 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  authLayer?: Layer.Layer<import('../services/auth-service').AuthService>
+  authLayer?: Layer.Layer<import("../services/auth-service").AuthService>
   curriculumLayer?: Layer.Layer<CurriculumService>
 } = {}) {
   const apiLayer = HttpApiBuilder.api(TeacherExamApi).pipe(
@@ -111,9 +104,9 @@ export function createHttpApiTestLayer(opts: {
         ...(opts.publicBankRateLimit !== undefined
           ? { publicBankRateLimit: opts.publicBankRateLimit }
           : {}),
-        ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {}),
-      }),
-    ),
+        ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {})
+      })
+    )
   )
 
   return Layer.mergeAll(
@@ -125,17 +118,17 @@ export function createHttpApiTestLayer(opts: {
     BankServiceLive,
     opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,
-    HttpServer.layerContext,
+    HttpServer.layerContext
   )
 }
 
 export function buildTestHandler(opts: Parameters<typeof createHttpApiTestLayer>[0] = {}) {
-  const { handler, dispose } = HttpApiBuilder.toWebHandler(createHttpApiTestLayer(opts))
+  const { dispose, handler } = HttpApiBuilder.toWebHandler(createHttpApiTestLayer(opts))
 
   return {
     request: async (path: string, init?: RequestInit) =>
       attachRateLimitHeaders(await handler(new Request(`http://localhost${path}`, init))),
-    dispose,
+    dispose
   }
 }
 

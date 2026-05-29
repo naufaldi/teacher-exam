@@ -1,28 +1,28 @@
-import type { Exam } from '@teacher-exam/shared'
-import { subjectMetaFor } from '../../lib/subjects'
+import type { Exam } from "@teacher-exam/shared"
+import { subjectMetaFor } from "../../lib/subjects"
 
 interface MiniPaperPreviewProps {
   exam: Exam
 }
 
-function formatTopicsDisplay(topics: readonly string[]): string {
+function formatTopicsDisplay(topics: ReadonlyArray<string>): string {
   if (topics.length <= 2) {
-    return topics.join(' · ')
+    return topics.join(" · ")
   }
-  const visible = topics.slice(0, 2).join(' · ')
+  const visible = topics.slice(0, 2).join(" · ")
   const remaining = topics.length - 2
   return `${visible} +${remaining}`
 }
 
 const QUESTION_SKELETONS = [
-  { num: '1.', widths: ['100%', '70%', '50%'] },
-  { num: '11.', widths: ['100%', '60%', '45%'] },
-  { num: '2.', widths: ['90%', '75%', '55%'] },
-  { num: '12.', widths: ['100%', '65%', '40%'] },
-  { num: '3.', widths: ['95%', '70%', '50%'] },
-  { num: '13.', widths: ['100%', '80%', '60%'] },
-  { num: '4.', widths: ['85%', '60%', '45%'] },
-  { num: '14.', widths: ['100%', '70%', '50%'] },
+  { num: "1.", widths: ["100%", "70%", "50%"] },
+  { num: "11.", widths: ["100%", "60%", "45%"] },
+  { num: "2.", widths: ["90%", "75%", "55%"] },
+  { num: "12.", widths: ["100%", "65%", "40%"] },
+  { num: "3.", widths: ["95%", "70%", "50%"] },
+  { num: "13.", widths: ["100%", "80%", "60%"] },
+  { num: "4.", widths: ["85%", "60%", "45%"] },
+  { num: "14.", widths: ["100%", "70%", "50%"] }
 ] as const
 
 function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
@@ -32,7 +32,7 @@ function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
   return (
     <div
       className="aspect-[1/1.414] bg-bg-surface border border-kertas-300 rounded-xs shadow-xs overflow-hidden w-full"
-      style={{ padding: '10px 8px 6px', fontFamily: 'var(--font-serif)' }}
+      style={{ padding: "10px 8px 6px", fontFamily: "var(--font-serif)" }}
       aria-hidden="true"
     >
       {/* Kop header */}
@@ -43,7 +43,7 @@ function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
         <div className="text-[5px] mt-0.5 text-text-secondary">
           {exam.examType} {subjectShort} · {exam.academicYear}
         </div>
-        {topicsDisplay !== '' && (
+        {topicsDisplay !== "" && (
           <div className="text-[4.5px] mt-0.5 text-text-secondary truncate">
             {topicsDisplay}
           </div>
@@ -84,4 +84,4 @@ function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
   )
 }
 
-export { MiniPaperPreview, formatTopicsDisplay }
+export { formatTopicsDisplay, MiniPaperPreview }

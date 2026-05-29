@@ -1,6 +1,6 @@
-import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react'
-import ReactMarkdown from 'react-markdown'
-import { MathText } from './math-text.js'
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react"
+import ReactMarkdown from "react-markdown"
+import { MathText } from "./math-text.js"
 
 type MarkdownMathProps = {
   markdown: string
@@ -17,7 +17,7 @@ export function MarkdownMath({ markdown }: MarkdownMathProps) {
         h3: ({ children }) => <h3>{renderMathChildren(children)}</h3>,
         strong: ({ children }) => <strong>{renderMathChildren(children)}</strong>,
         em: ({ children }) => <em>{renderMathChildren(children)}</em>,
-        code: ({ children }) => <code>{children}</code>,
+        code: ({ children }) => <code>{children}</code>
       }}
     >
       {markdown}
@@ -27,15 +27,15 @@ export function MarkdownMath({ markdown }: MarkdownMathProps) {
 
 function renderMathChildren(children: ReactNode): ReactNode {
   return Children.map(children, (child) => {
-    if (typeof child === 'string') return <MathText text={child} />
+    if (typeof child === "string") return <MathText text={child} />
     if (!isValidElement<{ children?: ReactNode }>(child)) return child
     if (isLiteralCodeElement(child)) return child
     return cloneElement(child, {
-      children: renderMathChildren(child.props.children),
+      children: renderMathChildren(child.props.children)
     })
   })
 }
 
 function isLiteralCodeElement(child: ReactElement<{ children?: ReactNode; node?: { tagName?: string } }>): boolean {
-  return child.type === 'code' || child.type === 'pre' || child.props.node?.tagName === 'code'
+  return child.type === "code" || child.type === "pre" || child.props.node?.tagName === "code"
 }

@@ -1,58 +1,58 @@
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
+import { Badge, Button } from "@teacher-exam/ui"
 import {
-  Sparkles,
-  FolderOpen,
-  BookOpen,
-  CheckSquare,
   ArrowRight,
-  PrinterIcon,
-  Copy,
+  BookOpen,
   CalendarDays,
+  CheckSquare,
+  Copy,
+  FolderOpen,
   Pencil,
-} from 'lucide-react'
-import { useMemo } from 'react'
-import { Button, Badge } from '@teacher-exam/ui'
-import { api, unwrapApiEither } from '../lib/api.js'
-import { computeStats, computeWeeklyActivity, getRecentSheets } from '../lib/dashboard-selectors.js'
-import { StatSummary } from '../components/dashboard/stat-summary.js'
-import { MiniPaperPreview } from '../components/dashboard/mini-paper-preview.js'
-import { CurriculumTipsCard } from '../components/dashboard/curriculum-tips-card.js'
-import { ExamHistoryRow } from '../components/dashboard/exam-history-row.js'
-import { DuplicateConfirmDialog } from '../components/dashboard/duplicate-confirm-dialog.js'
-import { useDuplicateExam } from '../hooks/use-duplicate-exam.js'
-import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../lib/feature-flags.js'
+  PrinterIcon,
+  Sparkles
+} from "lucide-react"
+import { useMemo } from "react"
+import { CurriculumTipsCard } from "../components/dashboard/curriculum-tips-card.js"
+import { DuplicateConfirmDialog } from "../components/dashboard/duplicate-confirm-dialog.js"
+import { ExamHistoryRow } from "../components/dashboard/exam-history-row.js"
+import { MiniPaperPreview } from "../components/dashboard/mini-paper-preview.js"
+import { StatSummary } from "../components/dashboard/stat-summary.js"
+import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
+import { api, unwrapApiEither } from "../lib/api.js"
+import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
-export const Route = createFileRoute('/_auth/dashboard')({
+export const Route = createFileRoute("/_auth/dashboard")({
   loader: async () => ({ exams: unwrapApiEither(await api.exams.list()) }),
   pendingComponent: DashboardSkeleton,
   errorComponent: DashboardError,
-  component: DashboardPage,
+  component: DashboardPage
 })
 
 // ── Module-level helpers (hoisted to avoid recreation on each render) ─────────
 
 function getGreetingTime(): string {
   const h = new Date().getHours()
-  if (h < 11) return 'pagi'
-  if (h < 15) return 'siang'
-  if (h < 18) return 'sore'
-  return 'malam'
+  if (h < 11) return "pagi"
+  if (h < 15) return "siang"
+  if (h < 18) return "sore"
+  return "malam"
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   })
 }
 
 function formatTodayLong(): string {
-  return new Date().toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   })
 }
 
@@ -60,69 +60,67 @@ function formatTodayLong(): string {
 
 const ACTION_CARDS = [
   {
-    id: 'generate',
-    to: '/generate' as const,
-    variant: 'primary' as const,
-    iconBg: 'bg-primary-600',
-    iconColor: 'text-white',
-    ctaColor: 'text-primary-700',
+    id: "generate",
+    to: "/generate" as const,
+    variant: "primary" as const,
+    iconBg: "bg-primary-600",
+    iconColor: "text-white",
+    ctaColor: "text-primary-700",
     icon: Sparkles,
-    title: 'Generate Lembar (AI)',
+    title: "Generate Lembar (AI)",
     description:
-      'Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C — BI, PPKN, IPAS, dan Bahasa Inggris (kelas 5–6).',
-    cta: 'Mulai generate',
-    kbd: 'G',
-    cardBg: 'bg-gradient-to-b from-white to-primary-50 border-primary-100',
-    disabled: false,
+      "Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C — BI, PPKN, IPAS, dan Bahasa Inggris (kelas 5–6).",
+    cta: "Mulai generate",
+    kbd: "G",
+    cardBg: "bg-gradient-to-b from-white to-primary-50 border-primary-100",
+    disabled: false
   },
   {
-    id: 'history',
-    to: '/history' as const,
-    variant: 'secondary' as const,
-    iconBg: 'bg-secondary-50',
-    iconColor: 'text-secondary-700',
-    ctaColor: 'text-secondary-700',
+    id: "history",
+    to: "/history" as const,
+    variant: "secondary" as const,
+    iconBg: "bg-secondary-50",
+    iconColor: "text-secondary-700",
+    ctaColor: "text-secondary-700",
     icon: FolderOpen,
-    title: 'Riwayat Ujian',
-    description:
-      'Lihat lembar tersimpan. Cetak ulang, duplikat, atau buka koreksi cepat untuk ujian yang sudah final.',
-    cta: 'Buka riwayat',
+    title: "Riwayat Ujian",
+    description: "Lihat lembar tersimpan. Cetak ulang, duplikat, atau buka koreksi cepat untuk ujian yang sudah final.",
+    cta: "Buka riwayat",
     kbd: null,
-    cardBg: 'bg-bg-surface border-border-default',
-    disabled: false,
+    cardBg: "bg-bg-surface border-border-default",
+    disabled: false
   },
   {
-    id: 'bank-soal',
-    to: '/bank-soal' as const,
-    variant: 'secondary' as const,
-    iconBg: 'bg-info-bg',
-    iconColor: 'text-info-fg',
-    ctaColor: 'text-info-fg',
+    id: "bank-soal",
+    to: "/bank-soal" as const,
+    variant: "secondary" as const,
+    iconBg: "bg-info-bg",
+    iconColor: "text-info-fg",
+    ctaColor: "text-info-fg",
     icon: BookOpen,
-    title: 'Bank Soal',
+    title: "Bank Soal",
     description:
-      'Soal dari generate otomatis tersimpan di bank. Bagikan ujian dari Riwayat untuk mempublikasikan soal terkait.',
-    cta: 'Buka bank soal',
+      "Soal dari generate otomatis tersimpan di bank. Bagikan ujian dari Riwayat untuk mempublikasikan soal terkait.",
+    cta: "Buka bank soal",
     kbd: null,
-    cardBg: 'bg-bg-surface border-border-default',
-    disabled: false,
+    cardBg: "bg-bg-surface border-border-default",
+    disabled: false
   },
   {
-    id: 'review',
-    to: '/dashboard' as const,
-    variant: 'accent' as const,
-    iconBg: 'bg-accent-50',
-    iconColor: 'text-accent-700',
-    ctaColor: 'text-accent-700',
+    id: "review",
+    to: "/dashboard" as const,
+    variant: "accent" as const,
+    iconBg: "bg-accent-50",
+    iconColor: "text-accent-700",
+    ctaColor: "text-accent-700",
     icon: CheckSquare,
-    title: 'Koreksi Cepat',
-    description:
-      'Input jawaban murid, skor dihitung otomatis terhadap kunci. Rekap kelas per sesi siap dicetak.',
-    cta: 'Mulai koreksi',
+    title: "Koreksi Cepat",
+    description: "Input jawaban murid, skor dihitung otomatis terhadap kunci. Rekap kelas per sesi siap dicetak.",
+    cta: "Mulai koreksi",
     kbd: null,
-    cardBg: 'bg-bg-surface border-border-default',
-    disabled: true,
-  },
+    cardBg: "bg-bg-surface border-border-default",
+    disabled: true
+  }
 ] as const
 
 function DashboardSkeleton() {
@@ -149,7 +147,7 @@ function DashboardError({ error }: { error: Error }) {
   return (
     <div className="py-20 text-center space-y-3">
       <p className="text-body text-danger-700">
-        {error.message || 'Gagal memuat data dashboard'}
+        {error.message || "Gagal memuat data dashboard"}
       </p>
       <Button variant="secondary" size="sm" onClick={() => void router.invalidate()}>
         Coba lagi
@@ -171,24 +169,22 @@ function DashboardPage() {
   const recent = useMemo(() => getRecentSheets(exams, 5), [exams])
   const lastExam = recent[0] ?? null
 
-  const firstName = user.name.split(' ')[0] ?? user.name
+  const firstName = user.name.split(" ")[0] ?? user.name
   const greeting = getGreetingTime()
 
   return (
     <div className="space-y-10">
-
       {/* ── Section 1: Hero — Greeting + Stats ──────────────────────────── */}
       <section
         className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 items-stretch animate-fade-up-stagger"
-        style={{ '--index': 0 } as React.CSSProperties}
+        style={{ "--index": 0 } as React.CSSProperties}
       >
         {/* Greeting card */}
         <div className="relative overflow-hidden rounded-lg border border-border-default bg-white p-7">
           <div
             className="pointer-events-none absolute inset-0"
             style={{
-              background:
-                'radial-gradient(ellipse 1200px 360px at -10% -40%, rgba(180,35,24,0.07), transparent 60%)',
+              background: "radial-gradient(ellipse 1200px 360px at -10% -40%, rgba(180,35,24,0.07), transparent 60%)"
             }}
           />
 
@@ -202,8 +198,8 @@ function DashboardPage() {
             </h1>
 
             <p className="text-body text-text-secondary max-w-[560px]">
-              Siap menyiapkan lembar ujian hari ini? Kurikulum Merdeka Fase C sudah terpasang
-              otomatis untuk Bahasa Indonesia, Pendidikan Pancasila, IPAS, dan Bahasa Inggris.
+              Siap menyiapkan lembar ujian hari ini? Kurikulum Merdeka Fase C sudah terpasang otomatis untuk Bahasa
+              Indonesia, Pendidikan Pancasila, IPAS, dan Bahasa Inggris.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -237,7 +233,7 @@ function DashboardPage() {
       {/* ── Section 2: Primary Actions ──────────────────────────────────── */}
       <section
         className="animate-fade-up-stagger"
-        style={{ '--index': 1 } as React.CSSProperties}
+        style={{ "--index": 1 } as React.CSSProperties}
       >
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-h2 font-bold text-text-primary">Apa yang ingin Anda kerjakan?</h2>
@@ -249,15 +245,16 @@ function DashboardPage() {
             const Icon = card.icon
             const cardContent = (
               <>
-                {card.variant === 'primary' ? (
-                  <div
-                    className="pointer-events-none absolute -right-10 -top-10 w-40 h-40"
-                    style={{
-                      background:
-                        'radial-gradient(closest-side, rgba(180,35,24,0.10), transparent 70%)',
-                    }}
-                  />
-                ) : null}
+                {card.variant === "primary" ?
+                  (
+                    <div
+                      className="pointer-events-none absolute -right-10 -top-10 w-40 h-40"
+                      style={{
+                        background: "radial-gradient(closest-side, rgba(180,35,24,0.10), transparent 70%)"
+                      }}
+                    />
+                  ) :
+                  null}
 
                 <div className="flex items-start justify-between mb-4">
                   <div
@@ -265,28 +262,36 @@ function DashboardPage() {
                   >
                     <Icon size={22} />
                   </div>
-                  {card.disabled ? (
-                    <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-kertas-100 text-text-tertiary border border-border-default">
-                      Segera hadir
-                    </span>
-                  ) : null}
+                  {card.disabled ?
+                    (
+                      <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-kertas-100 text-text-tertiary border border-border-default">
+                        Segera hadir
+                      </span>
+                    ) :
+                    null}
                 </div>
 
                 <h3 className="text-h3 font-semibold text-text-primary mb-1">
                   {card.title}
-                  {card.kbd ? (
-                    <kbd className="ml-2 font-mono text-[11px] px-1.5 py-0.5 bg-white border border-border-default rounded-xs text-text-secondary align-middle">
-                      {card.kbd}
-                    </kbd>
-                  ) : null}
+                  {card.kbd ?
+                    (
+                      <kbd className="ml-2 font-mono text-[11px] px-1.5 py-0.5 bg-white border border-border-default rounded-xs text-text-secondary align-middle">
+                        {card.kbd}
+                      </kbd>
+                    ) :
+                    null}
                 </h3>
 
                 <p className="text-body-sm text-text-secondary leading-relaxed m-0 max-w-[42ch]">
                   {card.description}
                 </p>
 
-                <span className={`mt-5 inline-flex items-center gap-1.5 text-body-sm font-semibold ${card.disabled ? 'text-text-tertiary' : card.ctaColor}`}>
-                  {card.disabled ? 'Belum tersedia' : card.cta}
+                <span
+                  className={`mt-5 inline-flex items-center gap-1.5 text-body-sm font-semibold ${
+                    card.disabled ? "text-text-tertiary" : card.ctaColor
+                  }`}
+                >
+                  {card.disabled ? "Belum tersedia" : card.cta}
                   {card.disabled ? null : (
                     <ArrowRight
                       size={14}
@@ -325,7 +330,7 @@ function DashboardPage() {
       {/* ── Section 3: Last Sheet + Curriculum Tips ──────────────────────── */}
       <section
         className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 animate-fade-up-stagger"
-        style={{ '--index': 2 } as React.CSSProperties}
+        style={{ "--index": 2 } as React.CSSProperties}
       >
         {/* Last exam card */}
         <div className="bg-bg-surface border border-border-default rounded-md p-6">
@@ -341,106 +346,108 @@ function DashboardPage() {
             </Link>
           </div>
 
-          {lastExam ? (
-            <div className="flex gap-5 p-4 bg-kertas-50 border border-border-default rounded-sm">
-              <div className="w-[140px] shrink-0 hidden sm:block">
-                <MiniPaperPreview exam={lastExam} />
-              </div>
+          {lastExam ?
+            (
+              <div className="flex gap-5 p-4 bg-kertas-50 border border-border-default rounded-sm">
+                <div className="w-[140px] shrink-0 hidden sm:block">
+                  <MiniPaperPreview exam={lastExam} />
+                </div>
 
-              <div className="flex flex-col min-w-0">
-                <h4 className="text-h3 font-bold text-text-primary m-0 mb-2 leading-snug">
-                  {lastExam.title}
-                </h4>
+                <div className="flex flex-col min-w-0">
+                  <h4 className="text-h3 font-bold text-text-primary m-0 mb-2 leading-snug">
+                    {lastExam.title}
+                  </h4>
 
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-secondary mb-3">
-                  <span>
-                    <span className="text-text-tertiary mr-1">Topik:</span>
-                    {lastExam.topics.join(', ')}
-                  </span>
-                  <span>
-                    <span className="text-text-tertiary mr-1">Dibuat:</span>
-                    {formatDate(lastExam.createdAt)}
-                  </span>
-                  {lastExam.durationMinutes !== null ? (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-secondary mb-3">
                     <span>
-                      <span className="text-text-tertiary mr-1">Durasi:</span>
-                      {lastExam.durationMinutes} menit
+                      <span className="text-text-tertiary mr-1">Topik:</span>
+                      {lastExam.topics.join(", ")}
                     </span>
-                  ) : null}
-                </div>
+                    <span>
+                      <span className="text-text-tertiary mr-1">Dibuat:</span>
+                      {formatDate(lastExam.createdAt)}
+                    </span>
+                    {lastExam.durationMinutes !== null ?
+                      (
+                        <span>
+                          <span className="text-text-tertiary mr-1">Durasi:</span>
+                          {lastExam.durationMinutes} menit
+                        </span>
+                      ) :
+                      null}
+                  </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={lastExam.status === 'final' ? 'success' : 'warning'}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current inline-block" />
-                    {lastExam.status === 'final' ? 'Final' : 'Draft'}
-                  </Badge>
-                  {lastExam.status === 'final' ? (
-                    <Badge variant="secondary">Siap cetak</Badge>
-                  ) : null}
-                </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={lastExam.status === "final" ? "success" : "warning"}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current inline-block" />
+                      {lastExam.status === "final" ? "Final" : "Draft"}
+                    </Badge>
+                    {lastExam.status === "final" ? <Badge variant="secondary">Siap cetak</Badge> : null}
+                  </div>
 
-                <p className="text-body-sm text-text-secondary m-0 mt-3 leading-snug">
-                  Semua soal siap. Lembar jawaban dan kunci jawaban tergabung dalam satu file cetak.
-                </p>
+                  <p className="text-body-sm text-text-secondary m-0 mt-3 leading-snug">
+                    Semua soal siap. Lembar jawaban dan kunci jawaban tergabung dalam satu file cetak.
+                  </p>
 
-                <div className="flex gap-2 flex-wrap mt-4">
-                  {lastExam.status === 'final' ? (
-                    <>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => void navigate({ to: '/preview', search: { examId: lastExam.id } })}
-                      >
-                        <PrinterIcon size={13} />
-                        Cetak lembar
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!KOREKSI_ENABLED}
-                        title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
-                        onClick={() =>
-                          void navigate({
-                            to: '/correction/$examId',
-                            params: { examId: lastExam.id },
-                          })
-                        }
-                      >
-                        <CheckSquare size={13} />
-                        Koreksi
-                      </Button>
-                    </>
-                  ) : (
+                  <div className="flex gap-2 flex-wrap mt-4">
+                    {lastExam.status === "final" ?
+                      (
+                        <>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => void navigate({ to: "/preview", search: { examId: lastExam.id } })}
+                          >
+                            <PrinterIcon size={13} />
+                            Cetak lembar
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={!KOREKSI_ENABLED}
+                            title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+                            onClick={() =>
+                              void navigate({
+                                to: "/correction/$examId",
+                                params: { examId: lastExam.id }
+                              })}
+                          >
+                            <CheckSquare size={13} />
+                            Koreksi
+                          </Button>
+                        </>
+                      ) :
+                      (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() =>
+                            void navigate({
+                              to: "/review",
+                              search: { examId: lastExam.id, mode: lastExam.reviewMode }
+                            })}
+                        >
+                          <Pencil size={13} />
+                          Edit
+                        </Button>
+                      )}
                     <Button
-                      variant="primary"
+                      variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        void navigate({
-                          to: '/review',
-                          search: { examId: lastExam.id, mode: lastExam.reviewMode },
-                        })
-                      }
+                      onClick={() => duplicate.openFor(lastExam)}
                     >
-                      <Pencil size={13} />
-                      Edit
+                      <Copy size={13} />
+                      Duplikat
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => duplicate.openFor(lastExam)}
-                  >
-                    <Copy size={13} />
-                    Duplikat
-                  </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="py-10 text-center text-text-tertiary text-body-sm">
-              Belum ada lembar ujian. Mulai generate lembar pertama Anda.
-            </div>
-          )}
+            ) :
+            (
+              <div className="py-10 text-center text-text-tertiary text-body-sm">
+                Belum ada lembar ujian. Mulai generate lembar pertama Anda.
+              </div>
+            )}
         </div>
 
         {/* Curriculum tips */}
@@ -450,7 +457,7 @@ function DashboardPage() {
       {/* ── Section 4: History Table ─────────────────────────────────────── */}
       <section
         className="animate-fade-up-stagger"
-        style={{ '--index': 3 } as React.CSSProperties}
+        style={{ "--index": 3 } as React.CSSProperties}
       >
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-h2 font-bold text-text-primary">Riwayat terbaru</h2>
@@ -480,15 +487,15 @@ function DashboardPage() {
           </div>
 
           {/* Rows */}
-          {recent.length > 0 ? (
-            recent.map((exam) => (
-              <ExamHistoryRow key={exam.id} exam={exam} onDuplicate={duplicate.openFor} />
-            ))
-          ) : (
-            <div className="py-8 text-center text-text-tertiary text-body-sm">
-              Belum ada riwayat ujian.
-            </div>
-          )}
+          {recent.length > 0 ?
+            (
+              recent.map((exam) => <ExamHistoryRow key={exam.id} exam={exam} onDuplicate={duplicate.openFor} />)
+            ) :
+            (
+              <div className="py-8 text-center text-text-tertiary text-body-sm">
+                Belum ada riwayat ujian.
+              </div>
+            )}
 
           {/* Footer */}
           <div className="flex items-center justify-between px-5 py-3.5 bg-kertas-50 border-t border-border-default">
@@ -509,8 +516,12 @@ function DashboardPage() {
         <DuplicateConfirmDialog
           exam={duplicate.confirmingExam}
           open={true}
-          onOpenChange={(open) => { if (!open) duplicate.close() }}
-          onConfirm={() => { void duplicate.confirm() }}
+          onOpenChange={(open) => {
+            if (!open) duplicate.close()
+          }}
+          onConfirm={() => {
+            void duplicate.confirm()
+          }}
           isPending={duplicate.isPending}
         />
       )}

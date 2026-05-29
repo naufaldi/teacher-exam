@@ -1,11 +1,11 @@
-import * as React from 'react'
-import { createPortal } from 'react-dom'
-import { Toast } from './toast'
+import * as React from "react"
+import { createPortal } from "react-dom"
+import { Toast } from "./toast"
 
 export interface ToastOptions {
   title: string
   description?: string
-  variant?: 'success' | 'error' | 'warning' | 'info'
+  variant?: "success" | "error" | "warning" | "info"
   duration?: number
 }
 
@@ -13,7 +13,7 @@ interface ToastItem {
   id: string
   title: string
   description?: string
-  variant: 'success' | 'error' | 'warning' | 'info'
+  variant: "success" | "error" | "warning" | "info"
   duration: number
   dismissing: boolean
 }
@@ -31,7 +31,7 @@ const MAX_TOASTS = 3
 const EXIT_DURATION = 300
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<ToastItem[]>([])
+  const [toasts, setToasts] = React.useState<Array<ToastItem>>([])
   const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
 
   React.useEffect(() => {
@@ -43,9 +43,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const dismiss = React.useCallback((id: string) => {
     // Phase 1: mark as dismissing for exit animation
-    setToasts((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
-    )
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)))
     // Phase 2: remove after animation completes
     const t = setTimeout(() => {
       timers.current.delete(t)
@@ -60,10 +58,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const newToast: ToastItem = {
         id,
         title: opts.title,
-        variant: opts.variant ?? 'info',
+        variant: opts.variant ?? "info",
         duration: opts.duration ?? 5000,
         dismissing: false,
-        ...(opts.description !== undefined ? { description: opts.description } : {}),
+        ...(opts.description !== undefined ? { description: opts.description } : {})
       }
 
       setToasts((prev) => {
@@ -71,9 +69,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         // If over max, mark oldest non-dismissing ones for removal
         if (next.length > MAX_TOASTS) {
           const excess = next.length - MAX_TOASTS
-          return next.map((item, i) =>
-            i < excess && !item.dismissing ? { ...item, dismissing: true } : item,
-          )
+          return next.map((item, i) => i < excess && !item.dismissing ? { ...item, dismissing: true } : item)
         }
         return next
       })
@@ -90,7 +86,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       }, EXIT_DURATION)
       timers.current.add(t)
     },
-    [],
+    []
   )
 
   const contextValue = React.useMemo(() => ({ toast, dismiss }), [toast, dismiss])
@@ -98,7 +94,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      {typeof document !== 'undefined' &&
+      {typeof document !== "undefined" &&
         createPortal(
           <div
             role="region"
@@ -118,7 +114,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               />
             ))}
           </div>,
-          document.body,
+          document.body
         )}
     </ToastContext.Provider>
   )
@@ -127,7 +123,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = React.useContext(ToastContext)
   if (ctx === null) {
-    throw new Error('useToast must be used within a ToastProvider')
+    throw new Error("useToast must be used within a ToastProvider")
   }
   return ctx
 }

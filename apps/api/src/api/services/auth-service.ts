@@ -1,9 +1,9 @@
-import { Context, Data, Effect, Layer } from 'effect'
-import type { AppDb } from './db'
-import { DbClient } from './db'
-import { getAuth } from '../../lib/auth'
+import { Context, Data, Effect, Layer } from "effect"
+import { getAuth } from "../../lib/auth"
+import type { AppDb } from "./db"
+import { DbClient } from "./db"
 
-export class AuthError extends Data.TaggedError('AuthError')<{
+export class AuthError extends Data.TaggedError("AuthError")<{
   cause: unknown
 }> {}
 
@@ -14,7 +14,7 @@ export interface AuthSession {
 
 export interface AuthServiceApi {
   readonly getSession: (
-    headers: Headers,
+    headers: Headers
   ) => Effect.Effect<AuthSession | null, AuthError>
   readonly signInEmail: (input: {
     email: string
@@ -24,10 +24,10 @@ export interface AuthServiceApi {
   }) => Effect.Effect<Response, AuthError>
 }
 
-export class AuthService extends Context.Tag('AuthService')<AuthService, AuthServiceApi>() {}
+export class AuthService extends Context.Tag("AuthService")<AuthService, AuthServiceApi>() {}
 
 export type AuthEffectRunner = <A, E>(
-  effect: Effect.Effect<A, E, DbClient>,
+  effect: Effect.Effect<A, E, DbClient>
 ) => Promise<A>
 
 let authEffectRunner: AuthEffectRunner | undefined
@@ -38,7 +38,7 @@ export function setAuthEffectRunner(runner: AuthEffectRunner): void {
 
 export function runAuthDbEffect<A, E>(
   db: AppDb,
-  effect: Effect.Effect<A, E, DbClient>,
+  effect: Effect.Effect<A, E, DbClient>
 ): Promise<A> {
   if (authEffectRunner) {
     return authEffectRunner(effect)
@@ -57,9 +57,8 @@ function headersToRecord(headers: Headers): Record<string, string> {
 export function TestAuthServiceLayer(api: Partial<AuthServiceApi> = {}): Layer.Layer<AuthService> {
   return Layer.succeed(AuthService, {
     getSession: () => Effect.succeed(null),
-    signInEmail: () =>
-      Effect.succeed(new Response(JSON.stringify({}), { status: 200 })),
-    ...api,
+    signInEmail: () => Effect.succeed(new Response(JSON.stringify({}), { status: 200 })),
+    ...api
   })
 }
 
@@ -70,7 +69,7 @@ export const AuthServiceLive = Layer.sync(AuthService, () => {
     getSession: (headers) =>
       Effect.tryPromise({
         try: () => auth.api.getSession({ headers: headersToRecord(headers) }),
-        catch: (cause) => new AuthError({ cause }),
+        catch: (cause) => new AuthError({ cause })
       }),
 
     signInEmail: (input) =>
@@ -79,7 +78,7 @@ export const AuthServiceLive = Layer.sync(AuthService, () => {
           auth.api.signInEmail({
             body: {
               email: input.email,
-              password: input.password,
+              password: input.password
             },
             ...(input.headers !== undefined
               ? { headers: headersToRecord(input.headers) }
@@ -87,9 +86,9 @@ export const AuthServiceLive = Layer.sync(AuthService, () => {
             asResponse: true,
             ...(input.callbackURL !== undefined && input.callbackURL.length > 0
               ? { callbackURL: input.callbackURL }
-              : {}),
+              : {})
           }),
-        catch: (cause) => new AuthError({ cause }),
-      }),
+        catch: (cause) => new AuthError({ cause })
+      })
   } satisfies AuthServiceApi
 })

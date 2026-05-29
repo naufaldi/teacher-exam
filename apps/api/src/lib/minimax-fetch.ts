@@ -1,23 +1,23 @@
-import https from 'node:https'
+import https from "node:https"
 
-const MINIMAX_HOSTS = new Set(['api.minimax.io'])
+const MINIMAX_HOSTS = new Set(["api.minimax.io"])
 
 function isDnsFailure(error: unknown): boolean {
   const codes = collectErrorCodes(error)
-  return codes.some((code) => code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ESERVFAIL')
+  return codes.some((code) => code === "ENOTFOUND" || code === "EAI_AGAIN" || code === "ESERVFAIL")
 }
 
-function collectErrorCodes(error: unknown): string[] {
-  const codes: string[] = []
+function collectErrorCodes(error: unknown): Array<string> {
+  const codes: Array<string> = []
   let current: unknown = error
   for (let depth = 0; depth < 4 && current !== undefined && current !== null; depth += 1) {
-    if (typeof current === 'object' && current !== null && 'code' in current) {
+    if (typeof current === "object" && current !== null && "code" in current) {
       const code = (current as { code?: unknown }).code
-      if (typeof code === 'string') {
+      if (typeof code === "string") {
         codes.push(code)
       }
     }
-    if (typeof current === 'object' && current !== null && 'cause' in current) {
+    if (typeof current === "object" && current !== null && "cause" in current) {
       current = (current as { cause?: unknown }).cause
       continue
     }
@@ -52,7 +52,7 @@ function mergeRequestInit(input: string | URL | Request, init?: RequestInit): Re
   const merged: RequestInit = {
     method: init?.method ?? input.method,
     headers,
-    body: init?.body ?? input.body,
+    body: init?.body ?? input.body
   }
   if (init?.signal !== undefined) {
     merged.signal = init.signal
@@ -60,10 +60,10 @@ function mergeRequestInit(input: string | URL | Request, init?: RequestInit): Re
   return merged
 }
 
-export async function resolveHostViaGoogleDns(hostname: string): Promise<string[]> {
+export async function resolveHostViaGoogleDns(hostname: string): Promise<Array<string>> {
   const response = await fetch(
     `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=A`,
-    { signal: AbortSignal.timeout(5000) },
+    { signal: AbortSignal.timeout(5000) }
   )
   if (!response.ok) {
     throw new Error(`DNS lookup failed for ${hostname}: HTTP ${response.status}`)
@@ -86,11 +86,11 @@ export async function resolveHostViaGoogleDns(hostname: string): Promise<string[
 export function fetchViaResolvedIp(
   requestUrl: URL,
   ip: string,
-  init?: RequestInit,
+  init?: RequestInit
 ): Promise<Response> {
-  const method = init?.method ?? 'GET'
+  const method = init?.method ?? "GET"
   const headers = new Headers(init?.headers)
-  headers.set('host', requestUrl.host)
+  headers.set("host", requestUrl.host)
 
   const body = init?.body
 
@@ -101,28 +101,28 @@ export function fetchViaResolvedIp(
         servername: requestUrl.hostname,
         path: `${requestUrl.pathname}${requestUrl.search}`,
         method,
-        headers: Object.fromEntries(headers.entries()),
+        headers: Object.fromEntries(headers.entries())
       },
       (res) => {
-        const chunks: Buffer[] = []
-        res.on('data', (chunk: Buffer) => {
+        const chunks: Array<Buffer> = []
+        res.on("data", (chunk: Buffer) => {
           chunks.push(chunk)
         })
-        res.on('end', () => {
+        res.on("end", () => {
           resolve(
             new Response(Buffer.concat(chunks), {
               status: res.statusCode ?? 502,
-              statusText: res.statusMessage ?? 'Bad Gateway',
-              headers: res.headers as Record<string, string>,
-            }),
+              statusText: res.statusMessage ?? "Bad Gateway",
+              headers: res.headers as Record<string, string>
+            })
           )
         })
-      },
+      }
     )
 
-    req.on('error', reject)
+    req.on("error", reject)
     req.setTimeout(30 * 60 * 1000, () => {
-      req.destroy(new Error('Request timeout'))
+      req.destroy(new Error("Request timeout"))
     })
 
     if (body === null || body === undefined) {
@@ -130,7 +130,7 @@ export function fetchViaResolvedIp(
       return
     }
 
-    if (typeof body === 'string') {
+    if (typeof body === "string") {
       req.write(body)
       req.end()
       return
@@ -142,13 +142,13 @@ export function fetchViaResolvedIp(
       return
     }
 
-    reject(new Error('Unsupported request body type for MiniMax DNS fallback fetch'))
+    reject(new Error("Unsupported request body type for MiniMax DNS fallback fetch"))
   })
 }
 
 export function createMinimaxFetch(
   baseFetch: typeof fetch = globalThis.fetch,
-  ipFetch: typeof fetchViaResolvedIp = fetchViaResolvedIp,
+  ipFetch: typeof fetchViaResolvedIp = fetchViaResolvedIp
 ): typeof fetch {
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const mergedInit = mergeRequestInit(input, init)
@@ -178,6 +178,6 @@ export function createMinimaxFetch(
 }
 
 export function isMinimaxDnsFallbackEnabled(): boolean {
-  const flag = process.env['MINIMAX_DNS_FALLBACK']?.trim().toLowerCase()
-  return flag !== '0' && flag !== 'false' && flag !== 'off'
+  const flag = process.env["MINIMAX_DNS_FALLBACK"]?.trim().toLowerCase()
+  return flag !== "0" && flag !== "false" && flag !== "off"
 }

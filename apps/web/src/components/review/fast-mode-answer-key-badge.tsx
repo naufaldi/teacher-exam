@@ -1,17 +1,17 @@
-import type { Question } from '@teacher-exam/shared'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@teacher-exam/ui'
-import { matchQuestion, questionCorrectLabel } from '../../lib/question-render.js'
+import type { Question } from "@teacher-exam/shared"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@teacher-exam/ui"
+import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
 
 function answerKeyTooltip(question: Question): string {
   return matchQuestion(question, {
     mcq_single: (q) => `Jawaban benar: pilihan ${q.correct.toUpperCase()}`,
     mcq_multi: (q) => {
       const labels = q.correct.map((l) => l.toUpperCase())
-      if (labels.length <= 1) return `Jawaban benar: pilihan ${labels[0] ?? ''}`
+      if (labels.length <= 1) return `Jawaban benar: pilihan ${labels[0] ?? ""}`
       const last = labels.pop()
-      return `Jawaban benar: pilihan ${labels.join(', ')} dan ${last ?? ''}`
+      return `Jawaban benar: pilihan ${labels.join(", ")} dan ${last ?? ""}`
     },
-    true_false: () => 'B = Benar, S = Salah per pernyataan',
+    true_false: () => "B = Benar, S = Salah per pernyataan"
   })
 }
 

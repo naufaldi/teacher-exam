@@ -1,40 +1,40 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { db } from '@teacher-exam/db'
-import { buildHttpApiTestApp } from '../http-api-setup.js'
-import { makeChain, makeExamRow, makeQuestionRow } from '../helpers.js'
+import { db } from "@teacher-exam/db"
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
+import { makeChain, makeExamRow, makeQuestionRow } from "../helpers.js"
+import { buildHttpApiTestApp } from "../http-api-setup.js"
 
-const NOW = '2024-01-01T00:00:00.000Z'
+const NOW = "2024-01-01T00:00:00.000Z"
 
 function buildTestApp() {
-  return buildHttpApiTestApp({ userId: 'test-user-id' })
+  return buildHttpApiTestApp({ userId: "test-user-id" })
 }
 
 function makeBankQuestionRow(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'bank-1',
-    userId: 'test-user-id',
-    questionId: 'q-1',
-    subject: 'ipas',
+    id: "bank-1",
+    userId: "test-user-id",
+    questionId: "q-1",
+    subject: "ipas",
     grade: 5,
-    topics: ['Energi'],
-    difficulty: 'sedang',
-    type: 'mcq_single',
+    topics: ["Energi"],
+    difficulty: "sedang",
+    type: "mcq_single",
     payload: {},
     isPublic: false,
     usageCount: 0,
     createdAt: new Date(NOW),
-    ...overrides,
+    ...overrides
   }
 }
 
-describe('GET /api/bank', () => {
+describe("GET /api/bank", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns paginated bank questions for the current user', async () => {
+  it("returns paginated bank questions for the current user", async () => {
     const bankRow = makeBankQuestionRow()
-    const questionRow = makeQuestionRow({ id: 'q-1', text: 'Apa itu energi?' })
+    const questionRow = makeQuestionRow({ id: "q-1", text: "Apa itu energi?" })
 
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
@@ -45,35 +45,35 @@ describe('GET /api/bank', () => {
     })
 
     const app = buildTestApp()
-    const res = await app.request('/api/bank')
+    const res = await app.request("/api/bank")
     expect(res.status).toBe(200)
     const body = await res.json() as Record<string, unknown>
-    expect(body['total']).toBe(1)
-    const data = body['data'] as Array<Record<string, unknown>>
-    expect(data[0]?.['text']).toBe('Apa itu energi?')
+    expect(body["total"]).toBe(1)
+    const data = body["data"] as Array<Record<string, unknown>>
+    expect(data[0]?.["text"]).toBe("Apa itu energi?")
   })
 })
 
-describe('POST /api/bank', () => {
+describe("POST /api/bank", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 404 when question is not owned by user', async () => {
+  it("returns 404 when question is not owned by user", async () => {
     ;(db.select as Mock).mockReturnValue(makeChain([]))
 
     const app = buildTestApp()
-    const res = await app.request('/api/bank', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: 'missing-q' }),
+    const res = await app.request("/api/bank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: "missing-q" })
     })
     expect(res.status).toBe(404)
   })
 
-  it('saves a question to bank and returns 201', async () => {
-    const examRow = makeExamRow({ subject: 'ipas', grade: 5 })
-    const questionRow = makeQuestionRow({ id: 'q-1', examId: 'exam-1', text: 'Soal bank' })
+  it("saves a question to bank and returns 201", async () => {
+    const examRow = makeExamRow({ subject: "ipas", grade: 5 })
+    const questionRow = makeQuestionRow({ id: "q-1", examId: "exam-1", text: "Soal bank" })
     const bankRow = makeBankQuestionRow()
 
     let selectCount = 0
@@ -88,61 +88,61 @@ describe('POST /api/bank', () => {
     ;(db.insert as Mock).mockReturnValue({
       values: vi.fn(() => ({
         onConflictDoNothing: vi.fn(() => ({
-          returning: vi.fn(() => insertChain),
-        })),
-      })),
+          returning: vi.fn(() => insertChain)
+        }))
+      }))
     })
 
     const app = buildTestApp()
-    const res = await app.request('/api/bank', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: 'q-1' }),
+    const res = await app.request("/api/bank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: "q-1" })
     })
     expect(res.status).toBe(201)
     const body = await res.json() as Record<string, unknown>
-    expect(body['text']).toBe('Soal bank')
+    expect(body["text"]).toBe("Soal bank")
   })
 })
 
-describe('DELETE /api/bank/:id', () => {
+describe("DELETE /api/bank/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 404 when bank question not found', async () => {
+  it("returns 404 when bank question not found", async () => {
     ;(db.select as Mock).mockReturnValue(makeChain([]))
 
     const app = buildTestApp()
-    const res = await app.request('/api/bank/missing', { method: 'DELETE' })
+    const res = await app.request("/api/bank/missing", { method: "DELETE" })
     expect(res.status).toBe(404)
   })
 
-  it('deletes owned bank question', async () => {
+  it("deletes owned bank question", async () => {
     const bankRow = makeBankQuestionRow()
     ;(db.select as Mock).mockReturnValue(makeChain([bankRow]))
     ;(db.delete as Mock).mockReturnValue(makeChain(undefined))
 
     const app = buildTestApp()
-    const res = await app.request('/api/bank/bank-1', { method: 'DELETE' })
+    const res = await app.request("/api/bank/bank-1", { method: "DELETE" })
     expect(res.status).toBe(204)
   })
 })
 
-describe('POST /api/bank/build-exam', () => {
+describe("POST /api/bank/build-exam", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 422 when fewer than 5 questions', async () => {
+  it("returns 422 when fewer than 5 questions", async () => {
     const app = buildTestApp()
-    const res = await app.request('/api/bank/build-exam', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/bank/build-exam", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        bankQuestionIds: ['a', 'b', 'c', 'd'],
-        metadata: { subject: 'ipas', grade: 5 },
-      }),
+        bankQuestionIds: ["a", "b", "c", "d"],
+        metadata: { subject: "ipas", grade: 5 }
+      })
     })
     expect(res.status).toBe(400)
   })

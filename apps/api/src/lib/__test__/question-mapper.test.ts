@@ -1,141 +1,153 @@
-import { describe, test, expect } from 'vitest'
-import { rowToQuestion, questionToRow } from '../question-mapper'
+import { describe, expect, test } from "vitest"
+import { questionToRow, rowToQuestion } from "../question-mapper"
 
 const baseRow = {
-  id: 'q_1',
-  examId: 'e_1',
+  id: "q_1",
+  examId: "e_1",
   number: 1,
-  text: 'Apa ibukota?',
-  topic: 'Geografi',
-  difficulty: 'mudah',
-  status: 'accepted' as const,
+  text: "Apa ibukota?",
+  topic: "Geografi",
+  difficulty: "mudah",
+  status: "accepted" as const,
   validationStatus: null,
   validationReason: null,
-  createdAt: '2024-01-01T00:00:00Z',
+  createdAt: "2024-01-01T00:00:00Z"
 }
 
-describe('rowToQuestion', () => {
-  test('maps legacy mcq_single row (payload null, flat options)', () => {
+describe("rowToQuestion", () => {
+  test("maps legacy mcq_single row (payload null, flat options)", () => {
     const result = rowToQuestion({
       ...baseRow,
-      type: 'mcq_single',
-      optionA: 'Jakarta', optionB: 'Bandung', optionC: 'Surabaya', optionD: 'Medan',
-      correctAnswer: 'a',
-      payload: null,
+      type: "mcq_single",
+      optionA: "Jakarta",
+      optionB: "Bandung",
+      optionC: "Surabaya",
+      optionD: "Medan",
+      correctAnswer: "a",
+      payload: null
     })
-    expect(result._tag).toBe('mcq_single')
+    expect(result._tag).toBe("mcq_single")
     expect(result.figure).toBeNull()
-    if (result._tag === 'mcq_single') {
-      expect(result.options.a).toBe('Jakarta')
-      expect(result.correct).toBe('a')
+    if (result._tag === "mcq_single") {
+      expect(result.options.a).toBe("Jakarta")
+      expect(result.correct).toBe("a")
     }
   })
 
-  test('maps figure from payload for a persisted mcq_single row', () => {
+  test("maps figure from payload for a persisted mcq_single row", () => {
     const result = rowToQuestion({
       ...baseRow,
-      type: 'mcq_single',
-      optionA: '154 cm²', optionB: '44 cm²', optionC: '22 cm²', optionD: '49 cm²',
-      correctAnswer: 'a',
-      payload: { figure: { type: 'circle', radius: 7, label: 'r = 7 cm' } },
+      type: "mcq_single",
+      optionA: "154 cm²",
+      optionB: "44 cm²",
+      optionC: "22 cm²",
+      optionD: "49 cm²",
+      correctAnswer: "a",
+      payload: { figure: { type: "circle", radius: 7, label: "r = 7 cm" } }
     })
-    expect(result.figure).toEqual({ type: 'circle', radius: 7, label: 'r = 7 cm' })
+    expect(result.figure).toEqual({ type: "circle", radius: 7, label: "r = 7 cm" })
   })
 
-  test('maps mcq_multi row (payload present, legacy cols null)', () => {
+  test("maps mcq_multi row (payload present, legacy cols null)", () => {
     const result = rowToQuestion({
       ...baseRow,
-      type: 'mcq_multi',
-      optionA: null, optionB: null, optionC: null, optionD: null,
+      type: "mcq_multi",
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
       correctAnswer: null,
       payload: {
-        options: { a: 'x', b: 'y', c: 'z', d: 'w' },
-        correct: ['a', 'c'],
-      },
+        options: { a: "x", b: "y", c: "z", d: "w" },
+        correct: ["a", "c"]
+      }
     })
-    expect(result._tag).toBe('mcq_multi')
-    if (result._tag === 'mcq_multi') {
-      expect(result.correct).toEqual(['a', 'c'])
+    expect(result._tag).toBe("mcq_multi")
+    if (result._tag === "mcq_multi") {
+      expect(result.correct).toEqual(["a", "c"])
     }
   })
 
-  test('maps true_false row (payload present, no options)', () => {
+  test("maps true_false row (payload present, no options)", () => {
     const result = rowToQuestion({
       ...baseRow,
-      type: 'true_false',
-      optionA: null, optionB: null, optionC: null, optionD: null,
+      type: "true_false",
+      optionA: null,
+      optionB: null,
+      optionC: null,
+      optionD: null,
       correctAnswer: null,
       payload: {
         statements: [
-          { text: 'Jakarta ibukota', answer: true },
-          { text: 'Bali ibukota', answer: false },
-          { text: 'Indonesia Asia', answer: true },
-        ],
-      },
+          { text: "Jakarta ibukota", answer: true },
+          { text: "Bali ibukota", answer: false },
+          { text: "Indonesia Asia", answer: true }
+        ]
+      }
     })
-    expect(result._tag).toBe('true_false')
-    if (result._tag === 'true_false') {
+    expect(result._tag).toBe("true_false")
+    if (result._tag === "true_false") {
       expect(result.statements).toHaveLength(3)
       expect(result.statements[0]?.answer).toBe(true)
     }
   })
 })
 
-describe('questionToRow', () => {
-  test('mcq_single writes flat cols, payload null', () => {
+describe("questionToRow", () => {
+  test("mcq_single writes flat cols, payload null", () => {
     const result = questionToRow({
-      _tag: 'mcq_single',
+      _tag: "mcq_single",
       ...baseRow,
       figure: null,
-      options: { a: 'Jakarta', b: 'Bandung', c: 'Surabaya', d: 'Medan' },
-      correct: 'a',
+      options: { a: "Jakarta", b: "Bandung", c: "Surabaya", d: "Medan" },
+      correct: "a"
     })
-    expect(result.type).toBe('mcq_single')
-    expect(result.optionA).toBe('Jakarta')
-    expect(result.correctAnswer).toBe('a')
+    expect(result.type).toBe("mcq_single")
+    expect(result.optionA).toBe("Jakarta")
+    expect(result.correctAnswer).toBe("a")
     expect(result.payload).toBeNull()
   })
 
-  test('mcq_single writes figure into payload without moving legacy option columns', () => {
+  test("mcq_single writes figure into payload without moving legacy option columns", () => {
     const result = questionToRow({
-      _tag: 'mcq_single',
+      _tag: "mcq_single",
       ...baseRow,
-      figure: { type: 'circle', radius: 7, label: 'r = 7 cm' },
-      options: { a: '154 cm²', b: '44 cm²', c: '22 cm²', d: '49 cm²' },
-      correct: 'a',
+      figure: { type: "circle", radius: 7, label: "r = 7 cm" },
+      options: { a: "154 cm²", b: "44 cm²", c: "22 cm²", d: "49 cm²" },
+      correct: "a"
     })
-    expect(result.optionA).toBe('154 cm²')
-    expect(result.correctAnswer).toBe('a')
-    expect(result.payload).toEqual({ figure: { type: 'circle', radius: 7, label: 'r = 7 cm' } })
+    expect(result.optionA).toBe("154 cm²")
+    expect(result.correctAnswer).toBe("a")
+    expect(result.payload).toEqual({ figure: { type: "circle", radius: 7, label: "r = 7 cm" } })
   })
 
-  test('mcq_multi writes payload, legacy cols null', () => {
+  test("mcq_multi writes payload, legacy cols null", () => {
     const result = questionToRow({
-      _tag: 'mcq_multi',
+      _tag: "mcq_multi",
       ...baseRow,
-      options: { a: 'x', b: 'y', c: 'z', d: 'w' },
-      correct: ['a', 'c'],
+      options: { a: "x", b: "y", c: "z", d: "w" },
+      correct: ["a", "c"]
     })
-    expect(result.type).toBe('mcq_multi')
+    expect(result.type).toBe("mcq_multi")
     expect(result.optionA).toBeNull()
     expect(result.correctAnswer).toBeNull()
-    expect(result.payload).toEqual({ options: { a: 'x', b: 'y', c: 'z', d: 'w' }, correct: ['a', 'c'] })
+    expect(result.payload).toEqual({ options: { a: "x", b: "y", c: "z", d: "w" }, correct: ["a", "c"] })
   })
 
-  test('true_false writes payload with statements, legacy cols null', () => {
+  test("true_false writes payload with statements, legacy cols null", () => {
     const result = questionToRow({
-      _tag: 'true_false',
+      _tag: "true_false",
       ...baseRow,
       statements: [
-        { text: 'p1', answer: true },
-        { text: 'p2', answer: false },
-        { text: 'p3', answer: true },
-      ],
+        { text: "p1", answer: true },
+        { text: "p2", answer: false },
+        { text: "p3", answer: true }
+      ]
     })
-    expect(result.type).toBe('true_false')
+    expect(result.type).toBe("true_false")
     expect(result.optionA).toBeNull()
     expect(result.payload).toEqual({
-      statements: [{ text: 'p1', answer: true }, { text: 'p2', answer: false }, { text: 'p3', answer: true }],
+      statements: [{ text: "p1", answer: true }, { text: "p2", answer: false }, { text: "p3", answer: true }]
     })
   })
 })

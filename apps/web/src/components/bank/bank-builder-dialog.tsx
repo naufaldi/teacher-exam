@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import type { BuildExamFromBankMetadata, ExamSubject } from '@teacher-exam/shared'
+import type { BuildExamFromBankMetadata, ExamSubject } from "@teacher-exam/shared"
 import {
   Button,
   Dialog,
@@ -10,8 +9,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Textarea,
-} from '@teacher-exam/ui'
+  Textarea
+} from "@teacher-exam/ui"
+import { useState } from "react"
 
 interface BankBuilderDialogProps {
   open: boolean
@@ -24,24 +24,29 @@ interface BankBuilderDialogProps {
 }
 
 function BankBuilderDialog({
-  open,
-  selectedCount,
-  defaultSubject,
   defaultGrade,
+  defaultSubject,
   loading,
   onClose,
   onSubmit,
+  open,
+  selectedCount
 }: BankBuilderDialogProps) {
-  const [schoolName, setSchoolName] = useState('')
-  const [academicYear, setAcademicYear] = useState('')
-  const [examType, setExamType] = useState<BuildExamFromBankMetadata['examType']>('latihan')
-  const [examDate, setExamDate] = useState('')
-  const [durationMinutes, setDurationMinutes] = useState('60')
-  const [instructions, setInstructions] = useState('')
-  const [classContext, setClassContext] = useState('')
+  const [schoolName, setSchoolName] = useState("")
+  const [academicYear, setAcademicYear] = useState("")
+  const [examType, setExamType] = useState<BuildExamFromBankMetadata["examType"]>("latihan")
+  const [examDate, setExamDate] = useState("")
+  const [durationMinutes, setDurationMinutes] = useState("60")
+  const [instructions, setInstructions] = useState("")
+  const [classContext, setClassContext] = useState("")
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Buat ujian dari bank</DialogTitle>
@@ -71,10 +76,8 @@ function BankBuilderDialog({
             <Label htmlFor="builder-type">Jenis ujian</Label>
             <select
               id="builder-type"
-              value={examType ?? 'latihan'}
-              onChange={(e) =>
-                setExamType(e.target.value as BuildExamFromBankMetadata['examType'])
-              }
+              value={examType ?? "latihan"}
+              onChange={(e) => setExamType(e.target.value as BuildExamFromBankMetadata["examType"])}
               className="w-full rounded-md border border-border-default bg-bg-surface px-3 py-2 text-body-sm"
             >
               <option value="latihan">Latihan</option>
@@ -140,11 +143,10 @@ function BankBuilderDialog({
                 ...(examDate ? { examDate } : {}),
                 durationMinutes: Number(durationMinutes) || 60,
                 ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
-                ...(classContext.trim() ? { classContext: classContext.trim() } : {}),
-              })
-            }
+                ...(classContext.trim() ? { classContext: classContext.trim() } : {})
+              })}
           >
-            {loading ? 'Membuat…' : 'Buat ujian'}
+            {loading ? "Membuat…" : "Buat ujian"}
           </Button>
         </DialogFooter>
       </DialogContent>

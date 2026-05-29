@@ -1,34 +1,34 @@
-import * as React from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cva, type VariantProps } from "class-variance-authority"
+import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from "lucide-react"
+import * as React from "react"
+import { cn } from "../lib/utils"
 
 const toastVariants = cva(
   [
-    'relative flex items-start gap-3 rounded-md border px-4 py-3 shadow-md',
-    'min-w-[280px] max-w-[380px] w-full',
-    'transition-all duration-300 ease-[cubic-bezier(0.4,0.0,0.2,1)]',
+    "relative flex items-start gap-3 rounded-md border px-4 py-3 shadow-md",
+    "min-w-[280px] max-w-[380px] w-full",
+    "transition-all duration-300 ease-[cubic-bezier(0.4,0.0,0.2,1)]"
   ],
   {
     variants: {
       variant: {
-        success: 'bg-success-bg text-success-fg border-success-border',
-        error: 'bg-danger-bg text-danger-fg border-danger-border',
-        warning: 'bg-warning-bg text-warning-fg border-warning-border',
-        info: 'bg-info-bg text-info-fg border-info-border',
-      },
+        success: "bg-success-bg text-success-fg border-success-border",
+        error: "bg-danger-bg text-danger-fg border-danger-border",
+        warning: "bg-warning-bg text-warning-fg border-warning-border",
+        info: "bg-info-bg text-info-fg border-info-border"
+      }
     },
     defaultVariants: {
-      variant: 'info',
-    },
-  },
+      variant: "info"
+    }
+  }
 )
 
 const toastIcons = {
   success: CheckCircle,
   error: AlertCircle,
   warning: AlertTriangle,
-  info: Info,
+  info: Info
 } as const
 
 export interface ToastProps extends VariantProps<typeof toastVariants> {
@@ -43,15 +43,15 @@ export interface ToastProps extends VariantProps<typeof toastVariants> {
 export const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
   (
     {
-      id,
-      title,
       description,
-      variant = 'info',
-      onDismiss,
-      duration = 5000,
       dismissing = false,
+      duration = 5000,
+      id,
+      onDismiss,
+      title,
+      variant = "info"
     },
-    ref,
+    ref
   ) => {
     React.useEffect(() => {
       const timer = setTimeout(() => {
@@ -60,28 +60,26 @@ export const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
       return () => clearTimeout(timer)
     }, [id, duration, onDismiss])
 
-    const resolvedVariant: 'success' | 'error' | 'warning' | 'info' = variant ?? 'info'
+    const resolvedVariant: "success" | "error" | "warning" | "info" = variant ?? "info"
     const IconComp = toastIcons[resolvedVariant]
 
     return (
       <div
         ref={ref}
-        role={resolvedVariant === 'error' || resolvedVariant === 'warning' ? 'alert' : 'status'}
-        aria-live={resolvedVariant === 'error' || resolvedVariant === 'warning' ? 'assertive' : 'polite'}
+        role={resolvedVariant === "error" || resolvedVariant === "warning" ? "alert" : "status"}
+        aria-live={resolvedVariant === "error" || resolvedVariant === "warning" ? "assertive" : "polite"}
         aria-atomic="true"
         className={cn(
           toastVariants({ variant }),
           dismissing
-            ? 'opacity-0 translate-x-4 scale-95'
-            : 'opacity-100 translate-x-0 scale-100',
+            ? "opacity-0 translate-x-4 scale-95"
+            : "opacity-100 translate-x-0 scale-100"
         )}
       >
         <IconComp size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-snug">{title}</p>
-          {description !== undefined && (
-            <p className="text-sm mt-0.5 opacity-80 leading-snug">{description}</p>
-          )}
+          {description !== undefined && <p className="text-sm mt-0.5 opacity-80 leading-snug">{description}</p>}
         </div>
         <button
           type="button"
@@ -93,6 +91,6 @@ export const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
         </button>
       </div>
     )
-  },
+  }
 )
-Toast.displayName = 'Toast'
+Toast.displayName = "Toast"

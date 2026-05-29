@@ -1,18 +1,15 @@
-import { useEffect, useState } from 'react'
-import { Sparkles, Check, Loader2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  Progress,
-} from '@teacher-exam/ui'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, Progress } from "@teacher-exam/ui"
+import { Check, Loader2, Sparkles } from "lucide-react"
+import { useEffect, useState } from "react"
 
 // Elapsed seconds counter — shown only when the bar has frozen at 99%
 function useElapsedSeconds(active: boolean) {
   const [seconds, setSeconds] = useState(0)
   useEffect(() => {
-    if (!active) { setSeconds(0); return }
+    if (!active) {
+      setSeconds(0)
+      return
+    }
     const id = setInterval(() => setSeconds((s) => s + 1), 1000)
     return () => clearInterval(id)
   }, [active])
@@ -20,16 +17,16 @@ function useElapsedSeconds(active: boolean) {
 }
 
 const STEPS = [
-  { id: 0, label: 'Menganalisis materi & CP Fase C', threshold: 0 },
-  { id: 1, label: 'Menyusun soal pilihan ganda', threshold: 20 },
-  { id: 2, label: 'Membuat kunci jawaban', threshold: 60 },
-  { id: 3, label: 'Validasi akhir', threshold: 90 },
+  { id: 0, label: "Menganalisis materi & CP Fase C", threshold: 0 },
+  { id: 1, label: "Menyusun soal pilihan ganda", threshold: 20 },
+  { id: 2, label: "Membuat kunci jawaban", threshold: 60 },
+  { id: 3, label: "Validasi akhir", threshold: 90 }
 ] as const
 
 const TIPS = [
-  'AI menyertakan Capaian Pembelajaran Fase C secara otomatis.',
-  'Setiap lembar berisi soal pilihan ganda — siap dicetak ke A4.',
-  'Setelah selesai, Anda bisa edit setiap soal sebelum dicetak.',
+  "AI menyertakan Capaian Pembelajaran Fase C secara otomatis.",
+  "Setiap lembar berisi soal pilihan ganda — siap dicetak ke A4.",
+  "Setelah selesai, Anda bisa edit setiap soal sebelum dicetak."
 ] as const
 
 export interface GenerateProgressDialogProps {
@@ -45,7 +42,7 @@ export interface GenerateProgressDialogProps {
 export function GenerateProgressDialog({
   open,
   progress,
-  totalSoal,
+  totalSoal
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
   const isOvertime = progress >= 99 && progress < 100
@@ -66,12 +63,12 @@ export function GenerateProgressDialog({
   // Counter starts ramping when step 2 begins and caps at the requested total.
   const soalCount = Math.max(
     0,
-    Math.min(totalSoal, Math.floor(((progress - 20) / 70) * totalSoal)),
+    Math.min(totalSoal, Math.floor(((progress - 20) / 70) * totalSoal))
   )
 
   const activeStepIndex = STEPS.reduce(
     (acc, step) => (progress >= step.threshold ? step.id : acc),
-    0,
+    0
   )
 
   return (
@@ -103,29 +100,33 @@ export function GenerateProgressDialog({
           <div className="space-y-2">
             <Progress
               value={progress}
-              className={['h-2', isOvertime ? 'animate-pulse' : ''].join(' ')}
+              className={["h-2", isOvertime ? "animate-pulse" : ""].join(" ")}
             />
             <div className="flex items-center justify-between text-caption text-text-tertiary tabular-nums">
               <span>
-                {isComplete ? (
-                  <span className="flex items-center gap-1.5 text-success-700">
-                    <Loader2 size={11} className="animate-spin shrink-0" />
-                    Menyiapkan halaman review...
-                  </span>
-                ) : isOvertime ? (
-                  <span className="flex items-center gap-1.5 text-text-secondary">
-                    <Loader2 size={11} className="animate-spin shrink-0" />
-                    Menunggu AI… {overtimeSeconds > 0 ? `${overtimeSeconds}dtk` : ''}
-                  </span>
-                ) : (
-                  `${Math.round(progress)}% selesai`
-                )}
+                {isComplete ?
+                  (
+                    <span className="flex items-center gap-1.5 text-success-700">
+                      <Loader2 size={11} className="animate-spin shrink-0" />
+                      Menyiapkan halaman review...
+                    </span>
+                  ) :
+                  isOvertime ?
+                  (
+                    <span className="flex items-center gap-1.5 text-text-secondary">
+                      <Loader2 size={11} className="animate-spin shrink-0" />
+                      Menunggu AI… {overtimeSeconds > 0 ? `${overtimeSeconds}dtk` : ""}
+                    </span>
+                  ) :
+                  (
+                    `${Math.round(progress)}% selesai`
+                  )}
               </span>
               <span>
-                Soal{' '}
+                Soal{" "}
                 <span className="font-mono font-semibold text-text-primary">
                   {soalCount}
-                </span>{' '}
+                </span>{" "}
                 / {totalSoal} dibuat
               </span>
             </div>
@@ -143,31 +144,27 @@ export function GenerateProgressDialog({
                 >
                   <span
                     className={[
-                      'flex items-center justify-center w-5 h-5 rounded-full shrink-0',
-                      'transition-colors duration-[180ms]',
+                      "flex items-center justify-center w-5 h-5 rounded-full shrink-0",
+                      "transition-colors duration-[180ms]",
                       isDone
-                        ? 'bg-success-solid text-white'
+                        ? "bg-success-solid text-white"
                         : isActive
-                          ? 'bg-primary-100 text-primary-700'
-                          : 'bg-bg-muted text-text-tertiary',
-                    ].join(' ')}
+                        ? "bg-primary-100 text-primary-700"
+                        : "bg-bg-muted text-text-tertiary"
+                    ].join(" ")}
                   >
-                    {isDone ? (
-                      <Check size={12} strokeWidth={3} />
-                    ) : isActive ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                    )}
+                    {isDone ?
+                      <Check size={12} strokeWidth={3} /> :
+                      isActive ?
+                      <Loader2 size={12} className="animate-spin" /> :
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />}
                   </span>
                   <span
-                    className={
-                      isDone
-                        ? 'text-text-secondary line-through decoration-text-tertiary/40'
-                        : isActive
-                          ? 'text-text-primary font-medium'
-                          : 'text-text-tertiary'
-                    }
+                    className={isDone
+                      ? "text-text-secondary line-through decoration-text-tertiary/40"
+                      : isActive
+                      ? "text-text-primary font-medium"
+                      : "text-text-tertiary"}
                   >
                     {step.label}
                   </span>
@@ -179,13 +176,12 @@ export function GenerateProgressDialog({
           {/* Tip rotator */}
           <div className="rounded-sm bg-bg-muted border border-border-default px-3 py-2.5">
             <p className="text-caption text-text-secondary">
-              <span className="font-semibold text-text-primary">Tip · </span>
+              <span className="font-semibold text-text-primary">Tip ·</span>
               <span key={tipIndex} className="animate-fade-up inline-block">
                 {TIPS[tipIndex]}
               </span>
             </p>
           </div>
-
         </div>
       </DialogContent>
     </Dialog>

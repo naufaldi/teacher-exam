@@ -1,26 +1,27 @@
-import { Effect, Layer } from 'effect'
-import { NodeRuntime } from '@effect/platform-node'
-import type { LanguageModel } from '@effect/ai'
-import { existsSync } from 'node:fs'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import type { PDFDocument } from 'pdf-lib'
-import type { ExamSubject } from '@teacher-exam/shared'
-import { AiGenerationError } from '../src/errors/index.js'
-import { buildAnthropicModelLayers } from '../src/lib/effect-ai/layers.js'
-import { buildPrompt } from '../src/lib/effect-ai/prompt.js'
-import { runGenerateText } from '../src/lib/effect-ai/run.js'
-import { extractPageRange, loadPdfDocument, planChunks } from './lib/pdf-split.js'
-import { mergeBab, MergeValidationError } from './lib/merge-bab.js'
-import { curriculumMdFilename } from '../src/lib/curriculum.js'
+import type { LanguageModel } from "@effect/ai"
+import { NodeRuntime } from "@effect/platform-node"
+import type { ExamSubject } from "@teacher-exam/shared"
+import type { Layer } from "effect"
+import { Effect } from "effect"
+import { existsSync } from "node:fs"
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import type { PDFDocument } from "pdf-lib"
+import { AiGenerationError } from "../src/errors/index.js"
+import { curriculumMdFilename } from "../src/lib/curriculum.js"
+import { buildAnthropicModelLayers } from "../src/lib/effect-ai/layers.js"
+import { buildPrompt } from "../src/lib/effect-ai/prompt.js"
+import { runGenerateText } from "../src/lib/effect-ai/run.js"
+import { mergeBab, MergeValidationError } from "./lib/merge-bab.js"
+import { extractPageRange, loadPdfDocument, planChunks } from "./lib/pdf-split.js"
 
 /**
  * One-off extraction of Kemendikdasmen textbook PDFs to curriculum markdown (`pnpm curriculum:extract`).
  * Uses `@effect/ai-anthropic` via `runGenerateText` + PDF file parts (same stack as runtime API).
  */
 
-const MODEL = 'claude-opus-4-7'
+const MODEL = "claude-opus-4-7"
 const MAX_TOKENS = 8192
 const MIN_RETRY_PAGES = 5
 
@@ -40,58 +41,58 @@ interface BookInput {
 }
 
 function defineBook(input: BookInput): BookSpec {
-  return { ...input, slug: curriculumMdFilename(input.subjectKey, input.grade).replace(/\.md$/, '') }
+  return { ...input, slug: curriculumMdFilename(input.subjectKey, input.grade).replace(/\.md$/, "") }
 }
 
-const BOOKS: BookSpec[] = [
+const BOOKS: Array<BookSpec> = [
   defineBook({
-    subjectKey: 'bahasa_indonesia',
-    subject: 'Bahasa Indonesia',
+    subjectKey: "bahasa_indonesia",
+    subject: "Bahasa Indonesia",
     grade: 5,
-    pdfFilename: 'Indonesia_BS_KLS_V_Rev.pdf',
+    pdfFilename: "Indonesia_BS_KLS_V_Rev.pdf"
   }),
   defineBook({
-    subjectKey: 'bahasa_indonesia',
-    subject: 'Bahasa Indonesia',
+    subjectKey: "bahasa_indonesia",
+    subject: "Bahasa Indonesia",
     grade: 6,
-    pdfFilename: 'Bahasa-Indonesia-BS-KLS-VI_compressed.pdf',
+    pdfFilename: "Bahasa-Indonesia-BS-KLS-VI_compressed.pdf"
   }),
   defineBook({
-    subjectKey: 'pendidikan_pancasila',
-    subject: 'Pendidikan Pancasila',
+    subjectKey: "pendidikan_pancasila",
+    subject: "Pendidikan Pancasila",
     grade: 5,
-    pdfFilename: 'Pendidikan-Pancasila-BS-KLS-V.pdf',
+    pdfFilename: "Pendidikan-Pancasila-BS-KLS-V.pdf"
   }),
   defineBook({
-    subjectKey: 'pendidikan_pancasila',
-    subject: 'Pendidikan Pancasila',
+    subjectKey: "pendidikan_pancasila",
+    subject: "Pendidikan Pancasila",
     grade: 6,
-    pdfFilename: 'Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf',
+    pdfFilename: "Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf"
   }),
   defineBook({
-    subjectKey: 'ipas',
-    subject: 'IPAS',
+    subjectKey: "ipas",
+    subject: "IPAS",
     grade: 5,
-    pdfFilename: 'IPAS_BS_KLS_V_Rev.pdf',
+    pdfFilename: "IPAS_BS_KLS_V_Rev.pdf"
   }),
   defineBook({
-    subjectKey: 'ipas',
-    subject: 'IPAS',
+    subjectKey: "ipas",
+    subject: "IPAS",
     grade: 6,
-    pdfFilename: 'IPAS_BS_KLS_VI_Rev.pdf',
+    pdfFilename: "IPAS_BS_KLS_VI_Rev.pdf"
   }),
   defineBook({
-    subjectKey: 'bahasa_inggris',
-    subject: 'Bahasa Inggris',
+    subjectKey: "bahasa_inggris",
+    subject: "Bahasa Inggris",
     grade: 5,
-    pdfFilename: 'Inggris_FN_BS_KLS_V.pdf',
+    pdfFilename: "Inggris_FN_BS_KLS_V.pdf"
   }),
   defineBook({
-    subjectKey: 'bahasa_inggris',
-    subject: 'Bahasa Inggris',
+    subjectKey: "bahasa_inggris",
+    subject: "Bahasa Inggris",
     grade: 6,
-    pdfFilename: 'Inggris_FN_BS_KLS_VI.pdf',
-  }),
+    pdfFilename: "Inggris_FN_BS_KLS_VI.pdf"
+  })
 ]
 
 const EXTRACTION_SYSTEM_PROMPT = `Anda adalah ekstraktor konten kurikulum. Konversi PDF Buku Siswa Kurikulum Merdeka
@@ -116,12 +117,13 @@ opini, atau pengantar — hanya markdown.
 
 (ulangi blok Bab untuk setiap bab dalam PDF)`
 
-const FALLBACK_MERGE_SYSTEM_PROMPT = 'Anda adalah konsolidator markdown kurikulum. Output HANYA markdown akhir, tanpa pengantar.'
+const FALLBACK_MERGE_SYSTEM_PROMPT =
+  "Anda adalah konsolidator markdown kurikulum. Output HANYA markdown akhir, tanpa pengantar."
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const PDF_DIR = join(SCRIPT_DIR, '..', 'src', 'curriculum', 'pdf')
-const MD_DIR = join(SCRIPT_DIR, '..', 'src', 'curriculum', 'md')
-const CACHE_DIR = join(SCRIPT_DIR, '..', 'src', 'curriculum', 'cache')
+const PDF_DIR = join(SCRIPT_DIR, "..", "src", "curriculum", "pdf")
+const MD_DIR = join(SCRIPT_DIR, "..", "src", "curriculum", "md")
+const CACHE_DIR = join(SCRIPT_DIR, "..", "src", "curriculum", "cache")
 
 interface FailureEntry {
   startPage: number
@@ -160,7 +162,7 @@ ${draft}`
 
 function errorMessage(err: unknown): string {
   if (err instanceof AiGenerationError) {
-    return typeof err.cause === 'string' ? err.cause : String(err.cause)
+    return typeof err.cause === "string" ? err.cause : String(err.cause)
   }
   if (err instanceof Error) {
     return err.message
@@ -172,7 +174,7 @@ async function generateMarkdown(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
   system: string,
   user: string,
-  pdfBytes?: Buffer,
+  pdfBytes?: Buffer
 ): Promise<string> {
   return Effect.runPromise(
     runGenerateText({
@@ -180,12 +182,12 @@ async function generateMarkdown(
       prompt: buildPrompt({
         system,
         user,
-        ...(pdfBytes !== undefined ? { pdfBytes } : {}),
+        ...(pdfBytes !== undefined ? { pdfBytes } : {})
       }),
       model: MODEL,
-      logEvent: 'curriculum.extract',
-      errorContext: { provider: 'anthropic' },
-    }),
+      logEvent: "curriculum.extract",
+      errorContext: { provider: "anthropic" }
+    })
   )
 }
 
@@ -196,7 +198,7 @@ function cachePathFor(slug: string, startPage: number, endPage: number): string 
 async function writeFileAtomic(path: string, contents: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
   const tmp = `${path}.tmp`
-  await writeFile(tmp, contents, 'utf-8')
+  await writeFile(tmp, contents, "utf-8")
   await rename(tmp, path)
 }
 
@@ -210,22 +212,22 @@ function isPromptTooLong(err: unknown): boolean {
 }
 
 function isFailureEntry(value: unknown): value is FailureEntry {
-  if (typeof value !== 'object' || value === null) return false
+  if (typeof value !== "object" || value === null) return false
   const v = value as Record<string, unknown>
   return (
-    typeof v['startPage'] === 'number' &&
-    typeof v['endPage'] === 'number' &&
-    typeof v['error'] === 'string' &&
-    typeof v['at'] === 'string'
+    typeof v["startPage"] === "number" &&
+    typeof v["endPage"] === "number" &&
+    typeof v["error"] === "string" &&
+    typeof v["at"] === "string"
   )
 }
 
-async function readFailures(path: string): Promise<FailureEntry[]> {
+async function readFailures(path: string): Promise<Array<FailureEntry>> {
   let raw: string
   try {
-    raw = await readFile(path, 'utf-8')
+    raw = await readFile(path, "utf-8")
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return []
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return []
     throw err
   }
   try {
@@ -241,7 +243,7 @@ async function readFailures(path: string): Promise<FailureEntry[]> {
 }
 
 async function recordFailure(slug: string, entry: FailureEntry): Promise<void> {
-  const path = join(CACHE_DIR, slug, 'failures.json')
+  const path = join(CACHE_DIR, slug, "failures.json")
   const existing = await readFailures(path)
   existing.push(entry)
   await writeFileAtomic(path, `${JSON.stringify(existing, null, 2)}\n`)
@@ -254,15 +256,14 @@ async function recordFailure(slug: string, entry: FailureEntry): Promise<void> {
  */
 async function readCachedChunk(cachePath: string): Promise<string | null> {
   try {
-    const contents = await readFile(cachePath, 'utf-8')
+    const contents = await readFile(cachePath, "utf-8")
     if (contents.trim().length === 0) return null
     return contents
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null
     throw err
   }
 }
-
 
 async function extractChunkMarkdown(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
@@ -271,7 +272,7 @@ async function extractChunkMarkdown(
   totalPages: number,
   startPage: number,
   endPage: number,
-  cacheStats: { hits: number; total: number },
+  cacheStats: { hits: number; total: number }
 ): Promise<string> {
   const cachePath = cachePathFor(book.slug, startPage, endPage)
   cacheStats.total += 1
@@ -284,7 +285,7 @@ async function extractChunkMarkdown(
   const pdfBytes = await extractPageRange(src, startPage, endPage)
   const sizeMb = (pdfBytes.byteLength / (1024 * 1024)).toFixed(1)
   process.stdout.write(
-    `[${book.slug}] pages ${startPage}-${endPage} (${endPage - startPage + 1}p, ${sizeMb} MB) → `,
+    `[${book.slug}] pages ${startPage}-${endPage} (${endPage - startPage + 1}p, ${sizeMb} MB) → `
   )
 
   try {
@@ -292,13 +293,13 @@ async function extractChunkMarkdown(
       pdfModelLayer,
       EXTRACTION_SYSTEM_PROMPT,
       chunkInstruction(book, startPage, endPage, totalPages),
-      Buffer.from(pdfBytes),
+      Buffer.from(pdfBytes)
     )
     console.log(`${text.length} chars`)
     await writeFileAtomic(cachePath, text)
     return text
   } catch (err) {
-    const isEmpty = errorMessage(err).includes('no text block')
+    const isEmpty = errorMessage(err).includes("no text block")
     if (!isPromptTooLong(err) && !isEmpty) throw err
 
     const pages = endPage - startPage + 1
@@ -309,15 +310,17 @@ async function extractChunkMarkdown(
         startPage,
         endPage,
         error: message,
-        at: new Date().toISOString(),
+        at: new Date().toISOString()
       })
       throw err
     }
 
     const mid = startPage + Math.floor(pages / 2) - 1
-    const reason = isEmpty ? 'empty response' : 'prompt too long'
+    const reason = isEmpty ? "empty response" : "prompt too long"
     console.warn(
-      `\n[${book.slug}] ${reason} for pages ${startPage}-${endPage}, halving into ${startPage}-${mid} + ${mid + 1}-${endPage}`,
+      `\n[${book.slug}] ${reason} for pages ${startPage}-${endPage}, halving into ${startPage}-${mid} + ${
+        mid + 1
+      }-${endPage}`
     )
     const left = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, startPage, mid, cacheStats)
     const right = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, mid + 1, endPage, cacheStats)
@@ -329,7 +332,7 @@ async function extractChunkMarkdown(
 
 async function extractBook(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
-  book: BookSpec,
+  book: BookSpec
 ): Promise<void> {
   const pdfPath = join(PDF_DIR, book.pdfFilename)
   if (!existsSync(pdfPath)) {
@@ -344,7 +347,7 @@ async function extractBook(
   console.log(`[${book.slug}] ${chunks.length} planned chunk(s), ${totalPages} pages`)
 
   const cacheStats = { hits: 0, total: 0 }
-  const chunkOutputs: string[] = []
+  const chunkOutputs: Array<string> = []
   for (const chunk of chunks) {
     const text = await extractChunkMarkdown(
       pdfModelLayer,
@@ -353,7 +356,7 @@ async function extractBook(
       totalPages,
       chunk.startPage,
       chunk.endPage,
-      cacheStats,
+      cacheStats
     )
     chunkOutputs.push(text)
   }
@@ -361,7 +364,7 @@ async function extractBook(
     console.log(`[${book.slug}] cache: ${cacheStats.hits}/${cacheStats.total} chunks reused`)
   }
 
-  const concatenated = chunkOutputs.join('\n\n')
+  const concatenated = chunkOutputs.join("\n\n")
   let merged: string
   try {
     merged = mergeBab(concatenated)
@@ -372,80 +375,80 @@ async function extractBook(
     merged = await generateMarkdown(
       pdfModelLayer,
       FALLBACK_MERGE_SYSTEM_PROMPT,
-      fallbackMergePrompt(book, concatenated),
+      fallbackMergePrompt(book, concatenated)
     )
   }
 
   await mkdir(MD_DIR, { recursive: true })
   const outPath = join(MD_DIR, `${book.slug}.md`)
-  await writeFile(outPath, `${merged.trimEnd()}\n`, 'utf-8')
+  await writeFile(outPath, `${merged.trimEnd()}\n`, "utf-8")
   console.log(`[${book.slug}] wrote ${outPath} (${merged.length} chars)`)
 }
 
-function parseArgs(argv: readonly string[]): { bookFilter: string | null } {
+function parseArgs(argv: ReadonlyArray<string>): { bookFilter: string | null } {
   let bookFilter: string | null = null
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
-    if (arg === '--book') {
+    if (arg === "--book") {
       bookFilter = argv[i + 1] ?? null
       i += 1
-    } else if (arg !== undefined && arg.startsWith('--book=')) {
-      bookFilter = arg.slice('--book='.length)
+    } else if (arg !== undefined && arg.startsWith("--book=")) {
+      bookFilter = arg.slice("--book=".length)
     }
   }
   return { bookFilter }
 }
 
-const main = Effect.gen(function* () {
-  const apiKey = process.env['ANTHROPIC_API_KEY']
-  if (!apiKey || apiKey.includes('your-api-key')) {
+const main = Effect.gen(function*() {
+  const apiKey = process.env["ANTHROPIC_API_KEY"]
+  if (!apiKey || apiKey.includes("your-api-key")) {
     return yield* Effect.die(
-      new Error('ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running.'),
+      new Error("ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running.")
     )
   }
   const { bookFilter } = parseArgs(process.argv.slice(2))
   const targets = bookFilter ? BOOKS.filter((b) => b.slug === bookFilter) : BOOKS
   if (targets.length === 0) {
     return yield* Effect.die(
-      new Error(`unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(', ')}`),
+      new Error(`unknown --book "${bookFilter}". Known: ${BOOKS.map((b) => b.slug).join(", ")}`)
     )
   }
 
   const pdfModelLayer = buildAnthropicModelLayers({
-    provider: 'anthropic',
+    provider: "anthropic",
     apiKey,
     model: MODEL,
     pdfModel: MODEL,
     discussionModel: MODEL,
     maxTokens: MAX_TOKENS,
     discussionMaxTokens: MAX_TOKENS,
-    validationMaxTokens: MAX_TOKENS,
+    validationMaxTokens: MAX_TOKENS
   }).pdf
 
   const failed: Array<{ slug: string; error: string }> = []
   for (const book of targets) {
     yield* Effect.tryPromise({
       try: () => extractBook(pdfModelLayer, book),
-      catch: (error: unknown) => new Error(errorMessage(error)),
+      catch: (error: unknown) => new Error(errorMessage(error))
     }).pipe(
       Effect.catchAll((err) =>
         Effect.sync(() => {
           const message = err.message
           console.error(`[${book.slug}] failed: ${message}`)
           failed.push({ slug: book.slug, error: message })
-        }),
-      ),
+        })
+      )
     )
   }
   if (failed.length > 0) {
     yield* Effect.sync(() => {
-      console.error(`\n${failed.length} book(s) failed: ${failed.map((f) => f.slug).join(', ')}`)
-      console.error('Cached chunks were preserved — re-run to resume.')
+      console.error(`\n${failed.length} book(s) failed: ${failed.map((f) => f.slug).join(", ")}`)
+      console.error("Cached chunks were preserved — re-run to resume.")
     })
     return yield* Effect.die(new Error(`${failed.length} book(s) failed`))
   }
   yield* Effect.sync(() => {
-    console.log('done.')
+    console.log("done.")
   })
 })
 

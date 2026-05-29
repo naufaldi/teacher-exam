@@ -1,8 +1,8 @@
-import { Effect, Either, Schema } from 'effect'
-import { GeneratedQuestionSchema, type GeneratedQuestion } from '@teacher-exam/shared'
-import { AiGenerationError } from '../errors'
-import { normalizeGeneratedQuestionItem } from './normalize-ai-output'
-import { parseAiJsonArray } from './repair-ai-json'
+import { type GeneratedQuestion, GeneratedQuestionSchema } from "@teacher-exam/shared"
+import { Effect, Either, Schema } from "effect"
+import { AiGenerationError } from "../errors"
+import { normalizeGeneratedQuestionItem } from "./normalize-ai-output"
+import { parseAiJsonArray } from "./repair-ai-json"
 
 export type ParsedItemFailure = {
   index: number
@@ -17,15 +17,15 @@ export type ParseGeneratedQuestionsResult = {
 
 function stripCodeFence(raw: string): string {
   const trimmed = raw.trim()
-  if (trimmed.startsWith('```')) {
-    const inner = trimmed.replace(/^```(?:json|markdown)?\n?/i, '').replace(/```\s*$/, '')
+  if (trimmed.startsWith("```")) {
+    const inner = trimmed.replace(/^```(?:json|markdown)?\n?/i, "").replace(/```\s*$/, "")
     return inner.trim()
   }
   return trimmed
 }
 
 function formatDecodeError(error: unknown): string {
-  return typeof error === 'object' && error !== null && 'message' in error
+  return typeof error === "object" && error !== null && "message" in error
     ? String((error as { message: unknown }).message)
     : String(error)
 }
@@ -35,20 +35,20 @@ function formatDecodeError(error: unknown): string {
  */
 export function parseGeneratedQuestions(
   raw: string,
-  expectedCount: number,
+  expectedCount: number
 ): Either.Either<ParseGeneratedQuestionsResult, AiGenerationError> {
-  let parsed: unknown[]
+  let parsed: Array<unknown>
   try {
     parsed = parseAiJsonArray(stripCodeFence(raw))
   } catch (cause) {
     return Either.left(
       new AiGenerationError({
-        cause: `AI returned non-JSON output: ${(cause as Error).message}`,
-      }),
+        cause: `AI returned non-JSON output: ${(cause as Error).message}`
+      })
     )
   }
 
-  const failed: ParsedItemFailure[] = []
+  const failed: Array<ParsedItemFailure> = []
   const byNumber = new Map<number, GeneratedQuestion>()
 
   parsed.forEach((item, index) => {
@@ -62,7 +62,7 @@ export function parseGeneratedQuestions(
     if (question.number < 1 || question.number > expectedCount) {
       failed.push({
         index,
-        error: `number ${question.number} out of range 1..${expectedCount}`,
+        error: `number ${question.number} out of range 1..${expectedCount}`
       })
       return
     }
@@ -75,7 +75,7 @@ export function parseGeneratedQuestions(
     .sort(([a], [b]) => a - b)
     .map(([, q]) => q)
 
-  const missingNumbers: number[] = []
+  const missingNumbers: Array<number> = []
   for (let n = 1; n <= expectedCount; n++) {
     if (!byNumber.has(n)) missingNumbers.push(n)
   }
@@ -83,8 +83,8 @@ export function parseGeneratedQuestions(
   if (valid.length === 0) {
     return Either.left(
       new AiGenerationError({
-        cause: `AI output had no valid questions (${failed.length} failed item(s))`,
-      }),
+        cause: `AI output had no valid questions (${failed.length} failed item(s))`
+      })
     )
   }
 
@@ -96,9 +96,9 @@ export function parseGeneratedQuestions(
  */
 export function parseGeneratedQuestionsStrict(
   raw: string,
-  expectedCount: number,
+  expectedCount: number
 ): Effect.Effect<ReadonlyArray<GeneratedQuestion>, AiGenerationError> {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const parsed = parseGeneratedQuestions(raw, expectedCount)
     if (Either.isLeft(parsed)) {
       return yield* Effect.fail(parsed.left)
@@ -107,15 +107,16 @@ export function parseGeneratedQuestionsStrict(
     if (salvage.missingNumbers.length > 0 || salvage.failed.length > 0) {
       return yield* Effect.fail(
         new AiGenerationError({
-          cause: `AI output failed schema validation: ${salvage.failed.length} invalid, ${salvage.missingNumbers.length} missing (expected ${expectedCount})`,
-        }),
+          cause:
+            `AI output failed schema validation: ${salvage.failed.length} invalid, ${salvage.missingNumbers.length} missing (expected ${expectedCount})`
+        })
       )
     }
     if (salvage.valid.length !== expectedCount) {
       return yield* Effect.fail(
         new AiGenerationError({
-          cause: `Expected ${expectedCount} questions, got ${salvage.valid.length}`,
-        }),
+          cause: `Expected ${expectedCount} questions, got ${salvage.valid.length}`
+        })
       )
     }
     return salvage.valid

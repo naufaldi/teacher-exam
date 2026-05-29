@@ -1,15 +1,15 @@
-import type { Exam } from '@teacher-exam/shared'
-import { formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
+import type { Exam } from "@teacher-exam/shared"
+import { formatExamTitle, SUBJECT_LABEL } from "@teacher-exam/shared"
 import {
+  Badge,
+  Button,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  Button,
-  Badge,
-} from '@teacher-exam/ui'
+  DialogHeader,
+  DialogTitle
+} from "@teacher-exam/ui"
 
 interface DuplicateConfirmDialogProps {
   exam: Exam
@@ -21,10 +21,10 @@ interface DuplicateConfirmDialogProps {
 
 export function DuplicateConfirmDialog({
   exam,
-  open,
-  onOpenChange,
-  onConfirm,
   isPending,
+  onConfirm,
+  onOpenChange,
+  open
 }: DuplicateConfirmDialogProps) {
   const subjectLabel = SUBJECT_LABEL[exam.subject] ?? exam.subject
   const derivedTitle = formatExamTitle({
@@ -32,7 +32,7 @@ export function DuplicateConfirmDialog({
     grade: exam.grade,
     examType: exam.examType,
     examDate: exam.examDate,
-    topics: exam.topics,
+    topics: exam.topics
   })
 
   return (
@@ -48,16 +48,18 @@ export function DuplicateConfirmDialog({
           <p className="text-sm text-text-secondary">
             {subjectLabel} · Kelas {exam.grade}
           </p>
-          <p className="text-sm text-text-tertiary">{exam.topics.join(', ')}</p>
-          <Badge variant={exam.status === 'final' ? 'success' : 'warning'}>
-            {exam.status === 'final' ? 'Final' : 'Draft'}
+          <p className="text-sm text-text-tertiary">{exam.topics.join(", ")}</p>
+          <Badge variant={exam.status === "final" ? "success" : "warning"}>
+            {exam.status === "final" ? "Final" : "Draft"}
           </Badge>
         </div>
 
         <DialogFooter>
           <Button
             variant="ghost"
-            onClick={() => { onOpenChange(false) }}
+            onClick={() => {
+              onOpenChange(false)
+            }}
             disabled={isPending}
           >
             Batal
@@ -67,7 +69,7 @@ export function DuplicateConfirmDialog({
             onClick={onConfirm}
             disabled={isPending}
           >
-            {isPending ? 'Menduplikat…' : 'Duplikat'}
+            {isPending ? "Menduplikat…" : "Duplikat"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,72 +1,72 @@
-import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock('../lib/auth', () => ({
+import { db } from "@teacher-exam/db"
+import { makeChain } from "../routes/__test__/helpers"
+import { buildHttpApiTestApp } from "../routes/__test__/http-api-setup"
+
+vi.mock("../lib/auth", () => ({
   auth: {
     api: {
-      getSession: vi.fn(async () => null),
-    },
-  },
+      getSession: vi.fn(async () => null)
+    }
+  }
 }))
-
-import { db } from '@teacher-exam/db'
-import { buildHttpApiTestApp } from '../routes/__test__/http-api-setup'
-import { makeChain } from '../routes/__test__/helpers'
 
 function buildApp() {
   return buildHttpApiTestApp({ authenticated: false })
 }
 
-describe('auth protection on protected API routes', () => {
+describe("auth protection on protected API routes", () => {
   beforeEach(() => {
     vi.mocked(db.select).mockReturnValue(makeChain([]))
   })
-  it('GET /api/health is reachable without a session', async () => {
+  it("GET /api/health is reachable without a session", async () => {
     const app = buildApp()
-    const res = await app.request('/api/health')
+    const res = await app.request("/api/health")
     expect(res.status).toBe(200)
   })
 
-  it('POST /api/dev/login is not blocked by requireAuth when dev auth is disabled', async () => {
-    vi.stubEnv('DEV_AUTH_ENABLED', '')
-    vi.stubEnv('NODE_ENV', 'development')
+  it("POST /api/dev/login is not blocked by requireAuth when dev auth is disabled", async () => {
+    vi.stubEnv("DEV_AUTH_ENABLED", "")
+    vi.stubEnv("NODE_ENV", "development")
 
     const app = buildApp()
-    const res = await app.request('/api/dev/login', {
-      method: 'POST',
-      headers: { Host: 'localhost:3000' },
+    const res = await app.request("/api/dev/login", {
+      method: "POST",
+      headers: { Host: "localhost:3000" }
     })
 
     expect(res.status).toBe(403)
     expect(await res.json()).toMatchObject({
-      error: 'Forbidden',
-      message: 'Dev auth is not available',
+      error: "Forbidden",
+      message: "Dev auth is not available"
     })
     vi.unstubAllEnvs()
   })
 
-  it('GET /api/me returns 401 without a session', async () => {
+  it("GET /api/me returns 401 without a session", async () => {
     const app = buildApp()
-    const res = await app.request('/api/me')
+    const res = await app.request("/api/me")
     expect(res.status).toBe(401)
-    expect(await res.json()).toMatchObject({ error: 'Unauthorized' })
+    expect(await res.json()).toMatchObject({ error: "Unauthorized" })
   })
 
-  it('GET /api/public/exams/:slug is reachable without a session', async () => {
+  it("GET /api/public/exams/:slug is reachable without a session", async () => {
     const app = buildApp()
-    const res = await app.request('/api/public/exams/missing-share')
+    const res = await app.request("/api/public/exams/missing-share")
     expect(res.status).toBe(404)
   })
 
-  it('POST /api/ai/generate returns 401 without a session and never invokes the AI service', async () => {
+  it("POST /api/ai/generate returns 401 without a session and never invokes the AI service", async () => {
     const app = buildApp()
-    const res = await app.request('/api/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subject: 'bahasa_indonesia',
+        subject: "bahasa_indonesia",
         grade: 5,
-        difficulty: 'sedang',
-      }),
+        difficulty: "sedang"
+      })
     })
     expect(res.status).toBe(401)
   })

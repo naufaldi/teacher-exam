@@ -1,4 +1,4 @@
-import { CalendarDays, FolderOpen } from 'lucide-react'
+import { CalendarDays, FolderOpen } from "lucide-react"
 
 interface SummaryItem {
   label: string
@@ -14,25 +14,25 @@ interface HistoryHeaderProps {
 }
 
 function formatTodayLong(): string {
-  return new Date().toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   })
 }
 
 function HistoryHeader({
-  total,
-  finalCount,
   draftCount,
+  finalCount,
   thisMonthCount,
+  total
 }: HistoryHeaderProps) {
-  const summary: readonly SummaryItem[] = [
-    { label: 'Total lembar', value: total },
-    { label: 'Sudah final', value: finalCount },
-    { label: 'Masih draft', value: draftCount },
-    { label: 'Bulan ini', value: thisMonthCount, hint: 'April 2026' },
+  const summary: ReadonlyArray<SummaryItem> = [
+    { label: "Total lembar", value: total },
+    { label: "Sudah final", value: finalCount },
+    { label: "Masih draft", value: draftCount },
+    { label: "Bulan ini", value: thisMonthCount, hint: "April 2026" }
   ]
 
   return (
@@ -40,8 +40,7 @@ function HistoryHeader({
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            'radial-gradient(ellipse 1100px 320px at -10% -40%, rgba(180,35,24,0.06), transparent 60%)',
+          background: "radial-gradient(ellipse 1100px 320px at -10% -40%, rgba(180,35,24,0.06), transparent 60%)"
         }}
       />
 
@@ -57,8 +56,8 @@ function HistoryHeader({
           </h1>
 
           <p className="text-body text-text-secondary max-w-[58ch]">
-            Cetak ulang, duplikat menjadi draft baru, atau buka koreksi cepat.
-            Lembar yang masih draft tetap bisa Anda lanjutkan kapan saja.
+            Cetak ulang, duplikat menjadi draft baru, atau buka koreksi cepat. Lembar yang masih draft tetap bisa Anda
+            lanjutkan kapan saja.
           </p>
 
           <div className="mt-5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-kertas-100 border border-border-default text-caption text-text-secondary">
@@ -79,9 +78,7 @@ function HistoryHeader({
               <div className="mt-1 text-[28px] font-bold leading-none text-text-primary tabular-nums">
                 {item.value}
               </div>
-              {item.hint ? (
-                <div className="mt-1 text-caption text-text-tertiary">{item.hint}</div>
-              ) : null}
+              {item.hint ? <div className="mt-1 text-caption text-text-tertiary">{item.hint}</div> : null}
             </div>
           ))}
         </div>

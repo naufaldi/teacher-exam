@@ -1,9 +1,9 @@
-import { Either } from 'effect'
+import { Either } from "effect"
 
 type ApiMock = {
   mockResolvedValueOnce?: (value: any) => unknown
   mockResolvedValue?: (value: any) => unknown
-  mockImplementationOnce?: (fn: (...args: any[]) => any) => unknown
+  mockImplementationOnce?: (fn: (...args: Array<any>) => any) => unknown
 }
 
 /** Wrap a mocked API return value for tests (api methods return Either). */
@@ -33,19 +33,21 @@ export function mockApiSpyResolvedValue<T extends ApiMock>(mock: T, value: unkno
   return mock
 }
 
-export function mockApiImplementationOnce<T, Args extends unknown[]>(
+export function mockApiImplementationOnce<T, Args extends Array<unknown>>(
   mock: ApiMock,
-  fn: (...args: Args) => Promise<T> | T,
+  fn: (...args: Args) => Promise<T> | T
 ) {
-  mock.mockImplementationOnce?.(((...args: Args) =>
-    Promise.resolve(fn(...args)).then((result) =>
-      result !== null &&
-      typeof result === 'object' &&
-      '_tag' in result &&
-      (result._tag === 'Left' || result._tag === 'Right')
-        ? result
-        : Either.right(result),
-    )) as (...args: any[]) => any)
+  mock.mockImplementationOnce?.(
+    ((...args: Args) =>
+      Promise.resolve(fn(...args)).then((result) =>
+        result !== null &&
+          typeof result === "object" &&
+          "_tag" in result &&
+          (result._tag === "Left" || result._tag === "Right")
+          ? result
+          : Either.right(result)
+      )) as (...args: Array<any>) => any
+  )
 }
 
 export type { ApiMock }

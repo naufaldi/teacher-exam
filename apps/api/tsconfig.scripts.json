@@ -5,7 +5,24 @@
     "moduleResolution": "Bundler",
     "module": "ESNext",
     "lib": ["ES2022"],
-    "types": ["node"]
+    "types": ["node"],
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "missingStarInYieldEffectGen": "error",
+          "globalConsoleInEffect": "off",
+          "globalFetchInEffect": "error",
+          "tryCatchInEffectGen": "warning",
+          "missedPipeableOpportunity": "warning",
+          "unnecessaryFailYieldableError": "off",
+          "leakingRequirements": "warning"
+        },
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectWarningsInTscExitCode": true
+      }
+    ]
   },
   "include": ["scripts"]
 }

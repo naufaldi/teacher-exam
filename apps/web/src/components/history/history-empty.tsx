@@ -1,14 +1,14 @@
-import { FolderOpen, Sparkles } from 'lucide-react'
-import { Button } from '@teacher-exam/ui'
+import { Button } from "@teacher-exam/ui"
+import { FolderOpen, Sparkles } from "lucide-react"
 
 interface HistoryEmptyProps {
-  variant: 'no-match' | 'truly-empty'
+  variant: "no-match" | "truly-empty"
   onReset?: () => void
   onGenerate?: () => void
 }
 
-function HistoryEmpty({ variant, onReset, onGenerate }: HistoryEmptyProps) {
-  const isNoMatch = variant === 'no-match'
+function HistoryEmpty({ onGenerate, onReset, variant }: HistoryEmptyProps) {
+  const isNoMatch = variant === "no-match"
 
   return (
     <div className="bg-bg-surface border border-border-default rounded-md py-14 px-6">
@@ -19,28 +19,32 @@ function HistoryEmpty({ variant, onReset, onGenerate }: HistoryEmptyProps) {
 
         <h3 className="text-h3 font-semibold text-text-primary mb-1.5">
           {isNoMatch
-            ? 'Tidak ada lembar yang cocok'
-            : 'Belum ada lembar tersimpan'}
+            ? "Tidak ada lembar yang cocok"
+            : "Belum ada lembar tersimpan"}
         </h3>
 
         <p className="text-body-sm text-text-secondary leading-relaxed">
           {isNoMatch
-            ? 'Coba ubah atau bersihkan filter untuk melihat lembar lainnya.'
-            : 'Mulai buat lembar pertama Anda — pilih mata pelajaran dan topik, AI akan menyiapkan soal pilihan ganda.'}
+            ? "Coba ubah atau bersihkan filter untuk melihat lembar lainnya."
+            : "Mulai buat lembar pertama Anda — pilih mata pelajaran dan topik, AI akan menyiapkan soal pilihan ganda."}
         </p>
 
         <div className="mt-6 inline-flex gap-2">
-          {isNoMatch && onReset ? (
-            <Button variant="secondary" size="md" onClick={onReset}>
-              Reset filter
-            </Button>
-          ) : null}
-          {!isNoMatch && onGenerate ? (
-            <Button variant="primary" size="md" onClick={onGenerate}>
-              <Sparkles size={14} />
-              Generate lembar pertama
-            </Button>
-          ) : null}
+          {isNoMatch && onReset ?
+            (
+              <Button variant="secondary" size="md" onClick={onReset}>
+                Reset filter
+              </Button>
+            ) :
+            null}
+          {!isNoMatch && onGenerate ?
+            (
+              <Button variant="primary" size="md" onClick={onGenerate}>
+                <Sparkles size={14} />
+                Generate lembar pertama
+              </Button>
+            ) :
+            null}
         </div>
       </div>
     </div>

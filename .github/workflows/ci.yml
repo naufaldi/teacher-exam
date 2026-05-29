@@ -16,6 +16,38 @@ env:
   VITE_APP_ORIGIN: http://localhost:5173
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Effect style check
+        run: pnpm effect:check
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Shared test
+        run: pnpm --filter @teacher-exam/shared test
+
+      - name: API test
+        run: pnpm --filter @teacher-exam/api test
+
   web:
     runs-on: ubuntu-latest
     steps:

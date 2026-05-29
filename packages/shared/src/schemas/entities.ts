@@ -1,34 +1,48 @@
-import { Schema } from 'effect'
+import { Schema } from "effect"
+import { FigureSpecSchema } from "./figures.js"
 import {
-  ExamSubjectSchema,
-  ExamDifficultySchema,
-  ReviewModeSchema,
-  ExamStatusSchema,
   AnswerLetterSchema,
-  MultiAnswerSchema,
   CognitiveLevelSchema,
-  QuestionStatusSchema,
-  ValidationStatusSchema,
+  ExamDifficultySchema,
+  ExamStatusSchema,
+  ExamSubjectSchema,
   type ExamType,
-} from './primitives.js'
-import { FigureSpecSchema } from './figures.js'
+  MultiAnswerSchema,
+  QuestionStatusSchema,
+  ReviewModeSchema,
+  ValidationStatusSchema
+} from "./primitives.js"
+
+// ── Branded IDs ────────────────────────────────────────────
+export const UserIdSchema = Schema.String.pipe(Schema.brand("UserId"))
+export type UserId = typeof UserIdSchema.Type
+
+export const ExamIdSchema = Schema.String.pipe(Schema.brand("ExamId"))
+export type ExamId = typeof ExamIdSchema.Type
+
+export const QuestionIdSchema = Schema.String.pipe(Schema.brand("QuestionId"))
+export type QuestionId = typeof QuestionIdSchema.Type
+
+export const brandUserId = (id: string): UserId => Schema.decodeSync(UserIdSchema)(id)
+export const brandExamId = (id: string): ExamId => Schema.decodeSync(ExamIdSchema)(id)
+export const brandQuestionId = (id: string): QuestionId => Schema.decodeSync(QuestionIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
 export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
 export type Grade = typeof GradeSchema.Type
 
 export const UserProfileSchema = Schema.Struct({
-  id:               Schema.String,
-  email:            Schema.String,
-  name:             Schema.String,
-  username:         Schema.String,
-  image:            Schema.NullOr(Schema.String),
-  school:           Schema.NullOr(Schema.String),
-  gradesTaught:     Schema.NullOr(Schema.Array(GradeSchema)),
-  subjectsTaught:   Schema.NullOr(Schema.Array(ExamSubjectSchema)),
+  id: UserIdSchema,
+  email: Schema.String,
+  name: Schema.String,
+  username: Schema.String,
+  image: Schema.NullOr(Schema.String),
+  school: Schema.NullOr(Schema.String),
+  gradesTaught: Schema.NullOr(Schema.Array(GradeSchema)),
+  subjectsTaught: Schema.NullOr(Schema.Array(ExamSubjectSchema)),
   profileCompleted: Schema.Boolean,
-  locale:           Schema.String,
-  timezone:         Schema.String,
+  locale: Schema.String,
+  timezone: Schema.String
 })
 export type UserProfile = typeof UserProfileSchema.Type
 
@@ -38,75 +52,75 @@ const Options4Schema = Schema.Struct({
   a: Schema.NonEmptyString,
   b: Schema.NonEmptyString,
   c: Schema.NonEmptyString,
-  d: Schema.NonEmptyString,
+  d: Schema.NonEmptyString
 })
 
 const QuestionCommonFields = {
-  id:               Schema.String,
-  examId:           Schema.String,
-  number:           Schema.Int,
-  text:             Schema.NonEmptyString,
-  topic:            Schema.NullOr(Schema.String),
-  difficulty:       Schema.NullOr(Schema.String),
-  status:           QuestionStatusSchema,
+  id: QuestionIdSchema,
+  examId: ExamIdSchema,
+  number: Schema.Int,
+  text: Schema.NonEmptyString,
+  topic: Schema.NullOr(Schema.String),
+  difficulty: Schema.NullOr(Schema.String),
+  status: QuestionStatusSchema,
   validationStatus: Schema.NullOr(ValidationStatusSchema),
   validationReason: Schema.NullOr(Schema.String),
   /** True when bulk generate could not produce this soal; guru should use Regenerate. */
   generationFailed: Schema.optional(Schema.Boolean),
-  figure:           Schema.optional(Schema.NullOr(FigureSpecSchema)),
-  createdAt:        Schema.String,
+  figure: Schema.optional(Schema.NullOr(FigureSpecSchema)),
+  createdAt: Schema.String
 } as const
 
-export const McqSingleQuestionSchema = Schema.TaggedStruct('mcq_single', {
+export const McqSingleQuestionSchema = Schema.TaggedStruct("mcq_single", {
   ...QuestionCommonFields,
   options: Options4Schema,
-  correct: AnswerLetterSchema,
+  correct: AnswerLetterSchema
 })
 export type McqSingleQuestion = typeof McqSingleQuestionSchema.Type
 
-export const McqMultiQuestionSchema = Schema.TaggedStruct('mcq_multi', {
+export const McqMultiQuestionSchema = Schema.TaggedStruct("mcq_multi", {
   ...QuestionCommonFields,
   options: Options4Schema,
-  correct: MultiAnswerSchema,
+  correct: MultiAnswerSchema
 })
 export type McqMultiQuestion = typeof McqMultiQuestionSchema.Type
 
-export const TrueFalseQuestionSchema = Schema.TaggedStruct('true_false', {
+export const TrueFalseQuestionSchema = Schema.TaggedStruct("true_false", {
   ...QuestionCommonFields,
   statements: Schema.Array(
     Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Boolean })
-  ).pipe(Schema.minItems(3), Schema.maxItems(4)),
+  ).pipe(Schema.minItems(3), Schema.maxItems(4))
 })
 export type TrueFalseQuestion = typeof TrueFalseQuestionSchema.Type
 
 export const QuestionSchema = Schema.Union(
   McqSingleQuestionSchema,
   McqMultiQuestionSchema,
-  TrueFalseQuestionSchema,
+  TrueFalseQuestionSchema
 )
 export type Question = typeof QuestionSchema.Type
 
 // ── Exam (without questions) ───────────────────────────────
 export const ExamSchema = Schema.Struct({
-  id:              Schema.String,
-  userId:          Schema.String,
-  title:           Schema.String,
-  subject:         ExamSubjectSchema,
-  grade:           Schema.Int,
-  difficulty:      ExamDifficultySchema,
-  topics:          Schema.Array(Schema.String),
-  reviewMode:      ReviewModeSchema,
-  status:          ExamStatusSchema,
-  schoolName:      Schema.NullOr(Schema.String),
-  academicYear:    Schema.NullOr(Schema.String),
-  examType:        Schema.String,
-  examDate:        Schema.NullOr(Schema.String),
+  id: ExamIdSchema,
+  userId: UserIdSchema,
+  title: Schema.String,
+  subject: ExamSubjectSchema,
+  grade: Schema.Int,
+  difficulty: ExamDifficultySchema,
+  topics: Schema.Array(Schema.String),
+  reviewMode: ReviewModeSchema,
+  status: ExamStatusSchema,
+  schoolName: Schema.NullOr(Schema.String),
+  academicYear: Schema.NullOr(Schema.String),
+  examType: Schema.String,
+  examDate: Schema.NullOr(Schema.String),
   durationMinutes: Schema.NullOr(Schema.Int),
-  instructions:    Schema.NullOr(Schema.String),
-  classContext:    Schema.NullOr(Schema.String),
-  discussionMd:    Schema.NullOr(Schema.String),
-  createdAt:       Schema.String,
-  updatedAt:       Schema.String,
+  instructions: Schema.NullOr(Schema.String),
+  classContext: Schema.NullOr(Schema.String),
+  discussionMd: Schema.NullOr(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String
 })
 export type Exam = typeof ExamSchema.Type
 
@@ -116,61 +130,61 @@ export const ExamWithQuestionsSchema = Schema.Struct({
   questions: Schema.Array(QuestionSchema),
   /** Set when bulk generate salvaged partial output; some numbers need regen. */
   generationIncomplete: Schema.optional(Schema.Boolean),
-  failedQuestionNumbers: Schema.optional(Schema.Array(Schema.Int)),
+  failedQuestionNumbers: Schema.optional(Schema.Array(Schema.Int))
 })
 export type ExamWithQuestions = typeof ExamWithQuestionsSchema.Type
 
 export const PublicExamSchema = Schema.Struct({
-  id:              Schema.String,
-  title:           Schema.String,
-  subject:         ExamSubjectSchema,
-  grade:           Schema.Int,
-  difficulty:      ExamDifficultySchema,
-  topics:          Schema.Array(Schema.String),
-  reviewMode:      ReviewModeSchema,
-  status:          ExamStatusSchema,
-  schoolName:      Schema.NullOr(Schema.String),
-  academicYear:    Schema.NullOr(Schema.String),
-  examType:        Schema.String,
-  examDate:        Schema.NullOr(Schema.String),
+  id: ExamIdSchema,
+  title: Schema.String,
+  subject: ExamSubjectSchema,
+  grade: Schema.Int,
+  difficulty: ExamDifficultySchema,
+  topics: Schema.Array(Schema.String),
+  reviewMode: ReviewModeSchema,
+  status: ExamStatusSchema,
+  schoolName: Schema.NullOr(Schema.String),
+  academicYear: Schema.NullOr(Schema.String),
+  examType: Schema.String,
+  examDate: Schema.NullOr(Schema.String),
   durationMinutes: Schema.NullOr(Schema.Int),
-  instructions:    Schema.NullOr(Schema.String),
-  classContext:    Schema.NullOr(Schema.String),
-  discussionMd:    Schema.NullOr(Schema.String),
-  publishedAt:     Schema.String,
-  createdAt:       Schema.String,
-  updatedAt:       Schema.String,
+  instructions: Schema.NullOr(Schema.String),
+  classContext: Schema.NullOr(Schema.String),
+  discussionMd: Schema.NullOr(Schema.String),
+  publishedAt: Schema.String,
+  createdAt: Schema.String,
+  updatedAt: Schema.String
 })
 export type PublicExam = typeof PublicExamSchema.Type
 
 export const PublicExamWithQuestionsSchema = Schema.Struct({
   ...PublicExamSchema.fields,
-  questions: Schema.Array(QuestionSchema),
+  questions: Schema.Array(QuestionSchema)
 })
 export type PublicExamWithQuestions = typeof PublicExamWithQuestionsSchema.Type
 
 // ── PDF Upload ─────────────────────────────────────────────
 export const PdfUploadSchema = Schema.Struct({
-  id:            Schema.String,
-  userId:        Schema.String,
-  examId:        Schema.NullOr(Schema.String),
-  fileName:      Schema.String,
-  fileSize:      Schema.Int,
+  id: Schema.String.pipe(Schema.brand("PdfUploadId")),
+  userId: UserIdSchema,
+  examId: Schema.NullOr(ExamIdSchema),
+  fileName: Schema.String,
+  fileSize: Schema.Int,
   extractedText: Schema.NullOr(Schema.String),
-  uploadedAt:    Schema.String,
-  expiresAt:     Schema.String,
+  uploadedAt: Schema.String,
+  expiresAt: Schema.String
 })
 export type PdfUpload = typeof PdfUploadSchema.Type
 
 // ── AI-generated question (from Claude response) ───────────
 
 const GeneratedBaseFields = {
-  number:          Schema.Int,
-  text:            Schema.NonEmptyString,
-  topic:           Schema.String,
-  difficulty:      Schema.String,
+  number: Schema.Int,
+  text: Schema.NonEmptyString,
+  topic: Schema.String,
+  difficulty: Schema.String,
   cognitive_level: Schema.optional(CognitiveLevelSchema),
-  figure:          Schema.optional(Schema.Unknown),
+  figure: Schema.optional(Schema.Unknown)
 } as const
 
 const GeneratedMcqCommonFields = {
@@ -178,30 +192,30 @@ const GeneratedMcqCommonFields = {
   option_a: Schema.NonEmptyString,
   option_b: Schema.NonEmptyString,
   option_c: Schema.NonEmptyString,
-  option_d: Schema.NonEmptyString,
+  option_d: Schema.NonEmptyString
 } as const
 
-const GeneratedMcqSingleSchema = Schema.TaggedStruct('mcq_single', {
+const GeneratedMcqSingleSchema = Schema.TaggedStruct("mcq_single", {
   ...GeneratedMcqCommonFields,
-  correct_answer: AnswerLetterSchema,
+  correct_answer: AnswerLetterSchema
 })
 
-const GeneratedMcqMultiSchema = Schema.TaggedStruct('mcq_multi', {
+const GeneratedMcqMultiSchema = Schema.TaggedStruct("mcq_multi", {
   ...GeneratedMcqCommonFields,
-  correct_answers: MultiAnswerSchema,
+  correct_answers: MultiAnswerSchema
 })
 
-const GeneratedTrueFalseSchema = Schema.TaggedStruct('true_false', {
+const GeneratedTrueFalseSchema = Schema.TaggedStruct("true_false", {
   ...GeneratedBaseFields,
   statements: Schema.Array(
-    Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal('B', 'S') })
-  ).pipe(Schema.minItems(3), Schema.maxItems(4)),
+    Schema.Struct({ text: Schema.NonEmptyString, answer: Schema.Literal("B", "S") })
+  ).pipe(Schema.minItems(3), Schema.maxItems(4))
 })
 
 export const GeneratedQuestionSchema = Schema.Union(
   GeneratedMcqSingleSchema,
   GeneratedMcqMultiSchema,
-  GeneratedTrueFalseSchema,
+  GeneratedTrueFalseSchema
 )
 export type GeneratedQuestion = typeof GeneratedQuestionSchema.Type
 
@@ -211,16 +225,16 @@ export type GeneratedQuestion = typeof GeneratedQuestionSchema.Type
  * values (defaults to 'formatif' — current canonical default).
  */
 export function normalizeExamType(raw: string | null | undefined): ExamType {
-  if (!raw) return 'formatif'
+  if (!raw) return "formatif"
   const v = raw.trim().toLowerCase()
   switch (v) {
-    case 'latihan':
-    case 'formatif':
-    case 'sts':
-    case 'sas':
-    case 'tka':
+    case "latihan":
+    case "formatif":
+    case "sts":
+    case "sas":
+    case "tka":
       return v
     default:
-      return 'formatif'
+      return "formatif"
   }
 }

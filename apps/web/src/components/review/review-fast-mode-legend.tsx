@@ -1,5 +1,5 @@
-import { Badge } from '@teacher-exam/ui'
-import { CheckCircle2 } from 'lucide-react'
+import { Badge } from "@teacher-exam/ui"
+import { CheckCircle2 } from "lucide-react"
 
 export function ReviewFastModeLegend() {
   return (

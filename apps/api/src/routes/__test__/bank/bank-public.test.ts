@@ -1,39 +1,39 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { db } from '@teacher-exam/db'
-import { buildHttpApiTestApp } from '../http-api-setup.js'
-import { makeChain, makeQuestionRow } from '../helpers.js'
+import { db } from "@teacher-exam/db"
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
+import { makeChain, makeQuestionRow } from "../helpers.js"
+import { buildHttpApiTestApp } from "../http-api-setup.js"
 
-const NOW = '2024-01-01T00:00:00.000Z'
+const NOW = "2024-01-01T00:00:00.000Z"
 
 function makePublicBankRow(overrides: Record<string, unknown> = {}) {
   return {
     bank: {
-      id: 'bank-public-1',
-      userId: 'other-user',
-      questionId: 'q-1',
-      subject: 'ipas',
+      id: "bank-public-1",
+      userId: "other-user",
+      questionId: "q-1",
+      subject: "ipas",
       grade: 5,
-      topics: ['Energi'],
-      difficulty: 'sedang',
-      type: 'mcq_single',
-      payload: { source: 'ai' },
+      topics: ["Energi"],
+      difficulty: "sedang",
+      type: "mcq_single",
+      payload: { source: "ai" },
       isPublic: true,
       usageCount: 3,
       createdAt: new Date(NOW),
-      ...overrides,
+      ...overrides
     },
-    authorName: 'Guru Publik',
+    authorName: "Guru Publik"
   }
 }
 
-describe('GET /api/bank/public', () => {
+describe("GET /api/bank/public", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 200 for anonymous requests', async () => {
+  it("returns 200 for anonymous requests", async () => {
     const row = makePublicBankRow()
-    const questionRow = makeQuestionRow({ id: 'q-1', text: 'Soal publik' })
+    const questionRow = makeQuestionRow({ id: "q-1", text: "Soal publik" })
 
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
@@ -44,16 +44,16 @@ describe('GET /api/bank/public', () => {
     })
 
     const app = buildHttpApiTestApp({ authenticated: false })
-    const res = await app.request('/api/bank/public')
+    const res = await app.request("/api/bank/public")
     expect(res.status).toBe(200)
     const body = (await res.json()) as Record<string, unknown>
-    const data = body['data'] as Array<Record<string, unknown>>
-    expect(data[0]?.['authorName']).toBe('Guru Publik')
-    expect(data[0]?.['text']).toBe('Soal publik')
-    expect(data[0]?.['userId']).toBeUndefined()
+    const data = body["data"] as Array<Record<string, unknown>>
+    expect(data[0]?.["authorName"]).toBe("Guru Publik")
+    expect(data[0]?.["text"]).toBe("Soal publik")
+    expect(data[0]?.["userId"]).toBeUndefined()
   })
 
-  it('returns 429 after rate limit exceeded', async () => {
+  it("returns 429 after rate limit exceeded", async () => {
     let t = 0
     const app = buildHttpApiTestApp({
       authenticated: false,
@@ -62,8 +62,8 @@ describe('GET /api/bank/public', () => {
         now: () => {
           t += 1
           return t
-        },
-      },
+        }
+      }
     })
 
     let selectCount = 0
@@ -73,9 +73,9 @@ describe('GET /api/bank/public', () => {
       return makeChain([])
     })
 
-    expect((await app.request('/api/bank/public')).status).toBe(200)
-    expect((await app.request('/api/bank/public')).status).toBe(200)
-    const limited = await app.request('/api/bank/public')
+    expect((await app.request("/api/bank/public")).status).toBe(200)
+    expect((await app.request("/api/bank/public")).status).toBe(200)
+    const limited = await app.request("/api/bank/public")
     expect(limited.status).toBe(429)
   })
 })

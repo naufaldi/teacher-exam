@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react"
 
 interface BarData {
   day: string
   count: number
-  variant?: 'default' | 'secondary'
+  variant?: "default" | "secondary"
 }
 
 interface ActivityBarChartProps {
-  data: readonly BarData[]
+  data: ReadonlyArray<BarData>
   totalLabel?: ReactNode
 }
 
@@ -25,12 +25,12 @@ function ActivityBarChart({ data, totalLabel }: ActivityBarChartProps) {
       <div className="flex items-end gap-1.5 h-12">
         {data.map((bar, i) => {
           const heightPct = Math.max((bar.count / max) * 100, 6)
-          const isSecondary = bar.variant === 'secondary'
+          const isSecondary = bar.variant === "secondary"
           return (
             <div key={i} className="relative flex-1 h-full rounded-xs bg-kertas-100">
               <div
                 className={`absolute inset-x-0 bottom-0 rounded-xs transition-all duration-[180ms] ${
-                  isSecondary ? 'bg-secondary-700' : 'bg-primary-600'
+                  isSecondary ? "bg-secondary-700" : "bg-primary-600"
                 }`}
                 style={{ height: `${heightPct}%` }}
               />

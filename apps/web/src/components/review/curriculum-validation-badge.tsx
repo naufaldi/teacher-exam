@@ -1,29 +1,29 @@
-import type { ValidationStatus } from '@teacher-exam/shared'
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@teacher-exam/ui'
-import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import type { ValidationStatus } from "@teacher-exam/shared"
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@teacher-exam/ui"
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
 
 const LABEL: Record<ValidationStatus, string> = {
-  valid: 'Sesuai',
-  needs_review: 'Perlu review',
-  invalid: 'Tidak sesuai',
+  valid: "Sesuai",
+  needs_review: "Perlu review",
+  invalid: "Tidak sesuai"
 }
 
-const VARIANT: Record<ValidationStatus, 'success' | 'warning' | 'danger'> = {
-  valid: 'success',
-  needs_review: 'warning',
-  invalid: 'danger',
+const VARIANT: Record<ValidationStatus, "success" | "warning" | "danger"> = {
+  valid: "success",
+  needs_review: "warning",
+  invalid: "danger"
 }
 
 const ICON: Record<ValidationStatus, typeof CheckCircle2> = {
   valid: CheckCircle2,
   needs_review: AlertTriangle,
-  invalid: XCircle,
+  invalid: XCircle
 }
 
 const STATUS_DESCRIPTION: Record<ValidationStatus, string> = {
-  valid: 'Soal sesuai kurikulum.',
-  needs_review: 'Soal perlu ditinjau ulang terhadap kurikulum.',
-  invalid: 'Soal tidak sesuai kurikulum.',
+  valid: "Soal sesuai kurikulum.",
+  needs_review: "Soal perlu ditinjau ulang terhadap kurikulum.",
+  invalid: "Soal tidak sesuai kurikulum."
 }
 
 export interface CurriculumValidationBadgeProps {
@@ -33,9 +33,9 @@ export interface CurriculumValidationBadgeProps {
 }
 
 export function CurriculumValidationBadge({
-  status,
-  reason,
   compact = false,
+  reason,
+  status
 }: CurriculumValidationBadgeProps) {
   const Icon = ICON[status]
   const tooltipBody = reason?.trim() ? reason : STATUS_DESCRIPTION[status]
@@ -45,11 +45,11 @@ export function CurriculumValidationBadge({
       <TooltipTrigger asChild>
         <Badge
           variant={VARIANT[status]}
-          className={compact ? 'text-caption shrink-0 gap-1 cursor-default' : 'text-caption gap-1 cursor-default'}
+          className={compact ? "text-caption shrink-0 gap-1 cursor-default" : "text-caption gap-1 cursor-default"}
           data-testid={`curriculum-badge-${status}`}
         >
           <Icon className="h-3 w-3" aria-hidden />
-          {compact ? LABEL[status].split(' ')[0] : LABEL[status]}
+          {compact ? LABEL[status].split(" ")[0] : LABEL[status]}
         </Badge>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs">
@@ -61,5 +61,5 @@ export function CurriculumValidationBadge({
 }
 
 export function needsCurriculumReview(status: ValidationStatus | null | undefined): boolean {
-  return status === 'needs_review' || status === 'invalid'
+  return status === "needs_review" || status === "invalid"
 }

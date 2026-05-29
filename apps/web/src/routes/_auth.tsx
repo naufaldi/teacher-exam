@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react'
-import { createFileRoute, Outlet, redirect, Link } from '@tanstack/react-router'
-import { LogOut, HelpCircle } from 'lucide-react'
-import { Button } from '@teacher-exam/ui'
-import { authClient, signOut } from '../lib/auth-client'
-import { setUnauthorizedHandler } from '../lib/api'
-import { useThrottle } from '../lib/use-throttle'
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router"
+import { Button } from "@teacher-exam/ui"
+import { HelpCircle, LogOut } from "lucide-react"
+import { useEffect, useState } from "react"
+import { setUnauthorizedHandler } from "../lib/api"
+import { authClient, signOut } from "../lib/auth-client"
+import { useThrottle } from "../lib/use-throttle"
 
 const NAV_LINKS = [
-  { to: '/dashboard' as const, label: 'Dashboard' },
-  { to: '/history' as const, label: 'Riwayat' },
-  { to: '/bank-soal' as const, label: 'Bank Soal' },
-  { to: '/generate' as const, label: 'Generate' },
+  { to: "/dashboard" as const, label: "Dashboard" },
+  { to: "/history" as const, label: "Riwayat" },
+  { to: "/bank-soal" as const, label: "Bank Soal" },
+  { to: "/generate" as const, label: "Generate" }
 ] as const
 
 type RouteUser = {
@@ -22,23 +22,23 @@ type RouteUser = {
   profileCompleted?: boolean
 }
 
-export const Route = createFileRoute('/_auth')({
+export const Route = createFileRoute("/_auth")({
   beforeLoad: async ({ location }) => {
     const session = await authClient.getSession({
-      query: { disableCookieCache: true },
+      query: { disableCookieCache: true }
     })
     const user = session?.data?.user as RouteUser | undefined
     if (!user) {
-      throw redirect({ to: '/', search: { reason: 'session_expired' } })
+      throw redirect({ to: "/", search: { reason: "session_expired" } })
     }
 
-    if (user.profileCompleted === false && location.pathname !== '/onboarding') {
-      throw redirect({ to: '/onboarding' })
+    if (user.profileCompleted === false && location.pathname !== "/onboarding") {
+      throw redirect({ to: "/onboarding" })
     }
 
     return { user }
   },
-  component: AuthLayout,
+  component: AuthLayout
 })
 
 function AuthLayout() {
@@ -46,10 +46,10 @@ function AuthLayout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const initials = user.name
-    .split(' ')
+    .split(" ")
     .slice(0, 2)
     .map((n) => n.charAt(0).toUpperCase())
-    .join('')
+    .join("")
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -57,7 +57,7 @@ function AuthLayout() {
         try {
           await signOut()
         } finally {
-          window.location.replace('/?reason=session_expired')
+          window.location.replace("/?reason=session_expired")
         }
       })()
     })
@@ -72,7 +72,7 @@ function AuthLayout() {
     } finally {
       // Hard redirect bypasses the TanStack Router + better-auth in-memory
       // session cache so the cleared cookie is observed on the next load.
-      window.location.replace('/')
+      window.location.replace("/")
     }
   })
 
@@ -88,19 +88,19 @@ function AuthLayout() {
               className="w-7 h-7"
             />
             <span className="font-extrabold text-[17px] tracking-[-0.01em] text-text-primary">
-              Ujian<span className="text-primary-600"> SD</span>
+              Ujian<span className="text-primary-600">SD</span>
             </span>
           </a>
 
           {/* Nav links — hidden on small screens */}
           <div className="hidden md:flex items-center gap-1 ml-5">
-            {NAV_LINKS.map(({ to, label }) => (
+            {NAV_LINKS.map(({ label, to }) => (
               <Link
                 key={to}
                 to={to}
                 className="px-3 py-2 text-body-sm font-medium text-text-tertiary rounded-sm transition-colors duration-[120ms] hover:bg-kertas-100 hover:text-text-primary"
                 activeProps={{
-                  className: 'bg-primary-50 text-primary-700 font-semibold',
+                  className: "bg-primary-50 text-primary-700 font-semibold"
                 }}
               >
                 {label}
@@ -123,17 +123,19 @@ function AuthLayout() {
               className="flex items-center gap-2.5 py-1 pl-3 pr-1.5 border border-border-default rounded-pill bg-bg-surface text-body-sm font-medium hover:border-kertas-300 hover:bg-kertas-50 transition-colors duration-[120ms]"
             >
               <span className="text-text-primary">{user.name}</span>
-              {user.image ? (
-                <img
-                  src={user.image}
-                  alt={user.name}
-                  className="w-7 h-7 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
-                  <span className="font-bold text-white text-[12px] tracking-wide">{initials}</span>
-                </div>
-              )}
+              {user.image ?
+                (
+                  <img
+                    src={user.image}
+                    alt={user.name}
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                ) :
+                (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
+                    <span className="font-bold text-white text-[12px] tracking-wide">{initials}</span>
+                  </div>
+                )}
             </Link>
 
             {/* Logout */}

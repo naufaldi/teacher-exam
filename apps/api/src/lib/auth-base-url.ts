@@ -1,7 +1,7 @@
 function isLocalhostOrigin(url: string): boolean {
   try {
     const hostname = new URL(url).hostname
-    return hostname === 'localhost' || hostname === '127.0.0.1'
+    return hostname === "localhost" || hostname === "127.0.0.1"
   } catch {
     return false
   }
@@ -16,7 +16,7 @@ export function defaultBetterAuthBaseURL(input: {
   appUrl: string
   apiPort: string
 }): string {
-  if (input.explicit !== undefined && input.explicit !== '') {
+  if (input.explicit !== undefined && input.explicit !== "") {
     return input.explicit
   }
   if (isLocalhostOrigin(input.appUrl)) {

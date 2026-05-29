@@ -1,11 +1,11 @@
-import type { ExamSubject } from '@teacher-exam/shared'
+import type { ExamSubject } from "@teacher-exam/shared"
 
 export type SubjectBadgeVariant =
-  | 'subject-bi'
-  | 'subject-ppkn'
-  | 'subject-ipas'
-  | 'subject-bing'
-  | 'secondary'
+  | "subject-bi"
+  | "subject-ppkn"
+  | "subject-ipas"
+  | "subject-bing"
+  | "secondary"
 
 interface SubjectMeta {
   value: ExamSubject
@@ -15,54 +15,54 @@ interface SubjectMeta {
   dotClass: string
 }
 
-export const SUBJECT_OPTIONS: readonly SubjectMeta[] = [
+export const SUBJECT_OPTIONS: ReadonlyArray<SubjectMeta> = [
   {
-    value: 'bahasa_indonesia',
-    label: 'Bahasa Indonesia',
-    short: 'BI',
-    badgeVariant: 'subject-bi',
-    dotClass: 'text-subject-bi',
+    value: "bahasa_indonesia",
+    label: "Bahasa Indonesia",
+    short: "BI",
+    badgeVariant: "subject-bi",
+    dotClass: "text-subject-bi"
   },
   {
-    value: 'pendidikan_pancasila',
-    label: 'Pendidikan Pancasila',
-    short: 'PPKN',
-    badgeVariant: 'subject-ppkn',
-    dotClass: 'text-subject-ppkn',
+    value: "pendidikan_pancasila",
+    label: "Pendidikan Pancasila",
+    short: "PPKN",
+    badgeVariant: "subject-ppkn",
+    dotClass: "text-subject-ppkn"
   },
   {
-    value: 'ipas',
-    label: 'IPAS',
-    short: 'IPAS',
-    badgeVariant: 'subject-ipas',
-    dotClass: 'text-subject-ipas',
+    value: "ipas",
+    label: "IPAS",
+    short: "IPAS",
+    badgeVariant: "subject-ipas",
+    dotClass: "text-subject-ipas"
   },
   {
-    value: 'bahasa_inggris',
-    label: 'Bahasa Inggris',
-    short: 'BING',
-    badgeVariant: 'subject-bing',
-    dotClass: 'text-subject-bing',
+    value: "bahasa_inggris",
+    label: "Bahasa Inggris",
+    short: "BING",
+    badgeVariant: "subject-bing",
+    dotClass: "text-subject-bing"
   },
   {
-    value: 'matematika',
-    label: 'Matematika',
-    short: 'MTK',
-    badgeVariant: 'secondary',
-    dotClass: 'text-text-secondary',
-  },
+    value: "matematika",
+    label: "Matematika",
+    short: "MTK",
+    badgeVariant: "secondary",
+    dotClass: "text-text-secondary"
+  }
 ] as const
 
 const SUBJECT_META = Object.fromEntries(
-  SUBJECT_OPTIONS.map((subject) => [subject.value, subject]),
+  SUBJECT_OPTIONS.map((subject) => [subject.value, subject])
 ) as Record<ExamSubject, SubjectMeta>
 
 const FALLBACK_SUBJECT: SubjectMeta = {
-  value: 'bahasa_indonesia',
-  label: 'Mata Pelajaran',
-  short: '?',
-  badgeVariant: 'subject-bi',
-  dotClass: 'text-text-tertiary',
+  value: "bahasa_indonesia",
+  label: "Mata Pelajaran",
+  short: "?",
+  badgeVariant: "subject-bi",
+  dotClass: "text-text-tertiary"
 }
 
 export function subjectMetaFor(subject: ExamSubject | string): SubjectMeta {

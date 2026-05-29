@@ -1,6 +1,6 @@
-import * as React from 'react'
-import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { cn } from '../lib/utils'
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import * as React from "react"
+import { cn } from "../lib/utils"
 
 const Tabs = TabsPrimitive.Root
 
@@ -11,8 +11,8 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      'inline-flex h-10 items-center justify-center rounded-md bg-bg-muted p-1 text-text-tertiary',
-      className,
+      "inline-flex h-10 items-center justify-center rounded-md bg-bg-muted p-1 text-text-tertiary",
+      className
     )}
     {...props}
   />
@@ -26,13 +26,13 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium',
-      'transition-all duration-[120ms] ease-[cubic-bezier(0.4,0.0,0.2,1)]',
-      'focus-visible:outline-none',
-      'focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2',
-      'disabled:pointer-events-none disabled:opacity-45',
-      'data-[state=active]:bg-bg-surface data-[state=active]:text-text-primary data-[state=active]:shadow-sm',
-      className,
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium",
+      "transition-all duration-[120ms] ease-[cubic-bezier(0.4,0.0,0.2,1)]",
+      "focus-visible:outline-none",
+      "focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2",
+      "disabled:pointer-events-none disabled:opacity-45",
+      "data-[state=active]:bg-bg-surface data-[state=active]:text-text-primary data-[state=active]:shadow-sm",
+      className
     )}
     {...props}
   />
@@ -46,14 +46,14 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      'mt-2',
-      'focus-visible:outline-none',
-      'focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2',
-      className,
+      "mt-2",
+      "focus-visible:outline-none",
+      "focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2",
+      className
     )}
     {...props}
   />
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsContent, TabsList, TabsTrigger }

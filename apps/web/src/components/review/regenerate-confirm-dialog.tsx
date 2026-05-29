@@ -1,14 +1,14 @@
-import { RefreshCw, AlertTriangle } from 'lucide-react'
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@teacher-exam/ui'
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@teacher-exam/ui"
+import { AlertTriangle, RefreshCw } from "lucide-react"
 
 export interface RegenerateConfirmDialogProps {
   open: boolean
@@ -22,13 +22,18 @@ export interface RegenerateConfirmDialogProps {
  * Surfaces how many already-accepted/edited items will be lost.
  */
 export function RegenerateConfirmDialog({
-  open,
-  onConfirm,
-  onClose,
   acceptedCount,
+  onClose,
+  onConfirm,
+  open
 }: RegenerateConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={(o: boolean) => { if (!o) onClose() }}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(o: boolean) => {
+        if (!o) onClose()
+      }}
+    >
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-3">
@@ -38,16 +43,17 @@ export function RegenerateConfirmDialog({
             <div className="space-y-1">
               <AlertDialogTitle>Regenerate seluruh paket?</AlertDialogTitle>
               <AlertDialogDescription>
-                Semua soal pada lembar ini akan dibuang dan AI akan membuat paket baru
-                dengan konfigurasi yang sama.
-                {typeof acceptedCount === 'number' && acceptedCount > 0 ? (
-                  <>
-                    {' '}
-                    <span className="text-text-primary font-medium">
-                      {acceptedCount} soal yang sudah diterima/diedit akan hilang.
-                    </span>
-                  </>
-                ) : null}
+                Semua soal pada lembar ini akan dibuang dan AI akan membuat paket baru dengan konfigurasi yang sama.
+                {typeof acceptedCount === "number" && acceptedCount > 0 ?
+                  (
+                    <>
+                      {" "}
+                      <span className="text-text-primary font-medium">
+                        {acceptedCount} soal yang sudah diterima/diedit akan hilang.
+                      </span>
+                    </>
+                  ) :
+                  null}
               </AlertDialogDescription>
             </div>
           </div>

@@ -1,31 +1,30 @@
-import * as React from 'react'
-import { CalendarIcon } from 'lucide-react'
-import { cn } from '../lib/utils'
-import { Popover, PopoverContent, PopoverTrigger } from './popover'
-import { Calendar } from './calendar'
+import { CalendarIcon } from "lucide-react"
+import * as React from "react"
+import { cn } from "../lib/utils"
+import { Calendar } from "./calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "./popover"
 
-const INPUT_TRIGGER_CLASSES =
-  'flex h-10 w-full rounded-xs border border-border-ui bg-bg-surface px-3 py-2' +
-  ' text-body text-text-primary' +
-  ' transition-colors duration-[120ms] ease-[cubic-bezier(0.4,0.0,0.2,1)]' +
-  ' focus-visible:outline-none' +
-  ' focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2' +
-  ' disabled:opacity-45 disabled:cursor-not-allowed'
+const INPUT_TRIGGER_CLASSES = "flex h-10 w-full rounded-xs border border-border-ui bg-bg-surface px-3 py-2" +
+  " text-body text-text-primary" +
+  " transition-colors duration-[120ms] ease-[cubic-bezier(0.4,0.0,0.2,1)]" +
+  " focus-visible:outline-none" +
+  " focus-visible:ring-3 focus-visible:ring-[color:var(--color-border-focus)]/40 focus-visible:ring-offset-2" +
+  " disabled:opacity-45 disabled:cursor-not-allowed"
 
-const idFormatter = new Intl.DateTimeFormat('id-ID', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
+const idFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric"
 })
 
 function formatDisplay(iso: string): string {
-  return idFormatter.format(new Date(iso + 'T00:00:00'))
+  return idFormatter.format(new Date(iso + "T00:00:00"))
 }
 
 function isoFromDate(date: Date): string {
   const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
 }
 
@@ -40,13 +39,13 @@ export interface DatePickerProps {
 }
 
 export function DatePicker({
+  className,
+  disabled = false,
   id,
-  value,
   onChange,
   onCommit,
-  placeholder = 'Pilih tanggal',
-  disabled = false,
-  className,
+  placeholder = "Pilih tanggal",
+  value
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -62,7 +61,7 @@ export function DatePicker({
     setOpen(false)
   }
 
-  const selected = value ? new Date(value + 'T00:00:00') : undefined
+  const selected = value ? new Date(value + "T00:00:00") : undefined
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -71,9 +70,9 @@ export function DatePicker({
           type="button"
           id={id}
           disabled={disabled}
-          className={cn(INPUT_TRIGGER_CLASSES, 'justify-between text-left cursor-pointer', className)}
+          className={cn(INPUT_TRIGGER_CLASSES, "justify-between text-left cursor-pointer", className)}
         >
-          <span className={value ? 'text-text-primary' : 'text-text-disabled'}>
+          <span className={value ? "text-text-primary" : "text-text-disabled"}>
             {value ? formatDisplay(value) : placeholder}
           </span>
           <CalendarIcon className="h-4 w-4 shrink-0 text-text-secondary" />

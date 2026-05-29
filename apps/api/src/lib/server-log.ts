@@ -1,13 +1,13 @@
-const SERVICE = 'teacher-exam-api'
+const SERVICE = "teacher-exam-api"
 
 function useJsonLines(): boolean {
-  return process.env['NODE_ENV'] === 'production'
+  return process.env["NODE_ENV"] === "production"
 }
 
 function emit(
-  level: 'info' | 'warn' | 'error',
+  level: "info" | "warn" | "error",
   msg: string,
-  extra?: Record<string, unknown>,
+  extra?: Record<string, unknown>
 ): void {
   const time = new Date().toISOString()
   const hasExtra = extra !== undefined && Object.keys(extra).length > 0
@@ -17,15 +17,15 @@ function emit(
       service: SERVICE,
       level,
       msg,
-      time,
+      time
     }
     if (hasExtra) {
-      payload['extra'] = extra
+      payload["extra"] = extra
     }
     const line = JSON.stringify(payload)
-    if (level === 'error') {
+    if (level === "error") {
       console.error(line)
-    } else if (level === 'warn') {
+    } else if (level === "warn") {
       console.warn(line)
     } else {
       console.log(line)
@@ -37,9 +37,9 @@ function emit(
   if (hasExtra) {
     out += ` ${JSON.stringify(extra)}`
   }
-  if (level === 'error') {
+  if (level === "error") {
     console.error(out)
-  } else if (level === 'warn') {
+  } else if (level === "warn") {
     console.warn(out)
   } else {
     console.log(out)
@@ -48,13 +48,13 @@ function emit(
 
 /** Structured API process logging: JSON lines in production, readable lines in dev. */
 export function logInfo(msg: string, extra?: Record<string, unknown>): void {
-  emit('info', msg, extra)
+  emit("info", msg, extra)
 }
 
 export function logWarn(msg: string, extra?: Record<string, unknown>): void {
-  emit('warn', msg, extra)
+  emit("warn", msg, extra)
 }
 
 export function logError(msg: string, extra?: Record<string, unknown>): void {
-  emit('error', msg, extra)
+  emit("error", msg, extra)
 }

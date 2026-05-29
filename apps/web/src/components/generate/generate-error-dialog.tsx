@@ -1,13 +1,13 @@
-import { AlertTriangle, RefreshCw } from 'lucide-react'
 import {
+  Button,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  Button,
-} from '@teacher-exam/ui'
+  DialogHeader,
+  DialogTitle
+} from "@teacher-exam/ui"
+import { AlertTriangle, RefreshCw } from "lucide-react"
 
 export interface GenerateErrorDialogProps {
   open: boolean
@@ -21,13 +21,18 @@ export interface GenerateErrorDialogProps {
  * Offers a retry path that re-runs the generation and a close path that returns to the form.
  */
 export function GenerateErrorDialog({
-  open,
-  onRetry,
-  onClose,
   message,
+  onClose,
+  onRetry,
+  open
 }: GenerateErrorDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-start gap-3">
@@ -38,7 +43,7 @@ export function GenerateErrorDialog({
               <DialogTitle className="text-h3">AI gagal merespons</DialogTitle>
               <DialogDescription className="text-body-sm">
                 {message ??
-                  'Permintaan generate timeout atau melebihi batas penggunaan. Silakan coba lagi dalam beberapa saat.'}
+                  "Permintaan generate timeout atau melebihi batas penggunaan. Silakan coba lagi dalam beberapa saat."}
               </DialogDescription>
             </div>
           </div>

@@ -1,33 +1,33 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import tailwindcss from "@tailwindcss/vite"
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
+import react from "@vitejs/plugin-react"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { defineConfig, loadEnv } from "vite"
 
-const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
 export default defineConfig(({ mode }) => {
-  const fromFiles = loadEnv(mode, monorepoRoot, '')
-  const apiPort = process.env['API_PORT'] ?? fromFiles['API_PORT'] ?? '3000'
+  const fromFiles = loadEnv(mode, monorepoRoot, "")
+  const apiPort = process.env["API_PORT"] ?? fromFiles["API_PORT"] ?? "3000"
 
   return {
     plugins: [
       TanStackRouterVite({
-        routesDirectory: './src/routes',
-        routeFileIgnorePattern: '__test__',
+        routesDirectory: "./src/routes",
+        routeFileIgnorePattern: "__test__"
       }),
       react(),
-      tailwindcss(),
+      tailwindcss()
     ],
     server: {
-      port: Number(process.env['WEB_PORT'] ?? fromFiles['WEB_PORT'] ?? 5173),
+      port: Number(process.env["WEB_PORT"] ?? fromFiles["WEB_PORT"] ?? 5173),
       proxy: {
-        '/api': {
+        "/api": {
           target: `http://127.0.0.1:${apiPort}`,
-          changeOrigin: true,
-        },
-      },
-    },
+          changeOrigin: true
+        }
+      }
+    }
   }
 })

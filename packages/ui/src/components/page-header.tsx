@@ -1,6 +1,6 @@
-import * as React from 'react'
-import { ArrowLeft } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { ArrowLeft } from "lucide-react"
+import * as React from "react"
+import { cn } from "../lib/utils"
 
 export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string
@@ -10,12 +10,12 @@ export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
-  ({ className, title, subtitle, onBack, backLabel = 'Kembali', children, ...props }, ref) => (
+  ({ backLabel = "Kembali", children, className, onBack, subtitle, title, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        'flex items-start justify-between pb-6 border-b border-border-default mb-6',
-        className,
+        "flex items-start justify-between pb-6 border-b border-border-default mb-6",
+        className
       )}
       {...props}
     >
@@ -31,9 +31,7 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
           </button>
         )}
         <h1 className="text-h1 font-bold text-text-primary">{title}</h1>
-        {subtitle && (
-          <p className="text-body text-text-tertiary mt-1">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-body text-text-tertiary mt-1">{subtitle}</p>}
       </div>
       {children && (
         <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -41,6 +39,6 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
         </div>
       )}
     </div>
-  ),
+  )
 )
-PageHeader.displayName = 'PageHeader'
+PageHeader.displayName = "PageHeader"

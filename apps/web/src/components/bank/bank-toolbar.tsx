@@ -1,16 +1,12 @@
-import { Search, X } from 'lucide-react'
-import type { BankSort, ExamDifficulty, ExamSubject, QuestionType } from '@teacher-exam/shared'
-import { SUBJECT_OPTIONS } from '../../lib/subjects.js'
-import {
-  FILTER_SEARCH_CLASS,
-  SELECT_CLASS,
-  SELECT_CHEVRON,
-} from '../shared/filter-select-styles.js'
+import type { BankSort, ExamDifficulty, ExamSubject, QuestionType } from "@teacher-exam/shared"
+import { Search, X } from "lucide-react"
+import { SUBJECT_OPTIONS } from "../../lib/subjects.js"
+import { FILTER_SEARCH_CLASS, SELECT_CHEVRON, SELECT_CLASS } from "../shared/filter-select-styles.js"
 
-export type BankSubjectFilter = '' | ExamSubject
-export type BankGradeFilter = '' | '5' | '6'
-export type BankDifficultyFilter = '' | ExamDifficulty
-export type BankTypeFilter = '' | QuestionType
+export type BankSubjectFilter = "" | ExamSubject
+export type BankGradeFilter = "" | "5" | "6"
+export type BankDifficultyFilter = "" | ExamDifficulty
+export type BankTypeFilter = "" | QuestionType
 export type BankSortFilter = BankSort
 
 interface BankToolbarProps {
@@ -38,59 +34,59 @@ interface BankToolbarProps {
 }
 
 const SUBJECT_FILTER_OPTIONS: Array<{ value: BankSubjectFilter; label: string }> = [
-  { value: '', label: 'Semua mapel' },
-  ...SUBJECT_OPTIONS.map((subject) => ({ value: subject.value, label: subject.label })),
+  { value: "", label: "Semua mapel" },
+  ...SUBJECT_OPTIONS.map((subject) => ({ value: subject.value, label: subject.label }))
 ]
 
 const GRADE_OPTIONS: Array<{ value: BankGradeFilter; label: string }> = [
-  { value: '', label: 'Semua kelas' },
-  { value: '5', label: 'Kelas 5' },
-  { value: '6', label: 'Kelas 6' },
+  { value: "", label: "Semua kelas" },
+  { value: "5", label: "Kelas 5" },
+  { value: "6", label: "Kelas 6" }
 ]
 
 const DIFFICULTY_OPTIONS: Array<{ value: BankDifficultyFilter; label: string }> = [
-  { value: '', label: 'Semua tingkat' },
-  { value: 'mudah', label: 'Mudah' },
-  { value: 'sedang', label: 'Sedang' },
-  { value: 'sulit', label: 'Sulit' },
-  { value: 'campuran', label: 'Campuran' },
+  { value: "", label: "Semua tingkat" },
+  { value: "mudah", label: "Mudah" },
+  { value: "sedang", label: "Sedang" },
+  { value: "sulit", label: "Sulit" },
+  { value: "campuran", label: "Campuran" }
 ]
 
 const TYPE_OPTIONS: Array<{ value: BankTypeFilter; label: string }> = [
-  { value: '', label: 'Semua tipe' },
-  { value: 'mcq_single', label: 'Pilihan ganda' },
-  { value: 'mcq_multi', label: 'Pilihan ganda kompleks' },
-  { value: 'true_false', label: 'Benar/Salah' },
+  { value: "", label: "Semua tipe" },
+  { value: "mcq_single", label: "Pilihan ganda" },
+  { value: "mcq_multi", label: "Pilihan ganda kompleks" },
+  { value: "true_false", label: "Benar/Salah" }
 ]
 
 const SORT_OPTIONS: Array<{ value: BankSortFilter; label: string }> = [
-  { value: 'terbaru', label: 'Terbaru' },
-  { value: 'terpopuler', label: 'Terpopuler' },
-  { value: 'kesulitan', label: 'Kesulitan' },
+  { value: "terbaru", label: "Terbaru" },
+  { value: "terpopuler", label: "Terpopuler" },
+  { value: "kesulitan", label: "Kesulitan" }
 ]
 
 function BankToolbar({
-  search,
-  subject,
-  grade,
-  difficulty,
-  topic,
-  type,
   author,
-  sort,
-  showAuthorFilter = false,
+  difficulty,
+  grade,
   isFiltered,
   matchCount,
-  totalCount,
-  onSearchChange,
-  onSubjectChange,
-  onGradeChange,
+  onAuthorChange,
   onDifficultyChange,
+  onGradeChange,
+  onReset,
+  onSearchChange,
+  onSortChange,
+  onSubjectChange,
   onTopicChange,
   onTypeChange,
-  onAuthorChange,
-  onSortChange,
-  onReset,
+  search,
+  showAuthorFilter = false,
+  sort,
+  subject,
+  topic,
+  totalCount,
+  type
 }: BankToolbarProps) {
   return (
     <div className="rounded-md border border-border-default bg-bg-surface">
@@ -175,16 +171,18 @@ function BankToolbar({
           ))}
         </select>
 
-        {showAuthorFilter ? (
-          <input
-            type="text"
-            value={author}
-            onChange={(e) => onAuthorChange(e.target.value)}
-            placeholder="Penulis..."
-            className={`${SELECT_CLASS} min-w-[120px]`}
-            aria-label="Filter penulis"
-          />
-        ) : null}
+        {showAuthorFilter ?
+          (
+            <input
+              type="text"
+              value={author}
+              onChange={(e) => onAuthorChange(e.target.value)}
+              placeholder="Penulis..."
+              className={`${SELECT_CLASS} min-w-[120px]`}
+              aria-label="Filter penulis"
+            />
+          ) :
+          null}
 
         <select
           value={sort}
@@ -203,21 +201,21 @@ function BankToolbar({
 
       <div className="flex items-center justify-between px-4 py-2 bg-kertas-50">
         <span className="text-body-sm text-text-tertiary">
-          Menampilkan{' '}
-          <span className="text-text-primary font-semibold tabular-nums">{matchCount}</span>{' '}
-          dari{' '}
+          Menampilkan <span className="text-text-primary font-semibold tabular-nums">{matchCount}</span> dari{" "}
           <span className="tabular-nums">{totalCount}</span> soal
         </span>
-        {isFiltered ? (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms]"
-          >
-            <X size={13} />
-            Reset filter
-          </button>
-        ) : null}
+        {isFiltered ?
+          (
+            <button
+              type="button"
+              onClick={onReset}
+              className="inline-flex items-center gap-1.5 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms]"
+            >
+              <X size={13} />
+              Reset filter
+            </button>
+          ) :
+          null}
       </div>
     </div>
   )

@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react'
-import { XCircle } from 'lucide-react'
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-  Textarea,
-} from '@teacher-exam/ui'
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Textarea
+} from "@teacher-exam/ui"
+import { XCircle } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export interface TolakRegenerateDialogProps {
   open: boolean
@@ -21,16 +21,16 @@ export interface TolakRegenerateDialogProps {
 }
 
 export function TolakRegenerateDialog({
-  open,
-  questionNumber,
   initialHint,
-  onConfirm,
   onClose,
+  onConfirm,
+  open,
+  questionNumber
 }: TolakRegenerateDialogProps) {
-  const [hint, setHint] = useState(initialHint ?? '')
+  const [hint, setHint] = useState(initialHint ?? "")
 
   useEffect(() => {
-    if (open) setHint(initialHint ?? '')
+    if (open) setHint(initialHint ?? "")
   }, [open, initialHint])
 
   const handleConfirm = () => {
@@ -52,11 +52,11 @@ export function TolakRegenerateDialog({
             </div>
             <div className="space-y-1">
               <AlertDialogTitle>
-                Tolak {questionNumber !== null ? `Soal #${questionNumber}` : 'soal ini'}?
+                Tolak {questionNumber !== null ? `Soal #${questionNumber}` : "soal ini"}?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                AI akan langsung membuat soal pengganti dengan topik dan tingkat kesulitan yang sama.
-                Berikan petunjuk di bawah jika ingin mengarahkan AI.
+                AI akan langsung membuat soal pengganti dengan topik dan tingkat kesulitan yang sama. Berikan petunjuk
+                di bawah jika ingin mengarahkan AI.
               </AlertDialogDescription>
             </div>
           </div>

@@ -1,9 +1,9 @@
-import { Effect, Either } from 'effect'
-import type { Question, ValidationStatus } from '@teacher-exam/shared'
-import { buildValidatorPrompt } from '../lib/validator-prompt'
-import { mergeValidationStatus, validationFailureFallback } from '../lib/validation-status'
-import type { AiService } from './AiService'
-import { AiGenerationError } from '../errors'
+import type { Question, ValidationStatus } from "@teacher-exam/shared"
+import { Effect, Either } from "effect"
+import { AiGenerationError } from "../errors"
+import { mergeValidationStatus, validationFailureFallback } from "../lib/validation-status"
+import { buildValidatorPrompt } from "../lib/validator-prompt"
+import type { AiService } from "./AiService"
 
 const CHUNK_SIZE = 5
 const MAX_CONCURRENCY = 3
@@ -25,68 +25,67 @@ export interface QuestionValidationUpdate {
   validationReason: string
 }
 
-function chunkArray<T>(items: ReadonlyArray<T>, size: number): T[][] {
-  const chunks: T[][] = []
+function chunkArray<T>(items: ReadonlyArray<T>, size: number): Array<Array<T>> {
+  const chunks: Array<Array<T>> = []
   for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size) as T[])
+    chunks.push(items.slice(i, i + size) as Array<T>)
   }
   return chunks
 }
 
 function validateChunk(
   aiService: AiService,
-  exam: ValidateBatchParams['exam'],
+  exam: ValidateBatchParams["exam"],
   curriculumText: string,
-  chunk: ReadonlyArray<Question>,
+  chunk: ReadonlyArray<Question>
 ): Effect.Effect<ReadonlyArray<{ number: number; status: ValidationStatus; reason: string }>> {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const { system, user } = buildValidatorPrompt({
       exam,
       curriculumText,
-      questions: chunk,
+      questions: chunk
     })
 
     const result = yield* Effect.either(
       aiService.validateCurriculum({
         system,
         user,
-        expectedCount: chunk.length,
-      }),
+        expectedCount: chunk.length
+      })
     )
 
     if (Either.isLeft(result)) {
-      const cause =
-        result.left instanceof AiGenerationError
-          ? String(result.left.cause)
-          : String(result.left)
+      const cause = result.left instanceof AiGenerationError
+        ? String(result.left.cause)
+        : String(result.left)
       const fallback = validationFailureFallback(cause)
       return chunk.map((q) => ({
         number: q.number,
         status: fallback.validationStatus,
-        reason: fallback.validationReason,
+        reason: fallback.validationReason
       }))
     }
 
     return result.right.map((item) => ({
       number: item.number,
       status: item.status,
-      reason: item.reason,
+      reason: item.reason
     }))
   })
 }
 
 export function validateQuestionBatch(
-  params: ValidateBatchParams,
+  params: ValidateBatchParams
 ): Effect.Effect<ReadonlyArray<QuestionValidationUpdate>> {
-  return Effect.gen(function* () {
-    const { aiService, exam, curriculumText, questions } = params
+  return Effect.gen(function*() {
+    const { aiService, curriculumText, exam, questions } = params
     if (questions.length === 0) return []
 
     const chunks = chunkArray(questions, CHUNK_SIZE)
     const chunkResults = yield* Effect.forEach(
       chunks,
       (chunk) => validateChunk(aiService, exam, curriculumText, chunk),
-      { concurrency: MAX_CONCURRENCY },
+      { concurrency: MAX_CONCURRENCY }
     )
 
     const byNumber = new Map<number, { status: ValidationStatus; reason: string }>()
@@ -97,39 +96,39 @@ export function validateQuestionBatch(
     }
 
     return questions.map((question) => {
-      const fallback = validationFailureFallback('missing from AI output')
+      const fallback = validationFailureFallback("missing from AI output")
       const curriculum = byNumber.get(question.number) ?? {
         status: fallback.validationStatus,
-        reason: fallback.validationReason,
+        reason: fallback.validationReason
       }
       const merged = mergeValidationStatus(
         { status: question.validationStatus, reason: question.validationReason },
-        curriculum,
+        curriculum
       )
       return {
         id: question.id,
         validationStatus: merged.validationStatus,
-        validationReason: merged.validationReason,
+        validationReason: merged.validationReason
       }
     })
   })
 }
 
 export function validateSingleQuestion(
-  params: Omit<ValidateBatchParams, 'questions'> & { question: Question },
+  params: Omit<ValidateBatchParams, "questions"> & { question: Question }
 ): Effect.Effect<QuestionValidationUpdate> {
-  return Effect.gen(function* () {
+  return Effect.gen(function*() {
     const updates = yield* validateQuestionBatch({
       ...params,
-      questions: [params.question],
+      questions: [params.question]
     })
     const update = updates[0]
     if (!update) {
-      const fallback = validationFailureFallback('empty validation result')
+      const fallback = validationFailureFallback("empty validation result")
       return {
         id: params.question.id,
         validationStatus: fallback.validationStatus,
-        validationReason: fallback.validationReason,
+        validationReason: fallback.validationReason
       }
     }
     return update

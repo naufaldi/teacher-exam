@@ -1,5 +1,5 @@
-import { describe, expect, it, test } from 'vitest'
-import { buildExamPrompt } from '../prompt'
+import { describe, expect, it, test } from "vitest"
+import { buildExamPrompt } from "../prompt"
 
 const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merdeka)
 
@@ -12,8 +12,8 @@ const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merde
 `
 
 function parsePromptParams(user: string) {
-  const jsonStart = user.indexOf('{')
-  if (jsonStart === -1) throw new Error('Prompt user message does not contain JSON params')
+  const jsonStart = user.indexOf("{")
+  if (jsonStart === -1) throw new Error("Prompt user message does not contain JSON params")
   return JSON.parse(user.slice(jsonStart)) as {
     jumlah_soal: number
     distribusi_kesulitan: { mudah: number; sedang: number; sulit: number }
@@ -21,212 +21,216 @@ function parsePromptParams(user: string) {
   }
 }
 
-describe('buildExamPrompt', () => {
-  it('puts the full curriculum corpus in the system message, not in user', () => {
+describe("buildExamPrompt", () => {
+  it("puts the full curriculum corpus in the system message, not in user", () => {
     const { system, user } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 6,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
     expect(system).toContain(FAKE_CURRICULUM)
-    expect(system).toContain('## Capaian Pembelajaran')
-    expect(system).toContain('## Bab 1: Aku Anak Indonesia')
-    expect(user).not.toContain('## Capaian Pembelajaran')
-    expect(user).not.toContain('## Bab 1:')
+    expect(system).toContain("## Capaian Pembelajaran")
+    expect(system).toContain("## Bab 1: Aku Anak Indonesia")
+    expect(user).not.toContain("## Capaian Pembelajaran")
+    expect(user).not.toContain("## Bab 1:")
   })
 
-  it('puts the topic and per-request parameters in the user message', () => {
+  it("puts the topic and per-request parameters in the user message", () => {
     const { system, user } = buildExamPrompt({
-      examType: 'sas',
-      difficulty: 'sulit',
-      examSubject: 'pendidikan_pancasila',
-      subjectLabel: 'Pendidikan Pancasila',
+      examType: "sas",
+      difficulty: "sulit",
+      examSubject: "pendidikan_pancasila",
+      subjectLabel: "Pendidikan Pancasila",
       grade: 5,
-      topics: ['Hak dan Kewajiban'],
+      topics: ["Hak dan Kewajiban"],
       totalSoal: 25,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(user).toContain('Hak dan Kewajiban')
-    expect(user).toContain('"kelas": 5')
-    expect(user).toContain('"mata_pelajaran": "Pendidikan Pancasila"')
-    expect(user).toContain('"jenis_lembar": "sas"')
-    expect(system).not.toContain('Hak dan Kewajiban')
+    expect(user).toContain("Hak dan Kewajiban")
+    expect(user).toContain("\"kelas\": 5")
+    expect(user).toContain("\"mata_pelajaran\": \"Pendidikan Pancasila\"")
+    expect(user).toContain("\"jenis_lembar\": \"sas\"")
+    expect(system).not.toContain("Hak dan Kewajiban")
   })
 
-  it('declares the authority order so the PDF is treated as additive', () => {
+  it("declares the authority order so the PDF is treated as additive", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 6,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system.toLowerCase()).toContain('authority order')
+    expect(system.toLowerCase()).toContain("authority order")
     expect(system).toMatch(/PDF guru.*konteks tambahan|konteks tambahan.*PDF guru/i)
     expect(system).toMatch(/baseline/i)
   })
 
-  it('omits optional class context and example questions when absent', () => {
+  it("omits optional class context and example questions when absent", () => {
     const { user } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 6,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
+    })
+    expect(user).not.toContain("konteks_guru")
+    expect(user).not.toContain("contoh_soal")
+  })
+
+  it("includes optional class context and example questions when provided", () => {
+    const { user } = buildExamPrompt({
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
+      grade: 6,
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
       composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      classContext: "Anak-anak masih bingung membedakan teks persuasi.",
+      exampleQuestions: "Contoh: Bacalah teks berikut..."
     })
-    expect(user).not.toContain('konteks_guru')
-    expect(user).not.toContain('contoh_soal')
+    expect(user).toContain("konteks_guru")
+    expect(user).toContain("teks persuasi")
+    expect(user).toContain("contoh_soal")
   })
 
-  it('includes optional class context and example questions when provided', () => {
+  it("injects all topics in the user message when multiple provided", () => {
     const { user } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "sas",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 6,
-      topics: ['Pemahaman Bacaan'],
-      totalSoal: 20,
-      curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
-      classContext: 'Anak-anak masih bingung membedakan teks persuasi.',
-      exampleQuestions: 'Contoh: Bacalah teks berikut...',
-    })
-    expect(user).toContain('konteks_guru')
-    expect(user).toContain('teks persuasi')
-    expect(user).toContain('contoh_soal')
-  })
-
-  it('injects all topics in the user message when multiple provided', () => {
-    const { user } = buildExamPrompt({
-      examType: 'sas',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
-      grade: 6,
-      topics: ['Teks Narasi', 'Puisi', 'Opini dan Fakta'],
+      topics: ["Teks Narasi", "Puisi", "Opini dan Fakta"],
       totalSoal: 25,
-      curriculumText: FAKE_CURRICULUM,
+      curriculumText: FAKE_CURRICULUM
     })
 
-    expect(user).toContain('Teks Narasi')
-    expect(user).toContain('Puisi')
-    expect(user).toContain('Opini dan Fakta')
+    expect(user).toContain("Teks Narasi")
+    expect(user).toContain("Puisi")
+    expect(user).toContain("Opini dan Fakta")
     expect(user).toMatch(/merata|distribusikan/i)
   })
 
-  it('works with a single topic (backward-compatible)', () => {
+  it("works with a single topic (backward-compatible)", () => {
     const { user } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'mudah',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "mudah",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 5,
-      topics: ['Kosakata'],
+      topics: ["Kosakata"],
       totalSoal: 20,
-      curriculumText: FAKE_CURRICULUM,
+      curriculumText: FAKE_CURRICULUM
     })
 
-    expect(user).toContain('Kosakata')
+    expect(user).toContain("Kosakata")
   })
 
-  it('throws when topics array is empty', () => {
+  it("throws when topics array is empty", () => {
     expect(() =>
       buildExamPrompt({
-        examType: 'formatif',
-        difficulty: 'campuran',
-        examSubject: 'bahasa_indonesia',
-        subjectLabel: 'Bahasa Indonesia',
+        examType: "formatif",
+        difficulty: "campuran",
+        examSubject: "bahasa_indonesia",
+        subjectLabel: "Bahasa Indonesia",
         grade: 6,
         topics: [],
         totalSoal: 20,
-        curriculumText: FAKE_CURRICULUM,
-      }),
-    ).toThrow('topics must contain at least one item')
+        curriculumText: FAKE_CURRICULUM
+      })
+    ).toThrow("topics must contain at least one item")
   })
 
-  it('adds Bahasa Inggris language rules when examSubject is bahasa_inggris', () => {
+  it("adds Bahasa Inggris language rules when examSubject is bahasa_inggris", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_inggris',
-      subjectLabel: 'Bahasa Inggris',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_inggris",
+      subjectLabel: "Bahasa Inggris",
       grade: 5,
-      topics: ['Daily Activities'],
+      topics: ["Daily Activities"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).toContain('Bahasa Inggris language rules')
+    expect(system).toContain("Bahasa Inggris language rules")
     expect(system).toMatch(/stem.*Bahasa Inggris|Bahasa Inggris.*stem/i)
-    expect(system).toContain('option_*')
+    expect(system).toContain("option_*")
   })
 
-  it('does not add Bahasa Inggris language rules for IPAS', () => {
+  it("does not add Bahasa Inggris language rules for IPAS", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'ipas',
-      subjectLabel: 'IPAS',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "ipas",
+      subjectLabel: "IPAS",
       grade: 5,
-      topics: ['Cahaya dan Bunyi'],
+      topics: ["Cahaya dan Bunyi"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).not.toContain('Bahasa Inggris language rules')
+    expect(system).not.toContain("Bahasa Inggris language rules")
   })
 })
 
-describe('buildExamPrompt — totalSoal', () => {
+describe("buildExamPrompt — totalSoal", () => {
   const basePromptInput = {
-    examType: 'formatif' as const,
-    difficulty: 'campuran' as const,
-    examSubject: 'bahasa_indonesia' as const,
-    subjectLabel: 'Bahasa Indonesia',
+    examType: "formatif" as const,
+    difficulty: "campuran" as const,
+    examSubject: "bahasa_indonesia" as const,
+    subjectLabel: "Bahasa Indonesia",
     grade: 6,
-    topics: ['Pemahaman Bacaan'],
+    topics: ["Pemahaman Bacaan"],
     curriculumText: FAKE_CURRICULUM,
-    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
   }
 
-  test('system prompt contains exact totalSoal count (not hardcoded 20)', () => {
+  test("system prompt contains exact totalSoal count (not hardcoded 20)", () => {
     const { system } = buildExamPrompt({ ...basePromptInput, totalSoal: 25 })
-    expect(system).toContain('tepat 25 soal')
-    expect(system).not.toContain('tepat 20')
+    expect(system).toContain("tepat 25 soal")
+    expect(system).not.toContain("tepat 20")
   })
 
-  test('user prompt contains totalSoal count', () => {
-    const { user } = buildExamPrompt({ ...basePromptInput, totalSoal: 30, composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 } })
-    expect(user).toContain('berisi 30 soal')
-  })
-
-  test('difficulty distribution in prompt sums to totalSoal', () => {
+  test("user prompt contains totalSoal count", () => {
     const { user } = buildExamPrompt({
       ...basePromptInput,
-      difficulty: 'sedang',
       totalSoal: 30,
-      composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 }
+    })
+    expect(user).toContain("berisi 30 soal")
+  })
+
+  test("difficulty distribution in prompt sums to totalSoal", () => {
+    const { user } = buildExamPrompt({
+      ...basePromptInput,
+      difficulty: "sedang",
+      totalSoal: 30,
+      composition: { mcqSingle: 30, mcqMulti: 0, trueFalse: 0 }
     })
     const params = parsePromptParams(user)
     const dist = params.distribusi_kesulitan
@@ -235,25 +239,24 @@ describe('buildExamPrompt — totalSoal', () => {
     expect(dist.mudah + dist.sedang + dist.sulit).toBe(30)
   })
 
-  test('sts sulit prompt keeps requested 40-question totals consistent', () => {
+  test("sts sulit prompt keeps requested 40-question totals consistent", () => {
     const { user } = buildExamPrompt({
-      examType: 'sts',
-      difficulty: 'sulit',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "sts",
+      difficulty: "sulit",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 5,
       topics: [
-        'Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat)',
-        'Ide Pokok dan Gagasan Pendukung',
-        'Teks Eksposisi',
-        'Teks Eksplanasi',
-        'Teks Deskripsi',
+        "Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat)",
+        "Ide Pokok dan Gagasan Pendukung",
+        "Teks Eksposisi",
+        "Teks Eksplanasi",
+        "Teks Deskripsi"
       ],
       totalSoal: 40,
       curriculumText: FAKE_CURRICULUM,
-      classContext:
-        'Fokus pada: Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat).\nHubungkan dengan keagamaan',
-      composition: { mcqSingle: 29, mcqMulti: 6, trueFalse: 5 },
+      classContext: "Fokus pada: Unsur Intrinsik Cerita (Tokoh, Latar, Alur, Amanat).\nHubungkan dengan keagamaan",
+      composition: { mcqSingle: 29, mcqMulti: 6, trueFalse: 5 }
     })
     const params = parsePromptParams(user)
     const dist = params.distribusi_kesulitan
@@ -266,160 +269,160 @@ describe('buildExamPrompt — totalSoal', () => {
   })
 })
 
-describe('buildExamPrompt — composition and multi-type', () => {
+describe("buildExamPrompt — composition and multi-type", () => {
   const base = {
-    examType: 'latihan' as const,
-    difficulty: 'campuran' as const,
-    examSubject: 'bahasa_indonesia' as const,
-    subjectLabel: 'Bahasa Indonesia',
+    examType: "latihan" as const,
+    difficulty: "campuran" as const,
+    examSubject: "bahasa_indonesia" as const,
+    subjectLabel: "Bahasa Indonesia",
     grade: 5,
-    topics: ['Teks Narasi'],
+    topics: ["Teks Narasi"],
     totalSoal: 25,
-    curriculumText: 'Dummy curriculum.',
-    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+    curriculumText: "Dummy curriculum.",
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 }
   }
 
-  test('system message mentions _tag field', () => {
+  test("system message mentions _tag field", () => {
     const { system } = buildExamPrompt(base)
-    expect(system).toContain('_tag')
+    expect(system).toContain("_tag")
   })
 
-  test('system message requires number on every generated question shape', () => {
+  test("system message requires number on every generated question shape", () => {
     const { system } = buildExamPrompt(base)
-    expect(system).toContain('"number"')
+    expect(system).toContain("\"number\"")
     expect(system).toMatch(/number.*1/i)
   })
 
-  test('system message mentions all three _tag values', () => {
+  test("system message mentions all three _tag values", () => {
     const { system } = buildExamPrompt(base)
-    expect(system).toContain('mcq_single')
-    expect(system).toContain('mcq_multi')
-    expect(system).toContain('true_false')
+    expect(system).toContain("mcq_single")
+    expect(system).toContain("mcq_multi")
+    expect(system).toContain("true_false")
   })
 
-  test('system message describes correct_answers for mcq_multi', () => {
+  test("system message describes correct_answers for mcq_multi", () => {
     const { system } = buildExamPrompt(base)
-    expect(system).toContain('correct_answers')
+    expect(system).toContain("correct_answers")
   })
 
-  test('system message describes statements for true_false', () => {
+  test("system message describes statements for true_false", () => {
     const { system } = buildExamPrompt(base)
-    expect(system).toContain('statements')
+    expect(system).toContain("statements")
   })
 
-  test('user message contains count for each non-zero type', () => {
+  test("user message contains count for each non-zero type", () => {
     const { user } = buildExamPrompt(base)
-    expect(user).toContain('15 soal pilihan ganda')
-    expect(user).toContain('5 soal pilihan ganda kompleks')
-    expect(user).toContain('5 soal benar/salah')
+    expect(user).toContain("15 soal pilihan ganda")
+    expect(user).toContain("5 soal pilihan ganda kompleks")
+    expect(user).toContain("5 soal benar/salah")
   })
 
-  test('user message does NOT mention type with 0 count', () => {
+  test("user message does NOT mention type with 0 count", () => {
     const pureLatihan = { ...base, composition: { mcqSingle: 25, mcqMulti: 0, trueFalse: 0 }, totalSoal: 25 }
     const { user } = buildExamPrompt(pureLatihan)
-    expect(user).not.toContain('pilihan ganda kompleks')
-    expect(user).not.toContain('benar/salah')
+    expect(user).not.toContain("pilihan ganda kompleks")
+    expect(user).not.toContain("benar/salah")
   })
 })
 
-describe('buildExamPrompt — geometry figure spec', () => {
-  test('system message describes optional figure JSON for diagram geometry topics', () => {
+describe("buildExamPrompt — geometry figure spec", () => {
+  test("system message describes optional figure JSON for diagram geometry topics", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Matematika',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Matematika",
       grade: 5,
-      topics: ['Bangun Datar'],
+      topics: ["Bangun Datar"],
       totalSoal: 20,
-      curriculumText: 'Dummy matematika curriculum.',
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      curriculumText: "Dummy matematika curriculum.",
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).toContain('"figure"')
-    expect(system).toContain('circle')
-    expect(system).toContain('square')
-    expect(system).toContain('rectangle')
-    expect(system).toContain('triangle')
-    expect(system).toContain('trapezoid')
-    expect(system).toContain('coordinate_plane')
-    expect(system).toContain('opsional')
+    expect(system).toContain("\"figure\"")
+    expect(system).toContain("circle")
+    expect(system).toContain("square")
+    expect(system).toContain("rectangle")
+    expect(system).toContain("triangle")
+    expect(system).toContain("trapezoid")
+    expect(system).toContain("coordinate_plane")
+    expect(system).toContain("opsional")
   })
 })
 
-describe('buildExamPrompt — Matematika LaTeX rules', () => {
-  test('adds LaTeX delimiter rules for Matematika', () => {
+describe("buildExamPrompt — Matematika LaTeX rules", () => {
+  test("adds LaTeX delimiter rules for Matematika", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      subjectLabel: 'Matematika',
+      examType: "formatif",
+      difficulty: "campuran",
+      subjectLabel: "Matematika",
       grade: 5,
-      topics: ['Pecahan'],
+      topics: ["Pecahan"],
       totalSoal: 20,
-      curriculumText: 'Dummy matematika curriculum.',
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      curriculumText: "Dummy matematika curriculum.",
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).toContain('$inline$')
-    expect(system).toContain('$$display$$')
-    expect(system).toContain('\\frac{3}{4}')
-    expect(system).toContain('x^2')
-    expect(system).toContain('\\sqrt{16}')
-    expect(system).toContain('Rp350.000')
-    expect(system).toContain('tanda kutip ganda JSON')
-    expect(system).toContain('pemisah ribuan')
-    expect(system).toContain('Jangan mulai field "text" dengan `$`')
-    expect(system).toContain('tanpa delimiter')
+    expect(system).toContain("$inline$")
+    expect(system).toContain("$$display$$")
+    expect(system).toContain("\\frac{3}{4}")
+    expect(system).toContain("x^2")
+    expect(system).toContain("\\sqrt{16}")
+    expect(system).toContain("Rp350.000")
+    expect(system).toContain("tanda kutip ganda JSON")
+    expect(system).toContain("pemisah ribuan")
+    expect(system).toContain("Jangan mulai field \"text\" dengan `$`")
+    expect(system).toContain("tanpa delimiter")
   })
 
-  test('requires valid JSON string quoting for all subjects', () => {
+  test("requires valid JSON string quoting for all subjects", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      subjectLabel: "Bahasa Indonesia",
       grade: 5,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
-      curriculumText: 'Dummy curriculum.',
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      curriculumText: "Dummy curriculum.",
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).toContain('tanda kutip ganda valid JSON')
+    expect(system).toContain("tanda kutip ganda valid JSON")
   })
 
-  test('does not add Matematika-only LaTeX rules for non-Matematika', () => {
+  test("does not add Matematika-only LaTeX rules for non-Matematika", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      subjectLabel: "Bahasa Indonesia",
       grade: 5,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
-      curriculumText: 'Dummy bahasa curriculum.',
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      curriculumText: "Dummy bahasa curriculum.",
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).not.toContain('$inline$')
-    expect(system).not.toContain('$$display$$')
-    expect(system).not.toContain('\\frac{3}{4}')
+    expect(system).not.toContain("$inline$")
+    expect(system).not.toContain("$$display$$")
+    expect(system).not.toContain("\\frac{3}{4}")
   })
 
-  test('includes GPT-5.4 modular sections and mcq_single example', () => {
+  test("includes GPT-5.4 modular sections and mcq_single example", () => {
     const { system } = buildExamPrompt({
-      examType: 'formatif',
-      difficulty: 'campuran',
-      examSubject: 'bahasa_indonesia',
-      subjectLabel: 'Bahasa Indonesia',
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
       grade: 6,
-      topics: ['Pemahaman Bacaan'],
+      topics: ["Pemahaman Bacaan"],
       totalSoal: 20,
       curriculumText: FAKE_CURRICULUM,
-      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
     })
 
-    expect(system).toContain('# Tujuan')
-    expect(system).toContain('# Verifikasi')
-    expect(system).toContain('Contoh minimal mcq_single')
-    expect(system).toContain('"mcq_single"')
+    expect(system).toContain("# Tujuan")
+    expect(system).toContain("# Verifikasi")
+    expect(system).toContain("Contoh minimal mcq_single")
+    expect(system).toContain("\"mcq_single\"")
   })
 })

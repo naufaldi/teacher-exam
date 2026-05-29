@@ -1,13 +1,13 @@
-import { Search, X, ArrowUpDown } from 'lucide-react'
-import type { ExamSubject } from '@teacher-exam/shared'
-import { SUBJECT_OPTIONS } from '../../lib/subjects'
-import { FILTER_SEARCH_CLASS, SELECT_CLASS, SELECT_CHEVRON } from '../shared/filter-select-styles.js'
+import type { ExamSubject } from "@teacher-exam/shared"
+import { ArrowUpDown, Search, X } from "lucide-react"
+import { SUBJECT_OPTIONS } from "../../lib/subjects"
+import { FILTER_SEARCH_CLASS, SELECT_CHEVRON, SELECT_CLASS } from "../shared/filter-select-styles.js"
 
-export type StatusFilter = 'all' | 'final' | 'draft'
-export type SubjectFilter = 'all' | ExamSubject
-export type GradeFilter = 'all' | '5' | '6'
-export type PeriodFilter = 'all' | '7d' | '30d' | 'this_semester'
-export type SortOrder = 'terbaru' | 'terlama' | 'judul'
+export type StatusFilter = "all" | "final" | "draft"
+export type SubjectFilter = "all" | ExamSubject
+export type GradeFilter = "all" | "5" | "6"
+export type PeriodFilter = "all" | "7d" | "30d" | "this_semester"
+export type SortOrder = "terbaru" | "terlama" | "judul"
 
 interface HistoryToolbarProps {
   status: StatusFilter
@@ -29,52 +29,52 @@ interface HistoryToolbarProps {
 }
 
 const STATUS_TABS: Array<{ id: StatusFilter; label: string }> = [
-  { id: 'all', label: 'Semua' },
-  { id: 'final', label: 'Final' },
-  { id: 'draft', label: 'Draft' },
+  { id: "all", label: "Semua" },
+  { id: "final", label: "Final" },
+  { id: "draft", label: "Draft" }
 ]
 
 const SUBJECT_FILTER_OPTIONS: Array<{ value: SubjectFilter; label: string }> = [
-  { value: 'all', label: 'Semua mapel' },
-  ...SUBJECT_OPTIONS.map((subject) => ({ value: subject.value, label: subject.label })),
+  { value: "all", label: "Semua mapel" },
+  ...SUBJECT_OPTIONS.map((subject) => ({ value: subject.value, label: subject.label }))
 ]
 
 const GRADE_OPTIONS: Array<{ value: GradeFilter; label: string }> = [
-  { value: 'all', label: 'Semua kelas' },
-  { value: '5', label: 'Kelas 5' },
-  { value: '6', label: 'Kelas 6' },
+  { value: "all", label: "Semua kelas" },
+  { value: "5", label: "Kelas 5" },
+  { value: "6", label: "Kelas 6" }
 ]
 
 const PERIOD_OPTIONS: Array<{ value: PeriodFilter; label: string }> = [
-  { value: 'all', label: 'Semua periode' },
-  { value: '7d', label: '7 hari terakhir' },
-  { value: '30d', label: '30 hari terakhir' },
-  { value: 'this_semester', label: 'Semester ini' },
+  { value: "all", label: "Semua periode" },
+  { value: "7d", label: "7 hari terakhir" },
+  { value: "30d", label: "30 hari terakhir" },
+  { value: "this_semester", label: "Semester ini" }
 ]
 
 const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
-  { value: 'terbaru', label: 'Terbaru' },
-  { value: 'terlama', label: 'Terlama' },
-  { value: 'judul', label: 'Judul (A–Z)' },
+  { value: "terbaru", label: "Terbaru" },
+  { value: "terlama", label: "Terlama" },
+  { value: "judul", label: "Judul (A–Z)" }
 ]
 
 function HistoryToolbar({
-  status,
-  subject,
   grade,
-  period,
-  sort,
-  query,
   isFiltered,
   matchCount,
-  totalCount,
-  onStatusChange,
-  onSubjectChange,
   onGradeChange,
   onPeriodChange,
-  onSortChange,
   onQueryChange,
   onReset,
+  onSortChange,
+  onStatusChange,
+  onSubjectChange,
+  period,
+  query,
+  sort,
+  status,
+  subject,
+  totalCount
 }: HistoryToolbarProps) {
   return (
     <div className="rounded-md border border-border-default bg-bg-surface">
@@ -88,11 +88,11 @@ function HistoryToolbar({
                 type="button"
                 onClick={() => onStatusChange(tab.id)}
                 className={[
-                  'h-7 px-3 rounded-pill text-body-sm font-medium transition-colors duration-[120ms]',
+                  "h-7 px-3 rounded-pill text-body-sm font-medium transition-colors duration-[120ms]",
                   active
-                    ? 'bg-bg-surface text-primary-700 shadow-xs border border-border-default'
-                    : 'text-text-tertiary hover:text-text-primary',
-                ].join(' ')}
+                    ? "bg-bg-surface text-primary-700 shadow-xs border border-border-default"
+                    : "text-text-tertiary hover:text-text-primary"
+                ].join(" ")}
                 aria-pressed={active}
               >
                 {tab.label}
@@ -184,21 +184,21 @@ function HistoryToolbar({
 
       <div className="flex items-center justify-between px-4 py-2 bg-kertas-50">
         <span className="text-body-sm text-text-tertiary">
-          Menampilkan{' '}
-          <span className="text-text-primary font-semibold tabular-nums">{matchCount}</span>{' '}
-          dari{' '}
+          Menampilkan <span className="text-text-primary font-semibold tabular-nums">{matchCount}</span> dari{" "}
           <span className="tabular-nums">{totalCount}</span> lembar
         </span>
-        {isFiltered ? (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms]"
-          >
-            <X size={13} />
-            Reset filter
-          </button>
-        ) : null}
+        {isFiltered ?
+          (
+            <button
+              type="button"
+              onClick={onReset}
+              className="inline-flex items-center gap-1.5 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms]"
+            >
+              <X size={13} />
+              Reset filter
+            </button>
+          ) :
+          null}
       </div>
     </div>
   )

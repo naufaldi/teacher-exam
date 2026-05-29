@@ -9,20 +9,20 @@
  */
 
 export const REQUIRED_FIELDS = [
-  'Topik utama',
-  'Sub-konsep',
-  'Sample teks bacaan',
-  'Kosakata kunci',
-  'Kompetensi yang diuji',
+  "Topik utama",
+  "Sub-konsep",
+  "Sample teks bacaan",
+  "Kosakata kunci",
+  "Kompetensi yang diuji"
 ] as const
 
 export class MergeValidationError extends Error {
   constructor(
     message: string,
-    public readonly details: { babNumbers: number[]; missingFields: Array<{ bab: number; field: string }> },
+    public readonly details: { babNumbers: Array<number>; missingFields: Array<{ bab: number; field: string }> }
   ) {
     super(message)
-    this.name = 'MergeValidationError'
+    this.name = "MergeValidationError"
   }
 }
 
@@ -39,14 +39,16 @@ interface BabBlock {
  */
 export function mergeBab(concatenated: string): string {
   const h1 = extractH1(concatenated)
-  if (!h1) throw new MergeValidationError('missing H1 header', { babNumbers: [], missingFields: [] })
+  if (!h1) throw new MergeValidationError("missing H1 header", { babNumbers: [], missingFields: [] })
 
   const cp = extractCapaianPembelajaran(concatenated)
-  if (!cp) throw new MergeValidationError('missing ## Capaian Pembelajaran section', { babNumbers: [], missingFields: [] })
+  if (!cp) {
+    throw new MergeValidationError("missing ## Capaian Pembelajaran section", { babNumbers: [], missingFields: [] })
+  }
 
   const blocks = parseBabBlocks(concatenated)
   if (blocks.length === 0) {
-    throw new MergeValidationError('no Bab blocks found', { babNumbers: [], missingFields: [] })
+    throw new MergeValidationError("no Bab blocks found", { babNumbers: [], missingFields: [] })
   }
 
   const grouped = new Map<number, BabBlock>()
@@ -59,12 +61,12 @@ export function mergeBab(concatenated: string): string {
 
   const sorted = [...grouped.values()].sort((a, b) => a.num - b.num)
   const numbers = sorted.map((b) => b.num)
-  const [expected] = numbers as [number, ...number[]]
+  const [expected] = numbers as [number, ...Array<number>]
   for (let i = 0; i < numbers.length; i += 1) {
     if (numbers[i] !== expected + i) {
-      throw new MergeValidationError(`non-sequential Bab numbers: ${numbers.join(', ')}`, {
+      throw new MergeValidationError(`non-sequential Bab numbers: ${numbers.join(", ")}`, {
         babNumbers: numbers,
-        missingFields: [],
+        missingFields: []
       })
     }
   }
@@ -78,11 +80,11 @@ export function mergeBab(concatenated: string): string {
     }
   }
   if (missingFields.length > 0) {
-    const summary = missingFields.map((m) => `Bab ${m.bab}: ${m.field}`).join('; ')
+    const summary = missingFields.map((m) => `Bab ${m.bab}: ${m.field}`).join("; ")
     throw new MergeValidationError(`missing required fields — ${summary}`, { babNumbers: numbers, missingFields })
   }
 
-  const body = sorted.map((b) => `## Bab ${b.num}: ${b.title}\n${b.body.trimEnd()}`).join('\n\n')
+  const body = sorted.map((b) => `## Bab ${b.num}: ${b.title}\n${b.body.trimEnd()}`).join("\n\n")
   return `${h1}\n\n## Capaian Pembelajaran\n${cp.trimEnd()}\n\n${body}\n`
 }
 
@@ -92,11 +94,11 @@ function extractH1(input: string): string | null {
 }
 
 function extractCapaianPembelajaran(input: string): string | null {
-  const match = input.match(/^## Capaian Pembelajaran\s*\n([\s\S]*?)(?=^## |\Z)/m)
-  return match ? (match[1] ?? '').trim() : null
+  const match = input.match(/^## Capaian Pembelajaran\s*\n([\s\S]*?)(?=^## |$)/m)
+  return match ? (match[1] ?? "").trim() : null
 }
 
-function parseBabBlocks(input: string): BabBlock[] {
+function parseBabBlocks(input: string): Array<BabBlock> {
   const regex = /^## Bab (\d+):\s*(.+?)\s*$/gm
   const matches: Array<{ num: number; title: string; start: number; headerEnd: number }> = []
   let m: RegExpExecArray | null
@@ -108,14 +110,14 @@ function parseBabBlocks(input: string): BabBlock[] {
       num: Number.parseInt(numStr, 10),
       title,
       start: m.index,
-      headerEnd: regex.lastIndex,
+      headerEnd: regex.lastIndex
     })
   }
 
   return matches.map((entry, i) => {
     const next = matches[i + 1]
     const end = next ? next.start : input.length
-    const body = input.slice(entry.headerEnd, end).replace(/^\n+/, '').trimEnd()
+    const body = input.slice(entry.headerEnd, end).replace(/^\n+/, "").trimEnd()
     return { num: entry.num, title: entry.title, body }
   })
 }

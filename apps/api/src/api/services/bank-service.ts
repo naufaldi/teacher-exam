@@ -1,83 +1,83 @@
-import { Context, Data, Effect, Layer } from 'effect'
-import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm'
-import { bankQuestions, exams, questions, user } from '@teacher-exam/db'
+import { bankQuestions, exams, questions, user } from "@teacher-exam/db"
 import type {
-  SaveToBankInput,
-  BrowseBankQuery,
   BankQuestion,
+  BankSort,
+  BrowseBankQuery,
+  BuildExamFromBankInput,
+  BuildExamFromBankResponse,
+  ExamDifficulty,
+  ExamSubject,
   PaginatedBankResponse,
   PaginatedPublicBankResponse,
   PublicBankQuestion,
-  UpdateBankQuestionInput,
-  ExamDifficulty,
-  BankSort,
-  BuildExamFromBankInput,
-  BuildExamFromBankResponse,
-  ExamSubject,
-} from '@teacher-exam/shared'
-import { formatExamTitle, SUBJECT_LABEL } from '@teacher-exam/shared'
-import { DbClient } from './db'
-import { runDb } from '../lib/db-effect'
-import { ApiDatabaseError } from '../errors/http'
+  SaveToBankInput,
+  UpdateBankQuestionInput
+} from "@teacher-exam/shared"
+import { formatExamTitle, SUBJECT_LABEL } from "@teacher-exam/shared"
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm"
+import { Context, Data, Effect, Layer } from "effect"
+import type { ApiDatabaseError } from "../errors/http"
+import { runDb } from "../lib/db-effect"
+import { DbClient } from "./db"
 
-export class BankSaveError extends Data.TaggedError('BankSaveError')<{
+export class BankSaveError extends Data.TaggedError("BankSaveError")<{
   cause: unknown
 }> {}
 
-export class BankNotFoundError extends Data.TaggedError('BankNotFoundError')<{
+export class BankNotFoundError extends Data.TaggedError("BankNotFoundError")<{
   id: string
 }> {}
 
-export class BankBuildError extends Data.TaggedError('BankBuildError')<{
-  code: 'TOO_FEW' | 'TOO_MANY' | 'UNOWNED'
+export class BankBuildError extends Data.TaggedError("BankBuildError")<{
+  code: "TOO_FEW" | "TOO_MANY" | "UNOWNED"
   message: string
 }> {}
 
 export interface BankServiceApi {
   readonly saveQuestion: (
     userId: string,
-    input: SaveToBankInput,
+    input: SaveToBankInput
   ) => Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError, DbClient>
   readonly browseOwn: (
     userId: string,
-    query: BrowseBankQuery,
+    query: BrowseBankQuery
   ) => Effect.Effect<PaginatedBankResponse, ApiDatabaseError, DbClient>
   readonly update: (
     userId: string,
     id: string,
-    input: UpdateBankQuestionInput,
+    input: UpdateBankQuestionInput
   ) => Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError, DbClient>
   readonly remove: (
     userId: string,
-    id: string,
+    id: string
   ) => Effect.Effect<void, BankNotFoundError | ApiDatabaseError, DbClient>
   readonly autoSaveAccepted: (
     userId: string,
-    examId: string,
+    examId: string
   ) => Effect.Effect<number, BankSaveError | ApiDatabaseError, DbClient>
   readonly propagatePublish: (
     userId: string,
-    examId: string,
+    examId: string
   ) => Effect.Effect<number, never, DbClient>
   readonly browsePublic: (
     query: BrowseBankQuery,
-    excludeUserId?: string,
+    excludeUserId?: string
   ) => Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError, DbClient>
   readonly buildExam: (
     userId: string,
-    input: BuildExamFromBankInput,
+    input: BuildExamFromBankInput
   ) => Effect.Effect<BuildExamFromBankResponse, BankBuildError | ApiDatabaseError, DbClient>
 }
 
 function resolveBankDifficulty(
   questionDifficulty: string | null,
-  examDifficulty: ExamDifficulty,
+  examDifficulty: ExamDifficulty
 ): ExamDifficulty {
   if (
-    questionDifficulty === 'mudah' ||
-    questionDifficulty === 'sedang' ||
-    questionDifficulty === 'sulit' ||
-    questionDifficulty === 'campuran'
+    questionDifficulty === "mudah" ||
+    questionDifficulty === "sedang" ||
+    questionDifficulty === "sulit" ||
+    questionDifficulty === "campuran"
   ) {
     return questionDifficulty
   }
@@ -85,10 +85,10 @@ function resolveBankDifficulty(
 }
 
 function resolveOrderBy(sort: BankSort | undefined) {
-  if (sort === 'terpopuler') {
+  if (sort === "terpopuler") {
     return desc(bankQuestions.usageCount)
   }
-  if (sort === 'kesulitan') {
+  if (sort === "kesulitan") {
     return sql`CASE ${bankQuestions.difficulty}
       WHEN 'mudah' THEN 1
       WHEN 'sedang' THEN 2
@@ -98,7 +98,7 @@ function resolveOrderBy(sort: BankSort | undefined) {
   return desc(bankQuestions.createdAt)
 }
 
-function appendBrowseFilters(conditions: ReturnType<typeof eq>[], query: BrowseBankQuery) {
+function appendBrowseFilters(conditions: Array<ReturnType<typeof eq>>, query: BrowseBankQuery) {
   if (query.subject) {
     conditions.push(eq(bankQuestions.subject, query.subject))
   }
@@ -113,7 +113,7 @@ function appendBrowseFilters(conditions: ReturnType<typeof eq>[], query: BrowseB
   }
   if (query.topic) {
     conditions.push(
-      sql`${bankQuestions.topics} @> ${JSON.stringify([query.topic])}::jsonb`,
+      sql`${bankQuestions.topics} @> ${JSON.stringify([query.topic])}::jsonb`
     )
   }
   if (query.search) {
@@ -136,26 +136,26 @@ function toPublicBankQuestion(
     optionC: string | null
     optionD: string | null
     correctAnswer: string | null
-  } | null,
+  } | null
 ): PublicBankQuestion {
   const base: PublicBankQuestion = {
-    id: bankRow.id as PublicBankQuestion['id'],
-    questionId: bankRow.questionId as PublicBankQuestion['questionId'],
+    id: bankRow.id as PublicBankQuestion["id"],
+    questionId: bankRow.questionId as PublicBankQuestion["questionId"],
     authorName,
-    subject: bankRow.subject as PublicBankQuestion['subject'],
+    subject: bankRow.subject as PublicBankQuestion["subject"],
     grade: bankRow.grade,
     topics: bankRow.topics ?? [],
-    difficulty: bankRow.difficulty as PublicBankQuestion['difficulty'],
+    difficulty: bankRow.difficulty as PublicBankQuestion["difficulty"],
     type: bankRow.type,
     payload: bankRow.payload,
     usageCount: bankRow.usageCount,
     createdAt: bankRow.createdAt.toISOString(),
-    text: '',
+    text: "",
     optionA: null,
     optionB: null,
     optionC: null,
     optionD: null,
-    correctAnswer: null,
+    correctAnswer: null
   }
   if (!questionRow) {
     return base
@@ -167,35 +167,35 @@ function toPublicBankQuestion(
     optionB: questionRow.optionB,
     optionC: questionRow.optionC,
     optionD: questionRow.optionD,
-    correctAnswer: questionRow.correctAnswer as PublicBankQuestion['correctAnswer'],
+    correctAnswer: questionRow.correctAnswer as PublicBankQuestion["correctAnswer"]
   }
 }
 
-export class BankService extends Context.Tag('BankService')<
+export class BankService extends Context.Tag("BankService")<
   BankService,
   BankServiceApi
 >() {}
 
 function toBankQuestion(row: typeof bankQuestions.$inferSelect): BankQuestion {
   return {
-    id: row.id as BankQuestion['id'],
-    questionId: row.questionId as BankQuestion['questionId'],
+    id: row.id as BankQuestion["id"],
+    questionId: row.questionId as BankQuestion["questionId"],
     userId: row.userId,
-    subject: row.subject as BankQuestion['subject'],
+    subject: row.subject as BankQuestion["subject"],
     grade: row.grade,
     topics: row.topics ?? [],
-    difficulty: row.difficulty as BankQuestion['difficulty'],
+    difficulty: row.difficulty as BankQuestion["difficulty"],
     type: row.type,
     payload: row.payload,
     isPublic: row.isPublic,
     usageCount: row.usageCount,
     createdAt: row.createdAt.toISOString(),
-    text: '',
+    text: "",
     optionA: null,
     optionB: null,
     optionC: null,
     optionD: null,
-    correctAnswer: null,
+    correctAnswer: null
   }
 }
 
@@ -208,7 +208,7 @@ function toBankQuestionWithDetails(
     optionC: string | null
     optionD: string | null
     correctAnswer: string | null
-  } | null,
+  } | null
 ): BankQuestion {
   const base = toBankQuestion(bankRow)
   if (!questionRow) {
@@ -221,18 +221,18 @@ function toBankQuestionWithDetails(
     optionB: questionRow.optionB,
     optionC: questionRow.optionC,
     optionD: questionRow.optionD,
-    correctAnswer: questionRow.correctAnswer as BankQuestion['correctAnswer'],
+    correctAnswer: questionRow.correctAnswer as BankQuestion["correctAnswer"]
   }
 }
 
 export const BankServiceLive = Layer.effect(
   BankService,
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const saveQuestion = (
       userId: string,
-      input: SaveToBankInput,
+      input: SaveToBankInput
     ): Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         const questionRows = yield* runDb(
@@ -249,17 +249,17 @@ export const BankServiceLive = Layer.effect(
               type: questions.type,
               payload: questions.payload,
               topic: questions.topic,
-              difficulty: questions.difficulty,
+              difficulty: questions.difficulty
             })
             .from(questions)
             .innerJoin(exams, eq(questions.examId, exams.id))
             .where(and(eq(questions.id, input.questionId), eq(exams.userId, userId)))
-            .limit(1),
+            .limit(1)
         )
 
         const questionRow = questionRows[0]
         if (!questionRow) {
-          return yield* Effect.fail(new BankSaveError({ cause: 'Question not found or not owned' }))
+          return yield* Effect.fail(new BankSaveError({ cause: "Question not found or not owned" }))
         }
 
         const examRows = yield* runDb(
@@ -267,11 +267,11 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(exams)
             .where(eq(exams.id, questionRow.examId))
-            .limit(1),
+            .limit(1)
         )
         const examRow = examRows[0]
         if (!examRow) {
-          return yield* Effect.fail(new BankSaveError({ cause: 'Exam not found' }))
+          return yield* Effect.fail(new BankSaveError({ cause: "Exam not found" }))
         }
 
         const result = yield* Effect.either(
@@ -289,15 +289,15 @@ export const BankServiceLive = Layer.effect(
                 type: questionRow.type,
                 payload: questionRow.payload ?? {},
                 isPublic: false,
-                usageCount: 0,
+                usageCount: 0
               })
               .onConflictDoNothing({ target: [bankQuestions.userId, bankQuestions.questionId] })
-              .returning(),
-          ),
+              .returning()
+          )
         )
 
         let bankRow: typeof bankQuestions.$inferSelect | undefined
-        if (result._tag === 'Right' && result.right[0]) {
+        if (result._tag === "Right" && result.right[0]) {
           bankRow = result.right[0]
         } else {
           const existingRows = yield* runDb(
@@ -305,15 +305,15 @@ export const BankServiceLive = Layer.effect(
               .select()
               .from(bankQuestions)
               .where(
-                and(eq(bankQuestions.userId, userId), eq(bankQuestions.questionId, questionRow.id)),
+                and(eq(bankQuestions.userId, userId), eq(bankQuestions.questionId, questionRow.id))
               )
-              .limit(1),
+              .limit(1)
           )
           bankRow = existingRows[0]
         }
 
         if (!bankRow) {
-          return yield* Effect.fail(new BankSaveError({ cause: 'Failed to save to bank' }))
+          return yield* Effect.fail(new BankSaveError({ cause: "Failed to save to bank" }))
         }
 
         return toBankQuestionWithDetails(bankRow, questionRow)
@@ -321,9 +321,9 @@ export const BankServiceLive = Layer.effect(
 
     const browseOwn = (
       userId: string,
-      query: BrowseBankQuery,
+      query: BrowseBankQuery
     ): Effect.Effect<PaginatedBankResponse, ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
         const page = query.page ?? 1
         const limit = query.limit ?? 20
@@ -337,7 +337,7 @@ export const BankServiceLive = Layer.effect(
           db
             .select({ count: sql<number>`count(*)::int` })
             .from(bankQuestions)
-            .where(whereClause!),
+            .where(whereClause!)
         )
         const total = countRows[0]?.count ?? 0
 
@@ -348,17 +348,17 @@ export const BankServiceLive = Layer.effect(
             .where(whereClause!)
             .orderBy(resolveOrderBy(query.sort))
             .limit(limit)
-            .offset(offset),
+            .offset(offset)
         )
 
-        const data: BankQuestion[] = []
+        const data: Array<BankQuestion> = []
         for (const row of rows) {
           const questionRows = yield* runDb(
             db
               .select()
               .from(questions)
               .where(eq(questions.id, row.questionId))
-              .limit(1),
+              .limit(1)
           )
           const questionRow = questionRows[0] ?? null
           data.push(toBankQuestionWithDetails(row, questionRow))
@@ -368,16 +368,16 @@ export const BankServiceLive = Layer.effect(
           data,
           total,
           page,
-          limit,
+          limit
         }
       })
 
     const update = (
       userId: string,
       id: string,
-      input: UpdateBankQuestionInput,
+      input: UpdateBankQuestionInput
     ): Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         const existingRows = yield* runDb(
@@ -385,7 +385,7 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(bankQuestions)
             .where(and(eq(bankQuestions.id, id), eq(bankQuestions.userId, userId)))
-            .limit(1),
+            .limit(1)
         )
 
         if (!existingRows[0]) {
@@ -394,12 +394,12 @@ export const BankServiceLive = Layer.effect(
 
         const updateData: Record<string, unknown> = {}
         if (input.isPublic !== undefined) {
-          updateData['isPublic'] = input.isPublic
+          updateData["isPublic"] = input.isPublic
         }
 
         if (Object.keys(updateData).length > 0) {
           yield* runDb(
-            db.update(bankQuestions).set(updateData).where(eq(bankQuestions.id, id)),
+            db.update(bankQuestions).set(updateData).where(eq(bankQuestions.id, id))
           )
         }
 
@@ -408,7 +408,7 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(bankQuestions)
             .where(eq(bankQuestions.id, id))
-            .limit(1),
+            .limit(1)
         )
 
         const bankRow = updatedRows[0]
@@ -421,7 +421,7 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(questions)
             .where(eq(questions.id, bankRow.questionId))
-            .limit(1),
+            .limit(1)
         )
         const questionRow = questionRows[0] ?? null
 
@@ -430,9 +430,9 @@ export const BankServiceLive = Layer.effect(
 
     const remove = (
       userId: string,
-      id: string,
+      id: string
     ): Effect.Effect<void, BankNotFoundError | ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         const existingRows = yield* runDb(
@@ -440,7 +440,7 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(bankQuestions)
             .where(and(eq(bankQuestions.id, id), eq(bankQuestions.userId, userId)))
-            .limit(1),
+            .limit(1)
         )
 
         if (!existingRows[0]) {
@@ -452,9 +452,9 @@ export const BankServiceLive = Layer.effect(
 
     const autoSaveAccepted = (
       userId: string,
-      examId: string,
+      examId: string
     ): Effect.Effect<number, BankSaveError | ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         const acceptedQuestions = yield* runDb(
@@ -470,10 +470,10 @@ export const BankServiceLive = Layer.effect(
               type: questions.type,
               payload: questions.payload,
               topic: questions.topic,
-              difficulty: questions.difficulty,
+              difficulty: questions.difficulty
             })
             .from(questions)
-            .where(and(eq(questions.examId, examId), eq(questions.status, 'accepted'))),
+            .where(and(eq(questions.examId, examId), eq(questions.status, "accepted")))
         )
 
         if (acceptedQuestions.length === 0) {
@@ -481,11 +481,11 @@ export const BankServiceLive = Layer.effect(
         }
 
         const examRows = yield* runDb(
-          db.select().from(exams).where(eq(exams.id, examId)).limit(1),
+          db.select().from(exams).where(eq(exams.id, examId)).limit(1)
         )
         const examRow = examRows[0]
         if (!examRow) {
-          return yield* Effect.fail(new BankSaveError({ cause: 'Exam not found' }))
+          return yield* Effect.fail(new BankSaveError({ cause: "Exam not found" }))
         }
 
         const bankValues = acceptedQuestions.map((q) => ({
@@ -499,7 +499,7 @@ export const BankServiceLive = Layer.effect(
           type: q.type,
           payload: q.payload ?? {},
           isPublic: false,
-          usageCount: 0,
+          usageCount: 0
         }))
 
         const result = yield* Effect.either(
@@ -507,11 +507,11 @@ export const BankServiceLive = Layer.effect(
             db
               .insert(bankQuestions)
               .values(bankValues)
-              .onConflictDoNothing({ target: [bankQuestions.userId, bankQuestions.questionId] }),
-          ),
+              .onConflictDoNothing({ target: [bankQuestions.userId, bankQuestions.questionId] })
+          )
         )
 
-        if (result._tag === 'Left') {
+        if (result._tag === "Left") {
           return yield* Effect.fail(new BankSaveError({ cause: result.left }))
         }
 
@@ -520,9 +520,9 @@ export const BankServiceLive = Layer.effect(
 
     const propagatePublish = (
       userId: string,
-      examId: string,
+      examId: string
     ): Effect.Effect<number, never, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         const examRows = yield* runDb(
@@ -530,7 +530,7 @@ export const BankServiceLive = Layer.effect(
             .select()
             .from(exams)
             .where(and(eq(exams.id, examId), eq(exams.userId, userId)))
-            .limit(1),
+            .limit(1)
         )
 
         if (!examRows[0]) {
@@ -538,7 +538,7 @@ export const BankServiceLive = Layer.effect(
         }
 
         const questionIds = yield* runDb(
-          db.select({ id: questions.id }).from(questions).where(eq(questions.examId, examId)),
+          db.select({ id: questions.id }).from(questions).where(eq(questions.examId, examId))
         )
 
         if (questionIds.length === 0) {
@@ -554,11 +554,11 @@ export const BankServiceLive = Layer.effect(
                 eq(bankQuestions.userId, userId),
                 inArray(
                   bankQuestions.questionId,
-                  questionIds.map((q) => q.id),
-                ),
-              ),
+                  questionIds.map((q) => q.id)
+                )
+              )
             )
-            .returning(),
+            .returning()
         )
 
         return result.length
@@ -566,9 +566,9 @@ export const BankServiceLive = Layer.effect(
 
     const browsePublic = (
       query: BrowseBankQuery,
-      excludeUserId?: string,
+      excludeUserId?: string
     ): Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError, DbClient> =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
         const page = query.page ?? 1
         const limit = query.limit ?? 20
@@ -584,8 +584,8 @@ export const BankServiceLive = Layer.effect(
           conditions.push(
             or(
               sql`LOWER(${user.name}) LIKE ${authorTerm}`,
-              sql`LOWER(${user.username}) LIKE ${authorTerm}`,
-            )!,
+              sql`LOWER(${user.username}) LIKE ${authorTerm}`
+            )!
           )
         }
         const whereClause = and(...conditions)
@@ -595,7 +595,7 @@ export const BankServiceLive = Layer.effect(
             .select({ count: sql<number>`count(*)::int` })
             .from(bankQuestions)
             .innerJoin(user, eq(bankQuestions.userId, user.id))
-            .where(whereClause!),
+            .where(whereClause!)
         )
         const total = countRows[0]?.count ?? 0
 
@@ -603,24 +603,24 @@ export const BankServiceLive = Layer.effect(
           db
             .select({
               bank: bankQuestions,
-              authorName: user.name,
+              authorName: user.name
             })
             .from(bankQuestions)
             .innerJoin(user, eq(bankQuestions.userId, user.id))
             .where(whereClause!)
             .orderBy(resolveOrderBy(query.sort))
             .limit(limit)
-            .offset(offset),
+            .offset(offset)
         )
 
-        const data: PublicBankQuestion[] = []
+        const data: Array<PublicBankQuestion> = []
         for (const row of rows) {
           const questionRows = yield* runDb(
             db
               .select()
               .from(questions)
               .where(eq(questions.id, row.bank.questionId))
-              .limit(1),
+              .limit(1)
           )
           const questionRow = questionRows[0] ?? null
           data.push(toPublicBankQuestion(row.bank, row.authorName, questionRow))
@@ -630,35 +630,35 @@ export const BankServiceLive = Layer.effect(
           data,
           total,
           page,
-          limit,
+          limit
         }
       })
 
     const buildExam = (
       userId: string,
-      input: BuildExamFromBankInput,
+      input: BuildExamFromBankInput
     ): Effect.Effect<
       BuildExamFromBankResponse,
       BankBuildError | ApiDatabaseError,
       DbClient
     > =>
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         const db = yield* DbClient
 
         if (input.bankQuestionIds.length < 5) {
           return yield* Effect.fail(
             new BankBuildError({
-              code: 'TOO_FEW',
-              message: 'Minimal 5 soal diperlukan',
-            }),
+              code: "TOO_FEW",
+              message: "Minimal 5 soal diperlukan"
+            })
           )
         }
         if (input.bankQuestionIds.length > 50) {
           return yield* Effect.fail(
             new BankBuildError({
-              code: 'TOO_MANY',
-              message: 'Maksimal 50 soal',
-            }),
+              code: "TOO_MANY",
+              message: "Maksimal 50 soal"
+            })
           )
         }
 
@@ -669,17 +669,17 @@ export const BankServiceLive = Layer.effect(
             .where(
               and(
                 eq(bankQuestions.userId, userId),
-                inArray(bankQuestions.id, input.bankQuestionIds),
-              ),
-            ),
+                inArray(bankQuestions.id, input.bankQuestionIds)
+              )
+            )
         )
 
         if (bankRows.length !== input.bankQuestionIds.length) {
           return yield* Effect.fail(
             new BankBuildError({
-              code: 'UNOWNED',
-              message: 'Satu atau lebih soal tidak ditemukan di bank Anda',
-            }),
+              code: "UNOWNED",
+              message: "Satu atau lebih soal tidak ditemukan di bank Anda"
+            })
           )
         }
 
@@ -694,23 +694,23 @@ export const BankServiceLive = Layer.effect(
             .where(
               inArray(
                 questions.id,
-                orderedRows.map((row) => row.questionId),
-              ),
-            ),
+                orderedRows.map((row) => row.questionId)
+              )
+            )
         )
         const questionById = new Map(questionDetails.map((q) => [q.id, q]))
 
         const now = new Date()
         const newExamId = crypto.randomUUID()
         const meta = input.metadata
-        const difficulty = meta.difficulty ?? 'sedang'
+        const difficulty = meta.difficulty ?? "sedang"
         const topicList = [...(meta.topics ?? orderedRows.flatMap((row) => row.topics).slice(0, 5))]
         const title = formatExamTitle({
           subjectLabel: SUBJECT_LABEL[meta.subject as ExamSubject] ?? meta.subject,
           grade: meta.grade,
-          examType: meta.examType ?? 'latihan',
+          examType: meta.examType ?? "latihan",
           examDate: meta.examDate ?? null,
-          topics: topicList,
+          topics: topicList
         })
 
         yield* runDb(
@@ -722,33 +722,32 @@ export const BankServiceLive = Layer.effect(
             grade: meta.grade,
             difficulty,
             topics: topicList,
-            reviewMode: 'fast',
-            status: 'draft',
+            reviewMode: "fast",
+            status: "draft",
             schoolName: meta.schoolName ?? null,
             academicYear: meta.academicYear ?? null,
-            examType: meta.examType ?? 'latihan',
+            examType: meta.examType ?? "latihan",
             examDate: meta.examDate ?? null,
             durationMinutes: meta.durationMinutes ?? null,
             instructions: meta.instructions ?? null,
             classContext: meta.classContext ?? null,
             createdAt: now,
-            updatedAt: now,
-          }),
+            updatedAt: now
+          })
         )
 
         yield* runDb(
           db.insert(questions).values(
             orderedRows.map((bankRow, index) => {
               const source = questionById.get(bankRow.questionId)
-              const payload =
-                typeof bankRow.payload === 'object' && bankRow.payload !== null
-                  ? { ...(bankRow.payload as Record<string, unknown>), source: 'bank' }
-                  : { source: 'bank' }
+              const payload = typeof bankRow.payload === "object" && bankRow.payload !== null
+                ? { ...(bankRow.payload as Record<string, unknown>), source: "bank" }
+                : { source: "bank" }
               return {
                 id: crypto.randomUUID(),
                 examId: newExamId,
                 number: index + 1,
-                text: source?.text ?? '',
+                text: source?.text ?? "",
                 type: bankRow.type,
                 optionA: source?.optionA ?? null,
                 optionB: source?.optionB ?? null,
@@ -758,13 +757,13 @@ export const BankServiceLive = Layer.effect(
                 payload,
                 topic: source?.topic ?? bankRow.topics[0] ?? null,
                 difficulty: source?.difficulty ?? bankRow.difficulty,
-                status: 'accepted' as const,
+                status: "accepted" as const,
                 validationStatus: source?.validationStatus ?? null,
                 validationReason: source?.validationReason ?? null,
-                createdAt: now,
+                createdAt: now
               }
-            }),
-          ),
+            })
+          )
         )
 
         for (const bankRow of orderedRows) {
@@ -772,11 +771,11 @@ export const BankServiceLive = Layer.effect(
             db
               .update(bankQuestions)
               .set({ usageCount: bankRow.usageCount + 1 })
-              .where(eq(bankQuestions.id, bankRow.id)),
+              .where(eq(bankQuestions.id, bankRow.id))
           )
         }
 
-        return { examId: newExamId as BuildExamFromBankResponse['examId'] }
+        return { examId: newExamId as BuildExamFromBankResponse["examId"] }
       })
 
     return {
@@ -787,7 +786,7 @@ export const BankServiceLive = Layer.effect(
       autoSaveAccepted,
       propagatePublish,
       browsePublic,
-      buildExam,
+      buildExam
     }
-  }),
+  })
 )

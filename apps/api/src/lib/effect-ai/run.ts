@@ -1,29 +1,31 @@
-import { AiError, LanguageModel, Prompt } from '@effect/ai'
-import * as Response from '@effect/ai/Response'
-import { GenerateObjectResponse, GenerateTextResponse } from '@effect/ai/LanguageModel'
-import { Effect, Layer, Schema } from 'effect'
-import { AiGenerationError } from '../../errors'
-import { mapAiError, type ProviderErrorContext } from './errors'
-import { logGenerateTextFailure, logGenerateTextSuccess } from './logging'
-import { withAiSpan } from '../../api/telemetry'
+import type { AiError, Prompt } from "@effect/ai"
+import { LanguageModel } from "@effect/ai"
+import { GenerateObjectResponse, GenerateTextResponse } from "@effect/ai/LanguageModel"
+import * as Response from "@effect/ai/Response"
+import { Effect } from "effect"
+import type { Layer, Schema } from "effect"
+import { withAiSpan } from "../../api/telemetry"
+import { AiGenerationError } from "../../errors"
+import { mapAiError, type ProviderErrorContext } from "./errors"
+import { logGenerateTextFailure, logGenerateTextSuccess } from "./logging"
 
 function isAiGenerationError(error: unknown): error is AiGenerationError {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    '_tag' in error &&
-    (error as { _tag: string })._tag === 'AiGenerationError'
+    "_tag" in error &&
+    (error as { _tag: string })._tag === "AiGenerationError"
   )
 }
 
 export function isSuccessfulFinishReason(
   finishReason: Response.FinishReason,
-  hasText: boolean,
+  hasText: boolean
 ): boolean {
-  if (finishReason === 'stop') {
+  if (finishReason === "stop") {
     return true
   }
-  if (finishReason === 'unknown' && hasText) {
+  if (finishReason === "unknown" && hasText) {
     return true
   }
   return false
@@ -38,17 +40,17 @@ export interface RunGenerateTextInput {
 }
 
 export function runGenerateText(
-  input: RunGenerateTextInput,
+  input: RunGenerateTextInput
 ): Effect.Effect<string, AiGenerationError> {
   return withAiSpan(
     input.logEvent,
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       const t0 = Date.now()
       const response = yield* LanguageModel.generateText({
-        prompt: input.prompt,
+        prompt: input.prompt
       }).pipe(
         Effect.mapError((error) => mapAiError(error, input.errorContext)),
-        Effect.provide(input.modelLayer),
+        Effect.provide(input.modelLayer)
       )
 
       const durationMs = Date.now() - t0
@@ -63,7 +65,7 @@ export function runGenerateText(
           event: input.logEvent,
           durationMs,
           finishReason,
-          message,
+          message
         })
         return yield* Effect.fail(new AiGenerationError({ cause: message }))
       }
@@ -74,9 +76,9 @@ export function runGenerateText(
           event: input.logEvent,
           durationMs,
           finishReason,
-          message: 'no assistant text block',
+          message: "no assistant text block"
         })
-        return yield* Effect.fail(new AiGenerationError({ cause: 'AI returned no text block' }))
+        return yield* Effect.fail(new AiGenerationError({ cause: "AI returned no text block" }))
       }
 
       logGenerateTextSuccess({
@@ -84,11 +86,11 @@ export function runGenerateText(
         event: input.logEvent,
         durationMs,
         finishReason,
-        usage: response.usage,
+        usage: response.usage
       })
 
       return assistantText
-    }),
+    })
   )
 }
 
@@ -103,16 +105,16 @@ export interface RunGenerateObjectInput<A, I extends Record<string, unknown>> {
 }
 
 export function runGenerateObject<A, I extends Record<string, unknown>>(
-  input: RunGenerateObjectInput<A, I>,
+  input: RunGenerateObjectInput<A, I>
 ): Effect.Effect<A, AiGenerationError> {
   return withAiSpan(
-    'ai.languageModel.generateObject',
-    Effect.gen(function* () {
+    "ai.languageModel.generateObject",
+    Effect.gen(function*() {
       const t0 = Date.now()
       const response = yield* LanguageModel.generateObject({
         prompt: input.prompt,
         schema: input.schema,
-        objectName: input.objectName,
+        objectName: input.objectName
       }).pipe(
         Effect.mapError((error) => {
           if (isAiGenerationError(error)) {
@@ -120,7 +122,7 @@ export function runGenerateObject<A, I extends Record<string, unknown>>(
           }
           return mapAiError(error as AiError.AiError, input.errorContext)
         }),
-        Effect.provide(input.modelLayer),
+        Effect.provide(input.modelLayer)
       )
 
       const durationMs = Date.now() - t0
@@ -128,54 +130,54 @@ export function runGenerateObject<A, I extends Record<string, unknown>>(
         model: input.model,
         event: input.logEvent,
         durationMs,
-        finishReason: 'stop',
+        finishReason: "stop"
       })
 
       return response.value
-    }),
+    })
   ).pipe(
     Effect.mapError((error) => {
       if (isAiGenerationError(error)) {
         return error
       }
       return new AiGenerationError({ cause: String(error) })
-    }),
+    })
   )
 }
 
 export function buildGenerateObjectResponse<A>(
-  value: A,
+  value: A
 ): GenerateObjectResponse<Record<string, never>, A> {
   return new GenerateObjectResponse(value, [
-    Response.makePart('text', { text: JSON.stringify(value) }),
-    Response.makePart('finish', {
-      reason: 'stop',
+    Response.makePart("text", { text: JSON.stringify(value) }),
+    Response.makePart("finish", {
+      reason: "stop",
       usage: {
         inputTokens: 1,
         outputTokens: 1,
         totalTokens: 2,
         reasoningTokens: undefined,
-        cachedInputTokens: undefined,
-      },
-    }),
+        cachedInputTokens: undefined
+      }
+    })
   ])
 }
 
 export function buildGenerateTextResponse(
   text: string,
-  finishReason: Response.FinishReason = 'stop',
+  finishReason: Response.FinishReason = "stop"
 ): GenerateTextResponse<Record<string, never>> {
   return new GenerateTextResponse([
-    Response.makePart('text', { text }),
-    Response.makePart('finish', {
+    Response.makePart("text", { text }),
+    Response.makePart("finish", {
       reason: finishReason,
       usage: {
         inputTokens: 1,
         outputTokens: 1,
         totalTokens: 2,
         reasoningTokens: undefined,
-        cachedInputTokens: undefined,
-      },
-    }),
+        cachedInputTokens: undefined
+      }
+    })
   ])
 }

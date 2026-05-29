@@ -1,4 +1,6 @@
-import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from '@effect/platform'
+import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
+import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
+import * as HttpApiSchema from "@effect/platform/HttpApiSchema"
 import {
   BankQuestionSchema,
   BrowseBankUrlParamsSchema,
@@ -6,44 +8,44 @@ import {
   BuildExamFromBankResponseSchema,
   PaginatedBankResponseSchema,
   SaveToBankInputSchema,
-  UpdateBankQuestionInputSchema,
-} from '@teacher-exam/shared'
-import { Schema } from 'effect'
-import { ApiNotFound, ApiValidationError422 } from '../errors/http'
-import { Authorization } from '../middleware/auth'
-import { GlobalRateLimit } from '../middleware/rate-limit'
+  UpdateBankQuestionInputSchema
+} from "@teacher-exam/shared"
+import { Schema } from "effect"
+import { ApiNotFound, ApiValidationError422 } from "../errors/http"
+import { Authorization } from "../middleware/auth"
+import { GlobalRateLimit } from "../middleware/rate-limit"
 
-const idParam = HttpApiSchema.param('id', Schema.String)
+const idParam = HttpApiSchema.param("id", Schema.String)
 
-export const BankGroup = HttpApiGroup.make('bank')
+export const BankGroup = HttpApiGroup.make("bank")
   .add(
-    HttpApiEndpoint.post('saveQuestion', '/bank')
+    HttpApiEndpoint.post("saveQuestion", "/bank")
       .setPayload(SaveToBankInputSchema)
       .addSuccess(BankQuestionSchema, { status: 201 })
-      .addError(ApiNotFound, { status: 404 }),
+      .addError(ApiNotFound, { status: 404 })
   )
   .add(
-    HttpApiEndpoint.get('browseBank', '/bank')
+    HttpApiEndpoint.get("browseBank", "/bank")
       .setUrlParams(BrowseBankUrlParamsSchema)
-      .addSuccess(PaginatedBankResponseSchema),
+      .addSuccess(PaginatedBankResponseSchema)
   )
   .add(
-    HttpApiEndpoint.patch('updateBankQuestion')`/bank/${idParam}`
+    HttpApiEndpoint.patch("updateBankQuestion")`/bank/${idParam}`
       .setPayload(UpdateBankQuestionInputSchema)
       .addSuccess(BankQuestionSchema)
       .addError(ApiNotFound, { status: 404 })
-      .addError(ApiValidationError422, { status: 422 }),
+      .addError(ApiValidationError422, { status: 422 })
   )
   .add(
-    HttpApiEndpoint.del('removeBankQuestion')`/bank/${idParam}`
+    HttpApiEndpoint.del("removeBankQuestion")`/bank/${idParam}`
       .addSuccess(Schema.Void)
-      .addError(ApiNotFound, { status: 404 }),
+      .addError(ApiNotFound, { status: 404 })
   )
   .add(
-    HttpApiEndpoint.post('buildExamFromBank', '/bank/build-exam')
+    HttpApiEndpoint.post("buildExamFromBank", "/bank/build-exam")
       .setPayload(BuildExamFromBankInputSchema)
       .addSuccess(BuildExamFromBankResponseSchema, { status: 201 })
-      .addError(ApiValidationError422, { status: 422 }),
+      .addError(ApiValidationError422, { status: 422 })
   )
   .middleware(Authorization)
   .middleware(GlobalRateLimit)

@@ -1,4 +1,4 @@
-import { getReviewSearch, mockNavigate } from './setup.js'
+import { getReviewSearch, mockNavigate } from "./setup.js"
 
 export function deferred<T>() {
   let resolve!: (value: T) => void
@@ -15,11 +15,11 @@ export function lastReviewSearchResult() {
     [{ to?: string; search?: unknown }]
   >
   const reviewCall = [...calls].reverse().find(
-    (c) => c[0]?.to === '/review' && typeof c[0]?.search === 'function',
+    (c) => c[0]?.to === "/review" && typeof c[0]?.search === "function"
   )
-  if (!reviewCall) throw new Error('expected a navigate({ to: "/review", search: fn }) call')
+  if (!reviewCall) throw new Error("expected a navigate({ to: \"/review\", search: fn }) call")
   const fn = reviewCall[0].search as (
-    prev: ReturnType<typeof getReviewSearch>,
+    prev: ReturnType<typeof getReviewSearch>
   ) => Record<string, unknown>
   return fn(getReviewSearch())
 }

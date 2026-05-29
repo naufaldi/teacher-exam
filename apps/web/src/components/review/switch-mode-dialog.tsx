@@ -1,46 +1,51 @@
-import { ArrowLeftRight } from 'lucide-react'
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@teacher-exam/ui'
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@teacher-exam/ui"
+import { ArrowLeftRight } from "lucide-react"
 
 export interface SwitchModeDialogProps {
   open: boolean
-  targetMode: 'fast' | 'slow'
+  targetMode: "fast" | "slow"
   onConfirm: () => void
   onClose: () => void
 }
 
-const LABELS: Record<'fast' | 'slow', { name: string; desc: string }> = {
+const LABELS: Record<"fast" | "slow", { name: string; desc: string }> = {
   fast: {
-    name: 'Cepat',
-    desc: 'Semua soal akan auto-diterima dan Anda langsung ke layar konfirmasi paket.',
+    name: "Cepat",
+    desc: "Semua soal akan auto-diterima dan Anda langsung ke layar konfirmasi paket."
   },
   slow: {
-    name: 'Detail',
-    desc: 'Anda dapat me-review dan mengubah setiap soal satu per satu.',
-  },
+    name: "Detail",
+    desc: "Anda dapat me-review dan mengubah setiap soal satu per satu."
+  }
 }
 
 /**
  * Confirms a switch between Fast Track and Slow Track when dirty state exists.
  */
 export function SwitchModeDialog({
-  open,
-  targetMode,
-  onConfirm,
   onClose,
+  onConfirm,
+  open,
+  targetMode
 }: SwitchModeDialogProps) {
   const target = LABELS[targetMode]
 
   return (
-    <AlertDialog open={open} onOpenChange={(o: boolean) => { if (!o) onClose() }}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(o: boolean) => {
+        if (!o) onClose()
+      }}
+    >
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-3">

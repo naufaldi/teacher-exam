@@ -1,16 +1,16 @@
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import type { ExamSubject } from '@teacher-exam/shared'
+import type { ExamSubject } from "@teacher-exam/shared"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
-const MD_DIR = join(MODULE_DIR, '..', 'curriculum', 'md')
+const MD_DIR = join(MODULE_DIR, "..", "curriculum", "md")
 
 export const SUBJECT_SLUG: Record<ExamSubject, string> = {
-  bahasa_indonesia: 'bahasa-indonesia',
-  pendidikan_pancasila: 'pendidikan-pancasila',
-  ipas: 'ipas',
-  bahasa_inggris: 'bahasa-inggris',
-  matematika: 'matematika',
+  bahasa_indonesia: "bahasa-indonesia",
+  pendidikan_pancasila: "pendidikan-pancasila",
+  ipas: "ipas",
+  bahasa_inggris: "bahasa-inggris",
+  matematika: "matematika"
 }
 
 /**
@@ -29,12 +29,12 @@ export function curriculumMdPath(subject: ExamSubject, grade: number): string {
 
 /** PRD §8 stub when the extracted corpus file is missing. */
 export function getCurriculumFallback(subject: ExamSubject): string {
-  return FALLBACK[SUBJECT_SLUG[subject]] ?? ''
+  return FALLBACK[SUBJECT_SLUG[subject]] ?? ""
 }
 
 // Keyed by subject only — Fase C CP is identical for K5 and K6 (PRD §1.4).
 const FALLBACK: Record<string, string> = {
-  'bahasa-indonesia': `# Bahasa Indonesia — Fase C (Kurikulum Merdeka)
+  "bahasa-indonesia": `# Bahasa Indonesia — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Menyimak: Menganalisis informasi dengan mengidentifikasi ciri objek, urutan proses kejadian, dan nilai-nilai dari berbagai tipe teks nonfiksi dan fiksi (lisan, teks aural, audio).
@@ -44,7 +44,7 @@ const FALLBACK: Record<string, string> = {
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
 `,
-  'pendidikan-pancasila': `# Pendidikan Pancasila — Fase C (Kurikulum Merdeka)
+  "pendidikan-pancasila": `# Pendidikan Pancasila — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Pancasila: Memahami hubungan antarsila sebagai kesatuan utuh; mengidentifikasi makna nilai Pancasila sebagai pandangan hidup; menerapkan nilai Pancasila di lingkungan keluarga, sekolah, dan masyarakat.
@@ -64,7 +64,7 @@ const FALLBACK: Record<string, string> = {
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal akan didasarkan pada CP saja, tanpa daftar bab/sub-konsep/sample teks. Jalankan \`pnpm --filter @teacher-exam/api curriculum:extract\` untuk korpus penuh.
 `,
-  'bahasa-inggris': `# Bahasa Inggris — Fase C (Kurikulum Merdeka)
+  "bahasa-inggris": `# Bahasa Inggris — Fase C (Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Listening: Memahami percakapan sederhana dan instruksi lisan dalam Bahasa Inggris.
@@ -83,5 +83,5 @@ const FALLBACK: Record<string, string> = {
 - Analisis data: Membaca, menyajikan, dan menafsirkan data sederhana dalam tabel dan diagram.
 
 > Catatan: korpus Buku Siswa belum diekstrak. Soal diagram geometri dibuka pada fase D/M3 setelah verifikasi figure renderer.
-`,
+`
 }

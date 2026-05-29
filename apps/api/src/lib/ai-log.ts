@@ -1,17 +1,18 @@
-import { getActiveTraceId } from '../api/telemetry'
+/* eslint-disable no-console -- intentional stdout sink for AI telemetry */
+import { getActiveTraceId } from "../api/telemetry"
 
 function redactSecrets(msg: string, max = 800): string {
   const s = msg
-    .replace(/\bsk-ant-[a-zA-Z0-9_-]{20,}/g, 'sk-ant-[REDACTED]')
-    .replace(/\btp-[a-zA-Z0-9_-]{20,}/g, 'tp-[REDACTED]')
+    .replace(/\bsk-ant-[a-zA-Z0-9_-]{20,}/g, "sk-ant-[REDACTED]")
+    .replace(/\btp-[a-zA-Z0-9_-]{20,}/g, "tp-[REDACTED]")
   return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
 export function isAiLogEnabled(): boolean {
-  const on = process.env['AI_LOG']
-  if (on === '1' || on === 'true') return true
-  if (process.env['DEV_AUTH_ENABLED'] === 'true') return true
-  if (process.env['NODE_ENV'] === 'development') return true
+  const on = process.env["AI_LOG"]
+  if (on === "1" || on === "true") return true
+  if (process.env["DEV_AUTH_ENABLED"] === "true") return true
+  if (process.env["NODE_ENV"] === "development") return true
   return false
 }
 
@@ -21,23 +22,23 @@ export function isAiLogEnabled(): boolean {
  */
 export function logAiEvent(
   scope: string,
-  level: 'info' | 'warn',
-  data: Record<string, unknown>,
+  level: "info" | "warn",
+  data: Record<string, unknown>
 ): void {
-  if (level === 'info' && !isAiLogEnabled()) return
+  if (level === "info" && !isAiLogEnabled()) return
 
   const traceId = getActiveTraceId()
   const safe: Record<string, unknown> = {
     scope,
     ...data,
-    ...(traceId !== undefined ? { traceId } : {}),
+    ...(traceId !== undefined ? { traceId } : {})
   }
-  for (const key of ['cause', 'message', 'error']) {
+  for (const key of ["cause", "message", "error"]) {
     const v = safe[key]
-    if (typeof v === 'string') safe[key] = redactSecrets(v)
+    if (typeof v === "string") safe[key] = redactSecrets(v)
   }
 
   const line = `[ai] ${JSON.stringify(safe)}`
-  if (level === 'warn') console.warn(line)
+  if (level === "warn") console.warn(line)
   else console.info(line)
 }
