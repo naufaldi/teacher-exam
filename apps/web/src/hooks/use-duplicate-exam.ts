@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useNavigate, useRouter } from '@tanstack/react-router'
-import { useToast } from '@teacher-exam/ui'
-import type { Exam } from '@teacher-exam/shared'
-import { api, ApiError, unwrapApiEither } from '../lib/api.js'
+import { useNavigate, useRouter } from "@tanstack/react-router"
+import type { Exam } from "@teacher-exam/shared"
+import { useToast } from "@teacher-exam/ui"
+import { useState } from "react"
+import { api, ApiError, unwrapApiEither } from "../lib/api.js"
 
 export function useDuplicateExam() {
   const navigate = useNavigate()
@@ -26,10 +26,10 @@ export function useDuplicateExam() {
       const newExam = unwrapApiEither(await api.exams.duplicate(confirmingExam.id))
       await router.invalidate()
       setConfirmingExam(null)
-      void navigate({ to: '/review', search: { examId: newExam.id, mode: newExam.reviewMode } })
+      void navigate({ to: "/review", search: { examId: newExam.id, mode: newExam.reviewMode } })
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Gagal menduplikat lembar'
-      toast({ variant: 'error', title: message })
+      const message = err instanceof ApiError ? err.message : "Gagal menduplikat lembar"
+      toast({ variant: "error", title: message })
     } finally {
       setIsPending(false)
     }

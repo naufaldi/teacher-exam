@@ -1,9 +1,9 @@
-import { AiError } from '@effect/ai'
-import { Match } from 'effect'
-import { AiGenerationError } from '../../errors'
+import type { AiError } from "@effect/ai"
+import { Match } from "effect"
+import { AiGenerationError } from "../../errors"
 
 export interface ProviderErrorContext {
-  provider?: 'anthropic' | 'minimax' | 'openai'
+  provider?: "anthropic" | "minimax" | "openai"
   baseURL?: string
 }
 
@@ -28,26 +28,26 @@ export function appendConnectionContext(message: string, context: ProviderErrorC
   if (details.length === 0) {
     return message
   }
-  return `${message} (${details.join(', ')})`
+  return `${message} (${details.join(", ")})`
 }
 
 function summarizeAiError(error: AiError.AiError): string {
   return Match.value(error).pipe(
-    Match.tag('HttpRequestError', (err) => err.message),
-    Match.tag('HttpResponseError', (err) => {
+    Match.tag("HttpRequestError", (err) => err.message),
+    Match.tag("HttpResponseError", (err) => {
       const status = err.response.status
       return `[HTTP ${status}] ${err.message}`
     }),
-    Match.tag('MalformedInput', (err) => err.message),
-    Match.tag('MalformedOutput', (err) => err.message),
-    Match.tag('UnknownError', (err) => err.description ?? err.message),
-    Match.exhaustive,
+    Match.tag("MalformedInput", (err) => err.message),
+    Match.tag("MalformedOutput", (err) => err.message),
+    Match.tag("UnknownError", (err) => err.description ?? err.message),
+    Match.exhaustive
   )
 }
 
 export function mapAiError(
   error: AiError.AiError,
-  context: ProviderErrorContext,
+  context: ProviderErrorContext
 ): AiGenerationError {
   const message = appendConnectionContext(summarizeAiError(error), context)
   return new AiGenerationError({ cause: message })

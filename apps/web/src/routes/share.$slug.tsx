@@ -1,27 +1,27 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Badge, Button, PageHeader } from '@teacher-exam/ui'
-import { BookOpen, Download, Key, Printer } from 'lucide-react'
-import { SUBJECT_LABEL } from '@teacher-exam/shared'
-import type { PublicExamDetailResponse } from '@teacher-exam/shared'
-import { api, unwrapApiEither } from '../lib/api.js'
-import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
-import { pointsPerQuestion } from '../lib/points.js'
-import { MathText } from '../components/math-text.js'
-import { MarkdownMath } from '../components/markdown-math.js'
-import { FigureSvg } from '../components/figure-svg.js'
+import { createFileRoute } from "@tanstack/react-router"
+import { SUBJECT_LABEL } from "@teacher-exam/shared"
+import type { PublicExamDetailResponse } from "@teacher-exam/shared"
+import { Badge, Button, PageHeader } from "@teacher-exam/ui"
+import { BookOpen, Download, Key, Printer } from "lucide-react"
+import { FigureSvg } from "../components/figure-svg.js"
+import { MarkdownMath } from "../components/markdown-math.js"
+import { MathText } from "../components/math-text.js"
+import { api, unwrapApiEither } from "../lib/api.js"
+import { pointsPerQuestion } from "../lib/points.js"
+import { matchQuestion, questionCorrectLabel } from "../lib/question-render.js"
 
-export const Route = createFileRoute('/share/$slug')({
+export const Route = createFileRoute("/share/$slug")({
   loader: async ({ params }) => unwrapApiEither(await api.publicExams.get(params.slug)),
-  component: PublicSharePage,
+  component: PublicSharePage
 })
 
 function PublicSharePage() {
   const exam = Route.useLoaderData()
   const subjectLabel = SUBJECT_LABEL[exam.subject] ?? exam.subject
-  const publishedDate = new Date(exam.publishedAt).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  const publishedDate = new Date(exam.publishedAt).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   })
 
   return (
@@ -71,7 +71,7 @@ function PublicExamSection({ exam }: { exam: PublicExamDetailResponse }) {
       <div className="border-b border-border-default px-6 py-4">
         <h2 className="text-h3 font-semibold text-text-primary">Soal Ujian</h2>
         <p className="text-body-sm text-text-secondary">
-          {subjectLabel} · Kelas {exam.grade} · {exam.topics.join(' · ')}
+          {subjectLabel} · Kelas {exam.grade} · {exam.topics.join(" · ")}
         </p>
       </div>
 
@@ -86,24 +86,30 @@ function PublicExamSection({ exam }: { exam: PublicExamDetailResponse }) {
               mcq_single: (item) => (
                 <ol className="space-y-1 pl-5 text-body-sm text-text-secondary" type="a">
                   {Object.entries(item.options).map(([key, value]) => (
-                    <li key={key}><MathText text={value} /></li>
+                    <li key={key}>
+                      <MathText text={value} />
+                    </li>
                   ))}
                 </ol>
               ),
               mcq_multi: (item) => (
                 <ol className="space-y-1 pl-5 text-body-sm text-text-secondary" type="a">
                   {Object.entries(item.options).map(([key, value]) => (
-                    <li key={key}><MathText text={value} /></li>
+                    <li key={key}>
+                      <MathText text={value} />
+                    </li>
                   ))}
                 </ol>
               ),
               true_false: (item) => (
                 <ul className="space-y-1 text-body-sm text-text-secondary">
                   {item.statements.map((statement, index) => (
-                    <li key={`${question.id}-${index}`}><MathText text={statement.text} /></li>
+                    <li key={`${question.id}-${index}`}>
+                      <MathText text={statement.text} />
+                    </li>
                   ))}
                 </ul>
-              ),
+              )
             })}
           </article>
         ))}
@@ -129,7 +135,7 @@ function PublicAnswerKeySection({ exam }: { exam: PublicExamDetailResponse }) {
               key={question.id}
               className="rounded-sm border border-border-default bg-bg-surface px-3 py-2 text-body-sm"
             >
-              <span className="font-semibold text-text-primary">{question.number}.</span>{' '}
+              <span className="font-semibold text-text-primary">{question.number}.</span>{" "}
               <span className="text-text-secondary">{questionCorrectLabel(question)}</span>
             </div>
           ))}

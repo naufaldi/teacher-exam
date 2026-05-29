@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@teacher-exam/ui'
+import { Button } from "@teacher-exam/ui"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface HistoryPaginationProps {
   page: number
@@ -10,28 +10,28 @@ interface HistoryPaginationProps {
   onPageSizeChange: (size: number) => void
 }
 
-function getPageNumbers(page: number, totalPages: number): Array<number | '...'> {
+function getPageNumbers(page: number, totalPages: number): Array<number | "..."> {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1)
   }
   if (page <= 4) {
-    return [1, 2, 3, 4, 5, '...', totalPages]
+    return [1, 2, 3, 4, 5, "...", totalPages]
   }
   if (page >= totalPages - 3) {
-    return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+    return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
   }
-  return [1, '...', page - 1, page, page + 1, '...', totalPages]
+  return [1, "...", page - 1, page, page + 1, "...", totalPages]
 }
 
 const DEFAULT_PAGE_SIZE_OPTIONS: ReadonlyArray<number> = [8, 16, 32]
 
 function HistoryPagination({
-  page,
-  pageSize,
-  totalItems,
-  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   onPageChange,
   onPageSizeChange,
+  page,
+  pageSize,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  totalItems
 }: HistoryPaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
   const pageNumbers = getPageNumbers(page, totalPages)
@@ -69,27 +69,29 @@ function HistoryPagination({
         </Button>
 
         {pageNumbers.map((n, i) =>
-          n === '...' ? (
-            <span
-              key={`ellipsis-${i}`}
-              className="w-8 h-8 inline-flex items-center justify-center text-text-tertiary text-body-sm select-none"
-              aria-hidden
-            >
-              …
-            </span>
-          ) : (
-            <Button
-              key={n}
-              variant={n === page ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => onPageChange(n)}
-              aria-label={String(n)}
-              aria-current={n === page ? 'page' : undefined}
-              className="w-8 px-0"
-            >
-              {n}
-            </Button>
-          ),
+          n === "..." ?
+            (
+              <span
+                key={`ellipsis-${i}`}
+                className="w-8 h-8 inline-flex items-center justify-center text-text-tertiary text-body-sm select-none"
+                aria-hidden
+              >
+                …
+              </span>
+            ) :
+            (
+              <Button
+                key={n}
+                variant={n === page ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => onPageChange(n)}
+                aria-label={String(n)}
+                aria-current={n === page ? "page" : undefined}
+                className="w-8 px-0"
+              >
+                {n}
+              </Button>
+            )
         )}
 
         <Button

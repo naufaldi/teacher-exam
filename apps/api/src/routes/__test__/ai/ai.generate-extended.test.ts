@@ -1,40 +1,40 @@
-import './ai-setup.js'
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Effect } from 'effect'
-import { db } from '@teacher-exam/db'
-import { buildExamPrompt } from '../../../lib/prompt.js'
+import { db } from "@teacher-exam/db"
+import { Effect } from "effect"
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
+import { makeChain, makeQuestionRow } from "../helpers.js"
 import {
+  buildExamPrompt,
   buildTestApp,
-  fakeAiService,
   FAKE_AI_QUESTIONS,
+  fakeAiService,
   makeExamRow,
   mockGenerateDbSelects,
-  VALID_BODY,
-} from './ai-setup.js'
-import { makeChain, makeQuestionRow } from '../helpers.js'
+  VALID_BODY
+} from "./ai-setup.js"
 
 beforeEach(() => {
   vi.clearAllMocks()
   ;(fakeAiService.generateRaw as Mock).mockReturnValue(
-    Effect.succeed(JSON.stringify(FAKE_AI_QUESTIONS)),
+    Effect.succeed(JSON.stringify(FAKE_AI_QUESTIONS))
   )
   ;(fakeAiService.validateCurriculum as Mock).mockImplementation(({ expectedCount }: { expectedCount: number }) =>
     Effect.succeed(
       Array.from({ length: expectedCount }, (_, i) => ({
         number: i + 1,
-        status: 'valid' as const,
-        reason: 'Sesuai CP.',
-      })),
-    ),
+        status: "valid" as const,
+        reason: "Sesuai CP."
+      }))
+    )
   )
   ;(db.update as Mock).mockReturnValue(makeChain([]))
 })
 
-describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
+describe("POST /api/ai/generate — PRD v3 phase 1 subjects", () => {
   function setupPhase1Mocks(total = 20) {
     const examRow = makeExamRow()
-    const questionRows = Array.from({ length: total }, (_, i) =>
-      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    const questionRows = Array.from(
+      { length: total },
+      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
@@ -42,102 +42,103 @@ describe('POST /api/ai/generate — PRD v3 phase 1 subjects', () => {
     return insertChain
   }
 
-  it('calls buildExamPrompt with ipas curriculum text', async () => {
+  it("calls buildExamPrompt with ipas curriculum text", async () => {
     setupPhase1Mocks()
     const buildMock = buildExamPrompt as Mock
     buildMock.mockClear()
 
     const app = buildTestApp()
-    const res = await app.request('/api/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...VALID_BODY,
-        subject: 'ipas',
+        subject: "ipas",
         grade: 5,
-        topics: ['Cahaya dan Bunyi'],
-      }),
+        topics: ["Cahaya dan Bunyi"]
+      })
     })
 
     expect(res.status).toBe(201)
     expect(buildMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        examSubject: 'ipas',
-        subjectLabel: 'IPAS',
-        curriculumText: 'mock curriculum text',
-      }),
+        examSubject: "ipas",
+        subjectLabel: "IPAS",
+        curriculumText: "mock curriculum text"
+      })
     )
   })
 
-  it('calls buildExamPrompt with bahasa_inggris', async () => {
+  it("calls buildExamPrompt with bahasa_inggris", async () => {
     setupPhase1Mocks()
     const buildMock = buildExamPrompt as Mock
     buildMock.mockClear()
 
     const app = buildTestApp()
-    const res = await app.request('/api/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...VALID_BODY,
-        subject: 'bahasa_inggris',
+        subject: "bahasa_inggris",
         grade: 6,
-        topics: ['Daily Activities'],
-      }),
+        topics: ["Daily Activities"]
+      })
     })
 
     expect(res.status).toBe(201)
     expect(buildMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        examSubject: 'bahasa_inggris',
-        subjectLabel: 'Bahasa Inggris',
-      }),
+        examSubject: "bahasa_inggris",
+        subjectLabel: "Bahasa Inggris"
+      })
     )
   })
 })
 
-describe('POST /api/ai/generate — multi-topic', () => {
-  it('accepts topics array and returns 201', async () => {
+describe("POST /api/ai/generate — multi-topic", () => {
+  it("accepts topics array and returns 201", async () => {
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
 
-    const examRow = makeExamRow({ topics: ['Teks Narasi', 'Puisi'] })
-    const questionRows = Array.from({ length: 20 }, (_, i) =>
-      makeQuestionRow({ id: `q-${i + 1}`, examId: 'exam-gen-1', number: i + 1 }),
+    const examRow = makeExamRow({ topics: ["Teks Narasi", "Puisi"] })
+    const questionRows = Array.from(
+      { length: 20 },
+      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
     )
     mockGenerateDbSelects({ examRow, questionRows })
 
     const app = buildTestApp()
 
-    const res = await app.request('/api/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subject: 'bahasa_indonesia',
+        subject: "bahasa_indonesia",
         grade: 6,
-        difficulty: 'campuran',
-        topics: ['Teks Narasi', 'Puisi'],
-        reviewMode: 'fast',
-        examType: 'sas',
-      }),
+        difficulty: "campuran",
+        topics: ["Teks Narasi", "Puisi"],
+        reviewMode: "fast",
+        examType: "sas"
+      })
     })
 
     expect(res.status).toBe(201)
   })
 
-  it('rejects body with old single topic string field', async () => {
+  it("rejects body with old single topic string field", async () => {
     const app = buildTestApp()
 
-    const res = await app.request('/api/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subject: 'bahasa_indonesia',
+        subject: "bahasa_indonesia",
         grade: 6,
-        difficulty: 'campuran',
-        topic: 'Teks Narasi',
-        reviewMode: 'fast',
-      }),
+        difficulty: "campuran",
+        topic: "Teks Narasi",
+        reviewMode: "fast"
+      })
     })
 
     expect(res.status).toBe(400)

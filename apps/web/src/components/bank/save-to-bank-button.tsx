@@ -1,14 +1,14 @@
-import { useState } from 'react'
-import type { SaveToBankInput } from '@teacher-exam/shared'
-import { Badge, Button, LoadingSpinner } from '@teacher-exam/ui'
-import { api, unwrapApiEither } from '../../lib/api.js'
+import type { SaveToBankInput } from "@teacher-exam/shared"
+import { Badge, Button, LoadingSpinner } from "@teacher-exam/ui"
+import { useState } from "react"
+import { api, unwrapApiEither } from "../../lib/api.js"
 
 interface SaveToBankButtonProps {
-  questionId: SaveToBankInput['questionId']
+  questionId: SaveToBankInput["questionId"]
   assumeSaved?: boolean
 }
 
-function SaveToBankButton({ questionId, assumeSaved = false }: SaveToBankButtonProps) {
+function SaveToBankButton({ assumeSaved = false, questionId }: SaveToBankButtonProps) {
   const [saved, setSaved] = useState(assumeSaved)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,14 +38,14 @@ function SaveToBankButton({ questionId, assumeSaved = false }: SaveToBankButtonP
               setSaved(true)
             })
             .catch((err: unknown) => {
-              setError(err instanceof Error ? err.message : 'Gagal menyimpan')
+              setError(err instanceof Error ? err.message : "Gagal menyimpan")
             })
             .finally(() => {
               setLoading(false)
             })
         }}
       >
-        {loading ? <LoadingSpinner className="h-4 w-4" /> : 'Simpan ke Bank'}
+        {loading ? <LoadingSpinner className="h-4 w-4" /> : "Simpan ke Bank"}
       </Button>
       {error ? <span className="text-caption text-danger-fg">{error}</span> : null}
     </div>

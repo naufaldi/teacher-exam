@@ -1,10 +1,10 @@
-import type { IncomingMessage, ServerResponse } from 'node:http'
-import { Readable } from 'node:stream'
+import type { IncomingMessage, ServerResponse } from "node:http"
+import { Readable } from "node:stream"
 
 export async function nodeRequestToWebRequest(req: IncomingMessage): Promise<Request> {
-  const host = req.headers.host ?? 'localhost'
-  const url = `http://${host}${req.url ?? '/'}`
-  const method = req.method ?? 'GET'
+  const host = req.headers.host ?? "localhost"
+  const url = `http://${host}${req.url ?? "/"}`
+  const method = req.method ?? "GET"
 
   const headers = new Headers()
   for (const [key, value] of Object.entries(req.headers)) {
@@ -16,21 +16,24 @@ export async function nodeRequestToWebRequest(req: IncomingMessage): Promise<Req
     }
   }
 
-  const hasBody = method !== 'GET' && method !== 'HEAD'
+  const hasBody = method !== "GET" && method !== "HEAD"
   if (!hasBody) {
     return new Request(url, { method, headers })
   }
 
-  return new Request(url, {
-    method,
-    headers,
-    body: Readable.toWeb(req) as ReadableStream<Uint8Array>,
-    duplex: 'half',
-  } as RequestInit & { duplex: 'half' })
+  return new Request(
+    url,
+    {
+      method,
+      headers,
+      body: Readable.toWeb(req) as ReadableStream<Uint8Array>,
+      duplex: "half"
+    } as RequestInit & { duplex: "half" }
+  )
 }
 
 export async function writeWebResponse(res: ServerResponse, response: Response): Promise<void> {
-  const headers: Record<string, string | string[]> = {}
+  const headers: Record<string, string | Array<string>> = {}
   response.headers.forEach((value, key) => {
     const existing = headers[key]
     if (existing === undefined) {

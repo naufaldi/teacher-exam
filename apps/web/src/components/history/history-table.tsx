@@ -1,16 +1,14 @@
-import { useState } from 'react'
-import type { Exam } from '@teacher-exam/shared'
-import { Copy, Eye, Link2, MoreHorizontal, Pencil, Trash2, CheckSquare } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from "@tanstack/react-router"
+import type { Exam } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -23,18 +21,20 @@ import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
-} from '@teacher-exam/ui'
-import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
-import { subjectMetaFor } from '../../lib/subjects'
+  TooltipTrigger
+} from "@teacher-exam/ui"
+import { CheckSquare, Copy, Eye, Link2, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../../lib/feature-flags"
+import { subjectMetaFor } from "../../lib/subjects"
 
-const HEAD_CLS = 'text-caption font-semibold tracking-wider uppercase text-text-tertiary px-5 py-3 h-auto'
+const HEAD_CLS = "text-caption font-semibold tracking-wider uppercase text-text-tertiary px-5 py-3 h-auto"
 
 function formatShortDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
   })
 }
 
@@ -92,18 +92,18 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const subj = subjectMetaFor(exam.subject)
-  const isFinal = exam.status === 'final'
+  const isFinal = exam.status === "final"
 
   function handlePreview() {
-    void navigate({ to: '/preview', search: { examId: exam.id } })
+    void navigate({ to: "/preview", search: { examId: exam.id } })
   }
 
   function handleCorrection() {
-    void navigate({ to: '/correction/$examId', params: { examId: exam.id } })
+    void navigate({ to: "/correction/$examId", params: { examId: exam.id } })
   }
 
   function handleEdit() {
-    void navigate({ to: '/review', search: { examId: exam.id, mode: exam.reviewMode } })
+    void navigate({ to: "/review", search: { examId: exam.id, mode: exam.reviewMode } })
   }
 
   function handleOpenExam() {
@@ -131,7 +131,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subj.dotClass}`}
-              style={{ fontFamily: 'var(--font-serif)' }}
+              style={{ fontFamily: "var(--font-serif)" }}
             >
               {subj.short}
             </div>
@@ -153,7 +153,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="text-caption text-text-tertiary mt-0.5 truncate cursor-default">
-                    {exam.examType} · {exam.topics.join(', ')}
+                    {exam.examType} · {exam.topics.join(", ")}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent
@@ -161,7 +161,7 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
                   align="start"
                   className="max-w-[420px] whitespace-normal"
                 >
-                  {exam.examType} · {exam.topics.join(', ')}
+                  {exam.examType} · {exam.topics.join(", ")}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -187,11 +187,11 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
         <TableCell className="hidden lg:table-cell px-5 py-3.5 align-middle text-center">
           <div className="flex items-center justify-center">
             <Badge
-              variant={isFinal ? 'success' : 'warning'}
+              variant={isFinal ? "success" : "warning"}
               className="inline-flex items-center gap-1.5 whitespace-nowrap"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-current inline-block shrink-0" />
-              {isFinal ? 'Final' : 'Draft'}
+              {isFinal ? "Final" : "Draft"}
             </Badge>
           </div>
         </TableCell>
@@ -199,39 +199,41 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
         {/* Aksi column */}
         <TableCell className="hidden lg:table-cell px-5 py-3.5 align-middle">
           <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-            {isFinal ? (
-              <>
-                <Button variant="secondary" size="sm" onClick={handlePreview}>
-                  <Eye size={13} />
-                  Preview
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCorrection}
-                  disabled={!KOREKSI_ENABLED}
-                  title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
-                >
-                  <CheckSquare size={13} />
-                  Koreksi
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => void onShare(exam)}>
-                  <Link2 size={13} />
-                  Bagikan
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="secondary" size="sm" onClick={handleEdit}>
-                  <Pencil size={13} />
-                  Edit
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleDuplicate}>
-                  <Copy size={13} />
-                  Duplikat
-                </Button>
-              </>
-            )}
+            {isFinal ?
+              (
+                <>
+                  <Button variant="secondary" size="sm" onClick={handlePreview}>
+                    <Eye size={13} />
+                    Preview
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleCorrection}
+                    disabled={!KOREKSI_ENABLED}
+                    title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+                  >
+                    <CheckSquare size={13} />
+                    Koreksi
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => void onShare(exam)}>
+                    <Link2 size={13} />
+                    Bagikan
+                  </Button>
+                </>
+              ) :
+              (
+                <>
+                  <Button variant="secondary" size="sm" onClick={handleEdit}>
+                    <Pencil size={13} />
+                    Edit
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleDuplicate}>
+                    <Copy size={13} />
+                    Duplikat
+                  </Button>
+                </>
+              )}
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -247,16 +249,18 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
                 sideOffset={6}
                 className="w-auto min-w-[180px] p-1"
               >
-                {isFinal ? (
-                  <button
-                    type="button"
-                    onClick={handleDuplicate}
-                    className="w-full text-left px-3 py-2 text-body-sm text-text-primary hover:bg-kertas-50 rounded-xs inline-flex items-center gap-2 cursor-pointer"
-                  >
-                    <Copy size={13} className="text-text-tertiary" />
-                    Duplikat sebagai draft
-                  </button>
-                ) : null}
+                {isFinal ?
+                  (
+                    <button
+                      type="button"
+                      onClick={handleDuplicate}
+                      className="w-full text-left px-3 py-2 text-body-sm text-text-primary hover:bg-kertas-50 rounded-xs inline-flex items-center gap-2 cursor-pointer"
+                    >
+                      <Copy size={13} className="text-text-tertiary" />
+                      Duplikat sebagai draft
+                    </button>
+                  ) :
+                  null}
                 <button
                   type="button"
                   onClick={() => setConfirmOpen(true)}

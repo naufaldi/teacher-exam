@@ -1,11 +1,11 @@
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@teacher-exam/ui'
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@teacher-exam/ui"
 
 export interface FastModeTopicBadgeProps {
   topic: string
 }
 
 export function FastModeTopicBadge({ topic }: FastModeTopicBadgeProps) {
-  const shortLabel = topic.split(' ')[0] ?? topic
+  const shortLabel = topic.split(" ")[0] ?? topic
 
   return (
     <Tooltip>

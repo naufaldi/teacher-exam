@@ -1,54 +1,46 @@
-import { useState } from 'react'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Printer, FileText, ClipboardList, Key, Layers, BookOpen } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import {
-  Button,
-  Badge,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  PageHeader,
-} from '@teacher-exam/ui'
-import { examDraftStore, useExamDraft } from '../lib/exam-draft-store.js'
-import { pointsPerQuestion } from '../lib/points.js'
-import { matchQuestion, questionCorrectLabel } from '../lib/question-render.js'
-import { FigureSvg } from '../components/figure-svg.js'
-import { MathText } from '../components/math-text.js'
-import { MarkdownMath } from '../components/markdown-math.js'
-import type { ExamDetailResponse, ExamType, Question, SaveToBankInput } from '@teacher-exam/shared'
-import { api, unwrapApiEither } from '../lib/api.js'
-import { SaveToBankButton } from '../components/bank/save-to-bank-button.js'
-import { subjectMetaFor } from '../lib/subjects.js'
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import type { ExamDetailResponse, ExamType, Question, SaveToBankInput } from "@teacher-exam/shared"
+import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
+import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
+import { useState } from "react"
+import { SaveToBankButton } from "../components/bank/save-to-bank-button.js"
+import { FigureSvg } from "../components/figure-svg.js"
+import { MarkdownMath } from "../components/markdown-math.js"
+import { MathText } from "../components/math-text.js"
+import { api, unwrapApiEither } from "../lib/api.js"
+import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
+import { pointsPerQuestion } from "../lib/points.js"
+import { matchQuestion, questionCorrectLabel } from "../lib/question-render.js"
+import { subjectMetaFor } from "../lib/subjects.js"
 
-export const Route = createFileRoute('/_auth/preview')({
+export const Route = createFileRoute("/_auth/preview")({
   component: PreviewPage,
   validateSearch: (search): { examId?: string } => {
-    const examId = search['examId']
-    return typeof examId === 'string' ? { examId } : {}
+    const examId = search["examId"]
+    return typeof examId === "string" ? { examId } : {}
   },
   loaderDeps: ({ search }) => ({ examId: search.examId }),
   loader: async ({ deps }) => {
-    if (!deps.examId) throw redirect({ to: '/dashboard' })
+    if (!deps.examId) throw redirect({ to: "/dashboard" })
     const exam = unwrapApiEither(await api.exams.get(deps.examId))
     examDraftStore.setQuestions([...exam.questions])
-    examDraftStore.setReviewMode(exam.reviewMode as 'fast' | 'slow')
+    examDraftStore.setReviewMode(exam.reviewMode as "fast" | "slow")
     examDraftStore.setConfig({
       subject: exam.subject,
       grade: exam.grade,
-      topic: exam.topics.join(', '),
+      topic: exam.topics.join(", "),
       examType: exam.examType as ExamType,
-      classContext: exam.classContext ?? '',
+      classContext: exam.classContext ?? ""
     })
     examDraftStore.setMetadata({
-      schoolName: exam.schoolName ?? '',
-      academicYear: exam.academicYear ?? '',
-      examDate: exam.examDate ?? '',
+      schoolName: exam.schoolName ?? "",
+      academicYear: exam.academicYear ?? "",
+      examDate: exam.examDate ?? "",
       durationMinutes: exam.durationMinutes ?? 60,
-      instructions: exam.instructions ?? '',
+      instructions: exam.instructions ?? ""
     })
     return exam
-  },
+  }
 })
 
 /**
@@ -57,18 +49,18 @@ export const Route = createFileRoute('/_auth/preview')({
  * avoid pulling backend code into the web bundle.
  */
 const EXAM_TYPE_KOP_LABELS: Record<ExamType, string> = {
-  latihan: 'LATIHAN SOAL',
-  formatif: 'ULANGAN HARIAN',
-  sts: 'PENILAIAN TENGAH SEMESTER',
-  sas: 'PENILAIAN AKHIR SEMESTER',
-  tka: 'TKA',
+  latihan: "LATIHAN SOAL",
+  formatif: "ULANGAN HARIAN",
+  sts: "PENILAIAN TENGAH SEMESTER",
+  sas: "PENILAIAN AKHIR SEMESTER",
+  tka: "TKA"
 }
 
 function kopLabelFor(examType: string): string {
   return EXAM_TYPE_KOP_LABELS[examType as ExamType] ?? examType.toUpperCase()
 }
 
-type PrintScope = 'all' | 'soal' | 'lj' | 'kunci' | 'pembahasan'
+type PrintScope = "all" | "soal" | "lj" | "kunci" | "pembahasan"
 const PRINT_CLEANUP_FALLBACK_MS = 10_000
 
 function triggerPrint(scope: PrintScope) {
@@ -77,12 +69,12 @@ function triggerPrint(scope: PrintScope) {
 
   const cleanup = () => {
     if (fallbackId !== undefined) window.clearTimeout(fallbackId)
-    window.removeEventListener('afterprint', cleanup)
-    delete body.dataset['printScope']
+    window.removeEventListener("afterprint", cleanup)
+    delete body.dataset["printScope"]
   }
 
-  body.dataset['printScope'] = scope
-  window.addEventListener('afterprint', cleanup, { once: true })
+  body.dataset["printScope"] = scope
+  window.addEventListener("afterprint", cleanup, { once: true })
 
   // Defer to next tick so the data attribute is applied before print dialog opens
   window.setTimeout(() => {
@@ -95,11 +87,11 @@ function PreviewPage() {
   const navigate = useNavigate()
   const draft = useExamDraft()
   const exam = Route.useLoaderData()
-  const [tab, setTab] = useState<'soal' | 'lj' | 'kunci' | 'semua' | 'pembahasan'>('semua')
+  const [tab, setTab] = useState<"soal" | "lj" | "kunci" | "semua" | "pembahasan">("semua")
 
-  const { questions, metadata, subject, grade } = draft
+  const { grade, metadata, questions, subject } = draft
   const subjectLabel = subjectMetaFor(subject).label
-  const topicsLabel = exam?.topics?.join(' · ') ?? ''
+  const topicsLabel = exam?.topics?.join(" · ") ?? ""
 
   return (
     <div className="space-y-6">
@@ -109,7 +101,7 @@ function PreviewPage() {
         title="Preview Lembar"
         subtitle={`${kopLabelFor(metadata.examType)} · ${subjectLabel} — Kelas ${grade} SD`}
         onBack={() => {
-          void navigate({ to: '/review', search: { mode: draft.reviewMode } })
+          void navigate({ to: "/review", search: { mode: draft.reviewMode } })
         }}
         backLabel="Kembali ke Review"
       >
@@ -142,43 +134,46 @@ function PreviewPage() {
           </TabsList>
         </Tabs>
         <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('soal')}>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint("soal")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Soal
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('lj')}>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint("lj")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak LJ
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('kunci')}>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint("kunci")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Kunci
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint('pembahasan')}>
+          <Button variant="ghost" size="sm" onClick={() => triggerPrint("pembahasan")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
           </Button>
-          <Button onClick={() => triggerPrint('all')}>
+          <Button onClick={() => triggerPrint("all")}>
             <Printer className="h-4 w-4 mr-2" /> Cetak Semua
           </Button>
         </div>
       </div>
 
-      {(tab === 'soal' || tab === 'semua') && questions.length > 0 ? (
-        <div
-          data-screen-only
-          data-no-print
-          className="rounded-md border border-border-default bg-bg-surface p-4 flex flex-wrap gap-2 items-center"
-        >
-          <span className="text-body-sm text-text-secondary mr-2">Simpan ke bank:</span>
-          {questions.map((q) => (
-            <SaveToBankButton
-              key={q.id}
-              questionId={q.id as SaveToBankInput['questionId']}
-              assumeSaved={q.status === 'accepted'}
-            />
-          ))}
-        </div>
-      ) : null}
+      {(tab === "soal" || tab === "semua") && questions.length > 0 ?
+        (
+          <div
+            data-screen-only
+            data-no-print
+            className="rounded-md border border-border-default bg-bg-surface p-4 flex flex-wrap gap-2 items-center"
+          >
+            <span className="text-body-sm text-text-secondary mr-2">Simpan ke bank:</span>
+            {questions.map((q) => (
+              <SaveToBankButton
+                key={q.id}
+                questionId={q.id as SaveToBankInput["questionId"]}
+                assumeSaved={q.status === "accepted"}
+              />
+            ))}
+          </div>
+        ) :
+        null}
 
       {/* Print scope CSS */}
-      <style>{`
+      <style>
+        {`
         @media screen {
           [data-print-content][data-screen-tab="soal"] [data-print-section="lj"],
           [data-print-content][data-screen-tab="soal"] [data-print-section="kunci"],
@@ -217,13 +212,32 @@ function PreviewPage() {
             background: white !important;
           }
         }
-      `}</style>
+      `}
+      </style>
 
       {/* Preview content — all sections always rendered; screen visibility controlled via data-screen-tab */}
       <div data-print-content data-screen-tab={tab} className="space-y-6">
-        <SoalSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
-        <LembarJawabanSection metadata={metadata} subjectLabel={subjectLabel} grade={grade} questions={questions} topicsLabel={topicsLabel} />
-        <KunciSection subjectLabel={subjectLabel} grade={grade} questions={questions} examType={kopLabelFor(metadata.examType)} topicsLabel={topicsLabel} />
+        <SoalSection
+          metadata={metadata}
+          subjectLabel={subjectLabel}
+          grade={grade}
+          questions={questions}
+          topicsLabel={topicsLabel}
+        />
+        <LembarJawabanSection
+          metadata={metadata}
+          subjectLabel={subjectLabel}
+          grade={grade}
+          questions={questions}
+          topicsLabel={topicsLabel}
+        />
+        <KunciSection
+          subjectLabel={subjectLabel}
+          grade={grade}
+          questions={questions}
+          examType={kopLabelFor(metadata.examType)}
+          topicsLabel={topicsLabel}
+        />
         {exam ? <PembahasanSection exam={exam} /> : null}
       </div>
     </div>
@@ -238,10 +252,10 @@ function PaperFrame({ children }: { children: React.ReactNode }) {
       data-preview-frame
       className="mx-auto bg-white border border-border-default rounded-md shadow-sm"
       style={{
-        width: 'min(100%, 794px)', // ~A4 width @ 96dpi
-        padding: '40px 48px',
-        fontFamily: 'var(--font-serif)',
-        color: '#000',
+        width: "min(100%, 794px)", // ~A4 width @ 96dpi
+        padding: "40px 48px",
+        fontFamily: "var(--font-serif)",
+        color: "#000"
       }}
     >
       {children}
@@ -250,10 +264,10 @@ function PaperFrame({ children }: { children: React.ReactNode }) {
 }
 
 function PaperHeader({
+  grade,
   metadata,
   subjectLabel,
-  grade,
-  topicsLabel,
+  topicsLabel
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number }
   subjectLabel: string
@@ -264,17 +278,19 @@ function PaperHeader({
     <>
       <div className="text-center border-b-2 border-black pb-3 mb-4">
         <p className="text-sm font-bold uppercase tracking-wide">
-          {metadata.schoolName || 'SD Negeri ___________'}
+          {metadata.schoolName || "SD Negeri ___________"}
         </p>
         <p className="text-base font-bold uppercase mt-1 underline">
-          {kopLabelFor(metadata.examType)} Tahun Pelajaran {metadata.academicYear || '____/____'}
+          {kopLabelFor(metadata.examType)} Tahun Pelajaran {metadata.academicYear || "____/____"}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-4">
         <p>Nama : ............................................</p>
-        <p>Mata Pelajaran : <strong>{subjectLabel}</strong></p>
+        <p>
+          Mata Pelajaran : <strong>{subjectLabel}</strong>
+        </p>
         <p>No. Absen : ......................................</p>
-        <p>Hari/Tanggal : {metadata.examDate || '......................'}</p>
+        <p>Hari/Tanggal : {metadata.examDate || "......................"}</p>
         <p>Kelas : {grade} SD</p>
         <p>Waktu : {metadata.durationMinutes || 60} menit</p>
         {topicsLabel ? <p className="col-span-2">Materi : {topicsLabel}</p> : null}
@@ -285,7 +301,7 @@ function PaperHeader({
 
 // ── Question renderers for Soal section ──────────────────────────────────────
 
-const OPTION_LETTERS = ['a', 'b', 'c', 'd'] as const
+const OPTION_LETTERS = ["a", "b", "c", "d"] as const
 
 function renderMcqOptions(options: { a: string; b: string; c: string; d: string }) {
   return (
@@ -293,7 +309,9 @@ function renderMcqOptions(options: { a: string; b: string; c: string; d: string 
       {OPTION_LETTERS.map((letter) => (
         <li key={letter} className="flex gap-2">
           <span className="font-semibold">{letter}.</span>
-          <span><MathText text={options[letter]} /></span>
+          <span>
+            <MathText text={options[letter]} />
+          </span>
         </li>
       ))}
     </ol>
@@ -330,16 +348,23 @@ function renderTrueFalseTable(statements: ReadonlyArray<{ text: string; answer: 
 }
 
 function SoalSection({
-  metadata,
-  subjectLabel,
   grade,
+  metadata,
   questions,
-  topicsLabel,
+  subjectLabel,
+  topicsLabel
 }: {
-  metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number; instructions: string }
+  metadata: {
+    schoolName: string
+    academicYear: string
+    examType: string
+    examDate: string
+    durationMinutes: number
+    instructions: string
+  }
   subjectLabel: string
   grade: number
-  questions: Question[]
+  questions: Array<Question>
   topicsLabel: string
 }) {
   return (
@@ -348,19 +373,19 @@ function SoalSection({
         <PaperHeader metadata={metadata} subjectLabel={subjectLabel} grade={grade} topicsLabel={topicsLabel} />
 
         {/* Petunjuk */}
-        {metadata.instructions ? (
-          <div className="border border-black p-3 mb-5 text-sm">
-            <p className="font-bold mb-1">PETUNJUK PENGERJAAN:</p>
-            <ol className="list-decimal list-inside space-y-0.5">
-              {metadata.instructions
-                .split('\n')
-                .filter((l) => l.trim() !== '')
-                .map((line, i) => (
-                  <li key={i}>{line.trim()}</li>
-                ))}
-            </ol>
-          </div>
-        ) : null}
+        {metadata.instructions ?
+          (
+            <div className="border border-black p-3 mb-5 text-sm">
+              <p className="font-bold mb-1">PETUNJUK PENGERJAAN:</p>
+              <ol className="list-decimal list-inside space-y-0.5">
+                {metadata.instructions
+                  .split("\n")
+                  .filter((l) => l.trim() !== "")
+                  .map((line, i) => <li key={i}>{line.trim()}</li>)}
+              </ol>
+            </div>
+          ) :
+          null}
 
         {/* 2-column soal grid */}
         <div className="columns-1 md:columns-2 gap-8 text-[13px] leading-relaxed">
@@ -368,13 +393,15 @@ function SoalSection({
             <div key={q.id} className="break-inside-avoid mb-4">
               <p className="mb-1.5">
                 <span className="font-bold mr-1">{q.number}.</span>
-                <span className="whitespace-pre-line"><MathText text={q.text} /></span>
+                <span className="whitespace-pre-line">
+                  <MathText text={q.text} />
+                </span>
               </p>
               {q.figure ? <FigureSvg figure={q.figure} /> : null}
               {matchQuestion(q, {
                 mcq_single: (x) => renderMcqOptions(x.options),
                 mcq_multi: (x) => renderMcqOptions(x.options),
-                true_false: (x) => renderTrueFalseTable(x.statements),
+                true_false: (x) => renderTrueFalseTable(x.statements)
               })}
             </div>
           ))}
@@ -390,7 +417,7 @@ function renderMcqBubbleRow(number: number) {
   return (
     <div key={number} className="flex items-center gap-2">
       <span className="font-mono font-semibold w-6 text-right">{number}.</span>
-      {(['A', 'B', 'C', 'D'] as const).map((letter) => (
+      {(["A", "B", "C", "D"] as const).map((letter) => (
         <span
           key={letter}
           className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-black text-[11px] font-mono"
@@ -433,16 +460,16 @@ function renderTrueFalseBubbleRow(number: number, statementCount: number) {
 }
 
 function LembarJawabanSection({
-  metadata,
-  subjectLabel,
   grade,
+  metadata,
   questions,
-  topicsLabel,
+  subjectLabel,
+  topicsLabel
 }: {
   metadata: { schoolName: string; academicYear: string; examType: string; examDate: string; durationMinutes: number }
   subjectLabel: string
   grade: number
-  questions: Question[]
+  questions: Array<Question>
   topicsLabel: string
 }) {
   const left = questions.slice(0, Math.ceil(questions.length / 2))
@@ -453,7 +480,7 @@ function LembarJawabanSection({
       <PaperFrame>
         <div className="text-center border-b-2 border-black pb-3 mb-4">
           <p className="text-sm font-bold uppercase tracking-wide">
-            {metadata.schoolName || 'SD Negeri ___________'}
+            {metadata.schoolName || "SD Negeri ___________"}
           </p>
           <p className="text-base font-bold uppercase mt-1">LEMBAR JAWABAN</p>
           <p className="text-sm">
@@ -463,9 +490,9 @@ function LembarJawabanSection({
         </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-5">
           <p>Nama : ............................................</p>
-          <p>Tahun Pelajaran : {metadata.academicYear || '____/____'}</p>
+          <p>Tahun Pelajaran : {metadata.academicYear || "____/____"}</p>
           <p>No. Absen : ......................................</p>
-          <p>Hari/Tanggal : {metadata.examDate || '......................'}</p>
+          <p>Hari/Tanggal : {metadata.examDate || "......................"}</p>
           <p>Kelas : {grade} SD</p>
           <p>Waktu : {metadata.durationMinutes || 60} menit</p>
         </div>
@@ -491,30 +518,30 @@ function LembarJawabanSection({
   )
 }
 
-function AnswerColumn({ questions }: { questions: Question[] }) {
+function AnswerColumn({ questions }: { questions: Array<Question> }) {
   return (
     <div className="space-y-1.5">
       {questions.map((q) =>
         matchQuestion(q, {
           mcq_single: (x) => renderMcqBubbleRow(x.number),
           mcq_multi: (x) => renderMcqBubbleRow(x.number),
-          true_false: (x) => renderTrueFalseBubbleRow(x.number, x.statements.length),
-        }),
+          true_false: (x) => renderTrueFalseBubbleRow(x.number, x.statements.length)
+        })
       )}
     </div>
   )
 }
 
 function KunciSection({
-  subjectLabel,
+  examType,
   grade,
   questions,
-  examType,
-  topicsLabel,
+  subjectLabel,
+  topicsLabel
 }: {
   subjectLabel: string
   grade: number
-  questions: Question[]
+  questions: Array<Question>
   examType: string
   topicsLabel: string
 }) {
@@ -545,7 +572,9 @@ function KunciSection({
             const totalPoin = questions.length * poinPerSoal
             return (
               <>
-                <p>Setiap jawaban benar bernilai <strong>{poinPerSoal} poin</strong>.</p>
+                <p>
+                  Setiap jawaban benar bernilai <strong>{poinPerSoal} poin</strong>.
+                </p>
                 <p className="font-bold">Total: {totalPoin} poin</p>
               </>
             )
@@ -571,14 +600,14 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
         setIsGenerating(false)
       },
       (message) => {
-        const isFetchError = message === 'Failed to fetch' || message.toLowerCase().includes('failed to fetch')
+        const isFetchError = message === "Failed to fetch" || message.toLowerCase().includes("failed to fetch")
         setGenerateError(
           isFetchError
-            ? 'Koneksi terputus saat membuat pembahasan. Coba lagi sebentar.'
-            : message || 'Gagal membuat pembahasan. Coba lagi.',
+            ? "Koneksi terputus saat membuat pembahasan. Coba lagi sebentar."
+            : message || "Gagal membuat pembahasan. Coba lagi."
         )
         setIsGenerating(false)
-      },
+      }
     )
   }
 
@@ -588,26 +617,26 @@ function PembahasanSection({ exam }: { exam: ExamDetailResponse }) {
         <div className="text-center border-b-2 border-black pb-3 mb-5">
           <p className="text-base font-bold uppercase">PEMBAHASAN</p>
         </div>
-        {md === null ? (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <p className="text-sm text-kertas-600">Pembahasan belum dibuat untuk ujian ini.</p>
-            {generateError ? (
-              <p className="text-sm text-danger-600">{generateError}</p>
-            ) : null}
-            <Button onClick={handleGenerate} disabled={isGenerating}>
-              <BookOpen className="h-4 w-4 mr-2" />
-              {isGenerating
-                ? 'Membuat Pembahasan...'
-                : generateError
-                  ? 'Coba Lagi'
-                  : 'Generate Pembahasan'}
-            </Button>
-          </div>
-        ) : (
-          <div className="prose prose-sm max-w-none text-[13px] leading-relaxed">
-            <MarkdownMath markdown={md} />
-          </div>
-        )}
+        {md === null ?
+          (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <p className="text-sm text-kertas-600">Pembahasan belum dibuat untuk ujian ini.</p>
+              {generateError ? <p className="text-sm text-danger-600">{generateError}</p> : null}
+              <Button onClick={handleGenerate} disabled={isGenerating}>
+                <BookOpen className="h-4 w-4 mr-2" />
+                {isGenerating
+                  ? "Membuat Pembahasan..."
+                  : generateError
+                  ? "Coba Lagi"
+                  : "Generate Pembahasan"}
+              </Button>
+            </div>
+          ) :
+          (
+            <div className="prose prose-sm max-w-none text-[13px] leading-relaxed">
+              <MarkdownMath markdown={md} />
+            </div>
+          )}
       </PaperFrame>
     </div>
   )

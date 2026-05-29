@@ -3,27 +3,27 @@ export interface FormatExamTitleInput {
   grade: number
   examType: string
   examDate: string | null
-  topics: readonly string[]
+  topics: ReadonlyArray<string>
 }
 
 export function formatExamTitle(input: FormatExamTitleInput): string {
-  const { subjectLabel, grade, examType, examDate, topics } = input
+  const { examDate, examType, grade, subjectLabel, topics } = input
 
-  const topicSegment = topics.join(', ')
+  const topicSegment = topics.join(", ")
   const typeSegment = examType.trim() || topicSegment
   const dateSegment = examDate
-    ? new Date(examDate).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
+    ? new Date(examDate).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    })
     : null
 
   const parts = [
     `${subjectLabel} / Kelas ${grade}`,
     ...(typeSegment ? [typeSegment] : []),
-    ...(dateSegment ? [dateSegment] : []),
+    ...(dateSegment ? [dateSegment] : [])
   ]
 
-  return parts.join(' / ').slice(0, 80)
+  return parts.join(" / ").slice(0, 80)
 }

@@ -1,10 +1,10 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
-import { EmptyState, ToastProvider, Button } from '@teacher-exam/ui'
+import { createRootRoute, Link, Outlet } from "@tanstack/react-router"
+import { Button, EmptyState, ToastProvider } from "@teacher-exam/ui"
 
 export const Route = createRootRoute({
   component: RootLayout,
   notFoundComponent: NotFoundPage,
-  errorComponent: ErrorPage,
+  errorComponent: ErrorPage
 })
 
 function RootLayout() {

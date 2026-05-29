@@ -1,5 +1,5 @@
-import { Button } from '@teacher-exam/ui'
-import { RefreshCw } from 'lucide-react'
+import { Button } from "@teacher-exam/ui"
+import { RefreshCw } from "lucide-react"
 
 export interface RegenerateQuestionButtonProps {
   loading: boolean
@@ -10,24 +10,24 @@ export interface RegenerateQuestionButtonProps {
 }
 
 export function RegenerateQuestionButton({
-  loading,
-  failedRetry,
   disabled = false,
+  failedRetry,
+  loading,
   onClick,
-  testId,
+  testId
 }: RegenerateQuestionButtonProps) {
-  const label = loading ? 'Meregenerate…' : failedRetry ? 'Coba lagi' : 'Regenerate'
+  const label = loading ? "Meregenerate…" : failedRetry ? "Coba lagi" : "Regenerate"
 
   return (
     <Button
       size="sm"
-      variant={failedRetry ? 'secondary' : 'primary'}
+      variant={failedRetry ? "secondary" : "primary"}
       disabled={disabled || loading}
       onClick={onClick}
       data-testid={testId}
-      aria-busy={loading ? 'true' : undefined}
+      aria-busy={loading ? "true" : undefined}
     >
-      <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+      <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} aria-hidden />
       {label}
     </Button>
   )

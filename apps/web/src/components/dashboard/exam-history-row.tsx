@@ -1,15 +1,15 @@
-import type { Exam } from '@teacher-exam/shared'
-import { MoreHorizontal } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
-import { Badge, Button } from '@teacher-exam/ui'
-import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from '../../lib/feature-flags'
-import { subjectMetaFor } from '../../lib/subjects'
+import { useNavigate } from "@tanstack/react-router"
+import type { Exam } from "@teacher-exam/shared"
+import { Badge, Button } from "@teacher-exam/ui"
+import { MoreHorizontal } from "lucide-react"
+import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../../lib/feature-flags"
+import { subjectMetaFor } from "../../lib/subjects"
 
 function formatShortDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
   })
 }
 
@@ -21,21 +21,21 @@ interface ExamHistoryRowProps {
 function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
   const navigate = useNavigate()
   const subj = subjectMetaFor(exam.subject)
-  const isFinal = exam.status === 'final'
+  const isFinal = exam.status === "final"
 
   function handleEdit() {
     void navigate({
-      to: '/review',
-      search: { examId: exam.id, mode: exam.reviewMode },
+      to: "/review",
+      search: { examId: exam.id, mode: exam.reviewMode }
     })
   }
 
   function handlePrint() {
-    void navigate({ to: '/preview', search: { examId: exam.id } })
+    void navigate({ to: "/preview", search: { examId: exam.id } })
   }
 
   function handleCorrect() {
-    void navigate({ to: '/correction/$examId', params: { examId: exam.id } })
+    void navigate({ to: "/correction/$examId", params: { examId: exam.id } })
   }
 
   function handleDuplicate() {
@@ -50,7 +50,7 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
       <div className="flex items-center gap-3 min-w-0">
         <div
           className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subj.dotClass}`}
-          style={{ fontFamily: 'var(--font-serif)' }}
+          style={{ fontFamily: "var(--font-serif)" }}
         >
           {subj.short}
         </div>
@@ -59,7 +59,7 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
             {exam.title}
           </div>
           <div className="text-caption text-text-tertiary mt-0.5">
-            {exam.topics.join(', ')}
+            {exam.topics.join(", ")}
           </div>
         </div>
       </div>
@@ -76,32 +76,34 @@ function ExamHistoryRow({ exam, onDuplicate }: ExamHistoryRowProps) {
 
       {/* Status cell — hidden on mobile */}
       <div className="hidden lg:block">
-        <Badge variant={isFinal ? 'success' : 'warning'}>
-          {isFinal ? 'Final' : 'Draft'}
+        <Badge variant={isFinal ? "success" : "warning"}>
+          {isFinal ? "Final" : "Draft"}
         </Badge>
       </div>
 
       {/* Actions cell — hidden on mobile */}
       <div className="hidden lg:flex justify-end gap-1.5">
-        {isFinal ? (
-          <>
-            <Button variant="secondary" size="sm" onClick={handlePrint}>Cetak</Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleCorrect}
-              disabled={!KOREKSI_ENABLED}
-              title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
-            >
-              Koreksi
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="secondary" size="sm" onClick={handleEdit}>Edit</Button>
-            <Button variant="secondary" size="sm" onClick={handleDuplicate}>Duplikat</Button>
-          </>
-        )}
+        {isFinal ?
+          (
+            <>
+              <Button variant="secondary" size="sm" onClick={handlePrint}>Cetak</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCorrect}
+                disabled={!KOREKSI_ENABLED}
+                title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
+              >
+                Koreksi
+              </Button>
+            </>
+          ) :
+          (
+            <>
+              <Button variant="secondary" size="sm" onClick={handleEdit}>Edit</Button>
+              <Button variant="secondary" size="sm" onClick={handleDuplicate}>Duplikat</Button>
+            </>
+          )}
         <Button variant="ghost" size="icon" aria-label="Aksi lain">
           <MoreHorizontal size={14} />
         </Button>

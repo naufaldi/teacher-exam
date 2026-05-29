@@ -1,30 +1,29 @@
-import { useRef, useState } from 'react'
 import type {
   ExamSubject,
-  Question,
-  McqSingleQuestion,
   McqMultiQuestion,
-  TrueFalseQuestion,
-} from '@teacher-exam/shared'
-import { detectBrokenMatematikaLatex, repairMatematikaLatexInText } from '@teacher-exam/shared'
+  McqSingleQuestion,
+  Question,
+  TrueFalseQuestion
+} from "@teacher-exam/shared"
+import { detectBrokenMatematikaLatex, repairMatematikaLatexInText } from "@teacher-exam/shared"
 import {
+  Badge,
+  Button,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  Button,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
-  Textarea,
   RadioGroup,
   RadioGroupItem,
-  Badge,
-} from '@teacher-exam/ui'
-import { matchQuestion } from '../../lib/question-render.js'
-import { MathText } from '../math-text.js'
-import { TeacherPreviewBlock } from './teacher-preview-block.js'
+  Textarea
+} from "@teacher-exam/ui"
+import { useRef, useState } from "react"
+import { matchQuestion } from "../../lib/question-render.js"
+import { TeacherPreviewBlock } from "./teacher-preview-block.js"
 
 export interface QuestionEditDialogProps {
   open: boolean
@@ -34,26 +33,26 @@ export interface QuestionEditDialogProps {
   onSave: (updated: Question) => void
 }
 
-const LETTERS = ['a', 'b', 'c', 'd'] as const
+const LETTERS = ["a", "b", "c", "d"] as const
 
 const MATH_INSERTS = [
-  { label: '×', snippet: ' $\\times$ ', ariaLabel: 'Sisipkan kali' },
-  { label: '÷', snippet: ' $\\div$ ', ariaLabel: 'Sisipkan bagi' },
-  { label: '√', snippet: ' $\\sqrt{}$ ', ariaLabel: 'Sisipkan akar' },
-  { label: 'pecahan', snippet: ' $\\frac{}{}$ ', ariaLabel: 'Sisipkan pecahan' },
-  { label: 'pangkat', snippet: ' $^{}$ ', ariaLabel: 'Sisipkan pangkat' },
+  { label: "×", snippet: " $\\times$ ", ariaLabel: "Sisipkan kali" },
+  { label: "÷", snippet: " $\\div$ ", ariaLabel: "Sisipkan bagi" },
+  { label: "√", snippet: " $\\sqrt{}$ ", ariaLabel: "Sisipkan akar" },
+  { label: "pecahan", snippet: " $\\frac{}{}$ ", ariaLabel: "Sisipkan pecahan" },
+  { label: "pangkat", snippet: " $^{}$ ", ariaLabel: "Sisipkan pangkat" }
 ] as const
 
 function insertSnippet(
   textarea: HTMLTextAreaElement,
   current: string,
-  snippet: string,
+  snippet: string
 ): { next: string; cursor: number } {
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const next = current.slice(0, start) + snippet + current.slice(end)
-  const cursorOffset = snippet.includes('{}')
-    ? snippet.indexOf('{}') + 1
+  const cursorOffset = snippet.includes("{}")
+    ? snippet.indexOf("{}") + 1
     : snippet.length
   return { next, cursor: start + cursorOffset }
 }
@@ -61,7 +60,7 @@ function insertSnippet(
 function applyMatematikaTextRepair(text: string): string {
   let s = text.trim()
   if (/^\$[A-Za-zÀ-ÿ]/.test(s)) {
-    s = s.replace(/^\$+/, '')
+    s = s.replace(/^\$+/, "")
   }
   return repairMatematikaLatexInText(s)
 }
@@ -73,21 +72,21 @@ function getPreviewText(raw: string, isMatematika: boolean): string {
 // ── Per-type state shapes ─────────────────────────────────────────────────
 
 interface McqSingleState {
-  _tag: 'mcq_single'
+  _tag: "mcq_single"
   text: string
   options: { a: string; b: string; c: string; d: string }
-  correct: 'a' | 'b' | 'c' | 'd'
+  correct: "a" | "b" | "c" | "d"
 }
 
 interface McqMultiState {
-  _tag: 'mcq_multi'
+  _tag: "mcq_multi"
   text: string
   options: { a: string; b: string; c: string; d: string }
-  correct: Array<'a' | 'b' | 'c' | 'd'>
+  correct: Array<"a" | "b" | "c" | "d">
 }
 
 interface TrueFalseState {
-  _tag: 'true_false'
+  _tag: "true_false"
   text: string
   statements: Array<{ text: string; answer: boolean }>
 }
@@ -97,51 +96,51 @@ type EditState = McqSingleState | McqMultiState | TrueFalseState
 function initState(question: Question): EditState {
   return matchQuestion<EditState>(question, {
     mcq_single: (q) => ({
-      _tag: 'mcq_single' as const,
+      _tag: "mcq_single" as const,
       text: q.text,
       options: { a: q.options.a, b: q.options.b, c: q.options.c, d: q.options.d },
-      correct: q.correct,
+      correct: q.correct
     }),
     mcq_multi: (q) => ({
-      _tag: 'mcq_multi' as const,
+      _tag: "mcq_multi" as const,
       text: q.text,
       options: { a: q.options.a, b: q.options.b, c: q.options.c, d: q.options.d },
-      correct: [...q.correct] as Array<'a' | 'b' | 'c' | 'd'>,
+      correct: [...q.correct] as Array<"a" | "b" | "c" | "d">
     }),
     true_false: (q) => ({
-      _tag: 'true_false' as const,
+      _tag: "true_false" as const,
       text: q.text,
-      statements: q.statements.map((s) => ({ text: s.text, answer: s.answer })),
-    }),
+      statements: q.statements.map((s) => ({ text: s.text, answer: s.answer }))
+    })
   })
 }
 
 function buildUpdated(question: Question, state: EditState): Question {
-  if (state._tag === 'mcq_single') {
+  if (state._tag === "mcq_single") {
     const q = question as McqSingleQuestion
     return { ...q, text: state.text, options: state.options, correct: state.correct }
   }
-  if (state._tag === 'mcq_multi') {
+  if (state._tag === "mcq_multi") {
     const q = question as McqMultiQuestion
-    const correct = state.correct as McqMultiQuestion['correct']
+    const correct = state.correct as McqMultiQuestion["correct"]
     return { ...q, text: state.text, options: state.options, correct }
   }
   const q = question as TrueFalseQuestion
-  const statements = state.statements as TrueFalseQuestion['statements']
+  const statements = state.statements as TrueFalseQuestion["statements"]
   return { ...q, text: state.text, statements }
 }
 
 function isValidState(state: EditState): boolean {
-  if (state.text.trim() === '') return false
-  if (state._tag === 'mcq_single') {
-    return LETTERS.every((l) => state.options[l].trim() !== '')
+  if (state.text.trim() === "") return false
+  if (state._tag === "mcq_single") {
+    return LETTERS.every((l) => state.options[l].trim() !== "")
   }
-  if (state._tag === 'mcq_multi') {
-    const validOptions = LETTERS.every((l) => state.options[l].trim() !== '')
+  if (state._tag === "mcq_multi") {
+    const validOptions = LETTERS.every((l) => state.options[l].trim() !== "")
     const validCorrect = state.correct.length >= 2 && state.correct.length <= 3
     return validOptions && validCorrect
   }
-  return state.statements.length >= 3 && state.statements.every((s) => s.text.trim() !== '')
+  return state.statements.length >= 3 && state.statements.every((s) => s.text.trim() !== "")
 }
 
 interface McqSingleFormProps {
@@ -150,13 +149,13 @@ interface McqSingleFormProps {
   onChange: (s: McqSingleState) => void
 }
 
-function McqSingleForm({ state, isMatematika, onChange }: McqSingleFormProps) {
+function McqSingleForm({ isMatematika, onChange, state }: McqSingleFormProps) {
   return (
     <div className="space-y-3">
       <Label>Pilihan jawaban</Label>
       <RadioGroup
         value={state.correct}
-        onValueChange={(v) => onChange({ ...state, correct: v as 'a' | 'b' | 'c' | 'd' })}
+        onValueChange={(v) => onChange({ ...state, correct: v as "a" | "b" | "c" | "d" })}
       >
         <div className="space-y-2">
           {LETTERS.map((letter) => {
@@ -165,11 +164,11 @@ function McqSingleForm({ state, isMatematika, onChange }: McqSingleFormProps) {
               <div
                 key={letter}
                 className={[
-                  'p-3 rounded-sm border transition-colors',
+                  "p-3 rounded-sm border transition-colors",
                   isCorrect
-                    ? 'border-success-border bg-success-bg'
-                    : 'border-border-default bg-bg-surface',
-                ].join(' ')}
+                    ? "border-success-border bg-success-bg"
+                    : "border-border-default bg-bg-surface"
+                ].join(" ")}
               >
                 <div className="flex items-start gap-3">
                   <RadioGroupItem
@@ -187,9 +186,7 @@ function McqSingleForm({ state, isMatematika, onChange }: McqSingleFormProps) {
                   <div className="flex-1 min-w-0 space-y-2">
                     <Input
                       value={state.options[letter]}
-                      onChange={(e) =>
-                        onChange({ ...state, options: { ...state.options, [letter]: e.target.value } })
-                      }
+                      onChange={(e) => onChange({ ...state, options: { ...state.options, [letter]: e.target.value } })}
                     />
                     <TeacherPreviewBlock
                       text={getPreviewText(state.options[letter], isMatematika)}
@@ -204,7 +201,7 @@ function McqSingleForm({ state, isMatematika, onChange }: McqSingleFormProps) {
         </div>
       </RadioGroup>
       <p className="text-caption text-text-tertiary">
-        Jawaban benar saat ini:{' '}
+        Jawaban benar saat ini:{" "}
         <span className="font-mono font-semibold text-success-fg">
           {state.correct.toUpperCase()}
         </span>
@@ -219,8 +216,8 @@ interface McqMultiFormProps {
   onChange: (s: McqMultiState) => void
 }
 
-function McqMultiForm({ state, isMatematika, onChange }: McqMultiFormProps) {
-  const toggleCorrect = (letter: 'a' | 'b' | 'c' | 'd') => {
+function McqMultiForm({ isMatematika, onChange, state }: McqMultiFormProps) {
+  const toggleCorrect = (letter: "a" | "b" | "c" | "d") => {
     const next = state.correct.includes(letter)
       ? state.correct.filter((l) => l !== letter)
       : [...state.correct, letter]
@@ -237,11 +234,11 @@ function McqMultiForm({ state, isMatematika, onChange }: McqMultiFormProps) {
             <div
               key={letter}
               className={[
-                'p-3 rounded-sm border transition-colors',
+                "p-3 rounded-sm border transition-colors",
                 isCorrect
-                  ? 'border-success-border bg-success-bg'
-                  : 'border-border-default bg-bg-surface',
-              ].join(' ')}
+                  ? "border-success-border bg-success-bg"
+                  : "border-border-default bg-bg-surface"
+              ].join(" ")}
             >
               <div className="flex items-start gap-3">
                 <input
@@ -261,9 +258,7 @@ function McqMultiForm({ state, isMatematika, onChange }: McqMultiFormProps) {
                 <div className="flex-1 min-w-0 space-y-2">
                   <Input
                     value={state.options[letter]}
-                    onChange={(e) =>
-                      onChange({ ...state, options: { ...state.options, [letter]: e.target.value } })
-                    }
+                    onChange={(e) => onChange({ ...state, options: { ...state.options, [letter]: e.target.value } })}
                   />
                   <TeacherPreviewBlock
                     text={getPreviewText(state.options[letter], isMatematika)}
@@ -277,11 +272,11 @@ function McqMultiForm({ state, isMatematika, onChange }: McqMultiFormProps) {
         })}
       </div>
       <p className="text-caption text-text-tertiary">
-        Jawaban benar:{' '}
+        Jawaban benar:{" "}
         <span className="font-mono font-semibold text-success-fg">
-          {state.correct.map((l) => l.toUpperCase()).join(', ') || '—'}
-        </span>
-        {' '}(pilih 2–3)
+          {state.correct.map((l) => l.toUpperCase()).join(", ") || "—"}
+        </span>{" "}
+        (pilih 2–3)
       </p>
     </div>
   )
@@ -292,7 +287,7 @@ interface TrueFalseFormProps {
   onChange: (s: TrueFalseState) => void
 }
 
-function TrueFalseForm({ state, onChange }: TrueFalseFormProps) {
+function TrueFalseForm({ onChange, state }: TrueFalseFormProps) {
   const updateStatement = (idx: number, patch: Partial<{ text: string; answer: boolean }>) => {
     const next = state.statements.map((s, i) => (i === idx ? { ...s, ...patch } : s))
     onChange({ ...state, statements: next })
@@ -315,8 +310,8 @@ function TrueFalseForm({ state, onChange }: TrueFalseFormProps) {
               placeholder={`Pernyataan ${idx + 1}`}
             />
             <RadioGroup
-              value={s.answer ? 'true' : 'false'}
-              onValueChange={(v) => updateStatement(idx, { answer: v === 'true' })}
+              value={s.answer ? "true" : "false"}
+              onValueChange={(v) => updateStatement(idx, { answer: v === "true" })}
               className="flex gap-3"
             >
               <div className="flex items-center gap-1.5">
@@ -348,15 +343,15 @@ function TrueFalseForm({ state, onChange }: TrueFalseFormProps) {
  * Used by both Fast Track ("Edit cepat") and Slow Track ("Edit") flows.
  */
 export function QuestionEditDialog({
-  open,
-  question,
-  subject,
   onClose,
   onSave,
+  open,
+  question,
+  subject
 }: QuestionEditDialogProps) {
   const [editState, setEditState] = useState<EditState>(() => initState(question))
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
-  const isMatematika = subject === 'matematika'
+  const isMatematika = subject === "matematika"
   const brokenIssues = isMatematika ? detectBrokenMatematikaLatex(editState.text) : []
   const previewText = getPreviewText(editState.text, isMatematika)
 
@@ -365,7 +360,7 @@ export function QuestionEditDialog({
   const handleInsert = (snippet: string) => {
     const textarea = textAreaRef.current
     if (textarea === null) return
-    const { next, cursor } = insertSnippet(textarea, editState.text, snippet)
+    const { cursor, next } = insertSnippet(textarea, editState.text, snippet)
     setEditState((s) => ({ ...s, text: next }))
     requestAnimationFrame(() => {
       textarea.focus()
@@ -381,14 +376,17 @@ export function QuestionEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">Soal #{question.number}</Badge>
-            {question.topic !== null ? (
-              <span className="text-caption text-text-tertiary">{question.topic}</span>
-            ) : null}
+            {question.topic !== null ? <span className="text-caption text-text-tertiary">{question.topic}</span> : null}
           </div>
           <DialogTitle className="text-h3">Edit soal</DialogTitle>
           <DialogDescription>
@@ -399,22 +397,24 @@ export function QuestionEditDialog({
         <div className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="q-text">Teks soal</Label>
-            {isMatematika ? (
-              <div className="flex flex-wrap gap-2" data-testid="math-insert-bar">
-                {MATH_INSERTS.map((item) => (
-                  <Button
-                    key={item.label}
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    aria-label={item.ariaLabel}
-                    onClick={() => handleInsert(item.snippet)}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
+            {isMatematika ?
+              (
+                <div className="flex flex-wrap gap-2" data-testid="math-insert-bar">
+                  {MATH_INSERTS.map((item) => (
+                    <Button
+                      key={item.label}
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label={item.ariaLabel}
+                      onClick={() => handleInsert(item.snippet)}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
+              ) :
+              null}
             <Textarea
               ref={textAreaRef}
               id="q-text"
@@ -423,50 +423,53 @@ export function QuestionEditDialog({
               rows={5}
             />
             <p className="text-caption text-text-tertiary">
-              {isMatematika ? (
-                <>
-                  Notasi matematika memakai $...$.{' '}
-                  <a
-                    href="/help/notasi-matematika"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-600 underline underline-offset-2 hover:text-primary-700"
-                  >
-                    Panduan notasi matematika ↗
-                  </a>
-                </>
-              ) : (
-                'Pratinjau tampilan guru di bawah.'
-              )}
+              {isMatematika ?
+                (
+                  <>
+                    Notasi matematika memakai $...$.{" "}
+                    <a
+                      href="/help/notasi-matematika"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 underline underline-offset-2 hover:text-primary-700"
+                    >
+                      Panduan notasi matematika ↗
+                    </a>
+                  </>
+                ) :
+                (
+                  "Pratinjau tampilan guru di bawah."
+                )}
             </p>
-            {brokenIssues.length > 0 ? (
-              <div
-                className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-caption text-warning-fg"
-                data-testid="broken-math-warning"
-                role="alert"
-              >
-                Notasi terdeteksi rusak: {brokenIssues.join(', ')}. Gunakan tombol simbol di atas
-                atau lihat panduan.
-              </div>
-            ) : null}
+            {brokenIssues.length > 0 ?
+              (
+                <div
+                  className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-caption text-warning-fg"
+                  data-testid="broken-math-warning"
+                  role="alert"
+                >
+                  Notasi terdeteksi rusak: {brokenIssues.join(", ")}. Gunakan tombol simbol di atas atau lihat panduan.
+                </div>
+              ) :
+              null}
             <TeacherPreviewBlock text={previewText} testId="edit-question-preview" />
           </div>
 
-          {editState._tag === 'mcq_single' && (
+          {editState._tag === "mcq_single" && (
             <McqSingleForm
               state={editState}
               isMatematika={isMatematika}
               onChange={(s) => setEditState(s)}
             />
           )}
-          {editState._tag === 'mcq_multi' && (
+          {editState._tag === "mcq_multi" && (
             <McqMultiForm
               state={editState}
               isMatematika={isMatematika}
               onChange={(s) => setEditState(s)}
             />
           )}
-          {editState._tag === 'true_false' && (
+          {editState._tag === "true_false" && (
             <TrueFalseForm
               state={editState}
               onChange={(s) => setEditState(s)}

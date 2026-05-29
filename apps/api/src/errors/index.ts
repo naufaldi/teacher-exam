@@ -1,3 +1,3 @@
-import { AiGenerationError } from './AiGenerationError.js'
+import { AiGenerationError } from "./AiGenerationError.js"
 
 export { AiGenerationError }

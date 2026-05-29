@@ -1,6 +1,6 @@
-import * as React from 'react'
-import { Upload, FileText, X } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { FileText, Upload, X } from "lucide-react"
+import * as React from "react"
+import { cn } from "../lib/utils"
 
 function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024) {
@@ -17,13 +17,13 @@ export interface FileUploadProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
-  ({ className, onFileSelect, onFileRemove, selectedFile, disabled, ...props }, ref) => {
+  ({ className, disabled, onFileRemove, onFileSelect, selectedFile, ...props }, ref) => {
     const [dragging, setDragging] = React.useState(false)
     const [error, setError] = React.useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
 
     function validate(file: File): boolean {
-      return file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024
+      return file.type === "application/pdf" && file.size <= 10 * 1024 * 1024
     }
 
     function handleFile(file: File) {
@@ -65,7 +65,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
       const file = e.target.files?.[0]
       if (file) handleFile(file)
       // reset input so same file can be re-selected
-      e.target.value = ''
+      e.target.value = ""
     }
 
     function handlePickFile() {
@@ -77,9 +77,9 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         <div
           ref={ref}
           className={cn(
-            'border border-border-default rounded-md p-4 bg-bg-muted',
-            'flex items-center gap-3',
-            className,
+            "border border-border-default rounded-md p-4 bg-bg-muted",
+            "flex items-center gap-3",
+            className
           )}
           {...props}
         >
@@ -107,14 +107,14 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
     }
 
     const containerClass = cn(
-      'border-2 border-dashed rounded-md p-8 flex flex-col items-center text-center transition-colors duration-[120ms]',
+      "border-2 border-dashed rounded-md p-8 flex flex-col items-center text-center transition-colors duration-[120ms]",
       dragging
-        ? 'border-border-focus bg-primary-50'
+        ? "border-border-focus bg-primary-50"
         : error
-          ? 'border-danger-border bg-danger-bg'
-          : 'border-border-ui',
-      disabled && 'opacity-45 cursor-not-allowed',
-      className,
+        ? "border-danger-border bg-danger-bg"
+        : "border-border-ui",
+      disabled && "opacity-45 cursor-not-allowed",
+      className
     )
 
     return (
@@ -137,50 +137,54 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
           onChange={handleInputChange}
           aria-label="Pilih file PDF"
         />
-        {error ? (
-          <>
-            <Upload size={24} className="text-danger-fg mb-3" />
-            <p className="text-body text-danger-fg">
-              Format tidak didukung atau ukuran melebihi 10MB
-            </p>
-            <button
-              type="button"
-              onClick={handlePickFile}
-              disabled={disabled}
-              className="mt-3 text-body-sm text-text-tertiary underline hover:text-text-primary disabled:cursor-not-allowed"
-            >
-              Coba lagi
-            </button>
-          </>
-        ) : dragging ? (
-          <>
-            <Upload size={24} className="text-border-focus mb-3" />
-            <p className="text-body font-medium text-text-secondary">
-              Lepaskan untuk upload
-            </p>
-          </>
-        ) : (
-          <>
-            <Upload size={24} className="text-text-tertiary mb-3" />
-            <p className="text-body font-medium text-text-secondary">
-              Drag & drop PDF di sini
-            </p>
-            <p className="text-body-sm text-text-tertiary mt-1">atau</p>
-            <button
-              type="button"
-              onClick={handlePickFile}
-              disabled={disabled}
-              className="mt-2 h-8 px-3 text-sm font-semibold rounded-sm border border-border-ui bg-transparent text-text-primary hover:bg-kertas-100 transition-colors duration-[120ms] disabled:opacity-45 disabled:cursor-not-allowed"
-            >
-              Pilih file
-            </button>
-            <p className="text-caption text-text-tertiary mt-3">
-              Format: PDF • Maks 10MB
-            </p>
-          </>
-        )}
+        {error ?
+          (
+            <>
+              <Upload size={24} className="text-danger-fg mb-3" />
+              <p className="text-body text-danger-fg">
+                Format tidak didukung atau ukuran melebihi 10MB
+              </p>
+              <button
+                type="button"
+                onClick={handlePickFile}
+                disabled={disabled}
+                className="mt-3 text-body-sm text-text-tertiary underline hover:text-text-primary disabled:cursor-not-allowed"
+              >
+                Coba lagi
+              </button>
+            </>
+          ) :
+          dragging ?
+          (
+            <>
+              <Upload size={24} className="text-border-focus mb-3" />
+              <p className="text-body font-medium text-text-secondary">
+                Lepaskan untuk upload
+              </p>
+            </>
+          ) :
+          (
+            <>
+              <Upload size={24} className="text-text-tertiary mb-3" />
+              <p className="text-body font-medium text-text-secondary">
+                Drag & drop PDF di sini
+              </p>
+              <p className="text-body-sm text-text-tertiary mt-1">atau</p>
+              <button
+                type="button"
+                onClick={handlePickFile}
+                disabled={disabled}
+                className="mt-2 h-8 px-3 text-sm font-semibold rounded-sm border border-border-ui bg-transparent text-text-primary hover:bg-kertas-100 transition-colors duration-[120ms] disabled:opacity-45 disabled:cursor-not-allowed"
+              >
+                Pilih file
+              </button>
+              <p className="text-caption text-text-tertiary mt-3">
+                Format: PDF • Maks 10MB
+              </p>
+            </>
+          )}
       </div>
     )
-  },
+  }
 )
-FileUpload.displayName = 'FileUpload'
+FileUpload.displayName = "FileUpload"

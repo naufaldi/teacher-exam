@@ -1,13 +1,13 @@
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@teacher-exam/ui'
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@teacher-exam/ui"
 
 export interface RegenerateBatchDialogProps {
   open: boolean
@@ -17,10 +17,10 @@ export interface RegenerateBatchDialogProps {
 }
 
 export function RegenerateBatchDialog({
-  open,
-  onOpenChange,
-  onConfirm,
   count,
+  onConfirm,
+  onOpenChange,
+  open
 }: RegenerateBatchDialogProps) {
   const handleConfirm = () => {
     onConfirm()
@@ -33,8 +33,8 @@ export function RegenerateBatchDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Coba lagi {count} regenerate yang gagal?</AlertDialogTitle>
           <AlertDialogDescription>
-            Setiap soal yang gagal akan dicoba ulang dengan petunjuk yang sama. Soal yang berhasil
-            diganti akan kembali ke status pending dan ditandai sebagai &ldquo;Soal baru&rdquo;.
+            Setiap soal yang gagal akan dicoba ulang dengan petunjuk yang sama. Soal yang berhasil diganti akan kembali
+            ke status pending dan ditandai sebagai &ldquo;Soal baru&rdquo;.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -1,9 +1,8 @@
-import type { BankQuestion, ExamSubject, PublicBankQuestion } from '@teacher-exam/shared'
-import { SUBJECT_LABEL } from '@teacher-exam/shared'
-import { Badge } from '@teacher-exam/ui'
+import type { BankQuestion, ExamSubject } from "@teacher-exam/shared"
+import { SUBJECT_LABEL } from "@teacher-exam/shared"
 
 interface BankStatsSummaryProps {
-  items: readonly BankQuestion[]
+  items: ReadonlyArray<BankQuestion>
 }
 
 function BankStatsSummary({ items }: BankStatsSummaryProps) {
@@ -15,19 +14,21 @@ function BankStatsSummary({ items }: BankStatsSummaryProps) {
   }
 
   const parts = [...totals.entries()].map(
-    ([subject, count]) => `${count} ${SUBJECT_LABEL[subject] ?? subject}`,
+    ([subject, count]) => `${count} ${SUBJECT_LABEL[subject] ?? subject}`
   )
 
   return (
     <div className="rounded-md border border-border-default bg-kertas-50 px-4 py-3">
       <p className="text-body-sm text-text-secondary">
         <span className="font-semibold text-text-primary">{items.length}</span> soal tersimpan
-        {parts.length > 0 ? (
-          <>
-            {' '}
-            — {parts.join(', ')}
-          </>
-        ) : null}
+        {parts.length > 0 ?
+          (
+            <>
+              {" "}
+              — {parts.join(", ")}
+            </>
+          ) :
+          null}
       </p>
     </div>
   )

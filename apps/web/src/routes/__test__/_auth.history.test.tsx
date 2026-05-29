@@ -1,31 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ToastProvider } from '@teacher-exam/ui'
-import type { Exam } from '@teacher-exam/shared'
-import { ApiError } from '../../lib/api.js'
-import { mockApiFailOnce, mockApiResolvedValueOnce } from '../../lib/api-test-utils.js'
+import { ToastProvider } from "@teacher-exam/ui"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { mockApiFailOnce, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import { api, ApiError } from "../../lib/api.js"
+import { makeExam } from "../../test/fixtures/exam.js"
 
-const { mockNavigate, mockClipboardWriteText } = vi.hoisted(() => ({
+import { Route } from "../_auth.history.js"
+
+const { mockClipboardWriteText, mockNavigate } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockClipboardWriteText: vi.fn().mockResolvedValue(undefined),
+  mockClipboardWriteText: vi.fn().mockResolvedValue(undefined)
 }))
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('@tanstack/react-router')>()
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
   return {
     ...orig,
     createFileRoute: () => (opts: { component: React.ComponentType }) => ({
-      options: opts,
+      options: opts
     }),
-    useNavigate: () => mockNavigate,
+    useNavigate: () => mockNavigate
   }
 })
 
 // Mock api
-vi.mock('../../lib/api.js', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('../../lib/api.js')>()
+vi.mock("../../lib/api.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../lib/api.js")>()
   return {
     ...orig,
     api: {
@@ -33,14 +35,11 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
         list: vi.fn(),
         remove: vi.fn(),
         duplicate: vi.fn(),
-        share: vi.fn(),
-      },
-    },
+        share: vi.fn()
+      }
+    }
   }
 })
-
-import { api } from '../../lib/api.js'
-import { Route } from '../_auth.history.js'
 
 const mockApi = api as unknown as {
   exams: {
@@ -51,76 +50,49 @@ const mockApi = api as unknown as {
   }
 }
 
-const makeExam = (overrides: Partial<Exam> = {}): Exam => ({
-  id: 'exam-1',
-  userId: 'user-1',
-  title: 'Ujian Matematika',
-  subject: 'bahasa_indonesia',
-  grade: 5,
-  difficulty: 'sedang',
-  topics: ['Pemahaman Bacaan'],
-  reviewMode: 'fast',
-  status: 'final',
-  schoolName: null,
-  academicYear: null,
-  examType: 'formatif',
-  examDate: null,
-  durationMinutes: null,
-  instructions: null,
-  classContext: null,
-  discussionMd: null,
-  createdAt: '2026-04-01T00:00:00.000Z',
-  updatedAt: '2026-04-01T00:00:00.000Z',
-  ...overrides,
-})
-
 function renderHistoryPage() {
   const HistoryPage = Route.options.component as React.ComponentType
   return render(
     <ToastProvider>
       <HistoryPage />
-    </ToastProvider>,
+    </ToastProvider>
   )
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  Object.defineProperty(window.navigator, 'clipboard', {
+  Object.defineProperty(window.navigator, "clipboard", {
     configurable: true,
     value: {
-      writeText: mockClipboardWriteText,
-    },
+      writeText: mockClipboardWriteText
+    }
   })
 })
 
-describe('HistoryPage', () => {
-  it('shows loading spinner initially', () => {
+describe("HistoryPage", () => {
+  it("shows loading spinner initially", () => {
     mockApi.exams.list.mockReturnValue(new Promise(() => {})) // never resolves
     renderHistoryPage()
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByRole("status")).toBeInTheDocument()
   })
 
-  it('shows error state when api.exams.list() rejects', async () => {
-    mockApiFailOnce(mockApi.exams.list, 
-      new ApiError({ message: 'Server error', code: 'INTERNAL', status: 500 }),
-    )
+  it("shows error state when api.exams.list() rejects", async () => {
+    mockApiFailOnce(mockApi.exams.list, new ApiError({ message: "Server error", code: "INTERNAL", status: 500 }))
     renderHistoryPage()
     await waitFor(() => {
       expect(screen.getByText(/Server error/i)).toBeInTheDocument()
     })
   })
 
-  it('shows retry button in error state', async () => {
-    mockApiFailOnce(mockApi.exams.list, 
-      new ApiError({ message: 'Network error', code: 'NETWORK', status: 503 }),
-    )
+  it("shows retry button in error state", async () => {
+    mockApiFailOnce(mockApi.exams.list, new ApiError({ message: "Network error", code: "NETWORK", status: 503 }))
     renderHistoryPage()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /coba lagi/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /coba lagi/i })).toBeInTheDocument()
     })
   })
 
-  it('shows truly-empty state when api returns empty array', async () => {
+  it("shows truly-empty state when api returns empty array", async () => {
     mockApiResolvedValueOnce(mockApi.exams.list, [])
     renderHistoryPage()
     await waitFor(() => {
@@ -128,139 +100,139 @@ describe('HistoryPage', () => {
     })
   })
 
-  it('shows exam rows when api returns data', async () => {
+  it("shows exam rows when api returns data", async () => {
     const exams = [
-      makeExam({ id: 'exam-1', title: 'Ujian BI Kelas 5', status: 'final' }),
-      makeExam({ id: 'exam-2', title: 'Draft Matematika', status: 'draft' }),
+      makeExam({ id: "exam-1", title: "Ujian BI Kelas 5", status: "final" }),
+      makeExam({ id: "exam-2", title: "Draft Matematika", status: "draft" })
     ]
     mockApiResolvedValueOnce(mockApi.exams.list, exams)
     renderHistoryPage()
     await waitFor(() => {
-      expect(screen.getByText('Ujian BI Kelas 5')).toBeInTheDocument()
-      expect(screen.getByText('Draft Matematika')).toBeInTheDocument()
+      expect(screen.getByText("Ujian BI Kelas 5")).toBeInTheDocument()
+      expect(screen.getByText("Draft Matematika")).toBeInTheDocument()
     })
   })
 
-  it('filters history by IPAS subject', async () => {
+  it("filters history by IPAS subject", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'ipas-exam', title: 'Ujian IPAS', subject: 'ipas' }),
-      makeExam({ id: 'bi-exam', title: 'Ujian BI', subject: 'bahasa_indonesia' }),
+      makeExam({ id: "ipas-exam", title: "Ujian IPAS", subject: "ipas" }),
+      makeExam({ id: "bi-exam", title: "Ujian BI", subject: "bahasa_indonesia" })
     ])
 
     renderHistoryPage()
 
-    await screen.findByText('Ujian IPAS')
-    await user.selectOptions(screen.getByLabelText('Filter mata pelajaran'), 'ipas')
+    await screen.findByText("Ujian IPAS")
+    await user.selectOptions(screen.getByLabelText("Filter mata pelajaran"), "ipas")
 
-    expect(screen.getByText('Ujian IPAS')).toBeInTheDocument()
-    expect(screen.queryByText('Ujian BI')).not.toBeInTheDocument()
+    expect(screen.getByText("Ujian IPAS")).toBeInTheDocument()
+    expect(screen.queryByText("Ujian BI")).not.toBeInTheDocument()
   })
 
-  it('filters history by Bahasa Inggris subject', async () => {
+  it("filters history by Bahasa Inggris subject", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'bing-exam', title: 'Ujian B.Inggris', subject: 'bahasa_inggris' }),
-      makeExam({ id: 'ppkn-exam', title: 'Ujian PPKN', subject: 'pendidikan_pancasila' }),
+      makeExam({ id: "bing-exam", title: "Ujian B.Inggris", subject: "bahasa_inggris" }),
+      makeExam({ id: "ppkn-exam", title: "Ujian PPKN", subject: "pendidikan_pancasila" })
     ])
 
     renderHistoryPage()
 
-    await screen.findByText('Ujian B.Inggris')
-    await user.selectOptions(screen.getByLabelText('Filter mata pelajaran'), 'bahasa_inggris')
+    await screen.findByText("Ujian B.Inggris")
+    await user.selectOptions(screen.getByLabelText("Filter mata pelajaran"), "bahasa_inggris")
 
-    expect(screen.getByText('Ujian B.Inggris')).toBeInTheDocument()
-    expect(screen.queryByText('Ujian PPKN')).not.toBeInTheDocument()
+    expect(screen.getByText("Ujian B.Inggris")).toBeInTheDocument()
+    expect(screen.queryByText("Ujian PPKN")).not.toBeInTheDocument()
   })
 
-  it('shows preview/correction actions for final exams', async () => {
+  it("shows preview/correction actions for final exams", async () => {
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-final', status: 'final' }),
+      makeExam({ id: "exam-final", status: "final" })
     ])
     renderHistoryPage()
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /koreksi/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /koreksi/i })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: /cetak/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^duplikat$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /cetak/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^duplikat$/i })).not.toBeInTheDocument()
   })
 
-  it('shows edit/duplicate actions for draft exams', async () => {
+  it("shows edit/duplicate actions for draft exams", async () => {
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-draft', status: 'draft' }),
+      makeExam({ id: "exam-draft", status: "draft" })
     ])
     renderHistoryPage()
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /^duplikat$/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /^duplikat$/i })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: /cetak/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /koreksi/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /cetak/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /koreksi/i })).not.toBeInTheDocument()
   })
 
-  it('draft Edit opens the existing exam in review with examId and mode', async () => {
+  it("draft Edit opens the existing exam in review with examId and mode", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-draft-slow', status: 'draft', reviewMode: 'slow' }),
+      makeExam({ id: "exam-draft-slow", status: "draft", reviewMode: "slow" })
     ])
     renderHistoryPage()
 
-    await user.click(await screen.findByRole('button', { name: /^edit$/i }))
+    await user.click(await screen.findByRole("button", { name: /^edit$/i }))
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: '/review',
-      search: { examId: 'exam-draft-slow', mode: 'slow' },
+      to: "/review",
+      search: { examId: "exam-draft-slow", mode: "slow" }
     })
   })
 
-  it('final exam title opens preview with examId', async () => {
+  it("final exam title opens preview with examId", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-final-title', status: 'final', title: 'Final Bahasa Indonesia' }),
+      makeExam({ id: "exam-final-title", status: "final", title: "Final Bahasa Indonesia" })
     ])
     renderHistoryPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Final Bahasa Indonesia' }))
+    await user.click(await screen.findByRole("button", { name: "Final Bahasa Indonesia" }))
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: '/preview',
-      search: { examId: 'exam-final-title' },
+      to: "/preview",
+      search: { examId: "exam-final-title" }
     })
   })
 
-  it('draft exam title opens review with examId and mode', async () => {
+  it("draft exam title opens review with examId and mode", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-draft-title', status: 'draft', title: 'Draft Pancasila', reviewMode: 'slow' }),
+      makeExam({ id: "exam-draft-title", status: "draft", title: "Draft Pancasila", reviewMode: "slow" })
     ])
     renderHistoryPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Draft Pancasila' }))
+    await user.click(await screen.findByRole("button", { name: "Draft Pancasila" }))
 
     expect(mockNavigate).toHaveBeenCalledWith({
-      to: '/review',
-      search: { examId: 'exam-draft-title', mode: 'slow' },
+      to: "/review",
+      search: { examId: "exam-draft-title", mode: "slow" }
     })
   })
 
-  it('clicking Hapus lembar opens confirm dialog', async () => {
+  it("clicking Hapus lembar opens confirm dialog", async () => {
     const user = userEvent.setup()
-    const exams = [makeExam({ id: 'exam-1', status: 'final' })]
+    const exams = [makeExam({ id: "exam-1", status: "final" })]
     mockApiResolvedValueOnce(mockApi.exams.list, exams)
     renderHistoryPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Ujian Matematika')).toBeInTheDocument()
+      expect(screen.getByText("Test Exam")).toBeInTheDocument()
     })
 
     // Open the dropdown (details element)
-    const moreButton = screen.getByRole('button', { name: /aksi lain/i })
+    const moreButton = screen.getByRole("button", { name: /aksi lain/i })
     // details/summary don't respond to userEvent.click in jsdom; click directly
     await user.click(moreButton)
 
@@ -274,19 +246,19 @@ describe('HistoryPage', () => {
     })
   })
 
-  it('confirming delete calls api.exams.remove and removes exam from list', async () => {
+  it("confirming delete calls api.exams.remove and removes exam from list", async () => {
     const user = userEvent.setup()
-    const exams = [makeExam({ id: 'exam-1', status: 'final', title: 'Ujian BI' })]
+    const exams = [makeExam({ id: "exam-1", status: "final", title: "Ujian BI" })]
     mockApiResolvedValueOnce(mockApi.exams.list, exams)
     mockApiResolvedValueOnce(mockApi.exams.remove, undefined)
     renderHistoryPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Ujian BI')).toBeInTheDocument()
+      expect(screen.getByText("Ujian BI")).toBeInTheDocument()
     })
 
     // Open dropdown
-    const moreButton = screen.getByRole('button', { name: /aksi lain/i })
+    const moreButton = screen.getByRole("button", { name: /aksi lain/i })
     await user.click(moreButton)
 
     // Click Hapus lembar
@@ -298,32 +270,32 @@ describe('HistoryPage', () => {
     })
 
     // Confirm delete
-    await user.click(screen.getByRole('button', { name: /ya, hapus/i }))
+    await user.click(screen.getByRole("button", { name: /ya, hapus/i }))
 
     await waitFor(() => {
-      expect(mockApi.exams.remove).toHaveBeenCalledWith('exam-1')
+      expect(mockApi.exams.remove).toHaveBeenCalledWith("exam-1")
     })
   })
 
-  it('copies a public share link for final exams', async () => {
+  it("copies a public share link for final exams", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
-      makeExam({ id: 'exam-share', status: 'final', title: 'Final untuk Dibagikan' }),
+      makeExam({ id: "exam-share", status: "final", title: "Final untuk Dibagikan" })
     ])
     mockApiResolvedValueOnce(mockApi.exams.share, {
-      slug: 'share-abc123',
-      publicUrlPath: '/share/share-abc123',
-      publishedAt: '2026-05-08T00:00:00.000Z',
+      slug: "share-abc123",
+      publicUrlPath: "/share/share-abc123",
+      publishedAt: "2026-05-08T00:00:00.000Z"
     })
 
     renderHistoryPage()
 
-    await user.click(await screen.findByRole('button', { name: /^Bagikan$/i }))
+    await user.click(await screen.findByRole("button", { name: /^Bagikan$/i }))
 
     await waitFor(() => {
-      expect(mockApi.exams.share).toHaveBeenCalledWith('exam-share')
+      expect(mockApi.exams.share).toHaveBeenCalledWith("exam-share")
     })
 
-    expect(await screen.findByText('Link publik berhasil disalin')).toBeInTheDocument()
+    expect(await screen.findByText("Link publik berhasil disalin")).toBeInTheDocument()
   })
 })

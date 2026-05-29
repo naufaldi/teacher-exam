@@ -1,14 +1,14 @@
-import type { Layer } from 'effect'
-import type { AiService } from '../../services/AiService'
-import type { AuthService } from '../../api/services/auth-service'
-import { buildTestHandler } from '../../api/__test__/test-harness'
+import type { Layer } from "effect"
+import { buildTestHandler } from "../../api/__test__/test-harness"
+import type { AuthService } from "../../api/services/auth-service"
+import type { AiService } from "../../services/AiService"
 
 export function buildHttpApiTestApp(opts: {
   userId?: string
   authenticated?: boolean
   aiService?: AiService
   authLayer?: Layer.Layer<AuthService>
-  curriculumLayer?: Layer.Layer<import('../../api/services/curriculum-service').CurriculumService>
+  curriculumLayer?: Layer.Layer<import("../../api/services/curriculum-service").CurriculumService>
   rateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
@@ -27,6 +27,6 @@ export function buildHttpApiTestApp(opts: {
     ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
     ...(opts.publicBankRateLimit !== undefined
       ? { publicBankRateLimit: opts.publicBankRateLimit }
-      : {}),
+      : {})
   })
 }

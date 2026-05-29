@@ -1,9 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Printer, Users } from 'lucide-react'
-import type { Answer } from '@teacher-exam/shared'
+import { createFileRoute, Link } from "@tanstack/react-router"
+import type { Answer } from "@teacher-exam/shared"
 import {
   Button,
+  EmptyState,
+  Input,
   Progress,
   Table,
   TableBody,
@@ -11,17 +11,17 @@ import {
   TableFooter,
   TableHead,
   TableHeader,
-  TableRow,
-  Input,
-  EmptyState,
-} from '@teacher-exam/ui'
-import { MOCK_STUDENTS } from '../lib/mock-data.js'
-import { api, unwrapApiEither } from '../lib/api.js'
-import { matchQuestion } from '../lib/question-render.js'
+  TableRow
+} from "@teacher-exam/ui"
+import { ArrowLeft, Printer, Users } from "lucide-react"
+import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from "react"
+import { api, unwrapApiEither } from "../lib/api.js"
+import { MOCK_STUDENTS } from "../lib/mock-data.js"
+import { matchQuestion } from "../lib/question-render.js"
 
-export const Route = createFileRoute('/_auth/correction/$examId')({
+export const Route = createFileRoute("/_auth/correction/$examId")({
   loader: async ({ params }) => unwrapApiEither(await api.exams.get(params.examId)),
-  component: CorrectionPage,
+  component: CorrectionPage
 })
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -29,31 +29,34 @@ export const Route = createFileRoute('/_auth/correction/$examId')({
 type StudentResult = {
   studentNumber: number
   name: string
-  answers: (Answer | null)[]
+  answers: Array<Answer | null>
   correct: number
   wrong: number
   score: number
 }
 
 type CorrectionState = {
-  answerKey: Answer[]
-  currentAnswers: (Answer | null)[]
+  answerKey: Array<Answer>
+  currentAnswers: Array<Answer | null>
   studentName: string
   studentNumber: number
   activeIndex: number
-  rekapList: StudentResult[]
+  rekapList: Array<StudentResult>
 }
 
 type CorrectionAction =
-  | { type: 'SET_ANSWER'; questionIndex: number; answer: Answer }
-  | { type: 'SET_STUDENT_NAME'; name: string }
-  | { type: 'SET_ACTIVE_INDEX'; index: number }
-  | { type: 'NEXT_STUDENT' }
-  | { type: 'RESET' }
+  | { type: "SET_ANSWER"; questionIndex: number; answer: Answer }
+  | { type: "SET_STUDENT_NAME"; name: string }
+  | { type: "SET_ACTIVE_INDEX"; index: number }
+  | { type: "NEXT_STUDENT" }
+  | { type: "RESET" }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function calcScore(answers: (Answer | null)[], answerKey: Answer[]): { correct: number; wrong: number; score: number } {
+function calcScore(
+  answers: Array<Answer | null>,
+  answerKey: Array<Answer>
+): { correct: number; wrong: number; score: number } {
   let correct = 0
   let wrong = 0
   for (let i = 0; i < answers.length; i++) {
@@ -70,54 +73,54 @@ function calcScore(answers: (Answer | null)[], answerKey: Answer[]): { correct: 
   return { correct, wrong, score: correct * 5 }
 }
 
-function makeInitialState(answerKey: Answer[]): CorrectionState {
+function makeInitialState(answerKey: Array<Answer>): CorrectionState {
   return {
     answerKey,
     currentAnswers: Array<Answer | null>(answerKey.length).fill(null),
-    studentName: '',
+    studentName: "",
     studentNumber: 1,
     activeIndex: 0,
-    rekapList: [],
+    rekapList: []
   }
 }
 
 function correctionReducer(state: CorrectionState, action: CorrectionAction): CorrectionState {
   switch (action.type) {
-    case 'SET_ANSWER': {
+    case "SET_ANSWER": {
       const next = [...state.currentAnswers]
       next[action.questionIndex] = action.answer
       return { ...state, currentAnswers: next }
     }
-    case 'SET_STUDENT_NAME':
+    case "SET_STUDENT_NAME":
       return { ...state, studentName: action.name }
-    case 'SET_ACTIVE_INDEX':
+    case "SET_ACTIVE_INDEX":
       return { ...state, activeIndex: action.index }
-    case 'NEXT_STUDENT': {
-      const { correct, wrong, score } = calcScore(state.currentAnswers, state.answerKey)
+    case "NEXT_STUDENT": {
+      const { correct, score, wrong } = calcScore(state.currentAnswers, state.answerKey)
       const result: StudentResult = {
         studentNumber: state.studentNumber,
         name: state.studentName.trim() || `Murid ${state.studentNumber}`,
         answers: [...state.currentAnswers],
         correct,
         wrong,
-        score,
+        score
       }
-      const suggestedName = MOCK_STUDENTS[state.studentNumber] ?? ''
+      const suggestedName = MOCK_STUDENTS[state.studentNumber] ?? ""
       return {
         ...state,
         currentAnswers: Array<Answer | null>(state.answerKey.length).fill(null),
         studentName: suggestedName,
         studentNumber: state.studentNumber + 1,
         activeIndex: 0,
-        rekapList: [...state.rekapList, result],
+        rekapList: [...state.rekapList, result]
       }
     }
-    case 'RESET':
+    case "RESET":
       return {
         ...state,
         currentAnswers: Array<Answer | null>(state.answerKey.length).fill(null),
-        studentName: '',
-        activeIndex: 0,
+        studentName: "",
+        activeIndex: 0
       }
     default:
       return state
@@ -131,11 +134,11 @@ function dispatchSelectAnswer(
   questionIndex: number,
   answer: Answer,
   activeIndex: number,
-  totalQuestions: number,
+  totalQuestions: number
 ) {
-  dispatch({ type: 'SET_ANSWER', questionIndex, answer })
+  dispatch({ type: "SET_ANSWER", questionIndex, answer })
   if (activeIndex < totalQuestions - 1) {
-    dispatch({ type: 'SET_ACTIVE_INDEX', index: activeIndex + 1 })
+    dispatch({ type: "SET_ACTIVE_INDEX", index: activeIndex + 1 })
   }
 }
 
@@ -150,15 +153,15 @@ type AnswerRowProps = {
   onActivate: (questionIndex: number) => void
 }
 
-const ANSWER_OPTIONS: Answer[] = ['a', 'b', 'c', 'd']
+const ANSWER_OPTIONS: Array<Answer> = ["a", "b", "c", "d"]
 
 const AnswerRow = memo(function AnswerRow({
-  questionIndex,
-  isActive,
-  selectedAnswer,
   correctAnswer,
-  onSelect,
+  isActive,
   onActivate,
+  onSelect,
+  questionIndex,
+  selectedAnswer
 }: AnswerRowProps) {
   const isAnswered = selectedAnswer !== null
   const isCorrect = isAnswered && selectedAnswer === correctAnswer
@@ -166,9 +169,9 @@ const AnswerRow = memo(function AnswerRow({
   return (
     <TableRow
       className={[
-        'cursor-pointer',
-        isActive ? 'bg-kertas-100 hover:bg-kertas-100' : '',
-      ].join(' ')}
+        "cursor-pointer",
+        isActive ? "bg-kertas-100 hover:bg-kertas-100" : ""
+      ].join(" ")}
       onClick={() => onActivate(questionIndex)}
     >
       <TableCell className="py-2 px-3 text-body-sm text-text-tertiary font-medium w-8 tabular-nums">
@@ -185,11 +188,11 @@ const AnswerRow = memo(function AnswerRow({
                 onSelect(questionIndex, opt)
               }}
               className={[
-                'w-8 h-8 rounded text-sm font-semibold uppercase transition-colors',
+                "w-8 h-8 rounded text-sm font-semibold uppercase transition-colors",
                 selectedAnswer === opt
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-kertas-50 border border-border-ui text-text-secondary hover:bg-kertas-200',
-              ].join(' ')}
+                  ? "bg-primary-600 text-white"
+                  : "bg-kertas-50 border border-border-ui text-text-secondary hover:bg-kertas-200"
+              ].join(" ")}
               aria-label={`Jawaban ${opt.toUpperCase()} untuk soal ${questionIndex + 1}`}
               aria-pressed={selectedAnswer === opt}
             >
@@ -199,20 +202,22 @@ const AnswerRow = memo(function AnswerRow({
         </div>
       </TableCell>
       <TableCell className="py-2 px-3 w-28">
-        {isAnswered && correctAnswer != null ? (
-          isCorrect ? (
-            <span className="inline-flex items-center gap-1 text-success-700 text-body-sm font-medium">
-              <span aria-hidden="true">&#10003;</span> Benar
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-danger-700 text-body-sm font-medium">
-              <span aria-hidden="true">&#10007;</span>{' '}
-              <span className="text-text-tertiary">(kunci: {correctAnswer.toUpperCase()})</span>
-            </span>
-          )
-        ) : (
-          <span className="text-text-disabled text-body-sm">—</span>
-        )}
+        {isAnswered && correctAnswer != null ?
+          (
+            isCorrect ?
+              (
+                <span className="inline-flex items-center gap-1 text-success-700 text-body-sm font-medium">
+                  <span aria-hidden="true">&#10003;</span> Benar
+                </span>
+              ) :
+              (
+                <span className="inline-flex items-center gap-1 text-danger-700 text-body-sm font-medium">
+                  <span aria-hidden="true">&#10007;</span>{" "}
+                  <span className="text-text-tertiary">(kunci: {correctAnswer.toUpperCase()})</span>
+                </span>
+              )
+          ) :
+          <span className="text-text-disabled text-body-sm">—</span>}
       </TableCell>
     </TableRow>
   )
@@ -235,8 +240,7 @@ function ScoreDisplay({ correct, total }: ScoreDisplayProps) {
           Benar: <span className="font-semibold text-text-primary tabular-nums">{correct}</span> / {total}
         </span>
         <span className="text-text-secondary">
-          Nilai:{' '}
-          <span className="font-semibold text-text-primary tabular-nums text-lg">{score}</span> / 100
+          Nilai: <span className="font-semibold text-text-primary tabular-nums text-lg">{score}</span> / 100
         </span>
       </div>
     </div>
@@ -244,11 +248,11 @@ function ScoreDisplay({ correct, total }: ScoreDisplayProps) {
 }
 
 type RekapTableProps = {
-  rekapList: StudentResult[]
+  rekapList: Array<StudentResult>
   activeStudentNumber: number
 }
 
-function RekapTable({ rekapList, activeStudentNumber }: RekapTableProps) {
+function RekapTable({ activeStudentNumber, rekapList }: RekapTableProps) {
   if (rekapList.length === 0) {
     return (
       <EmptyState
@@ -281,7 +285,7 @@ function RekapTable({ rekapList, activeStudentNumber }: RekapTableProps) {
         {rekapList.map((student) => (
           <TableRow
             key={student.studentNumber}
-            className={student.studentNumber === activeStudentNumber ? 'bg-kertas-100' : ''}
+            className={student.studentNumber === activeStudentNumber ? "bg-kertas-100" : ""}
           >
             <TableCell className="px-2 py-2 text-body-sm text-text-tertiary tabular-nums">
               {student.studentNumber}.
@@ -307,12 +311,9 @@ function RekapTable({ rekapList, activeStudentNumber }: RekapTableProps) {
       <TableFooter>
         <TableRow>
           <TableCell colSpan={5} className="py-2 px-3 text-body-sm text-text-secondary">
-            Rata-rata:{' '}
-            <span className="font-semibold text-text-primary tabular-nums">{avg}</span>
-            {' | '}Tertinggi:{' '}
-            <span className="font-semibold text-text-primary tabular-nums">{max}</span>
-            {' | '}Terendah:{' '}
-            <span className="font-semibold text-text-primary tabular-nums">{min}</span>
+            Rata-rata: <span className="font-semibold text-text-primary tabular-nums">{avg}</span>
+            {" | "}Tertinggi: <span className="font-semibold text-text-primary tabular-nums">{max}</span>
+            {" | "}Terendah: <span className="font-semibold text-text-primary tabular-nums">{min}</span>
           </TableCell>
         </TableRow>
       </TableFooter>
@@ -324,18 +325,18 @@ function RekapTable({ rekapList, activeStudentNumber }: RekapTableProps) {
 
 function CorrectionPage() {
   const exam = Route.useLoaderData()
-  const answerKey: Answer[] = useMemo(
+  const answerKey: Array<Answer> = useMemo(
     () =>
       [...exam.questions]
         .sort((a, b) => a.number - b.number)
         .map((q) =>
           matchQuestion(q, {
             mcq_single: (x) => x.correct as Answer,
-            mcq_multi: (x) => x.correct[0] ?? 'a',
-            true_false: () => 'a' as Answer,
-          }),
+            mcq_multi: (x) => x.correct[0] ?? "a",
+            true_false: () => "a" as Answer
+          })
         ),
-    [exam.questions],
+    [exam.questions]
   )
 
   const [state, dispatch] = useReducer(correctionReducer, answerKey, makeInitialState)
@@ -344,36 +345,35 @@ function CorrectionPage() {
   const totalQuestions = state.answerKey.length
 
   // Fix 5: memoize calcScore call
-  const { correct, wrong, score } = useMemo(
+  const { correct, score, wrong } = useMemo(
     () => calcScore(state.currentAnswers, state.answerKey),
-    [state.currentAnswers, state.answerKey],
+    [state.currentAnswers, state.answerKey]
   )
 
   // Fix 7: memoize name input onChange
   const handleNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      dispatch({ type: 'SET_STUDENT_NAME', name: e.target.value }),
-    [dispatch],
+    (e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: "SET_STUDENT_NAME", name: e.target.value }),
+    [dispatch]
   )
 
   const handleSelectAnswer = useCallback(
     (questionIndex: number, answer: Answer) => {
       dispatchSelectAnswer(dispatch, questionIndex, answer, questionIndex, totalQuestions)
     },
-    [totalQuestions],
+    [totalQuestions]
   )
 
   const handleActivate = useCallback((questionIndex: number) => {
-    dispatch({ type: 'SET_ACTIVE_INDEX', index: questionIndex })
+    dispatch({ type: "SET_ACTIVE_INDEX", index: questionIndex })
   }, [])
 
   const handleNextStudent = useCallback(() => {
-    dispatch({ type: 'NEXT_STUDENT' })
+    dispatch({ type: "NEXT_STUDENT" })
     nameInputRef.current?.focus()
   }, [])
 
   const handleReset = useCallback(() => {
-    dispatch({ type: 'RESET' })
+    dispatch({ type: "RESET" })
   }, [])
 
   // Keyboard shortcuts
@@ -381,8 +381,7 @@ function CorrectionPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Fix 1: bail out entirely when focus is in any text input
       const target = e.target as HTMLElement
-      const isTextInput =
-        target instanceof HTMLInputElement ||
+      const isTextInput = target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         target.isContentEditable
 
@@ -390,46 +389,46 @@ function CorrectionPage() {
 
       const key = e.key.toLowerCase()
 
-      if (key === 'a' || key === 'b' || key === 'c' || key === 'd') {
+      if (key === "a" || key === "b" || key === "c" || key === "d") {
         e.preventDefault()
         dispatchSelectAnswer(dispatch, state.activeIndex, key as Answer, state.activeIndex, totalQuestions)
-      } else if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+      } else if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
         if (state.activeIndex < totalQuestions - 1) {
           e.preventDefault()
-          dispatch({ type: 'SET_ACTIVE_INDEX', index: state.activeIndex + 1 })
+          dispatch({ type: "SET_ACTIVE_INDEX", index: state.activeIndex + 1 })
         }
-      } else if (e.key === 'Tab' && e.shiftKey) {
+      } else if (e.key === "Tab" && e.shiftKey) {
         if (state.activeIndex > 0) {
           e.preventDefault()
-          dispatch({ type: 'SET_ACTIVE_INDEX', index: state.activeIndex - 1 })
+          dispatch({ type: "SET_ACTIVE_INDEX", index: state.activeIndex - 1 })
         }
-      } else if (e.key === 'ArrowDown') {
+      } else if (e.key === "ArrowDown") {
         e.preventDefault()
         if (state.activeIndex < totalQuestions - 1) {
-          dispatch({ type: 'SET_ACTIVE_INDEX', index: state.activeIndex + 1 })
+          dispatch({ type: "SET_ACTIVE_INDEX", index: state.activeIndex + 1 })
         }
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault()
         if (state.activeIndex > 0) {
-          dispatch({ type: 'SET_ACTIVE_INDEX', index: state.activeIndex - 1 })
+          dispatch({ type: "SET_ACTIVE_INDEX", index: state.activeIndex - 1 })
         }
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
   }, [state.activeIndex, totalQuestions])
 
   const handlePrintStudent = useCallback(() => {
-    document.body.dataset['printMode'] = 'student'
+    document.body.dataset["printMode"] = "student"
     window.print()
-    delete document.body.dataset['printMode']
+    delete document.body.dataset["printMode"]
   }, [])
 
   const handlePrintRekap = useCallback(() => {
-    document.body.dataset['printMode'] = 'rekap'
+    document.body.dataset["printMode"] = "rekap"
     window.print()
-    delete document.body.dataset['printMode']
+    delete document.body.dataset["printMode"]
   }, [])
 
   const suggestedPlaceholder = MOCK_STUDENTS[state.studentNumber - 1] ?? `Murid ${state.studentNumber}`
@@ -456,7 +455,8 @@ function CorrectionPage() {
 
       {/* Warning banner */}
       <div className="rounded-sm border border-warning-200 bg-warning-50 px-4 py-3 text-body-sm text-warning-700">
-        ⚠ Data koreksi tersimpan di browser saja. Data akan hilang jika halaman ditutup. Cetak terlebih dahulu jika perlu.
+        ⚠ Data koreksi tersimpan di browser saja. Data akan hilang jika halaman ditutup. Cetak terlebih dahulu jika
+        perlu.
       </div>
 
       {/* Two-panel layout */}
@@ -541,9 +541,15 @@ function CorrectionPage() {
                 {state.studentName.trim() || suggestedPlaceholder}
               </p>
               <div className="flex gap-4 text-body-sm">
-                <span className="text-success-700">Benar: <span className="font-bold tabular-nums">{correct}</span></span>
-                <span className="text-danger-700">Salah: <span className="font-bold tabular-nums">{wrong}</span></span>
-                <span className="text-text-primary font-bold">Nilai: <span className="tabular-nums">{score}</span></span>
+                <span className="text-success-700">
+                  Benar: <span className="font-bold tabular-nums">{correct}</span>
+                </span>
+                <span className="text-danger-700">
+                  Salah: <span className="font-bold tabular-nums">{wrong}</span>
+                </span>
+                <span className="text-text-primary font-bold">
+                  Nilai: <span className="tabular-nums">{score}</span>
+                </span>
               </div>
             </div>
           )}

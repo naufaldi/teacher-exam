@@ -1,21 +1,21 @@
-import type { ReactNode } from 'react'
-import katex from 'katex'
-import { parseMathText, formatMathFallbackPlain, repairMatematikaLatexInText } from '@teacher-exam/shared'
+import { formatMathFallbackPlain, parseMathText, repairMatematikaLatexInText } from "@teacher-exam/shared"
+import katex from "katex"
+import type { ReactNode } from "react"
 
 type MathTextProps = {
   text: string
   repair?: boolean
 }
 
-export function MathText({ text, repair = true }: MathTextProps): ReactNode {
+export function MathText({ repair = true, text }: MathTextProps): ReactNode {
   const normalized = repair ? repairMatematikaLatexInText(text) : text
 
   return (
     <>
       {parseMathText(normalized).map((part, index) => {
-        if (part._tag === 'text') {
-          const display = part.value.includes('$')
-            ? formatMathFallbackPlain(part.value.replace(/\$/g, ''))
+        if (part._tag === "text") {
+          const display = part.value.includes("$")
+            ? formatMathFallbackPlain(part.value.replace(/\$/g, ""))
             : part.value
           return <span key={index}>{display}</span>
         }
@@ -30,7 +30,7 @@ export function MathText({ text, repair = true }: MathTextProps): ReactNode {
   )
 }
 
-export { parseMathText } from '@teacher-exam/shared'
+export { parseMathText } from "@teacher-exam/shared"
 
 function renderMath(value: string, displayMode: boolean): string | null {
   try {
@@ -38,7 +38,7 @@ function renderMath(value: string, displayMode: boolean): string | null {
       displayMode,
       throwOnError: true,
       strict: false,
-      trust: false,
+      trust: false
     })
   } catch {
     return null

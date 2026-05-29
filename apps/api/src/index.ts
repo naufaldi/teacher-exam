@@ -1,34 +1,34 @@
-import { HttpApiBuilder } from '@effect/platform'
-import { Effect, ManagedRuntime } from 'effect'
-import { startDatabase, disposeDatabase, databaseRuntime } from './api/services/bootstrap-db'
-import { setAuthEffectRunner } from './api/services/auth-service'
-import { initAuth } from './lib/auth'
-import { resolveApiPort } from './lib/auth-origins'
-import { assertDevAuthNotEnabledInProduction } from './lib/dev-auth'
-import { logError, logInfo } from './lib/server-log'
-import { attachRateLimitHeaders } from './api/lib/rate-limit-response'
-import { createBridgeServer } from './api/bridge/create-bridge-server'
-import { withHttpSpan } from './api/telemetry'
+import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
+import { Effect, ManagedRuntime } from "effect"
+import { createBridgeServer } from "./api/bridge/create-bridge-server"
+import { attachRateLimitHeaders } from "./api/lib/rate-limit-response"
+import { setAuthEffectRunner } from "./api/services/auth-service"
+import { databaseRuntime, disposeDatabase, startDatabase } from "./api/services/bootstrap-db"
+import { withHttpSpan } from "./api/telemetry"
+import { initAuth } from "./lib/auth"
+import { resolveApiPort } from "./lib/auth-origins"
+import { assertDevAuthNotEnabledInProduction } from "./lib/dev-auth"
+import { logError, logInfo } from "./lib/server-log"
 
-process.on('uncaughtException', (err) => {
-  logError('uncaught_exception', {
+process.on("uncaughtException", (err) => {
+  logError("uncaught_exception", {
     message: err.message,
-    stack: err.stack,
+    stack: err.stack
   })
   process.exit(1)
 })
 
 assertDevAuthNotEnabledInProduction()
 
-process.on('unhandledRejection', (reason) => {
+process.on("unhandledRejection", (reason) => {
   if (reason instanceof Error) {
-    logError('unhandled_rejection', {
+    logError("unhandled_rejection", {
       message: reason.message,
-      stack: reason.stack,
+      stack: reason.stack
     })
     return
   }
-  logError('unhandled_rejection', { reason: String(reason) })
+  logError("unhandled_rejection", { reason: String(reason) })
 })
 
 async function main() {
@@ -36,13 +36,13 @@ async function main() {
   setAuthEffectRunner((effect) => databaseRuntime.runPromise(effect))
   initAuth(db)
 
-  const { createWebHandlerLayer } = await import('./api/server.js')
+  const { createWebHandlerLayer } = await import("./api/server.js")
   const port = resolveApiPort()
   const webLayer = createWebHandlerLayer()
   const runtime = ManagedRuntime.make(webLayer)
-  const { handler, dispose } = HttpApiBuilder.toWebHandler(webLayer)
+  const { dispose, handler } = HttpApiBuilder.toWebHandler(webLayer)
 
-  const { getAuth } = await import('./lib/auth.js')
+  const { getAuth } = await import("./lib/auth.js")
 
   const { server } = createBridgeServer({
     port,
@@ -53,15 +53,15 @@ async function main() {
         withHttpSpan(
           request.method,
           url.pathname,
-          Effect.promise(() => handler(request)),
-        ),
+          Effect.promise(() => handler(request))
+        )
       )
       return attachRateLimitHeaders(response)
     },
     disposeHttpApi: dispose,
     onListen: () => {
-      logInfo('listening', { port, url: `http://localhost:${port}`, pid: process.pid })
-    },
+      logInfo("listening", { port, url: `http://localhost:${port}`, pid: process.pid })
+    }
   })
 
   const shutdown = () => {
@@ -73,14 +73,14 @@ async function main() {
       })
     })
   }
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
+  process.on("SIGINT", shutdown)
+  process.on("SIGTERM", shutdown)
 }
 
 main().catch((err) => {
-  logError('startup_failed', {
+  logError("startup_failed", {
     message: err instanceof Error ? err.message : String(err),
-    stack: err instanceof Error ? err.stack : undefined,
+    stack: err instanceof Error ? err.stack : undefined
   })
   process.exit(1)
 })

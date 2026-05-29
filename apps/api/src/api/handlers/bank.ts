@@ -1,14 +1,14 @@
-import { HttpApiBuilder } from '@effect/platform'
-import { Effect } from 'effect'
-import { TeacherExamApi } from '../definition'
-import { ApiNotFound, ApiValidationError422 } from '../errors/http'
-import { CurrentUser } from '../middleware/auth'
-import { BankNotFoundError, BankSaveError, BankBuildError, BankService } from '../services/bank-service'
+import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
+import { Effect } from "effect"
+import { TeacherExamApi } from "../definition"
+import { ApiNotFound, ApiValidationError422 } from "../errors/http"
+import { CurrentUser } from "../middleware/auth"
+import { BankService } from "../services/bank-service"
 
-export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) =>
+export const BankLive = HttpApiBuilder.group(TeacherExamApi, "bank", (handlers) =>
   handlers
-    .handle('saveQuestion', ({ payload }) =>
-      Effect.gen(function* () {
+    .handle("saveQuestion", ({ payload }) =>
+      Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
         return yield* bankService.saveQuestion(userId, payload)
@@ -18,21 +18,19 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) 
             Effect.fail(
               new ApiNotFound({
                 error: String(e.cause),
-                code: 'NOT_FOUND',
-              }),
-            ),
-        }),
-      ),
-    )
-    .handle('browseBank', ({ urlParams }) =>
-      Effect.gen(function* () {
+                code: "NOT_FOUND"
+              })
+            )
+        })
+      ))
+    .handle("browseBank", ({ urlParams }) =>
+      Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
         return yield* bankService.browseOwn(userId, urlParams)
-      }),
-    )
-    .handle('updateBankQuestion', ({ path, payload }) =>
-      Effect.gen(function* () {
+      }))
+    .handle("updateBankQuestion", ({ path, payload }) =>
+      Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
         return yield* bankService.update(userId, path.id, payload)
@@ -42,14 +40,13 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) 
             Effect.fail(
               new ApiNotFound({
                 error: `Bank question ${e.id} not found`,
-                code: 'NOT_FOUND',
-              }),
-            ),
-        }),
-      ),
-    )
-    .handle('removeBankQuestion', ({ path }) =>
-      Effect.gen(function* () {
+                code: "NOT_FOUND"
+              })
+            )
+        })
+      ))
+    .handle("removeBankQuestion", ({ path }) =>
+      Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
         yield* bankService.remove(userId, path.id)
@@ -59,14 +56,13 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) 
             Effect.fail(
               new ApiNotFound({
                 error: `Bank question ${e.id} not found`,
-                code: 'NOT_FOUND',
-              }),
-            ),
-        }),
-      ),
-    )
-    .handle('buildExamFromBank', ({ payload }) =>
-      Effect.gen(function* () {
+                code: "NOT_FOUND"
+              })
+            )
+        })
+      ))
+    .handle("buildExamFromBank", ({ payload }) =>
+      Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
         return yield* bankService.buildExam(userId, payload)
@@ -75,12 +71,10 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, 'bank', (handlers) 
           BankBuildError: (e) =>
             Effect.fail(
               new ApiValidationError422({
-                error: 'Validation failed',
-                code: 'VALIDATION_ERROR',
-                details: e.message,
-              }),
-            ),
-        }),
-      ),
-    ),
-)
+                error: "Validation failed",
+                code: "VALIDATION_ERROR",
+                details: e.message
+              })
+            )
+        })
+      )))

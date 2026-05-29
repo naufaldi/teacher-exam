@@ -1,6 +1,6 @@
-import { Context, Effect, Layer, ManagedRuntime } from 'effect'
-import { SqlClient } from '@effect/sql/SqlClient'
-import { DbClient, DbLayer, type AppDb } from './db'
+import type { SqlClient } from "@effect/sql/SqlClient"
+import { Context, Effect, Layer, ManagedRuntime } from "effect"
+import { type AppDb, DbClient, DbLayer } from "./db"
 
 type DatabaseServices = DbClient | SqlClient
 
@@ -14,10 +14,10 @@ export async function startDatabase(): Promise<AppDb> {
   }
 
   sharedContext = await databaseRuntime.runPromise(
-    Effect.gen(function* () {
+    Effect.gen(function*() {
       yield* DbClient
       return yield* Effect.context<DatabaseServices>()
-    }),
+    })
   )
 
   return Context.get(sharedContext, DbClient)
@@ -25,7 +25,7 @@ export async function startDatabase(): Promise<AppDb> {
 
 export function getSharedDatabaseLayer(): Layer.Layer<DatabaseServices> {
   if (!sharedContext) {
-    throw new Error('Database not started — call startDatabase() before creating the HTTP handler')
+    throw new Error("Database not started — call startDatabase() before creating the HTTP handler")
   }
   return Layer.succeedContext(sharedContext)
 }

@@ -1,94 +1,82 @@
-import { act, fireEvent, screen, within } from '@testing-library/react'
-import { vi } from 'vitest'
-import './setup.js'
-import { mockApiResolvedValueOnce } from '../../../lib/api-test-utils.js'
-import type { ExamWithQuestions } from '@teacher-exam/shared'
-import {
-  makeExamWithQuestions,
-  makeMcqMulti,
-  makeMcqSingle,
-  makeTrueFalse,
-} from '../../../test/fixtures/exam.js'
-import { examDraftStore } from '../../../lib/exam-draft-store.js'
-import {
-  getLoader,
-  mockExamsGet,
-  renderPreviewPage,
-  seedPreviewDraft,
-  closestByAttr,
-} from './setup.js'
+import { brandExamId, type ExamWithQuestions } from "@teacher-exam/shared"
+import { act, fireEvent, screen, within } from "@testing-library/react"
+import { vi } from "vitest"
+import { mockApiResolvedValueOnce } from "../../../lib/api-test-utils.js"
+import { examDraftStore } from "../../../lib/exam-draft-store.js"
+import { makeExamWithQuestions, makeMcqMulti, makeMcqSingle, makeTrueFalse } from "../../../test/fixtures/exam.js"
+import { closestByAttr, getLoader, mockExamsGet, renderPreviewPage, seedPreviewDraft } from "./setup.js"
 
-describe('variable points per question', () => {
+describe("variable points per question", () => {
   function seedDraftWithQuestions(count: number) {
     const questions = Array.from({ length: count }, (_, i) => makeMcqSingle(i + 1))
     examDraftStore.setQuestions(questions)
-    examDraftStore.setReviewMode('fast')
+    examDraftStore.setReviewMode("fast")
     examDraftStore.setConfig({
-      subject: 'bahasa_indonesia',
+      subject: "bahasa_indonesia",
       grade: 6,
-      topic: 'Teks Narasi',
-      examType: 'formatif',
+      topic: "Teks Narasi",
+      examType: "formatif"
     })
     examDraftStore.setMetadata({
-      schoolName: 'SD Nusantara',
-      academicYear: '2025/2026',
-      examDate: '23 April 2026',
+      schoolName: "SD Nusantara",
+      academicYear: "2025/2026",
+      examDate: "23 April 2026",
       durationMinutes: 60,
-      instructions: 'Pilih jawaban yang benar.',
+      instructions: "Pilih jawaban yang benar."
     })
   }
 
-  it('25 soal → 4 poin per soal, 100 total poin', () => {
+  it("25 soal → 4 poin per soal, 100 total poin", () => {
     seedDraftWithQuestions(25)
     renderPreviewPage()
-    expect(screen.getByText('4 poin')).toBeInTheDocument()
-    expect(screen.getByText('Total: 100 poin')).toBeInTheDocument()
+    expect(screen.getByText("4 poin")).toBeInTheDocument()
+    expect(screen.getByText("Total: 100 poin")).toBeInTheDocument()
   })
 
-  it('10 soal → 10 poin per soal, 100 total poin', () => {
+  it("10 soal → 10 poin per soal, 100 total poin", () => {
     seedDraftWithQuestions(10)
     renderPreviewPage()
-    expect(screen.getByText('10 poin')).toBeInTheDocument()
-    expect(screen.getByText('Total: 100 poin')).toBeInTheDocument()
+    expect(screen.getByText("10 poin")).toBeInTheDocument()
+    expect(screen.getByText("Total: 100 poin")).toBeInTheDocument()
   })
 })
 
-describe('PreviewPage loader', () => {
-  it('seeds draft config from the loaded exam', async () => {
+describe("PreviewPage loader", () => {
+  it("seeds draft config from the loaded exam", async () => {
     const exam: ExamWithQuestions = {
-      ...makeExamWithQuestions(['Nilai Pancasila', 'Gotong Royong']),
-      id: 'exam-loaded',
-      subject: 'pendidikan_pancasila',
+      ...makeExamWithQuestions(["Nilai Pancasila", "Gotong Royong"]),
+      id: brandExamId("exam-loaded"),
+      subject: "pendidikan_pancasila",
       grade: 5,
-      examType: 'sas',
-      classContext: 'Siswa perlu contoh konkret.',
+      examType: "sas",
+      classContext: "Siswa perlu contoh konkret."
     }
     mockApiResolvedValueOnce(mockExamsGet, exam)
 
-    await getLoader()({ deps: { examId: 'exam-loaded' } })
+    await getLoader()({ deps: { examId: "exam-loaded" } })
 
-    expect(mockExamsGet).toHaveBeenCalledWith('exam-loaded')
+    expect(mockExamsGet).toHaveBeenCalledWith("exam-loaded")
     expect(examDraftStore.getSnapshot()).toMatchObject({
-      subject: 'pendidikan_pancasila',
+      subject: "pendidikan_pancasila",
       grade: 5,
-      topic: 'Nilai Pancasila, Gotong Royong',
-      classContext: 'Siswa perlu contoh konkret.',
+      topic: "Nilai Pancasila, Gotong Royong",
+      classContext: "Siswa perlu contoh konkret.",
       metadata: {
-        examType: 'sas',
-      },
+        examType: "sas"
+      }
     })
   })
 })
 
-describe('PreviewPage — multi-subject labels', () => {
-  it('renders "IPAS" label in subtitle when draft subject is ipas', () => {
+describe("PreviewPage — multi-subject labels", () => {
+  it("renders \"IPAS\" label in subtitle when draft subject is ipas", () => {
     // Seed store with ipas — force-cast to satisfy current narrow type (this cast
     // is what we are about to remove from production code)
     examDraftStore.setConfig({
-      subject: 'ipas',
+      subject: "ipas",
       grade: 5,
-      topic: 'Ekosistem',
-      examType: 'formatif',
+      topic: "Ekosistem",
+      examType: "formatif"
     })
     renderPreviewPage()
     // subtitle = "<examType> · <subjectLabel> — Kelas 5 SD"
@@ -98,166 +86,166 @@ describe('PreviewPage — multi-subject labels', () => {
     expect(screen.getAllByText(/IPAS/).length).toBeGreaterThan(0)
   })
 
-  it('renders "Bahasa Inggris" label when draft subject is bahasa_inggris', () => {
+  it("renders \"Bahasa Inggris\" label when draft subject is bahasa_inggris", () => {
     examDraftStore.setConfig({
-      subject: 'bahasa_inggris',
+      subject: "bahasa_inggris",
       grade: 6,
-      topic: 'Reading Comprehension',
-      examType: 'formatif',
+      topic: "Reading Comprehension",
+      examType: "formatif"
     })
     renderPreviewPage()
     expect(screen.queryAllByText(/\bbahasa_inggris\b/).length).toBe(0)
     expect(screen.getAllByText(/Bahasa Inggris/).length).toBeGreaterThan(0)
   })
 
-  it('loader stores ipas subject in draft store without casting it away', async () => {
+  it("loader stores ipas subject in draft store without casting it away", async () => {
     const exam: ExamWithQuestions = {
-      ...makeExamWithQuestions(['Ekosistem']),
-      subject: 'ipas',
-      grade: 5,
+      ...makeExamWithQuestions(["Ekosistem"]),
+      subject: "ipas",
+      grade: 5
     }
     mockApiResolvedValueOnce(mockExamsGet, exam)
 
     await getLoader()({ deps: { examId: exam.id } })
 
-    expect(examDraftStore.getSnapshot().subject).toBe('ipas')
+    expect(examDraftStore.getSnapshot().subject).toBe("ipas")
   })
 })
 
-describe('PreviewPage print flow', () => {
-  it('keeps print scope active until afterprint fires', () => {
+describe("PreviewPage print flow", () => {
+  it("keeps print scope active until afterprint fires", () => {
     vi.useFakeTimers()
-    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {})
 
     renderPreviewPage()
-    fireEvent.click(screen.getByRole('button', { name: /cetak soal/i }))
+    fireEvent.click(screen.getByRole("button", { name: /cetak soal/i }))
 
-    expect(document.body.dataset['printScope']).toBe('soal')
+    expect(document.body.dataset["printScope"]).toBe("soal")
 
     act(() => {
       vi.advanceTimersByTime(50)
     })
 
     expect(printSpy).toHaveBeenCalledTimes(1)
-    expect(document.body.dataset['printScope']).toBe('soal')
+    expect(document.body.dataset["printScope"]).toBe("soal")
 
     act(() => {
       vi.advanceTimersByTime(500)
     })
 
-    expect(document.body.dataset['printScope']).toBe('soal')
+    expect(document.body.dataset["printScope"]).toBe("soal")
 
     act(() => {
-      window.dispatchEvent(new Event('afterprint'))
+      window.dispatchEvent(new Event("afterprint"))
     })
 
-    expect(document.body.dataset['printScope']).toBeUndefined()
+    expect(document.body.dataset["printScope"]).toBeUndefined()
   })
 
-  it('keeps preview screen wording and toolbar outside printable content', () => {
+  it("keeps preview screen wording and toolbar outside printable content", () => {
     renderPreviewPage()
 
-    const printable = document.querySelector('[data-print-content]')
+    const printable = document.querySelector("[data-print-content]")
     expect(printable).toBeInstanceOf(HTMLElement)
-    expect(within(printable as HTMLElement).queryByText('Preview Lembar')).not.toBeInTheDocument()
-    expect(within(printable as HTMLElement).queryByRole('button', { name: /cetak semua/i })).not.toBeInTheDocument()
+    expect(within(printable as HTMLElement).queryByText("Preview Lembar")).not.toBeInTheDocument()
+    expect(within(printable as HTMLElement).queryByRole("button", { name: /cetak semua/i })).not.toBeInTheDocument()
 
-    const previewTitle = screen.getByRole('heading', { name: 'Preview Lembar' })
-    const previewHeader = closestByAttr(previewTitle, 'data-screen-only')
-    expect(previewHeader).toHaveAttribute('data-no-print')
+    const previewTitle = screen.getByRole("heading", { name: "Preview Lembar" })
+    const previewHeader = closestByAttr(previewTitle, "data-screen-only")
+    expect(previewHeader).toHaveAttribute("data-no-print")
 
-    const printAllButton = screen.getByRole('button', { name: /cetak semua/i })
-    const toolbar = closestByAttr(printAllButton, 'data-screen-only')
-    expect(toolbar).toHaveAttribute('data-no-print')
+    const printAllButton = screen.getByRole("button", { name: /cetak semua/i })
+    const toolbar = closestByAttr(printAllButton, "data-screen-only")
+    expect(toolbar).toHaveAttribute("data-no-print")
   })
 
-  it('keeps print section scope rules colocated with the preview route', () => {
+  it("keeps print section scope rules colocated with the preview route", () => {
     const { container } = renderPreviewPage()
-    const styleText = Array.from(container.querySelectorAll('style'))
-      .map((style) => style.textContent ?? '')
-      .join('\n')
+    const styleText = Array.from(container.querySelectorAll("style"))
+      .map((style) => style.textContent ?? "")
+      .join("\n")
 
-    expect(styleText).toContain('body[data-print-scope="soal"] [data-print-section="lj"]')
-    expect(styleText).toContain('body[data-print-scope="lj"] [data-print-section="kunci"]')
-    expect(styleText).toContain('body[data-print-scope="kunci"] [data-print-section="soal"]')
+    expect(styleText).toContain("body[data-print-scope=\"soal\"] [data-print-section=\"lj\"]")
+    expect(styleText).toContain("body[data-print-scope=\"lj\"] [data-print-section=\"kunci\"]")
+    expect(styleText).toContain("body[data-print-scope=\"kunci\"] [data-print-section=\"soal\"]")
   })
 })
 
-describe('Soal section renders correct structure per question type', () => {
-  it('mcq_single: renders A/B/C/D option list without special hint text', () => {
-    seedPreviewDraft([makeMcqSingle(1, 'b')])
+describe("Soal section renders correct structure per question type", () => {
+  it("mcq_single: renders A/B/C/D option list without special hint text", () => {
+    seedPreviewDraft([makeMcqSingle(1, "b")])
     renderPreviewPage()
 
     // Should render options list
-    const soalSection = document.querySelector('[data-print-section="soal"]')
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
     expect(soalSection).not.toBeNull()
-    expect(within(soalSection as HTMLElement).getByText('a.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('b.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('c.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('d.')).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("a.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("b.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("c.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("d.")).toBeInTheDocument()
     // No multi-select hint for single choice
     expect(within(soalSection as HTMLElement).queryByText(/pilih dua\/tiga/i)).not.toBeInTheDocument()
   })
 
-  it('mcq_multi: renders A/B/C/D option list and shows hint text in question', () => {
-    seedPreviewDraft([makeMcqMulti(1, ['a', 'c'])])
+  it("mcq_multi: renders A/B/C/D option list and shows hint text in question", () => {
+    seedPreviewDraft([makeMcqMulti(1, ["a", "c"])])
     renderPreviewPage()
 
-    const soalSection = document.querySelector('[data-print-section="soal"]')
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
     expect(soalSection).not.toBeNull()
     // Hint embedded in the question text (factory sets it)
     expect(within(soalSection as HTMLElement).getByText(/pilih dua\/tiga jawaban yang benar/i)).toBeInTheDocument()
     // Options still rendered
-    expect(within(soalSection as HTMLElement).getByText('a.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('b.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('c.')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('d.')).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("a.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("b.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("c.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("d.")).toBeInTheDocument()
   })
 
-  it('true_false: renders a table with Pernyataan header and B/S columns, one row per statement', () => {
+  it("true_false: renders a table with Pernyataan header and B/S columns, one row per statement", () => {
     seedPreviewDraft([makeTrueFalse(1, [true, false, true])])
     renderPreviewPage()
 
-    const soalSection = document.querySelector('[data-print-section="soal"]')
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
     expect(soalSection).not.toBeNull()
     // Table headers
-    expect(within(soalSection as HTMLElement).getByText('Pernyataan')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('B')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('S')).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("Pernyataan")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("B")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("S")).toBeInTheDocument()
     // Statement rows — 3 statements in fixture
-    expect(within(soalSection as HTMLElement).getByText('Pernyataan 1')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('Pernyataan 2')).toBeInTheDocument()
-    expect(within(soalSection as HTMLElement).getByText('Pernyataan 3')).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("Pernyataan 1")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("Pernyataan 2")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("Pernyataan 3")).toBeInTheDocument()
     // No A/B/C/D option letters for true_false
-    expect(within(soalSection as HTMLElement).queryByText('a.')).not.toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).queryByText("a.")).not.toBeInTheDocument()
   })
 })
 
-describe('Kunci Jawaban uses correct labels per question type', () => {
-  it('mcq_single with correct "b" → shows "B"', () => {
-    seedPreviewDraft([makeMcqSingle(1, 'b')])
+describe("Kunci Jawaban uses correct labels per question type", () => {
+  it("mcq_single with correct \"b\" → shows \"B\"", () => {
+    seedPreviewDraft([makeMcqSingle(1, "b")])
     renderPreviewPage()
 
-    const kunciSection = document.querySelector('[data-print-section="kunci"]')
+    const kunciSection = document.querySelector("[data-print-section=\"kunci\"]")
     expect(kunciSection).not.toBeNull()
-    expect(within(kunciSection as HTMLElement).getByText('B')).toBeInTheDocument()
+    expect(within(kunciSection as HTMLElement).getByText("B")).toBeInTheDocument()
   })
 
-  it('mcq_multi with correct ["a","c"] → shows "A, C"', () => {
-    seedPreviewDraft([makeMcqMulti(1, ['a', 'c'])])
+  it("mcq_multi with correct [\"a\",\"c\"] → shows \"A, C\"", () => {
+    seedPreviewDraft([makeMcqMulti(1, ["a", "c"])])
     renderPreviewPage()
 
-    const kunciSection = document.querySelector('[data-print-section="kunci"]')
+    const kunciSection = document.querySelector("[data-print-section=\"kunci\"]")
     expect(kunciSection).not.toBeNull()
-    expect(within(kunciSection as HTMLElement).getByText('A, C')).toBeInTheDocument()
+    expect(within(kunciSection as HTMLElement).getByText("A, C")).toBeInTheDocument()
   })
 
-  it('true_false with [true, false, true] → shows "B, S, B"', () => {
+  it("true_false with [true, false, true] → shows \"B, S, B\"", () => {
     seedPreviewDraft([makeTrueFalse(1, [true, false, true])])
     renderPreviewPage()
 
-    const kunciSection = document.querySelector('[data-print-section="kunci"]')
+    const kunciSection = document.querySelector("[data-print-section=\"kunci\"]")
     expect(kunciSection).not.toBeNull()
-    expect(within(kunciSection as HTMLElement).getByText('B, S, B')).toBeInTheDocument()
+    expect(within(kunciSection as HTMLElement).getByText("B, S, B")).toBeInTheDocument()
   })
 })

@@ -6,8 +6,8 @@ type OriginEnv = {
   WEB_PORT?: string | undefined
 }
 
-const DEFAULT_APP_URL = 'http://localhost:5173'
-const DEFAULT_VITE_DEV_ORIGIN = 'http://localhost:5173'
+const DEFAULT_APP_URL = "http://localhost:5173"
+const DEFAULT_VITE_DEV_ORIGIN = "http://localhost:5173"
 const DEFAULT_API_PORT = 3000
 
 export function resolveApiPort(env: OriginEnv = process.env): number {
@@ -16,13 +16,13 @@ export function resolveApiPort(env: OriginEnv = process.env): number {
 
   const rawWebPort = env.WEB_PORT?.trim()
   if (rawWebPort && port === parsePort(rawWebPort)) {
-    throw new Error('API_PORT must not equal WEB_PORT')
+    throw new Error("API_PORT must not equal WEB_PORT")
   }
 
   return port
 }
 
-export function resolveTrustedOrigins(env: OriginEnv = process.env): string[] {
+export function resolveTrustedOrigins(env: OriginEnv = process.env): Array<string> {
   const appUrl = env.APP_URL?.trim() || DEFAULT_APP_URL
   const origins = [appUrl]
 
@@ -33,11 +33,13 @@ export function resolveTrustedOrigins(env: OriginEnv = process.env): string[] {
     }
   }
 
-  origins.push(...parseOriginList(env.AUTH_TRUSTED_ORIGINS))
+  for (const origin of parseOriginList(env.AUTH_TRUSTED_ORIGINS)) {
+    origins.push(origin)
+  }
   return Array.from(new Set(origins))
 }
 
-export function resolveAllowedCorsOrigins(env: OriginEnv = process.env): string[] {
+export function resolveAllowedCorsOrigins(env: OriginEnv = process.env): Array<string> {
   return resolveTrustedOrigins(env)
 }
 
@@ -53,9 +55,9 @@ export function resolveAuthBaseURL(env: OriginEnv = process.env): string {
   return appUrl
 }
 
-function parseOriginList(value: string | undefined): string[] {
+function parseOriginList(value: string | undefined): Array<string> {
   return value
-    ?.split(',')
+    ?.split(",")
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0) ?? []
 }
@@ -63,7 +65,7 @@ function parseOriginList(value: string | undefined): string[] {
 function isLocalhostOrigin(value: string): boolean {
   try {
     const url = new URL(value)
-    return url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1"
   } catch {
     return false
   }

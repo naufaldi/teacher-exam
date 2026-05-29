@@ -1,5 +1,5 @@
-import { Data } from 'effect'
+import { Data } from "effect"
 
-export class AiGenerationError extends Data.TaggedError('AiGenerationError')<{
+export class AiGenerationError extends Data.TaggedError("AiGenerationError")<{
   cause: unknown
 }> {}

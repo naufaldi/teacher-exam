@@ -1,4 +1,4 @@
-import type { Exam } from '@teacher-exam/shared'
+import type { Exam } from "@teacher-exam/shared"
 
 export interface DashboardStats {
   totalSheets: number
@@ -9,23 +9,23 @@ export interface DashboardStats {
 export interface WeeklyActivityDay {
   day: string
   count: number
-  variant: 'default' | 'secondary'
+  variant: "default" | "secondary"
 }
 
-const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const
+const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"] as const
 
 function localDateKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
 // Compute { totalSheets, finalCount, draftCount } in a single pass (Vercel js-combine-iterations).
-export function computeStats(exams: Exam[]): DashboardStats {
+export function computeStats(exams: ReadonlyArray<Exam>): DashboardStats {
   let totalSheets = 0
   let finalCount = 0
   let draftCount = 0
   for (const exam of exams) {
     totalSheets++
-    if (exam.status === 'final') finalCount++
+    if (exam.status === "final") finalCount++
     else draftCount++
   }
   return { totalSheets, finalCount, draftCount }
@@ -33,7 +33,7 @@ export function computeStats(exams: Exam[]): DashboardStats {
 
 // Build 7 buckets for the days ending at `now` (local time).
 // Accepts `now` as a parameter for deterministic testing.
-export function computeWeeklyActivity(exams: Exam[], now: Date): WeeklyActivityDay[] {
+export function computeWeeklyActivity(exams: ReadonlyArray<Exam>, now: Date): Array<WeeklyActivityDay> {
   const buckets = Array.from({ length: 7 }, (_, i): { date: Date; key: string; count: number } => {
     const d = new Date(now.getTime())
     d.setDate(d.getDate() - (6 - i))
@@ -50,14 +50,14 @@ export function computeWeeklyActivity(exams: Exam[], now: Date): WeeklyActivityD
     }
   }
 
-  return buckets.map(({ date, count }, i) => ({
+  return buckets.map(({ count, date }, i) => ({
     day: DAY_LABELS[date.getDay()] as string,
     count,
-    variant: i === 6 ? 'secondary' : 'default',
+    variant: i === 6 ? "secondary" : "default"
   }))
 }
 
 // Return the first `limit` exams (server already orders by desc createdAt).
-export function getRecentSheets(exams: Exam[], limit: number): Exam[] {
+export function getRecentSheets(exams: ReadonlyArray<Exam>, limit: number): Array<Exam> {
   return exams.slice(0, limit)
 }

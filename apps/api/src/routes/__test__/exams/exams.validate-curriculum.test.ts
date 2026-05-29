@@ -1,24 +1,23 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { Effect } from 'effect'
+import { db } from "@teacher-exam/db"
+import { Effect } from "effect"
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((col, val) => ({ op: 'eq', col, val })),
-  and: vi.fn((...args) => ({ op: 'and', args })),
+import { TestCurriculumFailingLayer } from "../../../api/services/curriculum-service.js"
+import type { AiService } from "../../../services/AiService.js"
+import { makeChain, makeQuestionRow } from "../helpers.js"
+import { buildHttpApiTestApp } from "../http-api-setup.js"
+import { buildTestApp, makeExamRow } from "./exams-setup.js"
+
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn((col, val) => ({ op: "eq", col, val })),
+  and: vi.fn((...args) => ({ op: "and", args }))
 }))
 
-
-import { db } from '@teacher-exam/db'
-import type { AiService } from '../../../services/AiService.js'
-import { makeChain, makeQuestionRow } from '../helpers.js'
-import { makeExamRow, buildTestApp } from './exams-setup.js'
-import { TestCurriculumFailingLayer } from '../../../api/services/curriculum-service.js'
-import { buildHttpApiTestApp } from '../http-api-setup.js'
-
 const fakeAiService = {
-  validateCurriculum: vi.fn(),
+  validateCurriculum: vi.fn()
 } as unknown as AiService
 
-describe('POST /api/exams/:id/validate-curriculum', () => {
+describe("POST /api/exams/:id/validate-curriculum", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(fakeAiService.validateCurriculum as Mock).mockImplementation(
@@ -26,35 +25,34 @@ describe('POST /api/exams/:id/validate-curriculum', () => {
         Effect.succeed(
           Array.from({ length: expectedCount }, (_, i) => ({
             number: i + 1,
-            status: i === 0 ? ('needs_review' as const) : ('valid' as const),
-            reason: i === 0 ? 'Level kognitif tinggi.' : 'Sesuai CP.',
-          })),
-        ),
+            status: i === 0 ? ("needs_review" as const) : ("valid" as const),
+            reason: i === 0 ? "Level kognitif tinggi." : "Sesuai CP."
+          }))
+        )
     )
     ;(db.update as Mock).mockReturnValue(makeChain([]))
   })
 
-  it('returns 404 when exam not found', async () => {
+  it("returns 404 when exam not found", async () => {
     ;(db.select as Mock).mockReturnValue(makeChain([]))
     const app = buildTestApp({ aiService: fakeAiService })
-    const res = await app.request('/api/exams/missing/validate-curriculum', { method: 'POST' })
+    const res = await app.request("/api/exams/missing/validate-curriculum", { method: "POST" })
     expect(res.status).toBe(404)
   })
 
-  it('runs validation and returns updated exam', async () => {
+  it("runs validation and returns updated exam", async () => {
     const examRow = makeExamRow()
     const questionRows = Array.from({ length: 3 }, (_, i) =>
       makeQuestionRow({
         id: `q-${i + 1}`,
-        examId: 'exam-1',
+        examId: "exam-1",
         number: i + 1,
-        validationStatus: null,
-      }),
-    )
+        validationStatus: null
+      }))
     const validatedRows = questionRows.map((q, i) => ({
       ...q,
-      validationStatus: i === 0 ? 'needs_review' : 'valid',
-      validationReason: i === 0 ? 'Level kognitif tinggi.' : 'Sesuai CP.',
+      validationStatus: i === 0 ? "needs_review" : "valid",
+      validationReason: i === 0 ? "Level kognitif tinggi." : "Sesuai CP."
     }))
 
     let selectCount = 0
@@ -67,29 +65,35 @@ describe('POST /api/exams/:id/validate-curriculum', () => {
     })
 
     const app = buildTestApp({ aiService: fakeAiService })
-    const res = await app.request('/api/exams/exam-1/validate-curriculum', { method: 'POST' })
+    const res = await app.request("/api/exams/exam-1/validate-curriculum", { method: "POST" })
 
     expect(res.status).toBe(200)
     expect(db.update as Mock).toHaveBeenCalled()
     const body = (await res.json()) as { questions: Array<{ validationStatus: string | null }> }
-    expect(body.questions[0]?.validationStatus).toBe('needs_review')
-    expect(body.questions[1]?.validationStatus).toBe('valid')
+    expect(body.questions[0]?.validationStatus).toBe("needs_review")
+    expect(body.questions[1]?.validationStatus).toBe("valid")
   })
 
-  it('returns 500 when curriculum lookup fails', async () => {
+  it("returns 500 when curriculum lookup fails", async () => {
     const examRow = makeExamRow()
-    ;(db.select as Mock).mockReturnValue(makeChain([examRow]))
+    const questionRows = [makeQuestionRow({ examId: "exam-1", number: 1 })]
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain(questionRows)
+    })
 
     const app = buildHttpApiTestApp({
-      userId: 'test-user-id',
+      userId: "test-user-id",
       aiService: fakeAiService,
-      curriculumLayer: TestCurriculumFailingLayer(),
+      curriculumLayer: TestCurriculumFailingLayer()
     })
-    const res = await app.request('/api/exams/exam-1/validate-curriculum', { method: 'POST' })
+    const res = await app.request("/api/exams/exam-1/validate-curriculum", { method: "POST" })
 
     expect(res.status).toBe(500)
     const body = (await res.json()) as { code?: string; error?: string }
-    expect(body.code).toBe('DATABASE_ERROR')
-    expect(body.error).toContain('Curriculum')
+    expect(body.code).toBe("DATABASE_ERROR")
+    expect(body.error).toContain("Curriculum")
   })
 })

@@ -1,4 +1,4 @@
-import type { CognitiveLevel, ExamDifficulty, ExamType } from '@teacher-exam/shared'
+import type { CognitiveLevel, ExamDifficulty, ExamType } from "@teacher-exam/shared"
 
 /**
  * Per-exam-type steering profile injected into the AI prompt so generated
@@ -36,63 +36,60 @@ export const EXAM_TYPE_PROFILE: Record<ExamType, ExamTypeProfile> = {
   latihan: {
     difficultyDist: { mudah: 8, sedang: 8, sulit: 4 },
     defaultTotalSoal: 20,
-    cognitiveLevels: ['C1', 'C2', 'C3'],
-    stemHint:
-      'Gunakan konteks kehidupan sehari-hari siswa SD; soal eksploratif dan ramah.',
+    cognitiveLevels: ["C1", "C2", "C3"],
+    stemHint: "Gunakan konteks kehidupan sehari-hari siswa SD; soal eksploratif dan ramah.",
     promptPreamble:
-      'Lembar ini untuk LATIHAN mandiri. Tone ramah, fokus membangun pemahaman dasar dan aplikasi sederhana.',
-    kopLabel: 'LATIHAN SOAL',
-    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      "Lembar ini untuk LATIHAN mandiri. Tone ramah, fokus membangun pemahaman dasar dan aplikasi sederhana.",
+    kopLabel: "LATIHAN SOAL",
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
   },
   formatif: {
     difficultyDist: { mudah: 6, sedang: 10, sulit: 4 },
     defaultTotalSoal: 20,
-    cognitiveLevels: ['C1', 'C2', 'C3'],
-    stemHint:
-      'Soal berfokus pada satu topik; tonjolkan miskonsepsi umum siswa sebagai distractor.',
+    cognitiveLevels: ["C1", "C2", "C3"],
+    stemHint: "Soal berfokus pada satu topik; tonjolkan miskonsepsi umum siswa sebagai distractor.",
     promptPreamble:
-      'Lembar ini untuk ULANGAN HARIAN (Asesmen Formatif). Ukur penguasaan satu topik dengan soal terukur dan distractor edukatif.',
-    kopLabel: 'ULANGAN HARIAN',
-    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
+      "Lembar ini untuk ULANGAN HARIAN (Asesmen Formatif). Ukur penguasaan satu topik dengan soal terukur dan distractor edukatif.",
+    kopLabel: "ULANGAN HARIAN",
+    composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
   },
   sts: {
     difficultyDist: { mudah: 8, sedang: 13, sulit: 4 },
     defaultTotalSoal: 25,
-    cognitiveLevels: ['C1', 'C2', 'C3'],
-    stemHint:
-      'Cakup variasi sub-topik dalam bab; sebagian soal berbasis stimulus singkat (1-2 kalimat).',
+    cognitiveLevels: ["C1", "C2", "C3"],
+    stemHint: "Cakup variasi sub-topik dalam bab; sebagian soal berbasis stimulus singkat (1-2 kalimat).",
     promptPreamble:
-      'Lembar ini untuk UTS / Sumatif Tengah Semester. Cakupan lebih luas dari ulangan harian, distribusi kesulitan terukur.',
-    kopLabel: 'PENILAIAN TENGAH SEMESTER',
-    composition: { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 },
+      "Lembar ini untuk UTS / Sumatif Tengah Semester. Cakupan lebih luas dari ulangan harian, distribusi kesulitan terukur.",
+    kopLabel: "PENILAIAN TENGAH SEMESTER",
+    composition: { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 }
   },
   sas: {
     difficultyDist: { mudah: 5, sedang: 13, sulit: 7 },
     defaultTotalSoal: 25,
-    cognitiveLevels: ['C2', 'C3', 'C4'],
+    cognitiveLevels: ["C2", "C3", "C4"],
     stemHint:
-      'Cakup seluruh topik semester; tambahkan beberapa soal dengan stimulus paragraf pendek (3-4 kalimat) untuk analisis.',
+      "Cakup seluruh topik semester; tambahkan beberapa soal dengan stimulus paragraf pendek (3-4 kalimat) untuk analisis.",
     promptPreamble:
-      'Lembar ini untuk UAS / Sumatif Akhir Semester. Cakupan satu semester penuh; sertakan elemen analisis dan evaluasi.',
-    kopLabel: 'PENILAIAN AKHIR SEMESTER',
-    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
+      "Lembar ini untuk UAS / Sumatif Akhir Semester. Cakupan satu semester penuh; sertakan elemen analisis dan evaluasi.",
+    kopLabel: "PENILAIAN AKHIR SEMESTER",
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 }
   },
   tka: {
     difficultyDist: { mudah: 4, sedang: 11, sulit: 10 },
     defaultTotalSoal: 25,
-    cognitiveLevels: ['C2', 'C3', 'C4'],
+    cognitiveLevels: ["C2", "C3", "C4"],
     stemHint:
-      'Soal kontekstual / HOTS dengan stimulus berupa paragraf 3-5 kalimat, infografik sederhana, atau dialog. Distractor menggoda.',
+      "Soal kontekstual / HOTS dengan stimulus berupa paragraf 3-5 kalimat, infografik sederhana, atau dialog. Distractor menggoda.",
     promptPreamble:
-      'Lembar ini untuk TKA (Tes Kemampuan Akademik). Format formal, soal HOTS, banyak konteks dan analisis.',
-    kopLabel: 'TKA',
-    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
-  },
+      "Lembar ini untuk TKA (Tes Kemampuan Akademik). Format formal, soal HOTS, banyak konteks dan analisis.",
+    kopLabel: "TKA",
+    composition: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 }
+  }
 }
 
 function scaleDifficultyDist(
   base: { mudah: number; sedang: number; sulit: number },
-  totalSoal: number,
+  totalSoal: number
 ): { mudah: number; sedang: number; sulit: number } {
   const baseTotal = base.mudah + base.sedang + base.sulit
   const mudah = Math.round((base.mudah / baseTotal) * totalSoal)
@@ -110,17 +107,17 @@ function scaleDifficultyDist(
 export function resolveDifficultyDist(
   examType: ExamType,
   difficulty: ExamDifficulty,
-  totalSoal: number,
+  totalSoal: number
 ): { mudah: number; sedang: number; sulit: number } {
-  if (difficulty === 'campuran') return rescaleDifficultyDist(examType, totalSoal)
+  if (difficulty === "campuran") return rescaleDifficultyDist(examType, totalSoal)
   // Heavy bias to the chosen bucket but keep small variation so the sheet
   // doesn't feel monotone (16/3/1 instead of 20/0/0).
   switch (difficulty) {
-    case 'mudah':
+    case "mudah":
       return scaleDifficultyDist({ mudah: 16, sedang: 3, sulit: 1 }, totalSoal)
-    case 'sedang':
+    case "sedang":
       return scaleDifficultyDist({ mudah: 3, sedang: 14, sulit: 3 }, totalSoal)
-    case 'sulit':
+    case "sulit":
       return scaleDifficultyDist({ mudah: 1, sedang: 3, sulit: 16 }, totalSoal)
   }
 }
@@ -132,7 +129,7 @@ export function resolveDifficultyDist(
  */
 export function rescaleDifficultyDist(
   examType: ExamType,
-  totalSoal: number,
+  totalSoal: number
 ): { mudah: number; sedang: number; sulit: number } {
   return scaleDifficultyDist(EXAM_TYPE_PROFILE[examType].difficultyDist, totalSoal)
 }
@@ -152,7 +149,7 @@ export function rescaleDifficultyDist(
 export function resolveComposition(
   examType: ExamType,
   totalSoal: number,
-  override?: Composition,
+  override?: Composition
 ): Composition {
   if (override !== undefined) {
     const sum = override.mcqSingle + override.mcqMulti + override.trueFalse
@@ -169,4 +166,3 @@ export function resolveComposition(
   const trueFalse = Math.max(0, totalSoal - mcqSingle - mcqMulti)
   return { mcqSingle, mcqMulti, trueFalse }
 }
-

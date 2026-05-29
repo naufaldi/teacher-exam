@@ -1,20 +1,20 @@
-import { describe, test, expect } from 'vitest'
-import { Schema, Either } from 'effect'
+import { Either, Schema } from "effect"
+import { describe, expect, test } from "vitest"
 import {
   AnswerLetterSchema,
   ExamSubjectSchema,
   MultiAnswerSchema,
   QuestionTypeSchema,
-  SUBJECT_LABEL,
-} from '../primitives.js'
+  SUBJECT_LABEL
+} from "../primitives.js"
 
-describe('ExamSubjectSchema', () => {
+describe("ExamSubjectSchema", () => {
   test.each([
-    ['bahasa_indonesia', 'Bahasa Indonesia'],
-    ['pendidikan_pancasila', 'Pendidikan Pancasila'],
-    ['ipas', 'IPAS'],
-    ['bahasa_inggris', 'Bahasa Inggris'],
-    ['matematika', 'Matematika'],
+    ["bahasa_indonesia", "Bahasa Indonesia"],
+    ["pendidikan_pancasila", "Pendidikan Pancasila"],
+    ["ipas", "IPAS"],
+    ["bahasa_inggris", "Bahasa Inggris"],
+    ["matematika", "Matematika"]
   ])("accepts '%s' and exposes its label", (subject, label) => {
     const result = Schema.decodeUnknownEither(ExamSubjectSchema)(subject)
     expect(Either.isRight(result)).toBe(true)
@@ -22,46 +22,46 @@ describe('ExamSubjectSchema', () => {
   })
 })
 
-describe('AnswerLetterSchema', () => {
+describe("AnswerLetterSchema", () => {
   test("accepts 'a'", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('a')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("a")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts 'b'", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('b')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("b")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts 'c'", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('c')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("c")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts 'd'", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('d')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("d")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("rejects 'e' (out of range)", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('e')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("e")
     expect(Either.isLeft(result)).toBe(true)
   })
 
   test("rejects 'A' (case-sensitive)", () => {
-    const result = Schema.decodeUnknownEither(AnswerLetterSchema)('A')
+    const result = Schema.decodeUnknownEither(AnswerLetterSchema)("A")
     expect(Either.isLeft(result)).toBe(true)
   })
 })
 
-describe('MultiAnswerSchema', () => {
+describe("MultiAnswerSchema", () => {
   test("accepts ['a','b'] (min 2)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'b'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a", "b"])
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts ['a','b','c'] (max 3)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'b', 'c'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a", "b", "c"])
     expect(Either.isRight(result)).toBe(true)
   })
 
@@ -71,60 +71,60 @@ describe('MultiAnswerSchema', () => {
   })
 
   test("rejects ['a'] (below min 2)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a"])
     expect(Either.isLeft(result)).toBe(true)
   })
 
   test("rejects ['a','a'] (duplicate letters)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'a'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a", "a"])
     expect(Either.isLeft(result)).toBe(true)
   })
 
   test("rejects ['a','e'] (invalid letter in array)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'e'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a", "e"])
     expect(Either.isLeft(result)).toBe(true)
   })
 
   test("rejects ['a','b','c','d'] (above max 3)", () => {
-    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(['a', 'b', 'c', 'd'])
+    const result = Schema.decodeUnknownEither(MultiAnswerSchema)(["a", "b", "c", "d"])
     expect(Either.isLeft(result)).toBe(true)
   })
 })
 
-describe('QuestionTypeSchema', () => {
+describe("QuestionTypeSchema", () => {
   test("accepts 'mcq_single'", () => {
-    const result = Schema.decodeUnknownEither(QuestionTypeSchema)('mcq_single')
+    const result = Schema.decodeUnknownEither(QuestionTypeSchema)("mcq_single")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts 'mcq_multi'", () => {
-    const result = Schema.decodeUnknownEither(QuestionTypeSchema)('mcq_multi')
+    const result = Schema.decodeUnknownEither(QuestionTypeSchema)("mcq_multi")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("accepts 'true_false'", () => {
-    const result = Schema.decodeUnknownEither(QuestionTypeSchema)('true_false')
+    const result = Schema.decodeUnknownEither(QuestionTypeSchema)("true_false")
     expect(Either.isRight(result)).toBe(true)
   })
 
   test("rejects 'essay'", () => {
-    const result = Schema.decodeUnknownEither(QuestionTypeSchema)('essay')
+    const result = Schema.decodeUnknownEither(QuestionTypeSchema)("essay")
     expect(Either.isLeft(result)).toBe(true)
   })
 
   test("rejects 'mcq_Single' (case-sensitive)", () => {
-    const result = Schema.decodeUnknownEither(QuestionTypeSchema)('mcq_Single')
+    const result = Schema.decodeUnknownEither(QuestionTypeSchema)("mcq_Single")
     expect(Either.isLeft(result)).toBe(true)
   })
 })
 
-describe('ExamSubjectSchema', () => {
+describe("ExamSubjectSchema", () => {
   test("accepts 'matematika'", () => {
-    const result = Schema.decodeUnknownEither(ExamSubjectSchema)('matematika')
+    const result = Schema.decodeUnknownEither(ExamSubjectSchema)("matematika")
     expect(Either.isRight(result)).toBe(true)
   })
 
-  test('labels matematika as Matematika', () => {
-    expect((SUBJECT_LABEL as Record<string, string>)['matematika']).toBe('Matematika')
+  test("labels matematika as Matematika", () => {
+    expect((SUBJECT_LABEL as Record<string, string>)["matematika"]).toBe("Matematika")
   })
 })

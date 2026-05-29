@@ -1,72 +1,88 @@
-import { beforeEach, vi } from 'vitest'
-import { render } from '@testing-library/react'
-import React from 'react'
-import type { ExamWithQuestions } from '@teacher-exam/shared'
-import { examDraftStore } from '../../../lib/exam-draft-store.js'
-import { makeExamWithQuestions } from '../../../test/fixtures/exam.js'
+import type { ExamWithQuestions } from "@teacher-exam/shared"
+import { render } from "@testing-library/react"
+import React from "react"
+import { beforeEach, vi } from "vitest"
 import {
-  mockApiImplementationOnce as mockApiImplementationOnceHelper,
-  mockApiResolvedValueOnce as mockApiResolvedValueOnceHelper,
   type ApiMock,
-} from '../../../lib/api-test-utils.js'
+  mockApiImplementationOnce as mockApiImplementationOnceHelper,
+  mockApiResolvedValueOnce as mockApiResolvedValueOnceHelper
+} from "../../../lib/api-test-utils.js"
+import { examDraftStore } from "../../../lib/exam-draft-store.js"
+import { makeExamWithQuestions } from "../../../test/fixtures/exam.js"
+
+import { Route as ReviewRoute } from "../../_auth.review.js"
 
 export type ReviewSearchParams = {
-  mode: 'fast' | 'slow'
-  from?: 'generate'
+  mode: "fast" | "slow"
+  from?: "generate"
   examId?: string
 }
 
-const { mockNavigate, mockToast, getSearchParams, setSearchParams, reviewTestCtx } = vi.hoisted(() => {
-  let mockSearchParams: ReviewSearchParams = { mode: 'fast' }
+const { apiMocks, getSearchParams, mockNavigate, mockToast, reviewTestCtx, setSearchParams } = vi.hoisted(() => {
+  let mockSearchParams: ReviewSearchParams = { mode: "fast" }
   return {
+    apiMocks: {
+      examsGet: vi.fn(),
+      examsPatch: vi.fn(),
+      examsFinalize: vi.fn(),
+      examsValidateCurriculum: vi.fn(),
+      questionsPatch: vi.fn(),
+      questionsRegenerate: vi.fn()
+    },
     mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
     mockToast: vi.fn(),
     getSearchParams: () => mockSearchParams,
     setSearchParams: (params: ReviewSearchParams) => {
       mockSearchParams = params
     },
-    reviewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined },
+    reviewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined }
   }
 })
 
-vi.mock('@tanstack/react-router', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('@tanstack/react-router')>()
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
       options: opts,
       useSearch: () => getSearchParams(),
-      useLoaderData: () => reviewTestCtx.mockLoaderData,
+      useLoaderData: () => reviewTestCtx.mockLoaderData
     }),
     useNavigate: () => mockNavigate,
     useSearch: () => getSearchParams(),
-    redirect: ({ to }: { to: string }) =>
-      Object.assign(new Error(`Redirect to ${to}`), { isRedirect: true, to }),
+    redirect: ({ to }: { to: string }) => Object.assign(new Error(`Redirect to ${to}`), { isRedirect: true, to })
   }
 })
 
-vi.mock('../../../lib/api.js', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('../../../lib/api.js')>()
+vi.mock("../../../lib/api.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../../lib/api.js")>()
   return {
     ...orig,
     api: {
       ...orig.api,
-      exams: { ...orig.api.exams, get: vi.fn(), validateCurriculum: vi.fn() },
-      questions: { patch: vi.fn(), regenerate: vi.fn() },
-    },
+      exams: {
+        ...orig.api.exams,
+        get: apiMocks.examsGet,
+        patch: apiMocks.examsPatch,
+        finalize: apiMocks.examsFinalize,
+        validateCurriculum: apiMocks.examsValidateCurriculum
+      },
+      questions: {
+        ...orig.api.questions,
+        patch: apiMocks.questionsPatch,
+        regenerate: apiMocks.questionsRegenerate
+      }
+    }
   }
 })
 
-vi.mock('@teacher-exam/ui', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('@teacher-exam/ui')>()
+vi.mock("@teacher-exam/ui", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("@teacher-exam/ui")>()
   return {
     ...orig,
-    useToast: () => ({ toast: mockToast }),
+    useToast: () => ({ toast: mockToast })
   }
 })
-
-import { api } from '../../../lib/api.js'
-import { Route } from '../../_auth.review.js'
 
 type RouteOptions = {
   component: React.ComponentType
@@ -74,17 +90,16 @@ type RouteOptions = {
   pendingComponent?: React.ComponentType
 }
 
-export const mockExamsGet = (api as unknown as { exams: { get: ReturnType<typeof vi.fn> } }).exams
-  .get
-export const mockQuestionsPatch = (
-  api as unknown as { questions: { patch: ReturnType<typeof vi.fn> } }
-).questions.patch
-export const mockQuestionsRegenerate = (
-  api as unknown as { questions: { regenerate: ReturnType<typeof vi.fn> } }
-).questions.regenerate
-export const mockExamsValidateCurriculum = (
-  api as unknown as { exams: { validateCurriculum: ReturnType<typeof vi.fn> } }
-).exams.validateCurriculum
+export const mockExamsGet = apiMocks.examsGet
+export const mockExamsPatch = apiMocks.examsPatch
+export const mockExamsFinalize = apiMocks.examsFinalize
+export const mockQuestionsPatch = apiMocks.questionsPatch
+export const mockQuestionsRegenerate = apiMocks.questionsRegenerate
+export const mockExamsValidateCurriculum = apiMocks.examsValidateCurriculum
+
+export function getReviewRouteOptions(): RouteOptions {
+  return (ReviewRoute as unknown as { options: RouteOptions }).options
+}
 
 export { mockNavigate, mockToast }
 
@@ -97,7 +112,7 @@ export function getReviewSearch(): ReviewSearchParams {
 }
 
 export function getLoader() {
-  const loader = (Route as unknown as { options: RouteOptions }).options.loader!
+  const loader = (ReviewRoute as unknown as { options: RouteOptions }).options.loader!
   return async (ctx: { deps: Record<string, unknown> }) => {
     reviewTestCtx.mockLoaderData = (await loader(ctx)) as ExamWithQuestions
     return reviewTestCtx.mockLoaderData
@@ -105,7 +120,7 @@ export function getLoader() {
 }
 
 export function renderReviewPage() {
-  const ReviewPage = (Route as unknown as { options: RouteOptions }).options.component
+  const ReviewPage = (ReviewRoute as unknown as { options: RouteOptions }).options.component
   return render(<ReviewPage />)
 }
 
@@ -118,9 +133,9 @@ export function mockApiResolvedValueOnce(mock: ApiMock, value: unknown) {
   mockApiResolvedValueOnceHelper(mock, value)
 }
 
-export function mockApiImplementationOnce<T, Args extends unknown[]>(
+export function mockApiImplementationOnce<T, Args extends Array<unknown>>(
   mock: ApiMock,
-  fn: (...args: Args) => Promise<T> | T,
+  fn: (...args: Args) => Promise<T> | T
 ) {
   mockApiImplementationOnceHelper(mock, fn)
 }
@@ -130,5 +145,5 @@ beforeEach(() => {
   mockNavigate.mockResolvedValue(undefined)
   examDraftStore.reset()
   reviewTestCtx.mockLoaderData = undefined
-  setSearchParams({ mode: 'fast' })
+  setSearchParams({ mode: "fast" })
 })

@@ -206,6 +206,43 @@ These rules are enforceable across `apps/api`, `apps/web`, `packages/shared`, an
 11. **MUST** brand all new entity primary-key schemas via `Schema.String.pipe(Schema.brand('XId'))`.
 12. **MUST** use the platform-specific `runMain` (`NodeRuntime.runMain`, `BrowserRuntime.runMain`) for any standalone long-running Effect program. The HttpApi bridge entrypoint is exempt because it owns the Node HTTP request lifecycle.
 
+### Runtime version
+
+Production and CI pin **`effect@3.21.2`** (see root `package.json` `pnpm.overrides`). Use [effect.website](https://effect.website/docs/code-style/guidelines/) and `effect-solutions` against **v3** APIs. The optional v4 clone under `~/.local/share/effect-solutions/effect` is reference-only.
+
+### Error model (two tiers)
+
+| Layer | Pattern | Location |
+|-------|---------|----------|
+| HTTP responses | `Schema.TaggedError` + `HttpApiSchema.annotations({ status })` | `apps/api/src/api/errors/http.ts` |
+| Domain / services | `Data.TaggedError` | `apps/api/src/errors/`, service modules |
+
+### Import policy
+
+| Package | Rule |
+|---------|------|
+| Root `effect` | Named imports from `"effect"` only — no `effect/*` deep paths, no `flow`, no `import * as` |
+| `@effect/platform`, `@effect/sql` | Subpath namespace imports (enforced by `@effect/no-import-from-barrel-package` in ESLint) |
+
+### Lint and CI workflow
+
+Before push or PR:
+
+```bash
+pnpm lint && pnpm effect:check && pnpm type-check && pnpm test
+```
+
+| Command | Purpose |
+|---------|---------|
+| `pnpm lint` | `@effect/eslint-plugin` dprint + import rules |
+| `pnpm effect:check` | AGENTS-only rules (flow, Match, client bundle guards) |
+| `pnpm type-check` | Turbo type-check all packages |
+| `pnpm test` | Vitest across packages |
+
+IDE: use workspace TypeScript (`.vscode/settings.json`) and `@effect/language-service` diagnostics configured in `tsconfig.base.json`.
+
+Key language-service severities (error): `floatingEffect`, `missingStarInYieldEffectGen`, `globalConsoleInEffect`, `globalFetchInEffect`.
+
 <!-- effect-solutions:start -->
 ## Effect Best Practices
 
@@ -222,5 +259,5 @@ Never guess at Effect patterns — check the guide first.
 
 ## Local Effect Source
 
-The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
-Use this to explore APIs, find usage examples, and understand implementation details when the documentation isn't enough.
+The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for optional deep reference.
+Runtime code targets **Effect v3.21.2**; do not assume v4 APIs without checking the installed version.

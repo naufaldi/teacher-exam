@@ -1,4 +1,4 @@
-import { ActivityBarChart } from './activity-bar-chart.js'
+import { ActivityBarChart } from "./activity-bar-chart.js"
 
 interface StatSummaryProps {
   stats: {
@@ -6,7 +6,7 @@ interface StatSummaryProps {
     finalCount: number
     draftCount: number
   }
-  weeklyActivity: readonly { day: string; count: number; variant?: 'default' | 'secondary' }[]
+  weeklyActivity: ReadonlyArray<{ day: string; count: number; variant?: "default" | "secondary" }>
 }
 
 function StatSummary({ stats, weeklyActivity }: StatSummaryProps) {

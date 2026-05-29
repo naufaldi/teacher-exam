@@ -1,47 +1,49 @@
-import './setup.js'
-import { mockApiSpyResolvedValue } from '../../../lib/api-test-utils.js'
-import { test, expect, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import type { ExamWithQuestions } from '@teacher-exam/shared'
-import { examDraftStore } from '../../../lib/exam-draft-store.js'
+import type { ExamWithQuestions } from "@teacher-exam/shared"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { expect, test } from "vitest"
+import { mockApiSpyResolvedValue } from "../../../lib/api-test-utils.js"
+import { examDraftStore } from "../../../lib/exam-draft-store.js"
+import { makeExamWithCompleteMetadata, makeExamWithQuestions } from "./fixtures.js"
 import {
   getLoader,
+  mockApiResolvedValueOnce,
+  mockExamsFinalize,
   mockExamsGet,
+  mockExamsPatch,
   mockNavigate,
+  mockQuestionsPatch,
   mockToast,
   renderReviewPage,
-  setReviewSearch,
-  mockApiResolvedValueOnce} from './setup.js'
-import { api } from '../../../lib/api.js'
-import { makeExamWithQuestions, makeExamWithCompleteMetadata } from './fixtures.js'
+  setReviewSearch
+} from "./setup.js"
 
-test('Nama Sekolah onBlur PATCHes exam with schoolName only', async () => {
-  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
-  setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('E'))
-  await getLoader()({ deps: { examId: 'E' } })
+test("Nama Sekolah onBlur PATCHes exam with schoolName only", async () => {
+  const examsPatchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
+  setReviewSearch({ mode: "fast", examId: "E" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions("E"))
+  await getLoader()({ deps: { examId: "E" } })
   renderReviewPage()
 
   const input = screen.getByLabelText(/nama sekolah/i)
   await userEvent.clear(input)
-  await userEvent.type(input, 'SD Negeri 1')
+  await userEvent.type(input, "SD Negeri 1")
   fireEvent.blur(input)
   await waitFor(() => {
-    expect(examsPatchSpy).toHaveBeenCalledWith('E', { schoolName: 'SD Negeri 1' })
+    expect(examsPatchSpy).toHaveBeenCalledWith("E", { schoolName: "SD Negeri 1" })
   })
   examsPatchSpy.mockRestore()
 })
 
-test('persistMetaField skips PATCH when examId is undefined', async () => {
-  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
-  setReviewSearch({ mode: 'fast' })
+test("persistMetaField skips PATCH when examId is undefined", async () => {
+  const examsPatchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
+  setReviewSearch({ mode: "fast" })
   examDraftStore.reset()
   renderReviewPage()
 
   const input = screen.getByLabelText(/nama sekolah/i)
   await userEvent.clear(input)
-  await userEvent.type(input, 'SD Negeri 2')
+  await userEvent.type(input, "SD Negeri 2")
   fireEvent.blur(input)
 
   await new Promise((r) => setTimeout(r, 50))
@@ -49,15 +51,15 @@ test('persistMetaField skips PATCH when examId is undefined', async () => {
   examsPatchSpy.mockRestore()
 })
 
-test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
-  const examsPatchSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'patch'), {} as never)
-  setReviewSearch({ mode: 'fast', examId: 'E2' })
-  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions('E2'))
-  await getLoader()({ deps: { examId: 'E2' } })
+test("persistMetaField skips PATCH when Durasi value is NaN", async () => {
+  const examsPatchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
+  setReviewSearch({ mode: "fast", examId: "E2" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions("E2"))
+  await getLoader()({ deps: { examId: "E2" } })
   renderReviewPage()
 
   const input = screen.getByLabelText(/durasi/i) as HTMLInputElement
-  Object.defineProperty(input, 'value', { configurable: true, writable: true, value: 'abc' })
+  Object.defineProperty(input, "value", { configurable: true, writable: true, value: "abc" })
   fireEvent.blur(input)
 
   await new Promise((r) => setTimeout(r, 50))
@@ -65,111 +67,109 @@ test('persistMetaField skips PATCH when Durasi value is NaN', async () => {
   examsPatchSpy.mockRestore()
 })
 
-test('Preview Lembar click calls api.exams.finalize then navigates with examId', async () => {
+test("Preview Lembar click calls api.exams.finalize then navigates with examId", async () => {
   const user = userEvent.setup()
-  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(mockExamsFinalize, {} as never)
 
-  setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata('E'))
-  await getLoader()({ deps: { examId: 'E' } })
+  setReviewSearch({ mode: "fast", examId: "E" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata("E"))
+  await getLoader()({ deps: { examId: "E" } })
 
   renderReviewPage()
 
-  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  const previewButton = screen.getByRole("button", { name: /preview lembar/i })
   await user.click(previewButton)
 
   await waitFor(() => {
-    expect(finalizeSpy).toHaveBeenCalledWith('E')
+    expect(finalizeSpy).toHaveBeenCalledWith("E")
   })
   await waitFor(() => {
     expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ to: '/preview', search: { examId: 'E' } }),
+      expect.objectContaining({ to: "/preview", search: { examId: "E" } })
     )
   })
 
   finalizeSpy.mockRestore()
 })
 
-test('fast mode handlePreviewClick auto-accepts server-pending questions before calling finalize', async () => {
+test("fast mode handlePreviewClick auto-accepts server-pending questions before calling finalize", async () => {
   const user = userEvent.setup()
-  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
-  const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(mockExamsFinalize, {} as never)
+  const patchSpy = mockApiSpyResolvedValue(mockQuestionsPatch, {} as never)
 
-  setReviewSearch({ mode: 'fast', examId: 'exam_fast_auto' })
+  setReviewSearch({ mode: "fast", examId: "exam_fast_auto" })
   const exam: ExamWithQuestions = {
-    ...makeExamWithCompleteMetadata('exam_fast_auto'),
-    questions: makeExamWithQuestions('exam_fast_auto').questions,
+    ...makeExamWithCompleteMetadata("exam_fast_auto"),
+    questions: makeExamWithQuestions("exam_fast_auto").questions
   }
   mockApiResolvedValueOnce(mockExamsGet, exam)
-  await getLoader()({ deps: { examId: 'exam_fast_auto' } })
+  await getLoader()({ deps: { examId: "exam_fast_auto" } })
 
   renderReviewPage()
 
-  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  const previewButton = screen.getByRole("button", { name: /preview lembar/i })
   await user.click(previewButton)
 
   await waitFor(() => {
     expect(patchSpy).toHaveBeenCalledTimes(20)
     expect(
-      patchSpy.mock.calls.every((c) => (c[1] as { status: string }).status === 'accepted'),
+      patchSpy.mock.calls.every((c) => (c[1] as { status: string }).status === "accepted")
     ).toBe(true)
-    expect(finalizeSpy).toHaveBeenCalledWith('exam_fast_auto')
+    expect(finalizeSpy).toHaveBeenCalledWith("exam_fast_auto")
   })
 
   finalizeSpy.mockRestore()
   patchSpy.mockRestore()
 })
 
-test('slow mode handlePreviewClick does NOT auto-accept questions before finalize', async () => {
+test("slow mode handlePreviewClick does NOT auto-accept questions before finalize", async () => {
   const user = userEvent.setup()
-  const finalizeSpy = mockApiSpyResolvedValue(vi.spyOn(api.exams, 'finalize'), {} as never)
-  const patchSpy = mockApiSpyResolvedValue(vi.spyOn(api.questions, 'patch'), {} as never)
+  const finalizeSpy = mockApiSpyResolvedValue(mockExamsFinalize, {} as never)
+  const patchSpy = mockApiSpyResolvedValue(mockQuestionsPatch, {} as never)
 
-  setReviewSearch({ mode: 'slow', examId: 'exam_slow_no_auto' })
+  setReviewSearch({ mode: "slow", examId: "exam_slow_no_auto" })
   const exam: ExamWithQuestions = {
-    ...makeExamWithCompleteMetadata('exam_slow_no_auto'),
-    questions: makeExamWithCompleteMetadata('exam_slow_no_auto').questions,
+    ...makeExamWithCompleteMetadata("exam_slow_no_auto"),
+    questions: makeExamWithCompleteMetadata("exam_slow_no_auto").questions
   }
   mockApiResolvedValueOnce(mockExamsGet, exam)
-  await getLoader()({ deps: { examId: 'exam_slow_no_auto' } })
+  await getLoader()({ deps: { examId: "exam_slow_no_auto" } })
 
   renderReviewPage()
 
-  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  const previewButton = screen.getByRole("button", { name: /preview lembar/i })
   await user.click(previewButton)
 
   await waitFor(() => {
-    expect(finalizeSpy).toHaveBeenCalledWith('exam_slow_no_auto')
+    expect(finalizeSpy).toHaveBeenCalledWith("exam_slow_no_auto")
   })
-  expect(patchSpy.mock.calls.filter((c) => (c[1] as { status?: string }).status === 'accepted')).toHaveLength(0)
+  expect(patchSpy.mock.calls.filter((c) => (c[1] as { status?: string }).status === "accepted")).toHaveLength(0)
 
   finalizeSpy.mockRestore()
   patchSpy.mockRestore()
 })
 
-test('Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOWED', async () => {
+test("Preview Lembar shows specific toast when server returns FINALIZE_NOT_ALLOWED", async () => {
   const user = userEvent.setup()
-  const finalizeSpy = vi.spyOn(api.exams, 'finalize').mockRejectedValue(
-    Object.assign(new Error('Not allowed'), { code: 'FINALIZE_NOT_ALLOWED' }),
+  mockExamsFinalize.mockRejectedValueOnce(
+    Object.assign(new Error("Not allowed"), { code: "FINALIZE_NOT_ALLOWED" })
   )
 
-  setReviewSearch({ mode: 'fast', examId: 'E' })
-  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata('E'))
-  await getLoader()({ deps: { examId: 'E' } })
+  setReviewSearch({ mode: "fast", examId: "E" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata("E"))
+  await getLoader()({ deps: { examId: "E" } })
 
   renderReviewPage()
 
-  const previewButton = screen.getByRole('button', { name: /preview lembar/i })
+  const previewButton = screen.getByRole("button", { name: /preview lembar/i })
   await user.click(previewButton)
 
   await waitFor(() => {
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        variant: 'error',
-        description: 'Semua soal harus diterima sebelum finalisasi.',
-      }),
+        variant: "error",
+        description: "Semua soal harus diterima sebelum finalisasi."
+      })
     )
   })
-
-  finalizeSpy.mockRestore()
 })

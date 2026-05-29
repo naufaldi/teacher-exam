@@ -4,7 +4,7 @@ export type RateWindow = {
 }
 
 type Bucket = {
-  readonly hits: Array<number[]>
+  readonly hits: Array<Array<number>>
 }
 
 export type RateLimitCheckResult =
@@ -17,11 +17,11 @@ export type RateLimitChecker = {
 }
 
 export function createRateLimitChecker(
-  windows: readonly RateWindow[],
-  opts: { now?: () => number } = {},
+  windows: ReadonlyArray<RateWindow>,
+  opts: { now?: () => number } = {}
 ): RateLimitChecker {
   if (windows.length === 0) {
-    throw new Error('createRateLimitChecker requires at least one window')
+    throw new Error("createRateLimitChecker requires at least one window")
   }
   const now = opts.now ?? (() => Date.now())
   const buckets = new Map<string, Bucket>()
@@ -51,7 +51,7 @@ export function createRateLimitChecker(
       if (retryAfterMs > 0) {
         return {
           allowed: false,
-          retryAfterSec: Math.max(1, Math.ceil(retryAfterMs / 1000)),
+          retryAfterSec: Math.max(1, Math.ceil(retryAfterMs / 1000))
         }
       }
 
@@ -60,13 +60,13 @@ export function createRateLimitChecker(
     },
     reset() {
       buckets.clear()
-    },
+    }
   }
 }
 
-export const GLOBAL_RATE_WINDOWS: readonly RateWindow[] = [{ windowMs: 60_000, max: 60 }]
+export const GLOBAL_RATE_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 60_000, max: 60 }]
 
-export const AI_GENERATE_RATE_WINDOWS: readonly RateWindow[] = [
+export const AI_GENERATE_RATE_WINDOWS: ReadonlyArray<RateWindow> = [
   { windowMs: 60_000, max: 5 },
-  { windowMs: 24 * 60 * 60_000, max: 30 },
+  { windowMs: 24 * 60 * 60_000, max: 30 }
 ]

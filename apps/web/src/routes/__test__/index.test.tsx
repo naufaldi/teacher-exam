@@ -1,51 +1,51 @@
-import type { ReactElement, ReactNode } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import type { ReactElement, ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mockGetSession, mockSignInSocial, mockSearch } = vi.hoisted(() => ({
+import { Route } from "../index"
+
+const { mockGetSession, mockSearch, mockSignInSocial } = vi.hoisted(() => ({
   mockGetSession: vi.fn(),
   mockSignInSocial: vi.fn(),
-  mockSearch: { reason: undefined as 'session_expired' | undefined },
+  mockSearch: { reason: undefined as "session_expired" | undefined }
 }))
 
-vi.mock('../../lib/auth-client', () => ({
+vi.mock("../../lib/auth-client", () => ({
   getSession: mockGetSession,
-  signIn: { social: mockSignInSocial },
+  signIn: { social: mockSignInSocial }
 }))
 
 const mockNavigate = vi.fn()
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: Record<string, unknown>) => ({
     options: config,
-    useSearch: () => mockSearch,
+    useSearch: () => mockSearch
   }),
   useNavigate: () => mockNavigate,
   Link: ({
     children,
-    to,
     className,
+    to
   }: {
     children: ReactNode
     to?: unknown
     className?: string
   }) => (
-    <a href={typeof to === 'string' ? to : '#'} className={className}>
+    <a href={typeof to === "string" ? to : "#"} className={className}>
       {children}
     </a>
   ),
   redirect: (opts: Record<string, unknown>) => {
-    const err = new Error('redirect') as Error & Record<string, unknown>
+    const err = new Error("redirect") as Error & Record<string, unknown>
     err.isRedirect = true
     Object.assign(err, opts)
     throw err
   },
   isRedirect: (value: unknown) =>
-    Boolean(value && typeof value === 'object' && (value as { isRedirect?: unknown }).isRedirect),
+    Boolean(value && typeof value === "object" && (value as { isRedirect?: unknown }).isRedirect)
 }))
-
-import { Route } from '../index'
 
 type BeforeLoadFn = () => Promise<unknown>
 type LoginComponent = () => ReactElement
@@ -60,9 +60,9 @@ beforeEach(() => {
   mockSearch.reason = undefined
 })
 
-describe('index.beforeLoad', () => {
-  it('redirects authenticated users to the dashboard', async () => {
-    mockGetSession.mockResolvedValue({ data: { user: { id: 'u1' } } })
+describe("index.beforeLoad", () => {
+  it("redirects authenticated users to the dashboard", async () => {
+    mockGetSession.mockResolvedValue({ data: { user: { id: "u1" } } })
 
     let caught: (Error & Record<string, unknown>) | undefined
     try {
@@ -72,29 +72,29 @@ describe('index.beforeLoad', () => {
     }
 
     expect(caught).toBeDefined()
-    expect(caught?.['to']).toBe('/dashboard')
+    expect(caught?.["to"]).toBe("/dashboard")
   })
 
-  it('renders the login page when session lookup fails without a redirect', async () => {
-    mockGetSession.mockRejectedValue(new Error('Failed to fetch'))
+  it("renders the login page when session lookup fails without a redirect", async () => {
+    mockGetSession.mockRejectedValue(new Error("Failed to fetch"))
 
     await expect(beforeLoad()).resolves.toBeUndefined()
     render(<LoginPage />)
 
-    expect(screen.getByRole('button', { name: 'Masuk dengan akun Google' })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Masuk dengan akun Google" })).toBeInTheDocument()
   })
 })
 
-describe('LoginPage', () => {
-  it('starts Google sign-in with an absolute dashboard callback URL', async () => {
+describe("LoginPage", () => {
+  it("starts Google sign-in with an absolute dashboard callback URL", async () => {
     const user = userEvent.setup()
     render(<LoginPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Masuk dengan akun Google' }))
+    await user.click(screen.getByRole("button", { name: "Masuk dengan akun Google" }))
 
     expect(mockSignInSocial).toHaveBeenCalledWith({
-      provider: 'google',
-      callbackURL: `${window.location.origin}/dashboard`,
+      provider: "google",
+      callbackURL: `${window.location.origin}/dashboard`
     })
   })
 })

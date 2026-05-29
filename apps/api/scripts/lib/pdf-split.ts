@@ -1,5 +1,5 @@
-import { PDFDocument } from 'pdf-lib'
-import { readFile } from 'node:fs/promises'
+import { readFile } from "node:fs/promises"
+import { PDFDocument } from "pdf-lib"
 
 /**
  * One slice of a source PDF that fits inside Anthropic's per-document-block
@@ -22,7 +22,7 @@ const OVERLAP_PAGES = 5
 export async function extractPageRange(
   src: PDFDocument,
   startPage: number,
-  endPage: number,
+  endPage: number
 ): Promise<Buffer> {
   const total = src.getPageCount()
   if (startPage < 1 || endPage > total || startPage > endPage) {
@@ -40,14 +40,14 @@ export async function extractPageRange(
  * computation over an already-loaded document — callers materialize bytes on
  * demand via `extractPageRange`.
  */
-export function planChunks(doc: PDFDocument): PdfChunkRange[] {
+export function planChunks(doc: PDFDocument): Array<PdfChunkRange> {
   const total = doc.getPageCount()
 
   if (total <= PAGES_PER_CHUNK) {
     return [{ index: 1, total: 1, startPage: 1, endPage: total }]
   }
 
-  const ranges: Array<Omit<PdfChunkRange, 'total'>> = []
+  const ranges: Array<Omit<PdfChunkRange, "total">> = []
   let start = 0
   while (start < total) {
     const end = Math.min(start + PAGES_PER_CHUNK, total)

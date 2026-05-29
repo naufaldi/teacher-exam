@@ -3,7 +3,19 @@
   "compilerOptions": {
     "plugins": [
       {
-        "name": "@effect/language-service"
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "missingStarInYieldEffectGen": "error",
+          "globalConsoleInEffect": "error",
+          "globalFetchInEffect": "error",
+          "tryCatchInEffectGen": "warning",
+          "missedPipeableOpportunity": "warning",
+          "unnecessaryFailYieldableError": "off",
+          "leakingRequirements": "warning"
+        },
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectWarningsInTscExitCode": true
       }
     ],
     "target": "ES2022",
