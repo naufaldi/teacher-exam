@@ -115,7 +115,7 @@ export function createHttpApiTestLayer(opts: {
     TestDbLayer,
     TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
-    BankServiceLive,
+    BankServiceLive.pipe(Layer.provide(TestDbLayer)),
     opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,
     HttpServer.layerContext

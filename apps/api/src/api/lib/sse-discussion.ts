@@ -40,7 +40,12 @@ export function runDiscussionSse<A>(
       }, 25_000)
 
       const program = Effect.gen(function*() {
-        const discussionMd = yield* Stream.runFold(stream, "", (acc, chunk) => acc + chunk)
+        let discussionMd = ""
+        yield* Stream.runForEach(stream, (chunk) =>
+          Effect.sync(() => {
+            discussionMd += chunk
+            writeSse("chunk", JSON.stringify({ text: chunk }))
+          }))
         return yield* onComplete(discussionMd)
       })
 

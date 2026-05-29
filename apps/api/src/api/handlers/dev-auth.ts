@@ -1,11 +1,15 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import * as HttpServerRequest from "@effect/platform/HttpServerRequest"
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { assertDevAuthAllowed, DevAuthForbiddenError, getDevCredentials } from "../../lib/dev-auth"
 import { TeacherExamApi } from "../definition"
 import { ApiForbidden } from "../errors/http"
 import { AuthService } from "../services/auth-service"
+
+class DevAuthUnexpectedError extends Data.TaggedError("DevAuthUnexpectedError")<{
+  cause: unknown
+}> {}
 
 export const DevAuthLive = HttpApiBuilder.group(
   TeacherExamApi,
@@ -16,16 +20,22 @@ export const DevAuthLive = HttpApiBuilder.group(
         const request = yield* HttpServerRequest.HttpServerRequest
         const host = request.headers["host"] ?? ""
 
-        try {
-          assertDevAuthAllowed(host)
-        } catch (err) {
-          if (err instanceof DevAuthForbiddenError) {
-            return yield* Effect.fail(
-              new ApiForbidden({ error: "Forbidden", message: "Dev auth is not available" })
-            )
-          }
-          return yield* Effect.die(err)
-        }
+        yield* Effect.try({
+          try: () => assertDevAuthAllowed(host),
+          catch: (err): DevAuthForbiddenError | DevAuthUnexpectedError =>
+            err instanceof DevAuthForbiddenError
+              ? err
+              : new DevAuthUnexpectedError({ cause: err })
+        }).pipe(
+          Effect.catchIf(
+            (err): err is DevAuthForbiddenError => err instanceof DevAuthForbiddenError,
+            () =>
+              Effect.fail(
+                new ApiForbidden({ error: "Forbidden", message: "Dev auth is not available" })
+              )
+          ),
+          Effect.catchAll((err) => Effect.die(err))
+        )
 
         const { email, password } = getDevCredentials()
         const authService = yield* AuthService
