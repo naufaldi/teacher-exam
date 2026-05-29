@@ -1,42 +1,48 @@
 # M4 Bank Soal — browser E2E (E16)
 
 **Date:** 2026-05-29  
-**Branch:** `chore/e-epic-hygiene` (post PR #127 / #128)  
-**Covers:** #69 E16
+**Branch:** `chore/e-epic-hygiene`  
+**Covers:** [#69 E16](https://github.com/naufaldi/teacher-exam/issues/69)
 
-## Flow
+## Environment
+
+- Web: `http://localhost:5173`
+- API: `http://localhost:3000`
+- Auth: dev user (`Guru Dev`) via existing session / `DEV_AUTH_ENABLED`
+
+## Flow verified
 
 | Step | Action | Result |
 |------|--------|--------|
-| 1 | Dev login via "Masuk Guru Dev" | Dashboard loaded |
-| 2 | Open `/generate` (fast track pre-selected) | Generate form ready |
-| 3 | Bank already seeded from prior fast-track accepts | Skipped live AI; verified `/bank-soal` shows saved soal |
-| 4 | `/bank-soal` → Bank Saya tab | ≥20 soal visible with filters/stats |
-| 5 | Select ≥5 checkboxes → Buat Ujian → submit metadata | Builder dialog + draft exam created |
-| 6 | `/preview?examId=…` for bank-built draft | Preview Lembar renders, no console errors |
-| 7 | Riwayat → Bagikan on final exam | Share/publish action triggered |
-| 8 | Logout → `/bank-soal-publik` | Anonymous public bank loads (Masuk link, no auth required) |
+| 1 | Open `/dashboard` (authenticated) | Dashboard loads, Guru Dev session active |
+| 2 | Navigate `/bank-soal` → Bank Saya tab | 20+ bank questions listed with filters/toolbar |
+| 3 | Select 5 questions → **Buat Ujian** | Builder dialog opens |
+| 4 | Fill metadata → **Buat ujian** | Redirect to `/preview?examId=…` |
+| 5 | Open `/bank-soal-publik` (anonymous) | Public bank page loads without login |
 
 ## Screenshots
 
-- `.agent-browser/m4-bank-01-login.png`
-- `.agent-browser/m4-bank-02-generate.png`
-- `.agent-browser/m4-bank-03-review.png` (bank-soal stand-in — pre-seeded bank, no live generate)
-- `.agent-browser/m4-bank-04-bank-saya.png`
-- `.agent-browser/m4-bank-05-builder.png`
-- `.agent-browser/m4-bank-06-preview.png`
-- `.agent-browser/m4-bank-07-share.png`
-- `.agent-browser/m4-bank-08-public.png`
+| File | Step |
+|------|------|
+| `.agent-browser/m4-bank-01-dashboard.png` | Dashboard (authenticated) |
+| `.agent-browser/m4-bank-02-bank-saya.png` | Bank Saya with selection + sticky builder bar |
+| `.agent-browser/m4-bank-03-builder.png` | Builder metadata dialog |
+| `.agent-browser/m4-bank-04-preview.png` | Preview after build-exam from bank |
+| `.agent-browser/m4-bank-05-public.png` | Anonymous public bank route |
 
 ## Console
 
-Clean — no `error` or `warn` entries captured via `window.__agentLogs` hook during the chain.
+No `error` or `warn` captured during verified steps (`window.__agentLogs` hook).
 
-## Issues verified
+## Issues exercised
 
-E10 tabs, E11 save (pre-seeded), E12 filters, E14 stats, E15 builder, E17 public route
+- E10 tabs (`Bank Saya` / `Bank Publik`)
+- E12 filter + search + pagination toolbar
+- E14 stats banner (visible on Bank Saya)
+- E15 exam builder (≥5 selection → metadata → preview)
+- E17 public route without auth
 
 ## Notes
 
-- Step 3 used existing dev-seed + prior fast-track bank entries instead of a new AI generate run (avoids flaky/slow live AI in CI-style verification).
-- Bank builder navigates to preview via `examId` query param after successful `POST /api/bank/build-exam`.
+- Publish-via-Riwayat share and full Generate→Review chain were not re-run in this pass; bank data came from prior dev generates with auto-save.
+- Per-card public toggle (E13) superseded by exam-driven publish per [design spec](../superpowers/specs/2026-05-27-bank-soal-core-design.md).
