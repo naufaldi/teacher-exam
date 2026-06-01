@@ -18,6 +18,7 @@ import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm"
 import { Context, Data, Effect, Layer } from "effect"
 import type { ApiDatabaseError } from "../errors/http"
 import { runDb } from "../lib/db-effect"
+import { logDomainError } from "../../lib/effect-log"
 import { DbClient } from "./db"
 
 export class BankSaveError extends Data.TaggedError("BankSaveError")<{
@@ -171,6 +172,16 @@ function toPublicBankQuestion(
   }
 }
 
+/**
+ * BankService intentionally exposes `DbClient` in its method requirements
+ * so handlers can compose bank operations with other DB-bound Effects
+ * (transactions, multi-step workflows). Closing the requirement inside the
+ * Layer would force Effect.provideService on every call site or per-method
+ * service wrappers, adding ceremony without changing the runtime wiring —
+ * both BankServiceLive and handler Layers share CoreLive.
+ *
+ * @effect-expect-leaking DbClient
+ */
 export class BankService extends Context.Tag("BankService")<
   BankService,
   BankServiceApi
@@ -180,7 +191,7 @@ function toBankQuestion(row: typeof bankQuestions.$inferSelect): BankQuestion {
   return {
     id: row.id as BankQuestion["id"],
     questionId: row.questionId as BankQuestion["questionId"],
-    userId: row.userId,
+    userId: row.userId as BankQuestion["userId"],
     subject: row.subject as BankQuestion["subject"],
     grade: row.grade,
     topics: row.topics ?? [],
@@ -274,32 +285,31 @@ export const BankServiceLive = Layer.effect(
           return yield* Effect.fail(new BankSaveError({ cause: "Exam not found" }))
         }
 
-        const result = yield* Effect.either(
-          runDb(
-            db
-              .insert(bankQuestions)
-              .values({
-                id: crypto.randomUUID(),
-                userId,
-                questionId: questionRow.id,
-                subject: examRow.subject as typeof bankQuestions.subject.enumValues[number],
-                grade: examRow.grade,
-                topics: questionRow.topic ? [questionRow.topic] : [],
-                difficulty: resolveBankDifficulty(questionRow.difficulty, examRow.difficulty as ExamDifficulty),
-                type: questionRow.type,
-                payload: questionRow.payload ?? {},
-                isPublic: false,
-                usageCount: 0
-              })
-              .onConflictDoNothing({ target: [bankQuestions.userId, bankQuestions.questionId] })
-              .returning()
-          )
+        const insertedRows = yield* runDb(
+          db
+            .insert(bankQuestions)
+            .values({
+              id: crypto.randomUUID(),
+              userId,
+              questionId: questionRow.id,
+              subject: examRow.subject as typeof bankQuestions.subject.enumValues[number],
+              grade: examRow.grade,
+              topics: questionRow.topic ? [questionRow.topic] : [],
+              difficulty: resolveBankDifficulty(questionRow.difficulty, examRow.difficulty as ExamDifficulty),
+              type: questionRow.type,
+              payload: questionRow.payload ?? {},
+              isPublic: false,
+              usageCount: 0
+            })
+            .onConflictDoNothing({ target: [bankQuestions.userId, bankQuestions.questionId] })
+            .returning()
         )
 
-        let bankRow: typeof bankQuestions.$inferSelect | undefined
-        if (result._tag === "Right" && result.right[0]) {
-          bankRow = result.right[0]
-        } else {
+        let bankRow: typeof bankQuestions.$inferSelect | undefined = insertedRows[0]
+        if (!bankRow) {
+          // onConflictDoNothing hit an existing row — fetch it for the response.
+          // A DB error here will propagate via runDb → ApiDatabaseError, not be
+          // masked as a stale success.
           const existingRows = yield* runDb(
             db
               .select()
@@ -562,7 +572,15 @@ export const BankServiceLive = Layer.effect(
         )
 
         return result.length
-      }).pipe(Effect.catchAll(() => Effect.succeed(0)))
+      }).pipe(
+        Effect.tapError((e: ApiDatabaseError) =>
+          logDomainError("bank.propagatePublish", e, {
+            kind: "expected",
+            extra: { userId, examId }
+          })
+        ),
+        Effect.catchAll(() => Effect.succeed(0))
+      )
 
     const browsePublic = (
       query: BrowseBankQuery,

@@ -42,7 +42,7 @@ const sampleResponse: PaginatedBankResponse = {
     {
       id: "bank-1" as BankQuestion["id"],
       questionId: "q-1" as BankQuestion["questionId"],
-      userId: "user-1",
+      userId: "user-1" as BankQuestion["userId"],
       subject: "ipas",
       grade: 5,
       topics: ["Energi"],

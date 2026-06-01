@@ -1,8 +1,6 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
-import * as HttpServerRequest from "@effect/platform/HttpServerRequest"
 import { Effect } from "effect"
 import { TeacherExamApi } from "../definition"
-import { AuthService } from "../services/auth-service"
 import { BankService } from "../services/bank-service"
 
 export const BankPublicLive = HttpApiBuilder.group(
@@ -11,19 +9,13 @@ export const BankPublicLive = HttpApiBuilder.group(
   (handlers) =>
     handlers.handle("browsePublicBank", ({ urlParams }) =>
       Effect.gen(function*() {
-        const request = yield* HttpServerRequest.HttpServerRequest
-        const authService = yield* AuthService
-        const headers = new Headers()
-        for (const [key, value] of Object.entries(request.headers)) {
-          if (value !== undefined) {
-            headers.set(key, value)
-          }
-        }
-        const session = yield* authService.getSession(headers).pipe(
-          Effect.catchAll(() => Effect.succeed(null))
-        )
-        const excludeUserId = session?.user?.id
+        // "Bank Publik" lists every published soal, including the viewer's
+        // own. Excluding self was the previous behavior, but it made the tab
+        // empty for any user whose only public soal were their own (single-
+        // user seeded env, or a brand-new teacher who just shared their
+        // first exam). The author label already differentiates "soal saya"
+        // from "soal guru lain", so duplication is not a problem.
         const bankService = yield* BankService
-        return yield* bankService.browsePublic(urlParams, excludeUserId)
+        return yield* bankService.browsePublic(urlParams)
       }))
 )

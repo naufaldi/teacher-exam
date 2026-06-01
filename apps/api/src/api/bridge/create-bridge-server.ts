@@ -1,5 +1,6 @@
 import type { Auth } from "better-auth"
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
+import { logError } from "../../lib/server-log"
 import { isAuthPath, isHttpApiPath } from "./migrated-routes"
 import { nodeRequestToWebRequest, writeWebResponse } from "./node-http"
 
@@ -23,7 +24,11 @@ export function createBridgeServer(opts: {
         res.writeHead(500, { "Content-Type": "application/json" })
         res.end(JSON.stringify({ error: "Internal server error", code: "INTERNAL_ERROR" }))
       }
-      console.error("[bridge] unhandled request error", err)
+      logError("bridge.unhandled_request", {
+        method: req.method ?? "UNKNOWN",
+        url: req.url ?? "UNKNOWN",
+        cause: err instanceof Error ? err.message : String(err)
+      })
     }
   })
 

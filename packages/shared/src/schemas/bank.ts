@@ -1,5 +1,11 @@
 import { Schema } from "effect"
 import {
+  BankQuestionIdSchema,
+  ExamIdSchema,
+  QuestionIdSchema,
+  UserIdSchema
+} from "./entities.js"
+import {
   AnswerSchema,
   ExamDifficultySchema,
   ExamSubjectSchema,
@@ -13,7 +19,7 @@ export type BankSort = typeof BankSortSchema.Type
 // ── Bank Question Input Schemas ────────────────────────────
 
 export const SaveToBankInputSchema = Schema.Struct({
-  questionId: Schema.String.pipe(Schema.brand("QuestionId"))
+  questionId: QuestionIdSchema
 })
 export type SaveToBankInput = typeof SaveToBankInputSchema.Type
 
@@ -55,9 +61,9 @@ export type UpdateBankQuestionInput = typeof UpdateBankQuestionInputSchema.Type
 // ── Bank Question Response Schemas ─────────────────────────
 
 export const BankQuestionSchema = Schema.Struct({
-  id: Schema.String.pipe(Schema.brand("BankQuestionId")),
-  questionId: Schema.String.pipe(Schema.brand("QuestionId")),
-  userId: Schema.String,
+  id: BankQuestionIdSchema,
+  questionId: QuestionIdSchema,
+  userId: UserIdSchema,
   subject: ExamSubjectSchema,
   grade: Schema.Number,
   topics: Schema.Array(Schema.String),
@@ -85,8 +91,8 @@ export const PaginatedBankResponseSchema = Schema.Struct({
 export type PaginatedBankResponse = typeof PaginatedBankResponseSchema.Type
 
 export const PublicBankQuestionSchema = Schema.Struct({
-  id: Schema.String.pipe(Schema.brand("BankQuestionId")),
-  questionId: Schema.String.pipe(Schema.brand("QuestionId")),
+  id: BankQuestionIdSchema,
+  questionId: QuestionIdSchema,
   authorName: Schema.String,
   subject: ExamSubjectSchema,
   grade: Schema.Number,
@@ -129,12 +135,12 @@ export const BuildExamFromBankMetadataSchema = Schema.Struct({
 export type BuildExamFromBankMetadata = typeof BuildExamFromBankMetadataSchema.Type
 
 export const BuildExamFromBankInputSchema = Schema.Struct({
-  bankQuestionIds: Schema.Array(Schema.String).pipe(Schema.minItems(5), Schema.maxItems(50)),
+  bankQuestionIds: Schema.Array(BankQuestionIdSchema).pipe(Schema.minItems(5), Schema.maxItems(50)),
   metadata: BuildExamFromBankMetadataSchema
 })
 export type BuildExamFromBankInput = typeof BuildExamFromBankInputSchema.Type
 
 export const BuildExamFromBankResponseSchema = Schema.Struct({
-  examId: Schema.String.pipe(Schema.brand("ExamId"))
+  examId: ExamIdSchema
 })
 export type BuildExamFromBankResponse = typeof BuildExamFromBankResponseSchema.Type

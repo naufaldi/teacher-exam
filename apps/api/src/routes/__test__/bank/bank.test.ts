@@ -230,6 +230,43 @@ describe("POST /api/bank", () => {
     expect(body["id"]).toBe("bank-existing")
     expect(body["text"]).toBe("Soal sudah ada")
   })
+
+  it("surfaces 5xx when insert fails even if a later select would find a row (DB error masking regression)", async () => {
+    const examRow = makeExamRow({ subject: "ipas", grade: 5 })
+    const questionRow = makeQuestionRow({ id: "q-1", examId: "exam-1", text: "Soal insert-fail" })
+    const existingBankRow = makeBankQuestionRow({ id: "bank-existing" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([{ ...questionRow, examId: examRow.id }])
+      if (selectCount === 2) return makeChain([examRow])
+      return makeChain([existingBankRow])
+    })
+    // Insert returns a failing Promise — simulates a real DB error.
+    ;(db.insert as Mock).mockReturnValue({
+      values: vi.fn(() => ({
+        onConflictDoNothing: vi.fn(() => ({
+          returning: vi.fn(() => ({
+            then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+              Promise.reject(new Error("connection reset"))
+                .then(resolve, reject)
+          }))
+        }))
+      }))
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/bank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: "q-1" })
+    })
+
+    // Must NOT return 201 with a stale row.
+    expect(res.status).toBeGreaterThanOrEqual(500)
+    expect(res.status).not.toBe(201)
+  })
 })
 
 describe("PATCH /api/bank/:id", () => {

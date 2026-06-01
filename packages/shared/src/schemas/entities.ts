@@ -23,9 +23,19 @@ export type ExamId = typeof ExamIdSchema.Type
 export const QuestionIdSchema = Schema.String.pipe(Schema.brand("QuestionId"))
 export type QuestionId = typeof QuestionIdSchema.Type
 
+export const PdfUploadIdSchema = Schema.String.pipe(Schema.brand("PdfUploadId"))
+export type PdfUploadId = typeof PdfUploadIdSchema.Type
+
+export const BankQuestionIdSchema = Schema.String.pipe(Schema.brand("BankQuestionId"))
+export type BankQuestionId = typeof BankQuestionIdSchema.Type
+
 export const brandUserId = (id: string): UserId => Schema.decodeSync(UserIdSchema)(id)
 export const brandExamId = (id: string): ExamId => Schema.decodeSync(ExamIdSchema)(id)
 export const brandQuestionId = (id: string): QuestionId => Schema.decodeSync(QuestionIdSchema)(id)
+export const brandPdfUploadId = (id: string): PdfUploadId =>
+  Schema.decodeSync(PdfUploadIdSchema)(id)
+export const brandBankQuestionId = (id: string): BankQuestionId =>
+  Schema.decodeSync(BankQuestionIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
 export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
@@ -165,7 +175,7 @@ export type PublicExamWithQuestions = typeof PublicExamWithQuestionsSchema.Type
 
 // ── PDF Upload ─────────────────────────────────────────────
 export const PdfUploadSchema = Schema.Struct({
-  id: Schema.String.pipe(Schema.brand("PdfUploadId")),
+  id: PdfUploadIdSchema,
   userId: UserIdSchema,
   examId: Schema.NullOr(ExamIdSchema),
   fileName: Schema.String,

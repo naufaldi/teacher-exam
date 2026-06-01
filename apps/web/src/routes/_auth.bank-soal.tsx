@@ -1,5 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import type { BankQuestion, BrowseBankQuery, ExamSubject, PublicBankQuestion } from "@teacher-exam/shared"
+import type {
+  BankQuestion,
+  BankQuestionId,
+  BrowseBankQuery,
+  ExamSubject,
+  PublicBankQuestion
+} from "@teacher-exam/shared"
 import { Button, EmptyState, LoadingSpinner, PageHeader } from "@teacher-exam/ui"
 import { BookOpen } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -42,7 +48,7 @@ function BankSoalPage() {
   const [author, setAuthor] = useState("")
   const [sort, setSort] = useState<BankSortFilter>("terbaru")
   const [previewItem, setPreviewItem] = useState<BankQuestion | PublicBankQuestion | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Array<string>>([])
+  const [selectedIds, setSelectedIds] = useState<Array<BankQuestionId>>([])
   const [builderOpen, setBuilderOpen] = useState(false)
   const [builderLoading, setBuilderLoading] = useState(false)
 
@@ -110,7 +116,7 @@ function BankSoalPage() {
     setSort("terbaru")
   }
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = (id: BankQuestionId) => {
     setSelectedIds((prev) => {
       if (prev.includes(id)) {
         return prev.filter((x) => x !== id)
@@ -260,7 +266,9 @@ function BankSoalPage() {
             title={tab === "mine" ? "Bank soal masih kosong" : "Belum ada soal publik"}
             description={tab === "mine"
               ? "Generate ujian dan terima soal di Review. Soal yang diterima akan otomatis masuk ke bank."
-              : "Soal publik dari guru lain akan muncul di sini."}
+              : ownItems.some((i) => i.isPublic)
+                ? "Anda belum membagikan soal ke publik. Buka Bank Saya dan tandai soal sebagai Publik agar muncul di sini."
+                : "Soal publik dari guru lain akan muncul di sini."}
             action={tab === "mine" ?
               (
                 <Button asChild variant="primary" size="md">

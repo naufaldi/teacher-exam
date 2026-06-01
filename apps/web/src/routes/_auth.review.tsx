@@ -1026,7 +1026,7 @@ function ReviewPage() {
                                       </Button>
                                     </>
                                   )),
-                                  Match.orElse(() => (
+                                  Match.when("pending", () => (
                                     <>
                                       <Button
                                         size="sm"
@@ -1056,7 +1056,30 @@ function ReviewPage() {
                                         <XCircle className="h-3.5 w-3.5 mr-1.5" /> Tolak
                                       </Button>
                                     </>
-                                  ))
+                                  )),
+                                  Match.when("rejected", () => (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="text-success-fg border-success-border"
+                                        onClick={() => {
+                                          void setStatus(q.id, "accepted")
+                                        }}
+                                      >
+                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Terima
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={isRegenerating}
+                                        onClick={() => setEditingId(q.id)}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                      </Button>
+                                    </>
+                                  )),
+                                  Match.exhaustive
                                 )}
                               <SaveToBankButton
                                 questionId={q.id as SaveToBankInput["questionId"]}

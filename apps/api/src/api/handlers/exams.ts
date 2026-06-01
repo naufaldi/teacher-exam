@@ -7,6 +7,7 @@ import { and, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
+import { logDomainError } from "../../lib/effect-log"
 import { rowToQuestion } from "../../lib/question-mapper"
 import { validateExamCurriculum } from "../../lib/validate-exam-curriculum"
 import { TeacherExamApi } from "../definition"
@@ -311,7 +312,15 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         yield* Effect.gen(function*() {
           const bankService = yield* BankService
           yield* bankService.propagatePublish(userId, id)
-        }).pipe(Effect.catchAll(() => Effect.void))
+        }).pipe(
+          Effect.tapError((e) =>
+            logDomainError("exams.share.propagatePublish", e, {
+              kind: "expected",
+              extra: { userId, examId: id }
+            })
+          ),
+          Effect.catchAll(() => Effect.void)
+        )
 
         const result: ExamShareResponse = {
           slug,
