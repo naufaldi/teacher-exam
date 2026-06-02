@@ -53,4 +53,14 @@ describe("bank_questions migration", () => {
     expect(sql).toContain("bank_questions_public_browse_idx")
     expect(sql).toContain("bank_questions_user_id_question_id_unique")
   })
+
+  test("does not re-add exam_subject enum values from 0005 or 0007", () => {
+    const files = readdirSync(join(process.cwd(), "src/migrations"))
+      .filter((name) => name.startsWith("0008_") && name.endsWith(".sql"))
+    const sql = readFileSync(join(process.cwd(), "src/migrations", files[0]!), "utf8")
+
+    expect(sql).not.toMatch(/ADD VALUE ['"]matematika['"]/)
+    expect(sql).not.toMatch(/ADD VALUE ['"]ipas['"]/)
+    expect(sql).not.toMatch(/ADD VALUE ['"]bahasa_inggris['"]/)
+  })
 })
