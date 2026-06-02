@@ -1,4 +1,3 @@
-ALTER TYPE "public"."exam_subject" ADD VALUE 'matematika';--> statement-breakpoint
 CREATE TABLE "bank_questions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" text NOT NULL,

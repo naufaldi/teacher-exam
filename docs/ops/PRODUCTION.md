@@ -122,7 +122,20 @@ For our deployment, certs issued successfully even with Cloudflare proxy on (CF 
 
 ## Deployment Commands
 
-### Redeploy (most common — after `git push`)
+### Automated deploy (GitHub Actions — primary)
+
+Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml):
+
+1. Build and push API + web images to GHCR (tagged by commit SHA).
+2. SSH to VPS → `git pull`, pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
+3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
+4. Health check via public URL (through Cloudflare → **`edge-proxy-caddy`** → API).
+
+Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
+
+PRs run [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) including a **`db-migrate` job** (empty Postgres 16 → `pnpm db:migrate`) to catch broken migration chains before deploy.
+
+### Manual redeploy (fallback)
 
 ```bash
 ssh vps-faldi 'cd ~/projects/teacher-exam && \
@@ -278,7 +291,7 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 
 | Item | Status | Notes |
 |---|---|---|
-| Automated deploys (GitHub Actions) | Deferred | Manual `git pull + up --build` is the current flow |
+| Automated deploys (GitHub Actions) | Live | `deploy.yml` on push to `main`; manual `git pull + up` remains a fallback |
 | File uploads (PDF pembahasan) | Working | Stored in `uploads_data` named volume; not backed up |
 | Database backups | Deferred | Manual `pg_dump` only; no cron |
 | Staging environment | Deferred | Single prod only |
@@ -304,3 +317,5 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 7. **Caddy docker-proxy reloads on every container event**. In-flight ACME cert requests get cancelled on reload — the `context canceled` errors in Caddy logs during startup are expected and Caddy retries automatically.
 
 8. **The `upstream` (singular) error in Caddy logs** is from another app already on the VPS with an old-style label. It is not a teacher-exam issue and can be ignored.
+
+9. **`IMAGE_TAG` vs running containers after a failed deploy.** If migrate fails, `.env.production` must not advance `IMAGE_TAG` ahead of the containers still running an older image (deploy workflow only persists `IMAGE_TAG` after migrate succeeds). Manual migrate: `IMAGE_TAG=<sha> docker compose ... --profile migrate run --rm migrate`, then update `.env.production` and `up -d`.

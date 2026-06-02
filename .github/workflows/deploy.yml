@@ -107,17 +107,22 @@ jobs:
             echo "Pulling Web image..."
             docker pull ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
 
-            # Update IMAGE_TAG and GITHUB_REPOSITORY in .env.production
-            grep -v "^IMAGE_TAG=" .env.production > .env.production.tmp || true
-            grep -v "^GITHUB_REPOSITORY=" .env.production.tmp > .env.production
-            rm -f .env.production.tmp
-            echo "IMAGE_TAG=${{ needs.commit-hash.outputs.commit_hash }}" >> .env.production
+            # Update GITHUB_REPOSITORY only; IMAGE_TAG is written after migrate succeeds
+            grep -v "^GITHUB_REPOSITORY=" .env.production > .env.production.tmp || true
+            mv .env.production.tmp .env.production
             echo "GITHUB_REPOSITORY=${{ github.repository }}" >> .env.production
 
-            # Run DB migration
+            # Run DB migration with the new image (do not persist IMAGE_TAG until success)
             echo "Running database migration..."
+            IMAGE_TAG="${{ needs.commit-hash.outputs.commit_hash }}" \
+            GITHUB_REPOSITORY="${{ github.repository }}" \
             docker compose -f docker-compose.prod.yml --env-file .env.production \
-              run --rm migrate
+              --profile migrate run --rm migrate 2>&1 | tee /tmp/migrate.log
+
+            # Persist IMAGE_TAG only after migrate succeeds
+            grep -v "^IMAGE_TAG=" .env.production > .env.production.tmp || true
+            mv .env.production.tmp .env.production
+            echo "IMAGE_TAG=${{ needs.commit-hash.outputs.commit_hash }}" >> .env.production
 
             # Restart services with new images
             echo "Restarting services..."
