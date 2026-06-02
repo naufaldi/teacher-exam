@@ -95,8 +95,9 @@ jobs:
 
             cd ~/projects/teacher-exam
 
-            # Pull latest code (for compose file changes)
-            git pull origin main
+            # Sync to origin/main (VPS clone must not keep local edits — e.g. manual migration hotfixes block git pull)
+            git fetch origin main
+            git reset --hard origin/main
 
             # Login to GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
