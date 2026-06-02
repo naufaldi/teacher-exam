@@ -24,12 +24,14 @@ import { getSharedDatabaseLayer } from "../api/services/bootstrap-db"
 import { CurriculumServiceLive } from "../api/services/curriculum-service"
 import { createTelemetryLayer } from "../api/telemetry"
 
+const BankServiceWithDbLive = BankServiceLive.pipe(Layer.provide(getSharedDatabaseLayer()))
+
 const CoreLive = Layer.mergeAll(
   AppConfigLive,
   NodeContext.layer,
   getSharedDatabaseLayer(),
   AuthServiceLive,
-  BankServiceLive
+  BankServiceWithDbLive
 )
 
 const MiddlewareLive = Layer.mergeAll(

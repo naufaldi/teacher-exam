@@ -1,9 +1,8 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import type { ExamDetailResponse, ExamType, Question, SaveToBankInput } from "@teacher-exam/shared"
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
+import type { ExamDetailResponse, ExamType, Question } from "@teacher-exam/shared"
 import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
 import { useState } from "react"
-import { SaveToBankButton } from "../components/bank/save-to-bank-button.js"
 import { FigureSvg } from "../components/figure-svg.js"
 import { MarkdownMath } from "../components/markdown-math.js"
 import { MathText } from "../components/math-text.js"
@@ -157,16 +156,14 @@ function PreviewPage() {
           <div
             data-screen-only
             data-no-print
-            className="rounded-md border border-border-default bg-bg-surface p-4 flex flex-wrap gap-2 items-center"
+            className="rounded-md border border-border-default bg-bg-surface p-4"
           >
-            <span className="text-body-sm text-text-secondary mr-2">Simpan ke bank:</span>
-            {questions.map((q) => (
-              <SaveToBankButton
-                key={q.id}
-                questionId={q.id as SaveToBankInput["questionId"]}
-                assumeSaved={q.status === "accepted"}
-              />
-            ))}
+            <span className="text-body-sm text-text-secondary">
+              {questions.length} soal tersimpan otomatis di{" "}
+              <Link to="/bank-soal" className="font-medium text-text-primary underline underline-offset-2">
+                Bank Soal
+              </Link>
+            </span>
           </div>
         ) :
         null}

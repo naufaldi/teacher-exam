@@ -101,7 +101,10 @@ export function getAuthDb(): AppDb {
   return authDb
 }
 
-export const auth = {
+export const auth: {
+  readonly api: AuthInstance["api"]
+  readonly handler: AuthInstance["handler"]
+} = {
   get api() {
     return getAuth().api
   },

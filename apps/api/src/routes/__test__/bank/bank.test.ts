@@ -242,8 +242,7 @@ describe("POST /api/bank", () => {
       if (selectCount === 1) return makeChain([{ ...questionRow, examId: examRow.id }])
       if (selectCount === 2) return makeChain([examRow])
       return makeChain([existingBankRow])
-    })
-    // Insert returns a failing Promise — simulates a real DB error.
+    }) // Insert returns a failing Promise — simulates a real DB error.
     ;(db.insert as Mock).mockReturnValue({
       values: vi.fn(() => ({
         onConflictDoNothing: vi.fn(() => ({

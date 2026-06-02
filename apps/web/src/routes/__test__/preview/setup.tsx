@@ -24,7 +24,20 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       useLoaderData: () => previewTestCtx.mockLoaderData
     }),
     redirect: ({ to }: { to: string }) => Object.assign(new Error(`Redirect to ${to}`), { isRedirect: true, to }),
-    useNavigate: () => mockNavigate
+    useNavigate: () => mockNavigate,
+    Link: ({
+      children,
+      className,
+      to
+    }: {
+      children: React.ReactNode
+      to: string
+      className?: string
+    }) => (
+      <a href={to} className={className}>
+        {children}
+      </a>
+    )
   }
 })
 

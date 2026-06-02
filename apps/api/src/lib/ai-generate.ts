@@ -9,7 +9,7 @@ import {
   SUBJECT_LABEL
 } from "@teacher-exam/shared"
 import type { FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
-import { Effect, Either, Match, Schema } from "effect"
+import { Data, Effect, Either, Match, Schema } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
 import { BankService } from "../api/services/bank-service"
@@ -30,6 +30,10 @@ import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 
 const PLACEHOLDER_STUB_TEXT = "Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang."
+
+class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
+  message: string
+}> {}
 
 function makeFakeQuestionShape(number: number): GeneratedQuestion {
   return {
@@ -324,12 +328,19 @@ export function generateExam(
     const examType = normalizeExamType(input.examType ?? "formatif")
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
-    let composition: ReturnType<typeof resolveComposition>
-    try {
-      composition = resolveComposition(examType, totalSoal, input.composition)
-    } catch (err) {
-      return { _tag: "validation_error", details: (err as Error).message }
+    const compositionResult = yield* Effect.either(
+      Effect.try({
+        try: () => resolveComposition(examType, totalSoal, input.composition),
+        catch: (err): CompositionValidationError =>
+          new CompositionValidationError({
+            message: err instanceof Error ? err.message : String(err)
+          })
+      })
+    )
+    if (Either.isLeft(compositionResult)) {
+      return { _tag: "validation_error", details: compositionResult.left.message }
     }
+    const composition = compositionResult.right
 
     const curriculum = yield* CurriculumService
     const curriculumText = yield* curriculum.getText(input.subject, input.grade)

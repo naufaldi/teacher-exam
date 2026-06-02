@@ -1,10 +1,5 @@
 import { Schema } from "effect"
-import {
-  BankQuestionIdSchema,
-  ExamIdSchema,
-  QuestionIdSchema,
-  UserIdSchema
-} from "./entities.js"
+import { BankQuestionIdSchema, ExamIdSchema, QuestionIdSchema, UserIdSchema } from "./entities.js"
 import {
   AnswerSchema,
   ExamDifficultySchema,

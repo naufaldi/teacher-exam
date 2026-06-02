@@ -16,9 +16,9 @@ import type {
 import { formatExamTitle, SUBJECT_LABEL } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm"
 import { Context, Data, Effect, Layer } from "effect"
+import { logDomainError } from "../../lib/effect-log"
 import type { ApiDatabaseError } from "../errors/http"
 import { runDb } from "../lib/db-effect"
-import { logDomainError } from "../../lib/effect-log"
 import { DbClient } from "./db"
 
 export class BankSaveError extends Data.TaggedError("BankSaveError")<{
@@ -38,36 +38,36 @@ export interface BankServiceApi {
   readonly saveQuestion: (
     userId: string,
     input: SaveToBankInput
-  ) => Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError, DbClient>
+  ) => Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError>
   readonly browseOwn: (
     userId: string,
     query: BrowseBankQuery
-  ) => Effect.Effect<PaginatedBankResponse, ApiDatabaseError, DbClient>
+  ) => Effect.Effect<PaginatedBankResponse, ApiDatabaseError>
   readonly update: (
     userId: string,
     id: string,
     input: UpdateBankQuestionInput
-  ) => Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError, DbClient>
+  ) => Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError>
   readonly remove: (
     userId: string,
     id: string
-  ) => Effect.Effect<void, BankNotFoundError | ApiDatabaseError, DbClient>
+  ) => Effect.Effect<void, BankNotFoundError | ApiDatabaseError>
   readonly autoSaveAccepted: (
     userId: string,
     examId: string
-  ) => Effect.Effect<number, BankSaveError | ApiDatabaseError, DbClient>
+  ) => Effect.Effect<number, BankSaveError | ApiDatabaseError>
   readonly propagatePublish: (
     userId: string,
     examId: string
-  ) => Effect.Effect<number, never, DbClient>
+  ) => Effect.Effect<number, never>
   readonly browsePublic: (
     query: BrowseBankQuery,
     excludeUserId?: string
-  ) => Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError, DbClient>
+  ) => Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError>
   readonly buildExam: (
     userId: string,
     input: BuildExamFromBankInput
-  ) => Effect.Effect<BuildExamFromBankResponse, BankBuildError | ApiDatabaseError, DbClient>
+  ) => Effect.Effect<BuildExamFromBankResponse, BankBuildError | ApiDatabaseError>
 }
 
 function resolveBankDifficulty(
@@ -172,16 +172,6 @@ function toPublicBankQuestion(
   }
 }
 
-/**
- * BankService intentionally exposes `DbClient` in its method requirements
- * so handlers can compose bank operations with other DB-bound Effects
- * (transactions, multi-step workflows). Closing the requirement inside the
- * Layer would force Effect.provideService on every call site or per-method
- * service wrappers, adding ceremony without changing the runtime wiring —
- * both BankServiceLive and handler Layers share CoreLive.
- *
- * @effect-expect-leaking DbClient
- */
 export class BankService extends Context.Tag("BankService")<
   BankService,
   BankServiceApi
@@ -239,13 +229,13 @@ function toBankQuestionWithDetails(
 export const BankServiceLive = Layer.effect(
   BankService,
   Effect.gen(function*() {
+    const db = yield* DbClient
+
     const saveQuestion = (
       userId: string,
       input: SaveToBankInput
-    ): Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<BankQuestion, BankSaveError | ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         const questionRows = yield* runDb(
           db
             .select({
@@ -327,14 +317,13 @@ export const BankServiceLive = Layer.effect(
         }
 
         return toBankQuestionWithDetails(bankRow, questionRow)
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const browseOwn = (
       userId: string,
       query: BrowseBankQuery
-    ): Effect.Effect<PaginatedBankResponse, ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<PaginatedBankResponse, ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
         const page = query.page ?? 1
         const limit = query.limit ?? 20
         const offset = (page - 1) * limit
@@ -380,16 +369,14 @@ export const BankServiceLive = Layer.effect(
           page,
           limit
         }
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const update = (
       userId: string,
       id: string,
       input: UpdateBankQuestionInput
-    ): Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<BankQuestion, BankNotFoundError | ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         const existingRows = yield* runDb(
           db
             .select()
@@ -436,15 +423,13 @@ export const BankServiceLive = Layer.effect(
         const questionRow = questionRows[0] ?? null
 
         return toBankQuestionWithDetails(bankRow, questionRow)
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const remove = (
       userId: string,
       id: string
-    ): Effect.Effect<void, BankNotFoundError | ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<void, BankNotFoundError | ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         const existingRows = yield* runDb(
           db
             .select()
@@ -458,15 +443,13 @@ export const BankServiceLive = Layer.effect(
         }
 
         yield* runDb(db.delete(bankQuestions).where(eq(bankQuestions.id, id)))
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const autoSaveAccepted = (
       userId: string,
       examId: string
-    ): Effect.Effect<number, BankSaveError | ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<number, BankSaveError | ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         const acceptedQuestions = yield* runDb(
           db
             .select({
@@ -526,15 +509,13 @@ export const BankServiceLive = Layer.effect(
         }
 
         return acceptedQuestions.length
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const propagatePublish = (
       userId: string,
       examId: string
-    ): Effect.Effect<number, never, DbClient> =>
+    ): Effect.Effect<number, never> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         const examRows = yield* runDb(
           db
             .select()
@@ -573,6 +554,7 @@ export const BankServiceLive = Layer.effect(
 
         return result.length
       }).pipe(
+        Effect.provideService(DbClient, db),
         Effect.tapError((e: ApiDatabaseError) =>
           logDomainError("bank.propagatePublish", e, {
             kind: "expected",
@@ -585,9 +567,8 @@ export const BankServiceLive = Layer.effect(
     const browsePublic = (
       query: BrowseBankQuery,
       excludeUserId?: string
-    ): Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError, DbClient> =>
+    ): Effect.Effect<PaginatedPublicBankResponse, ApiDatabaseError> =>
       Effect.gen(function*() {
-        const db = yield* DbClient
         const page = query.page ?? 1
         const limit = query.limit ?? 20
         const offset = (page - 1) * limit
@@ -650,19 +631,16 @@ export const BankServiceLive = Layer.effect(
           page,
           limit
         }
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     const buildExam = (
       userId: string,
       input: BuildExamFromBankInput
     ): Effect.Effect<
       BuildExamFromBankResponse,
-      BankBuildError | ApiDatabaseError,
-      DbClient
+      BankBuildError | ApiDatabaseError
     > =>
       Effect.gen(function*() {
-        const db = yield* DbClient
-
         if (input.bankQuestionIds.length < 5) {
           return yield* Effect.fail(
             new BankBuildError({
@@ -794,7 +772,7 @@ export const BankServiceLive = Layer.effect(
         }
 
         return { examId: newExamId as BuildExamFromBankResponse["examId"] }
-      })
+      }).pipe(Effect.provideService(DbClient, db))
 
     return {
       saveQuestion,

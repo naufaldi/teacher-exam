@@ -267,8 +267,8 @@ function BankSoalPage() {
             description={tab === "mine"
               ? "Generate ujian dan terima soal di Review. Soal yang diterima akan otomatis masuk ke bank."
               : ownItems.some((i) => i.isPublic)
-                ? "Anda belum membagikan soal ke publik. Buka Bank Saya dan tandai soal sebagai Publik agar muncul di sini."
-                : "Soal publik dari guru lain akan muncul di sini."}
+              ? "Anda belum membagikan soal ke publik. Buka Bank Saya dan tandai soal sebagai Publik agar muncul di sini."
+              : "Soal publik dari guru lain akan muncul di sini."}
             action={tab === "mine" ?
               (
                 <Button asChild variant="primary" size="md">

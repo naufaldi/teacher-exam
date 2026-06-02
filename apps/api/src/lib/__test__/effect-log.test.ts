@@ -1,5 +1,5 @@
+import { Data, Effect, Either } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { Data, Effect } from "effect"
 import { logDomainError, withLoggedErrors } from "../effect-log.js"
 
 class SampleError extends Data.TaggedError("SampleError")<{
@@ -22,9 +22,7 @@ describe("effect-log", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
     const effect = Effect.fail(new SampleError({ detail: "boom" })).pipe(
-      Effect.catchAll((e) =>
-        logDomainError("bank.save", e, { kind: "expected" })
-      )
+      Effect.catchAll((e) => logDomainError("bank.save", e, { kind: "expected" }))
     )
 
     return Effect.runPromise(effect).then(() => {
@@ -45,9 +43,7 @@ describe("effect-log", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
     const effect = Effect.fail(new OtherError({ reason: "kaboom" })).pipe(
-      Effect.catchAll((e) =>
-        logDomainError("bank.publish", e, { kind: "unexpected" })
-      )
+      Effect.catchAll((e) => logDomainError("bank.publish", e, { kind: "unexpected" }))
     )
 
     return Effect.runPromise(effect).then(() => {
@@ -67,9 +63,7 @@ describe("effect-log", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
     const effect = Effect.fail("plain string error" as never).pipe(
-      Effect.catchAll((e) =>
-        logDomainError("misc", e, { kind: "unexpected" })
-      )
+      Effect.catchAll((e) => logDomainError("misc", e, { kind: "unexpected" }))
     )
 
     return Effect.runPromise(effect).then(() => {
@@ -116,5 +110,3 @@ describe("effect-log", () => {
     })
   })
 })
-
-import { Either } from "effect"

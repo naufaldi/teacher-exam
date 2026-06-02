@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Match } from "effect"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   ApiClientError,
-  DecodeClientError,
   type ApiClientFailure,
+  DecodeClientError,
   NetworkClientError,
   RateLimitedClientError,
   UnauthorizedClientError

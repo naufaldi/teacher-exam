@@ -27,17 +27,42 @@ describe("generateExam Effect integration", () => {
     mockGenerateDbSelects({ examRow, questionRows, reviewMode: "slow" })
 
     const input = { ...VALID_BODY, reviewMode: "slow" as const }
+    const bankLayer = BankServiceLive.pipe(Layer.provide(Layer.succeed(DbClient, db as never)))
     const result = await Effect.runPromise(
       generateExam("test-user-id", input, fakeAiService).pipe(
         Effect.provide(Layer.mergeAll(
           Layer.succeed(DbClient, db as never),
           TestSqlLayer,
           TestCurriculumLayer(),
-          BankServiceLive
+          bankLayer
         ))
       )
     )
 
     expect(result._tag).toBe("success")
+  })
+
+  it("returns validation_error when composition override is invalid", async () => {
+    const input = {
+      ...VALID_BODY,
+      totalSoal: 25,
+      composition: { mcqSingle: 10, mcqMulti: 10, trueFalse: 10 }
+    }
+    const bankLayer = BankServiceLive.pipe(Layer.provide(Layer.succeed(DbClient, db as never)))
+    const result = await Effect.runPromise(
+      generateExam("test-user-id", input, fakeAiService).pipe(
+        Effect.provide(Layer.mergeAll(
+          Layer.succeed(DbClient, db as never),
+          TestSqlLayer,
+          TestCurriculumLayer(),
+          bankLayer
+        ))
+      )
+    )
+
+    expect(result._tag).toBe("validation_error")
+    if (result._tag === "validation_error") {
+      expect(result.details.length).toBeGreaterThan(0)
+    }
   })
 })

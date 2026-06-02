@@ -25,8 +25,7 @@ describe("bridge structured logging", () => {
 
     const bridge = createBridgeServer({
       port: getPort(),
-      authHandler: (() =>
-        Promise.resolve(new Response(null, { status: 204 }))) as never,
+      authHandler: (() => Promise.resolve(new Response(null, { status: 204 }))) as never,
       httpApiHandler: () => Promise.reject(new Error("downstream blew up")),
       disposeHttpApi: () => Promise.resolve()
     })
@@ -40,8 +39,8 @@ describe("bridge structured logging", () => {
     const line = errorSpy.mock.calls
       .map((c) => c[0])
       .find((v) => typeof v === "string" && v.includes("bridge.unhandled_request")) as
-      | string
-      | undefined
+        | string
+        | undefined
     expect(typeof line).toBe("string")
     const obj = JSON.parse(line as string) as Record<string, unknown>
     expect(obj).toMatchObject({

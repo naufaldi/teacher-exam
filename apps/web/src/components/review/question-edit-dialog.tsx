@@ -21,8 +21,8 @@ import {
   RadioGroupItem,
   Textarea
 } from "@teacher-exam/ui"
-import { useRef, useState } from "react"
 import { Match } from "effect"
+import { useRef, useState } from "react"
 import { matchQuestion } from "../../lib/question-render.js"
 import { TeacherPreviewBlock } from "./teacher-preview-block.js"
 
@@ -145,9 +145,7 @@ function isValidState(state: EditState): boolean {
       const validCorrect = s.correct.length >= 2 && s.correct.length <= 3
       return validOptions && validCorrect
     }),
-    Match.tag("true_false", (s) =>
-      s.statements.length >= 3 && s.statements.every((s2) => s2.text.trim() !== "")
-    ),
+    Match.tag("true_false", (s) => s.statements.length >= 3 && s.statements.every((s2) => s2.text.trim() !== "")),
     Match.exhaustive
   )
 }

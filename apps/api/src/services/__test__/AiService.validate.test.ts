@@ -1,5 +1,5 @@
+import { assert, describe, it } from "@effect/vitest"
 import { Effect, Either } from "effect"
-import { describe, expect, it } from "vitest"
 import { AiGenerationError } from "../../errors"
 import { createFakeModelLayersFromText } from "../../lib/effect-ai/test-utils"
 import { createAiService } from "../AiService"
@@ -10,50 +10,45 @@ const VALID_ITEMS = [
 ]
 
 describe("AiService.validateCurriculum", () => {
-  it("parses JSON validation array and uses validation layer", async () => {
-    const textLayer = createFakeModelLayersFromText("unused")
-    const validationLayer = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS))
-    validationLayer.calls.length = 0
-    const ai = createAiService({
-      layers: {
-        text: textLayer.layers.text,
-        pdf: textLayer.layers.pdf,
-        discussion: textLayer.layers.discussion,
-        validation: validationLayer.layers.validation
-      },
-      discussionModel: "MiniMax-M2.7-highspeed"
-    })
+  it.effect("parses JSON validation array and uses validation layer", () =>
+    Effect.gen(function*() {
+      const textLayer = createFakeModelLayersFromText("unused")
+      const validationLayer = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS))
+      validationLayer.calls.length = 0
+      const ai = createAiService({
+        layers: {
+          text: textLayer.layers.text,
+          pdf: textLayer.layers.pdf,
+          discussion: textLayer.layers.discussion,
+          validation: validationLayer.layers.validation
+        },
+        discussionModel: "MiniMax-M2.7-highspeed"
+      })
 
-    const result = await Effect.runPromise(
-      ai.validateCurriculum({ system: "validator system", user: "[]", expectedCount: 2 })
-    )
+      const result = yield* ai.validateCurriculum({ system: "validator system", user: "[]", expectedCount: 2 })
 
-    expect(result).toEqual(VALID_ITEMS)
-    expect(validationLayer.calls).toHaveLength(1)
-  })
+      assert.deepStrictEqual(result, VALID_ITEMS)
+      assert.strictEqual(validationLayer.calls.length, 1)
+    }))
 
-  it("accepts finish_reason unknown when text is present", async () => {
-    const { layers } = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS), {
-      finishReason: "unknown"
-    })
-    const ai = createAiService({ layers })
+  it.effect("accepts finish_reason unknown when text is present", () =>
+    Effect.gen(function*() {
+      const { layers } = createFakeModelLayersFromText(JSON.stringify(VALID_ITEMS), {
+        finishReason: "unknown"
+      })
+      const ai = createAiService({ layers })
+      const result = yield* ai.validateCurriculum({ system: "s", user: "u", expectedCount: 2 })
+      assert.strictEqual(result.length, 2)
+    }))
 
-    const result = await Effect.runPromise(
-      ai.validateCurriculum({ system: "s", user: "u", expectedCount: 2 })
-    )
-    expect(result).toHaveLength(2)
-  })
-
-  it("fails when item count mismatches expectedCount", async () => {
-    const { layers } = createFakeModelLayersFromText(JSON.stringify([VALID_ITEMS[0]]))
-    const ai = createAiService({ layers })
-
-    const result = await Effect.runPromise(
-      Effect.either(ai.validateCurriculum({ system: "s", user: "u", expectedCount: 2 }))
-    )
-    expect(Either.isLeft(result)).toBe(true)
-    if (Either.isLeft(result)) {
-      expect(result.left).toBeInstanceOf(AiGenerationError)
-    }
-  })
+  it.effect("fails when item count mismatches expectedCount", () =>
+    Effect.gen(function*() {
+      const { layers } = createFakeModelLayersFromText(JSON.stringify([VALID_ITEMS[0]]))
+      const ai = createAiService({ layers })
+      const result = yield* Effect.either(ai.validateCurriculum({ system: "s", user: "u", expectedCount: 2 }))
+      assert.strictEqual(Either.isLeft(result), true)
+      if (Either.isLeft(result)) {
+        assert.strictEqual(result.left instanceof AiGenerationError, true)
+      }
+    }))
 })

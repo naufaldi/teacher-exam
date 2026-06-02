@@ -15,6 +15,7 @@ export interface FakeModelOptions {
   objectValue?: unknown
   finishReason?: Response.FinishReason
   leadingReasoning?: string
+  streamChunks?: ReadonlyArray<string>
 }
 
 export function createFakeLanguageModelService(
@@ -78,8 +79,27 @@ export function createFakeLanguageModelService(
         )
         return buildGenerateObjectResponse(value)
       }) as ReturnType<LanguageModel.Service["generateObject"]>,
-    streamText: () => Stream.dieMessage("streamText not implemented in fake LanguageModel")
+    streamText: (options) => {
+      const prompt = Prompt.make(options.prompt)
+      calls.push({ prompt })
+      const resolved = handler(prompt)
+      const chunks = resolved.streamChunks ?? splitStreamChunks(resolved.text)
+      return Stream.fromIterable(
+        chunks.map((delta, index) => Response.textDeltaPart({ id: `chunk-${index}`, delta }))
+      )
+    }
   }
+}
+
+function splitStreamChunks(text: string, size = 8): ReadonlyArray<string> {
+  if (text.length === 0) {
+    return [""]
+  }
+  const chunks: Array<string> = []
+  for (let i = 0; i < text.length; i += size) {
+    chunks.push(text.slice(i, i + size))
+  }
+  return chunks
 }
 
 export function createFakeModelLayers(
@@ -109,7 +129,8 @@ export function createFakeModelLayersFromText(
     text,
     ...(options.finishReason !== undefined ? { finishReason: options.finishReason } : {}),
     ...(options.leadingReasoning !== undefined ? { leadingReasoning: options.leadingReasoning } : {}),
-    ...(options.objectValue !== undefined ? { objectValue: options.objectValue } : {})
+    ...(options.objectValue !== undefined ? { objectValue: options.objectValue } : {}),
+    ...(options.streamChunks !== undefined ? { streamChunks: options.streamChunks } : {})
   }))
 }
 

@@ -3,7 +3,8 @@ import {
   CurriculumValidationItemSchema,
   type GeneratedQuestion
 } from "@teacher-exam/shared"
-import { Effect, Either, Schema, Stream } from "effect"
+import type { Stream } from "effect"
+import { Effect, Either, Schema } from "effect"
 import { AiGenerationError } from "../errors"
 import { logAiEvent } from "../lib/ai-log"
 import {
@@ -25,7 +26,7 @@ import {
   resolveOpenAiLayerConfig
 } from "../lib/effect-ai/layers"
 import { buildPrompt } from "../lib/effect-ai/prompt"
-import { runGenerateObject, runGenerateText } from "../lib/effect-ai/run"
+import { runGenerateObject, runGenerateText, runStreamText } from "../lib/effect-ai/run"
 import { CURRICULUM_VALIDATION_OBJECT_NAME, GENERATED_QUESTIONS_OBJECT_NAME } from "../lib/effect-ai/schema-bridge"
 import { CurriculumValidationBatchSchema } from "../lib/effect-ai/schemas/curriculum-validation"
 import { GeneratedQuestionsBatchSchema } from "../lib/effect-ai/schemas/generated-questions"
@@ -194,6 +195,15 @@ export function createAiService(config: AiServiceConfig): AiService {
       Effect.map((text) => stripCodeFence(text))
     )
 
+  const streamDiscussionText = (input: DiscussionInput): Stream.Stream<string, AiGenerationError> =>
+    runStreamText({
+      modelLayer: config.layers.discussion,
+      prompt: buildPrompt(input),
+      model: models.discussionModel,
+      logEvent: "ai.languageModel.streamText",
+      errorContext: errorContext(config)
+    })
+
   return {
     generateRaw(input) {
       const slot = input.pdfBytes !== undefined ? "pdf" : "text"
@@ -297,7 +307,7 @@ export function createAiService(config: AiServiceConfig): AiService {
     },
 
     streamDiscussion(input) {
-      return Stream.fromEffect(getDiscussionText(input))
+      return streamDiscussionText(input)
     }
   }
 }

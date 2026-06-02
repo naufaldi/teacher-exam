@@ -42,8 +42,8 @@ import {
   UnauthorizedClientError,
   UnauthorizedError
 } from "./api-errors.js"
-import { devLog } from "./dev-log.js"
 import { logClientError } from "./client-log.js"
+import { devLog } from "./dev-log.js"
 
 export {
   ApiClientError,

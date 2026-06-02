@@ -32,10 +32,8 @@ export type BankQuestionId = typeof BankQuestionIdSchema.Type
 export const brandUserId = (id: string): UserId => Schema.decodeSync(UserIdSchema)(id)
 export const brandExamId = (id: string): ExamId => Schema.decodeSync(ExamIdSchema)(id)
 export const brandQuestionId = (id: string): QuestionId => Schema.decodeSync(QuestionIdSchema)(id)
-export const brandPdfUploadId = (id: string): PdfUploadId =>
-  Schema.decodeSync(PdfUploadIdSchema)(id)
-export const brandBankQuestionId = (id: string): BankQuestionId =>
-  Schema.decodeSync(BankQuestionIdSchema)(id)
+export const brandPdfUploadId = (id: string): PdfUploadId => Schema.decodeSync(PdfUploadIdSchema)(id)
+export const brandBankQuestionId = (id: string): BankQuestionId => Schema.decodeSync(BankQuestionIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
 export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
