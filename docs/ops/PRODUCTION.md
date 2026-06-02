@@ -312,7 +312,7 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 
 5. **`BETTER_AUTH_URL` ≠ `APP_URL`** in subdomain-split deployments. `BETTER_AUTH_URL` is the API's own public URL (for OAuth callback construction); `APP_URL` is the web app's URL (for CORS/trustedOrigins).
 
-6. **Docker disk on VPS can fill during builds** (49 GB total, fast-fills with node_modules layers). Run `docker image prune -af && docker builder prune -af` before a full rebuild if disk is under 5 GB free.
+6. **Docker disk on VPS can fill during image pull** (49 GB total; `node_modules` layers are large). Symptom: `failed to register layer: no space left on device`. Deploy workflow runs `docker image prune -af` + `docker builder prune -af` before each pull. Manual fix: `ssh vps-faldi 'docker image prune -af && docker builder prune -af && df -h /'`.
 
 7. **Caddy docker-proxy reloads on every container event**. In-flight ACME cert requests get cancelled on reload — the `context canceled` errors in Caddy logs during startup are expected and Caddy retries automatically.
 

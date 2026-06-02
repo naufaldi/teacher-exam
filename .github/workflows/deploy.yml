@@ -102,6 +102,12 @@ jobs:
             # Login to GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            # VPS disk is limited (~50GB); prune unused images/cache before pull (avoids "no space left on device" on layer extract)
+            echo "Pruning unused Docker images and build cache..."
+            docker image prune -af
+            docker builder prune -af
+            df -h /
+
             # Pull new images
             echo "Pulling API image..."
             docker pull ${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
@@ -145,7 +151,7 @@ jobs:
               sleep 5
             done
 
-            # Cleanup old images
-            docker image prune -f
+            # Cleanup unused images after deploy
+            docker image prune -af
 
             echo "Deployed ${{ needs.commit-hash.outputs.commit_hash }}"
