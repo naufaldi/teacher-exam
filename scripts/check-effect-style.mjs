@@ -12,7 +12,8 @@ const SCAN_ROOTS = [
   join(ROOT, "apps/api/src"),
   join(ROOT, "packages/shared/src"),
   join(ROOT, "apps/web/src/lib"),
-  join(ROOT, "apps/web/src/routes")
+  join(ROOT, "apps/web/src/routes"),
+  join(ROOT, "apps/web/src/components")
 ]
 
 const EXT = /\.(ts|tsx)$/
@@ -79,6 +80,18 @@ function checkFile(file, content) {
 
     if (/switch\s*\([^)]*\._tag\s*\)/.test(line)) {
       issues.push({ rel, n, rule: "prefer-match", msg: "Use Match.exhaustive instead of switch on _tag" })
+    }
+
+    if (
+      isWeb &&
+      /\bif\s*\(\s*[\w.[\]]+\._tag\s*(===|!==)/.test(line)
+    ) {
+      issues.push({
+        rel,
+        n,
+        rule: "prefer-match-exhaustive",
+        msg: "Prefer Match.exhaustive over if/else chains on _tag"
+      })
     }
 
     if (isApi && /Effect\.gen\s*\(function\*\(\)/.test(line)) {

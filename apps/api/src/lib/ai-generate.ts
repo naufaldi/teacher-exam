@@ -20,6 +20,7 @@ import { AiGenerationError } from "../errors"
 import { type AiService } from "../services/AiService"
 import { logAiEvent } from "./ai-log"
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
+import { logDomainError } from "./effect-log"
 import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
 import { fetchExamWithQuestions } from "./exams-query"
 import { type LatexValidationResult, validateGeneratedQuestionLatex } from "./latex-validator"
@@ -461,7 +462,15 @@ export function generateExam(
       yield* Effect.gen(function*() {
         const bankService = yield* BankService
         yield* bankService.autoSaveAccepted(userId, examId)
-      }).pipe(Effect.catchAll(() => Effect.void))
+      }).pipe(
+        Effect.tapError((e) =>
+          logDomainError("ai.generate.autoSave", e, {
+            kind: "expected",
+            extra: { userId, examId }
+          })
+        ),
+        Effect.catchAll(() => Effect.void)
+      )
     }
 
     const result = yield* fetchExamWithQuestions(examId)

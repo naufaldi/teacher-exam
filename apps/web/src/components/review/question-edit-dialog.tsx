@@ -21,6 +21,7 @@ import {
   RadioGroupItem,
   Textarea
 } from "@teacher-exam/ui"
+import { Match } from "effect"
 import { useRef, useState } from "react"
 import { matchQuestion } from "../../lib/question-render.js"
 import { TeacherPreviewBlock } from "./teacher-preview-block.js"
@@ -116,31 +117,37 @@ function initState(question: Question): EditState {
 }
 
 function buildUpdated(question: Question, state: EditState): Question {
-  if (state._tag === "mcq_single") {
-    const q = question as McqSingleQuestion
-    return { ...q, text: state.text, options: state.options, correct: state.correct }
-  }
-  if (state._tag === "mcq_multi") {
-    const q = question as McqMultiQuestion
-    const correct = state.correct as McqMultiQuestion["correct"]
-    return { ...q, text: state.text, options: state.options, correct }
-  }
-  const q = question as TrueFalseQuestion
-  const statements = state.statements as TrueFalseQuestion["statements"]
-  return { ...q, text: state.text, statements }
+  return Match.value(state).pipe(
+    Match.tag("mcq_single", (s) => {
+      const q = question as McqSingleQuestion
+      return { ...q, text: s.text, options: s.options, correct: s.correct }
+    }),
+    Match.tag("mcq_multi", (s) => {
+      const q = question as McqMultiQuestion
+      const correct = s.correct as McqMultiQuestion["correct"]
+      return { ...q, text: s.text, options: s.options, correct }
+    }),
+    Match.tag("true_false", (s) => {
+      const q = question as TrueFalseQuestion
+      const statements = s.statements as TrueFalseQuestion["statements"]
+      return { ...q, text: s.text, statements }
+    }),
+    Match.exhaustive
+  )
 }
 
 function isValidState(state: EditState): boolean {
   if (state.text.trim() === "") return false
-  if (state._tag === "mcq_single") {
-    return LETTERS.every((l) => state.options[l].trim() !== "")
-  }
-  if (state._tag === "mcq_multi") {
-    const validOptions = LETTERS.every((l) => state.options[l].trim() !== "")
-    const validCorrect = state.correct.length >= 2 && state.correct.length <= 3
-    return validOptions && validCorrect
-  }
-  return state.statements.length >= 3 && state.statements.every((s) => s.text.trim() !== "")
+  return Match.value(state).pipe(
+    Match.tag("mcq_single", (s) => LETTERS.every((l) => s.options[l].trim() !== "")),
+    Match.tag("mcq_multi", (s) => {
+      const validOptions = LETTERS.every((l) => s.options[l].trim() !== "")
+      const validCorrect = s.correct.length >= 2 && s.correct.length <= 3
+      return validOptions && validCorrect
+    }),
+    Match.tag("true_false", (s) => s.statements.length >= 3 && s.statements.every((s2) => s2.text.trim() !== "")),
+    Match.exhaustive
+  )
 }
 
 interface McqSingleFormProps {

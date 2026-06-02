@@ -12,6 +12,7 @@ import {
 } from "@teacher-exam/shared"
 import { and, eq, ne } from "drizzle-orm"
 import { Effect, Either, Match, Schema } from "effect"
+import { logDomainError } from "../../lib/effect-log.js"
 import { validateGeneratedQuestionLatex } from "../../lib/latex-validator.js"
 import { normalizeMatematikaLatexField } from "../../lib/normalize-matematika-latex.js"
 import { buildRegeneratePrompt } from "../../lib/prompt"
@@ -146,7 +147,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
             }
             return merged
           }),
-          Match.orElse(() => existingQuestion)
+          Match.exhaustive
         )
 
         const typeCols = questionToRow(mergedQuestion)
@@ -181,7 +182,15 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
             yield* bankService.saveQuestion(userId, {
               questionId: id as SaveToBankInput["questionId"]
             })
-          }).pipe(Effect.catchAll(() => Effect.void))
+          }).pipe(
+            Effect.tapError((e) =>
+              logDomainError("questions.accept.autoSave", e, {
+                kind: "expected",
+                extra: { userId, questionId: id }
+              })
+            ),
+            Effect.catchAll(() => Effect.void)
+          )
         }
 
         return rowToQuestion(updated)

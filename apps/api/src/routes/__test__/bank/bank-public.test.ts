@@ -53,6 +53,27 @@ describe("GET /api/bank/public", () => {
     expect(data[0]?.["userId"]).toBeUndefined()
   })
 
+  it("authenticated user can see their own public soal in the public bank (regression for empty state bug)", async () => {
+    const row = makePublicBankRow({ userId: "test-user-id" })
+    const questionRow = makeQuestionRow({ id: "q-1", text: "Soal saya yang dipublikasikan" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([{ count: 1 }])
+      if (selectCount === 2) return makeChain([row])
+      return makeChain([questionRow])
+    })
+
+    const app = buildHttpApiTestApp({ userId: "test-user-id" })
+    const res = await app.request("/api/bank/public")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as Record<string, unknown>
+    const data = body["data"] as Array<Record<string, unknown>>
+    expect(data).toHaveLength(1)
+    expect(data[0]?.["text"]).toBe("Soal saya yang dipublikasikan")
+  })
+
   it("returns 429 after rate limit exceeded", async () => {
     let t = 0
     const app = buildHttpApiTestApp({

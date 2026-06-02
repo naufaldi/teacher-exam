@@ -5,6 +5,7 @@ import { formatExamTitle, SUBJECT_LABEL, UpdateExamInputSchema } from "@teacher-
 import type { ExamShareResponse, ExamSubject, ExamWithQuestions } from "@teacher-exam/shared"
 import { and, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+import { logDomainError } from "../../lib/effect-log"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
 import { rowToQuestion } from "../../lib/question-mapper"
@@ -311,7 +312,15 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         yield* Effect.gen(function*() {
           const bankService = yield* BankService
           yield* bankService.propagatePublish(userId, id)
-        }).pipe(Effect.catchAll(() => Effect.void))
+        }).pipe(
+          Effect.tapError((e) =>
+            logDomainError("exams.share.propagatePublish", e, {
+              kind: "expected",
+              extra: { userId, examId: id }
+            })
+          ),
+          Effect.catchAll(() => Effect.void)
+        )
 
         const result: ExamShareResponse = {
           slug,

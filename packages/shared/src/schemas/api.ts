@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { GradeSchema } from "./entities.js"
+import { GradeSchema, PdfUploadIdSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
 import {
   AnswerSchema,
@@ -23,7 +23,7 @@ export const GenerateExamInputSchema = Schema.Struct({
   reviewMode: ReviewModeSchema,
   examType: Schema.optional(ExamTypeSchema),
   classContext: Schema.optional(Schema.String),
-  pdfUploadId: Schema.optional(Schema.String),
+  pdfUploadId: Schema.optional(PdfUploadIdSchema),
   exampleQuestions: Schema.optional(Schema.String),
   totalSoal: Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
   composition: Schema.optional(Schema.Struct({

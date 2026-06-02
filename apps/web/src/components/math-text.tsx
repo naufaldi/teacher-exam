@@ -1,4 +1,5 @@
 import { formatMathFallbackPlain, parseMathText, repairMatematikaLatexInText } from "@teacher-exam/shared"
+import { Match } from "effect"
 import katex from "katex"
 import type { ReactNode } from "react"
 
@@ -13,18 +14,22 @@ export function MathText({ repair = true, text }: MathTextProps): ReactNode {
   return (
     <>
       {parseMathText(normalized).map((part, index) => {
-        if (part._tag === "text") {
-          const display = part.value.includes("$")
-            ? formatMathFallbackPlain(part.value.replace(/\$/g, ""))
-            : part.value
-          return <span key={index}>{display}</span>
-        }
-
-        const html = renderMath(part.value, part.displayMode)
-        if (html !== null) {
-          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />
-        }
-        return <span key={index}>{formatMathFallbackPlain(part.value)}</span>
+        return Match.value(part).pipe(
+          Match.tag("text", (p) => {
+            const display = p.value.includes("$")
+              ? formatMathFallbackPlain(p.value.replace(/\$/g, ""))
+              : p.value
+            return <span key={index}>{display}</span>
+          }),
+          Match.tag("math", (p) => {
+            const html = renderMath(p.value, p.displayMode)
+            if (html !== null) {
+              return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />
+            }
+            return <span key={index}>{formatMathFallbackPlain(p.value)}</span>
+          }),
+          Match.exhaustive
+        )
       })}
     </>
   )

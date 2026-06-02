@@ -42,6 +42,7 @@ import {
   UnauthorizedClientError,
   UnauthorizedError
 } from "./api-errors.js"
+import { logClientError } from "./client-log.js"
 import { devLog } from "./dev-log.js"
 
 export {
@@ -118,6 +119,9 @@ export async function apiFetchEither<T>(
       ...init
     })
   } catch (err) {
+    const failure = new NetworkClientError({
+      message: err instanceof Error ? err.message : String(err)
+    })
     devLog("api.fetch", {
       path,
       method,
@@ -125,11 +129,8 @@ export async function apiFetchEither<T>(
       durationMs: Math.round(performance.now() - t0),
       error: err instanceof Error ? err.message : String(err)
     })
-    return Either.left(
-      new NetworkClientError({
-        message: err instanceof Error ? err.message : String(err)
-      })
-    )
+    logClientError(failure, { scope: "api.network", path, method })
+    return Either.left(failure)
   }
 
   const durationMs = Math.round(performance.now() - t0)
@@ -142,30 +143,31 @@ export async function apiFetchEither<T>(
   if (res.status === 401) {
     const err = new UnauthorizedClientError({})
     if (onUnauthorized) onUnauthorized(err)
+    logClientError(err, { scope: "api.unauthorized", path, method })
     return Either.left(err)
   }
 
   if (res.status === 429) {
     const header = res.headers.get("Retry-After")
     const retryAfterSec = header ? Number(header) : 60
-    return Either.left(
-      new RateLimitedClientError({
-        retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : 60
-      })
-    )
+    const err = new RateLimitedClientError({
+      retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : 60
+    })
+    logClientError(err, { scope: "api.rate_limited", path, method })
+    return Either.left(err)
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText, code: "UNKNOWN" }))
     const errorBody = body as { error?: string; message?: string; code?: string; details?: unknown }
-    return Either.left(
-      new ApiClientError({
-        message: errorBody.message ?? errorBody.error ?? res.statusText,
-        code: errorBody.code ?? "UNKNOWN",
-        status: res.status,
-        details: errorBody.details
-      })
-    )
+    const err = new ApiClientError({
+      message: errorBody.message ?? errorBody.error ?? res.statusText,
+      code: errorBody.code ?? "UNKNOWN",
+      status: res.status,
+      details: errorBody.details
+    })
+    logClientError(err, { scope: "api.api_error", path, method })
+    return Either.left(err)
   }
 
   const json = (await res.json()) as T
