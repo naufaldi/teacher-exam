@@ -127,7 +127,7 @@ For our deployment, certs issued successfully even with Cloudflare proxy on (CF 
 Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml):
 
 1. Build and push API + web images to GHCR (tagged by commit SHA).
-2. SSH to VPS → `git pull`, pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
+2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
 4. Health check via public URL (through Cloudflare → **`edge-proxy-caddy`** → API).
 
@@ -139,7 +139,7 @@ PRs run [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) including a
 
 ```bash
 ssh vps-faldi 'cd ~/projects/teacher-exam && \
-  git pull && \
+  git fetch origin main && git reset --hard origin/main && \
   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build'
 ```
 
@@ -319,3 +319,5 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 8. **The `upstream` (singular) error in Caddy logs** is from another app already on the VPS with an old-style label. It is not a teacher-exam issue and can be ignored.
 
 9. **`IMAGE_TAG` vs running containers after a failed deploy.** If migrate fails, `.env.production` must not advance `IMAGE_TAG` ahead of the containers still running an older image (deploy workflow only persists `IMAGE_TAG` after migrate succeeds). Manual migrate: `IMAGE_TAG=<sha> docker compose ... --profile migrate run --rm migrate`, then update `.env.production` and `up -d`.
+
+10. **Do not leave local edits on the VPS git clone.** Patching files under `~/projects/teacher-exam` (e.g. SCP a fixed migration) makes `git pull` fail on the next deploy. Deploy uses `git reset --hard origin/main`. For one-off DB fixes, use `docker compose ... run migrate` with a volume mount or fix via a merged PR — not uncommitted files on the server.
