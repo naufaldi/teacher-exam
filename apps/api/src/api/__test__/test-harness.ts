@@ -18,6 +18,7 @@ import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
 import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
 import { AiGenerateRateLimitLive, createTestGlobalRateLimitLive, GlobalRateLimitLive } from "../middleware/rate-limit"
 import { type AiClient, TestAiLayer } from "../services/ai"
+import type { AuthService } from "../services/auth-service"
 import { AuthServiceLive } from "../services/auth-service"
 import { BankServiceLive } from "../services/bank-service"
 import { type CurriculumService, TestCurriculumLayer } from "../services/curriculum-service"
@@ -63,7 +64,7 @@ function createMiddlewareLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  authLayer?: Layer.Layer<import("../services/auth-service").AuthService>
+  authLayer?: Layer.Layer<AuthService>
 }) {
   const authMiddlewareLayer = opts.userId
     ? TestAuthorizationLive(opts.userId)
@@ -92,7 +93,7 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  authLayer?: Layer.Layer<import("../services/auth-service").AuthService>
+  authLayer?: Layer.Layer<AuthService>
   curriculumLayer?: Layer.Layer<CurriculumService>
 } = {}) {
   const apiLayer = HttpApiBuilder.api(TeacherExamApi).pipe(

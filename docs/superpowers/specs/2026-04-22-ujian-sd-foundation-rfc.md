@@ -2,6 +2,8 @@
 
 > **Status:** Proposed | **Date:** 2026-04-22 | **Author:** Design System Handoff + PRD v2
 
+> **PDF sections superseded** by [RFC: PDF Handling (2026-06-10)](../../rfc/2026-06-10-pdf-handling-rfc.md) — including §2 `pdf-parse`, §6 upload text-extraction wording, and prompt pre-extraction. This document remains historical reference for overall architecture.
+
 ---
 
 ## 1. Overview

@@ -1,8 +1,10 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import { brandExamId, brandQuestionId, type PublicExamDetailResponse } from "@teacher-exam/shared"
 import { fireEvent, render, screen } from "@testing-library/react"
 import type { ComponentType } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import type * as ApiModule from "../../lib/api.js"
 
 import { Route } from "../share.$slug.js"
 
@@ -13,7 +15,7 @@ const { mockPublicExamGet } = vi.hoisted(() => ({
 let mockLoaderData: PublicExamDetailResponse | undefined
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
@@ -24,7 +26,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 })
 
 vi.mock("../../lib/api.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {

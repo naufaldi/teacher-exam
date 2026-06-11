@@ -1,6 +1,7 @@
 import type { Layer } from "effect"
 import { buildTestHandler } from "../../api/__test__/test-harness"
 import type { AuthService } from "../../api/services/auth-service"
+import type { CurriculumService } from "../../api/services/curriculum-service"
 import type { AiService } from "../../services/AiService"
 
 export function buildHttpApiTestApp(opts: {
@@ -8,7 +9,7 @@ export function buildHttpApiTestApp(opts: {
   authenticated?: boolean
   aiService?: AiService
   authLayer?: Layer.Layer<AuthService>
-  curriculumLayer?: Layer.Layer<import("../../api/services/curriculum-service").CurriculumService>
+  curriculumLayer?: Layer.Layer<CurriculumService>
   rateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number

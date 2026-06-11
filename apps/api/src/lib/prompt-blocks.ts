@@ -49,7 +49,7 @@ export function corpusBlock(curriculumText: string): string {
 export function authorityOrderBlock(): string {
   return [
     "Authority order:",
-    "  1. Korpus Buku Siswa di bawah = baseline kurikulum (otoritatif untuk CP, daftar bab, sub-konsep, sample teks bacaan, dan kosakata).",
+    "  1. Korpus Buku Siswa di bawah = baseline kurikulum (otoritatif untuk CP, daftar bab, sub-konsep, teks bacaan, dan kosakata).",
     "  2. PDF guru (jika ada di user message sebagai document block) = konteks tambahan untuk memperkaya soal — bukan pengganti korpus."
   ].join("\n")
 }
