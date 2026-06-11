@@ -261,3 +261,39 @@ Never guess at Effect patterns — check the guide first.
 
 The Effect v4 repository is cloned to `~/.local/share/effect-solutions/effect` for optional deep reference.
 Runtime code targets **Effect v3.21.2**; do not assume v4 APIs without checking the installed version.
+
+## Cursor Cloud specific instructions
+
+### Infrastructure (not in `pnpm dev`)
+
+- **PostgreSQL 16** must be running before API/E2E. This VM uses the distro package (`postgresql` on Ubuntu), not Docker. Start with `sudo pg_ctlcluster 16 main start` if needed.
+- Create role/DB once (matches `.env.example`): user `school_exam`, password `change-me`, database `school_exam`.
+- Copy `.env.example` → `.env`. For local E2E without Google OAuth, enable `DEV_AUTH_ENABLED`, `VITE_DEV_AUTH`, dev email/password, then `pnpm db:seed:dev` after migrate.
+
+### Migrations gotcha
+
+`pnpm db:migrate` (`drizzle-kit migrate`) can exit **1** on a fresh DB because migration `0008_clean_leopardon.sql` repeats `ADD VALUE 'matematika'` after `0007` already added it. Workaround (no repo edits): copy `packages/db/src/migrations` to a temp folder, remove the first line of `0008_clean_leopardon.sql`, then run the migrator from `apps/api`:
+
+```bash
+cp -a packages/db/src/migrations /tmp/te-migrations
+tail -n +2 packages/db/src/migrations/0008_clean_leopardon.sql > /tmp/te-migrations/0008_clean_leopardon.sql
+cd apps/api && node --env-file-if-exists=../../.env --import tsx/esm -e "
+import pg from 'pg'; import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+await c.connect();
+await migrate(drizzle(c), { migrationsFolder: '/tmp/te-migrations' });
+await c.end();
+console.log('migrate ok');
+"
+```
+
+### Dev servers
+
+- `pnpm dev` (root) kills stale ports then starts API **:3000** and web **:5173** in parallel. Prefer **tmux** for long-running dev (`ujian-dev` or similar).
+- Vite binds to `localhost`; use `http://localhost:5173` (not `127.0.0.1`) if a health check returns connection refused.
+- API health: `curl http://localhost:3000/api/health`. Dev login: `POST http://localhost:3000/api/dev/login` (requires `DEV_AUTH_ENABLED`).
+
+### Verify / CI commands
+
+See the **Commands** and **Lint and CI workflow** sections above: `pnpm lint`, `pnpm effect:check`, `pnpm type-check`, `pnpm test` (use `pnpm exec turbo run test` if `pnpm test` has no script at root).
