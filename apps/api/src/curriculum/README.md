@@ -8,7 +8,7 @@ than the model's general knowledge.
 
 ```
 curriculum/
-├── pdf/   ← inputs (gitignored — too large; re-download from SIBI)
+├── pdf/   ← Buku Siswa PDF inputs (committed; CC-licensed Kemendikdasmen)
 └── md/    ← committed extracted markdown (consumed at runtime)
 ```
 
@@ -42,7 +42,7 @@ pnpm --filter @teacher-exam/api curriculum:verify -- --book bahasa-indonesia-kel
 
 ## Source PDFs — BOOKS manifest
 
-PDFs are CC-licensed by Kemendikdasmen but **gitignored** (large files; GitHub 100 MB limit).
+PDFs are CC-licensed by Kemendikdasmen and **committed** in `pdf/` so clones can run `curriculum:extract` without re-downloading from SIBI.
 
 ### Registered (8 books)
 
