@@ -1,9 +1,11 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import type { ExamWithQuestions, Question } from "@teacher-exam/shared"
 import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import type { ComponentType } from "react"
 import { afterEach, beforeEach, vi } from "vitest"
 import { makeMcqSingle } from "../../../test/fixtures/exam.js"
 
+import type * as ApiModule from "../../../lib/api.js"
 import { api } from "../../../lib/api.js"
 import { examDraftStore } from "../../../lib/exam-draft-store.js"
 import { Route } from "../../_auth.preview.js"
@@ -16,7 +18,7 @@ const { mockGenerateDiscussion, mockNavigate, mockStreamDiscussion, previewTestC
 }))
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
@@ -42,7 +44,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 })
 
 vi.mock("../../../lib/api.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {

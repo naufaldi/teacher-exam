@@ -2,6 +2,7 @@ import { QuestionSchema } from "@teacher-exam/shared"
 import { vi } from "vitest"
 
 import { db } from "@teacher-exam/db"
+import type { AiService } from "../../services/AiService.js"
 import { makeChain, makeQuestionRow } from "../helpers.js"
 import { buildHttpApiTestApp } from "../http-api-setup.js"
 
@@ -38,7 +39,7 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides
 })
 
-function buildTestApp(opts: { aiService?: import("../../services/AiService.js").AiService } = {}) {
+function buildTestApp(opts: { aiService?: AiService } = {}) {
   return buildHttpApiTestApp({
     userId: "test-user-id",
     ...(opts.aiService !== undefined ? { aiService: opts.aiService } : {})

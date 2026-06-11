@@ -1,7 +1,10 @@
+import type * as TanStackRouter from "@tanstack/react-router"
+import type * as UiModule from "@teacher-exam/ui"
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { mockApiFailOnce, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import type * as ApiModule from "../../lib/api.js"
 import { api, ApiError } from "../../lib/api.js"
 import { makeExamWithQuestions } from "../../test/fixtures/exam.js"
 import { Route } from "../_auth.generate.js"
@@ -9,7 +12,7 @@ import { Route } from "../_auth.generate.js"
 const mockNavigate = vi.fn<(opts: unknown) => Promise<void>>()
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: { component: React.ComponentType }) => ({
@@ -22,7 +25,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 })
 
 vi.mock("../../lib/api.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {
@@ -36,7 +39,7 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
 // The Generate button is disabled by default until the form is filled — this
 // lets us test the generate flow without Radix Select interaction.
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@teacher-exam/ui")>()
+  const orig = await importOriginal<typeof UiModule>()
   return {
     ...orig,
     Button: (

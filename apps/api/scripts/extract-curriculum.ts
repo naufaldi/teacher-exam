@@ -11,12 +11,12 @@ import type { PDFDocument } from "pdf-lib"
 import { AiGenerationError } from "../src/errors/index.js"
 import { curriculumMdFilename } from "../src/lib/curriculum.js"
 import {
+  type AiProvider,
   createModelLayersFromResolved,
   resolveAnthropicLayerConfig,
+  type ResolvedModelLayerConfig,
   resolveMinimaxLayerConfig,
-  resolveOpenAiLayerConfig,
-  type AiProvider,
-  type ResolvedModelLayerConfig
+  resolveOpenAiLayerConfig
 } from "../src/lib/effect-ai/layers.js"
 import { buildPrompt } from "../src/lib/effect-ai/prompt.js"
 import { runGenerateText } from "../src/lib/effect-ai/run.js"
@@ -435,10 +435,15 @@ async function extractBook(
   } catch (err) {
     if (!(err instanceof MergeValidationError)) throw err
     console.warn(`[${book.slug}] deterministic merge failed (${err.message}) — falling back to LLM consolidation`)
-    merged = await generateMarkdown(pdfModelLayer, FALLBACK_MERGE_SYSTEM_PROMPT, fallbackMergePrompt(book, concatenated), {
-      model: ai.model,
-      provider: ai.provider
-    })
+    merged = await generateMarkdown(
+      pdfModelLayer,
+      FALLBACK_MERGE_SYSTEM_PROMPT,
+      fallbackMergePrompt(book, concatenated),
+      {
+        model: ai.model,
+        provider: ai.provider
+      }
+    )
   }
 
   await mkdir(MD_DIR, { recursive: true })

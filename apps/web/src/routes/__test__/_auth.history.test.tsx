@@ -1,8 +1,10 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import { ToastProvider } from "@teacher-exam/ui"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mockApiFailOnce, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import type * as ApiModule from "../../lib/api.js"
 import { api, ApiError } from "../../lib/api.js"
 import { makeExam } from "../../test/fixtures/exam.js"
 
@@ -15,7 +17,7 @@ const { mockClipboardWriteText, mockNavigate } = vi.hoisted(() => ({
 
 // Mock TanStack Router
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: { component: React.ComponentType }) => ({
@@ -27,7 +29,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 // Mock api
 vi.mock("../../lib/api.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {

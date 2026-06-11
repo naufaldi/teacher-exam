@@ -1,7 +1,9 @@
+import type * as UiModule from "@teacher-exam/ui"
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { apiOk } from "../../lib/api-test-utils.js"
+import type * as ApiModule from "../../lib/api.js"
 import { makeExam } from "../../test/fixtures/exam.js"
 import { useDuplicateExam } from "../use-duplicate-exam.js"
 
@@ -15,14 +17,14 @@ vi.mock("@tanstack/react-router", () => ({
 }))
 
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@teacher-exam/ui")>()
+  const orig = await importOriginal<typeof UiModule>()
   return { ...orig, useToast: () => ({ toast: mockToast }) }
 })
 
 const mockDuplicate = vi.fn()
 
 vi.mock("../../lib/api", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {
