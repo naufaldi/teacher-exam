@@ -11,10 +11,10 @@ import { join } from "node:path"
 const API = process.env["API_URL"] ?? "http://localhost:3000"
 
 const COMBOS = [
-  { subject: "ipas", grade: 5, topic: "Cahaya dan Bunyi" },
-  { subject: "ipas", grade: 6, topic: "Tubuh Manusia dan Kesehatan" },
-  { subject: "bahasa_inggris", grade: 5, topic: "Daily Activities" },
-  { subject: "bahasa_inggris", grade: 6, topic: "Past Experiences" }
+  { subject: "ipas", grade: 5, topic: "Harmoni dalam Ekosistem" },
+  { subject: "ipas", grade: 6, topic: "Tubuh Kita Tumbuh dan Bekerja" },
+  { subject: "bahasa_inggris", grade: 5, topic: "My Daily Activities" },
+  { subject: "bahasa_inggris", grade: 6, topic: "My Past Experiences" }
 ] as const
 
 function englishRatio(text: string): number {
