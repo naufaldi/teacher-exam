@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
+import type { ExamSubject } from "@teacher-exam/shared"
 import { REQUIRED_FIELDS } from "../../../scripts/lib/merge-bab"
 import { curriculumMdFilename } from "../../lib/curriculum"
+import { listExtractableBooks } from "../readiness.js"
 
 interface BookCase {
   slug: string
@@ -11,16 +13,30 @@ interface BookCase {
   expectedMinBab: number
 }
 
-const BOOKS: Array<BookCase> = [
-  { slug: "bahasa-indonesia-kelas-5", subject: "Bahasa Indonesia", grade: 5, expectedMinBab: 4 },
-  { slug: "bahasa-indonesia-kelas-6", subject: "Bahasa Indonesia", grade: 6, expectedMinBab: 8 },
-  { slug: "pendidikan-pancasila-kelas-5", subject: "Pendidikan Pancasila", grade: 5, expectedMinBab: 4 },
-  { slug: "pendidikan-pancasila-kelas-6", subject: "Pendidikan Pancasila", grade: 6, expectedMinBab: 7 },
-  { slug: "ipas-kelas-5", subject: "IPAS", grade: 5, expectedMinBab: 6 },
-  { slug: "ipas-kelas-6", subject: "IPAS", grade: 6, expectedMinBab: 6 },
-  { slug: "bahasa-inggris-kelas-5", subject: "Bahasa Inggris", grade: 5, expectedMinBab: 6 },
-  { slug: "bahasa-inggris-kelas-6", subject: "Bahasa Inggris", grade: 6, expectedMinBab: 6 }
-]
+const EXPECTED_MIN_BAB: Record<string, number> = {
+  "bahasa-indonesia-kelas-5": 4,
+  "bahasa-indonesia-kelas-6": 8,
+  "pendidikan-pancasila-kelas-5": 4,
+  "pendidikan-pancasila-kelas-6": 7,
+  "ipas-kelas-5": 6,
+  "ipas-kelas-6": 6,
+  "bahasa-inggris-kelas-5": 6,
+  "bahasa-inggris-kelas-6": 6
+}
+
+const BOOKS: Array<BookCase> = listExtractableBooks().map((entry) => {
+  const slug = curriculumMdFilename(entry.subjectKey as ExamSubject, entry.grade).replace(/\.md$/, "")
+  const expectedMinBab = EXPECTED_MIN_BAB[slug]
+  if (expectedMinBab === undefined) {
+    throw new Error(`missing expectedMinBab test metadata for ${slug}`)
+  }
+  return {
+    slug,
+    subject: entry.label,
+    grade: entry.grade,
+    expectedMinBab
+  }
+})
 
 const MD_DIR = join(__dirname, "..", "md")
 

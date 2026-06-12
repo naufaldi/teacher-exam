@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url"
 import type { PDFDocument } from "pdf-lib"
 import { AiGenerationError } from "../src/errors/index.js"
 import { curriculumMdFilename } from "../src/lib/curriculum.js"
+import { listExtractableBooks } from "../src/curriculum/readiness.js"
 import { buildAnthropicModelLayers } from "../src/lib/effect-ai/layers.js"
 import { buildPrompt } from "../src/lib/effect-ai/prompt.js"
 import { runGenerateText } from "../src/lib/effect-ai/run.js"
@@ -57,56 +58,17 @@ function defineBook(input: BookInput): BookSpec {
   return { ...input, slug: curriculumMdFilename(input.subjectKey, input.grade).replace(/\.md$/, "") }
 }
 
-const BOOKS: Array<BookSpec> = [
-  defineBook({
-    subjectKey: "bahasa_indonesia",
-    subject: "Bahasa Indonesia",
-    grade: 5,
-    pdfFilename: "Indonesia_BS_KLS_V_Rev.pdf"
-  }),
-  defineBook({
-    subjectKey: "bahasa_indonesia",
-    subject: "Bahasa Indonesia",
-    grade: 6,
-    pdfFilename: "Bahasa-Indonesia-BS-KLS-VI_compressed.pdf"
-  }),
-  defineBook({
-    subjectKey: "pendidikan_pancasila",
-    subject: "Pendidikan Pancasila",
-    grade: 5,
-    pdfFilename: "Pendidikan-Pancasila-BS-KLS-V.pdf"
-  }),
-  defineBook({
-    subjectKey: "pendidikan_pancasila",
-    subject: "Pendidikan Pancasila",
-    grade: 6,
-    pdfFilename: "Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf"
-  }),
-  defineBook({
-    subjectKey: "ipas",
-    subject: "IPAS",
-    grade: 5,
-    pdfFilename: "IPAS_BS_KLS_V_Rev.pdf"
-  }),
-  defineBook({
-    subjectKey: "ipas",
-    subject: "IPAS",
-    grade: 6,
-    pdfFilename: "IPAS_BS_KLS_VI_Rev.pdf"
-  }),
-  defineBook({
-    subjectKey: "bahasa_inggris",
-    subject: "Bahasa Inggris",
-    grade: 5,
-    pdfFilename: "Inggris_FN_BS_KLS_V.pdf"
-  }),
-  defineBook({
-    subjectKey: "bahasa_inggris",
-    subject: "Bahasa Inggris",
-    grade: 6,
-    pdfFilename: "Inggris_FN_BS_KLS_VI.pdf"
+const BOOKS: Array<BookSpec> = listExtractableBooks().map((entry) => {
+  if (entry.sourceFilename === undefined) {
+    throw new Error(`extractable manifest entry ${entry.subjectKey} kelas ${entry.grade} missing sourceFilename`)
+  }
+  return defineBook({
+    subjectKey: entry.subjectKey as ExamSubject,
+    subject: entry.label,
+    grade: entry.grade,
+    pdfFilename: entry.sourceFilename
   })
-]
+})
 
 const EXTRACTION_SYSTEM_PROMPT = `Anda adalah ekstraktor konten kurikulum. Konversi PDF Buku Siswa Kurikulum Merdeka
 menjadi markdown TERSTRUKTUR sesuai skema ketat berikut. Jangan tambahkan komentar,
