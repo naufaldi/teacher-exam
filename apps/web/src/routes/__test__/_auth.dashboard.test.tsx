@@ -1,3 +1,4 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import type { Exam } from "@teacher-exam/shared"
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -22,7 +23,7 @@ vi.mock("../../hooks/use-duplicate-exam.js", () => ({
 }))
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({

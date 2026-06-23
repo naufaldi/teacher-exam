@@ -1,3 +1,4 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import type { BankQuestion, PaginatedBankResponse, PaginatedPublicBankResponse } from "@teacher-exam/shared"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -6,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Route } from "../_auth.bank-soal.js"
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({

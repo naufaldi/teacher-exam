@@ -11,7 +11,7 @@
 export const REQUIRED_FIELDS = [
   "Topik utama",
   "Sub-konsep",
-  "Sample teks bacaan",
+  "Teks bacaan",
   "Kosakata kunci",
   "Kompetensi yang diuji"
 ] as const

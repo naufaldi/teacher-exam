@@ -6,6 +6,7 @@ dist
 .DS_Store
 .worktrees
 apps/api/src/curriculum/pdf/*.pdf
+apps/api/src/curriculum/*.pdf
 apps/api/src/curriculum/cache/
 .cursor/
 .agent-browser/

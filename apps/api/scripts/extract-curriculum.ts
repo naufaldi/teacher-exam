@@ -8,10 +8,17 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { PDFDocument } from "pdf-lib"
+import { listExtractableBooks } from "../src/curriculum/readiness.js"
 import { AiGenerationError } from "../src/errors/index.js"
 import { curriculumMdFilename } from "../src/lib/curriculum.js"
-import { listExtractableBooks } from "../src/curriculum/readiness.js"
-import { buildAnthropicModelLayers } from "../src/lib/effect-ai/layers.js"
+import {
+  type AiProvider,
+  createModelLayersFromResolved,
+  resolveAnthropicLayerConfig,
+  type ResolvedModelLayerConfig,
+  resolveMinimaxLayerConfig,
+  resolveOpenAiLayerConfig
+} from "../src/lib/effect-ai/layers.js"
 import { buildPrompt } from "../src/lib/effect-ai/prompt.js"
 import { runGenerateText } from "../src/lib/effect-ai/run.js"
 import { mergeBab, MergeValidationError } from "./lib/merge-bab.js"
@@ -22,9 +29,20 @@ import { extractPageRange, loadPdfDocument, planChunks } from "./lib/pdf-split.j
  * Uses `@effect/ai-anthropic` via `runGenerateText` + PDF file parts (same stack as runtime API).
  */
 
-const MODEL = "claude-opus-4-7"
-const MAX_TOKENS = 8192
+const DEFAULT_EXTRACT_MAX_TOKENS = 16_384
 const MIN_RETRY_PAGES = 5
+
+function resolveExtractMaxTokens(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env["CURRICULUM_EXTRACT_MAX_TOKENS"]?.trim()
+  if (raw === undefined || raw === "") return DEFAULT_EXTRACT_MAX_TOKENS
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed < 1024) {
+    throw new CurriculumExtractConfigError({
+      message: `CURRICULUM_EXTRACT_MAX_TOKENS must be an integer ≥ 1024, got "${raw}"`
+    })
+  }
+  return parsed
+}
 
 class CurriculumExtractConfigError extends Data.TaggedError("CurriculumExtractConfigError")<{
   message: string
@@ -86,9 +104,16 @@ opini, atau pengantar — hanya markdown.
 **Topik utama:** ...
 **Sub-konsep:**
 - ...
-**Sample teks bacaan:** "kutipan singkat 2-4 kalimat dari buku"
+**Teks bacaan:** |
+  {teks utuh dari buku — cerita/informasi lengkap per bab, verbatim sebisa mungkin}
+  {beberapa paragraf diperbolehkan; jangan ringkas atau parafrase}
 **Kosakata kunci:** kata1, kata2, kata3
 **Kompetensi yang diuji:** apa yang siswa harus bisa lakukan setelah bab ini
+
+Aturan Teks bacaan:
+- Salin seluruh teks bacaan/narasi/informasi yang muncul di bab (bukan cuplikan 2-4 kalimat).
+- Jangan mengarang teks yang tidak ada di PDF.
+- Abaikan petunjuk guru, LKPD kosong, dan glosarium.
 
 (ulangi blok Bab untuk setiap bab dalam PDF)`
 
@@ -149,7 +174,7 @@ async function generateMarkdown(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
   system: string,
   user: string,
-  pdfBytes?: Buffer
+  options: { model: string; provider: AiProvider; pdfBytes?: Buffer }
 ): Promise<string> {
   return Effect.runPromise(
     runGenerateText({
@@ -157,13 +182,23 @@ async function generateMarkdown(
       prompt: buildPrompt({
         system,
         user,
-        ...(pdfBytes !== undefined ? { pdfBytes } : {})
+        ...(options.pdfBytes !== undefined ? { pdfBytes: options.pdfBytes } : {})
       }),
-      model: MODEL,
+      model: options.model,
       logEvent: "curriculum.extract",
-      errorContext: { provider: "anthropic" }
+      errorContext: { provider: options.provider }
     })
   )
+}
+
+function resolveExtractLayerConfig(env: NodeJS.ProcessEnv = process.env): ResolvedModelLayerConfig {
+  const provider = (env["AI_PROVIDER"] ?? "anthropic").toLowerCase()
+  if (provider === "openai") return resolveOpenAiLayerConfig(env)
+  if (provider === "minimax") return resolveMinimaxLayerConfig(env)
+  if (provider === "anthropic") return resolveAnthropicLayerConfig(env)
+  throw new CurriculumExtractConfigError({
+    message: `AI_PROVIDER must be "anthropic", "minimax", or "openai", got "${provider}"`
+  })
 }
 
 function cachePathFor(slug: string, startPage: number, endPage: number): string {
@@ -242,6 +277,7 @@ async function readCachedChunk(cachePath: string): Promise<string | null> {
 
 async function extractChunkMarkdown(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
+  ai: { model: string; provider: AiProvider },
   book: BookSpec,
   src: PDFDocument,
   totalPages: number,
@@ -268,7 +304,7 @@ async function extractChunkMarkdown(
       pdfModelLayer,
       EXTRACTION_SYSTEM_PROMPT,
       chunkInstruction(book, startPage, endPage, totalPages),
-      Buffer.from(pdfBytes)
+      { model: ai.model, provider: ai.provider, pdfBytes: Buffer.from(pdfBytes) }
     )
     console.log(`${text.length} chars`)
     await writeFileAtomic(cachePath, text)
@@ -297,8 +333,8 @@ async function extractChunkMarkdown(
         mid + 1
       }-${endPage}`
     )
-    const left = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, startPage, mid, cacheStats)
-    const right = await extractChunkMarkdown(pdfModelLayer, book, src, totalPages, mid + 1, endPage, cacheStats)
+    const left = await extractChunkMarkdown(pdfModelLayer, ai, book, src, totalPages, startPage, mid, cacheStats)
+    const right = await extractChunkMarkdown(pdfModelLayer, ai, book, src, totalPages, mid + 1, endPage, cacheStats)
     const combined = `${left.trimEnd()}\n\n${right.trimStart()}`
     await writeFileAtomic(cachePath, combined)
     return combined
@@ -307,6 +343,7 @@ async function extractChunkMarkdown(
 
 async function extractBook(
   pdfModelLayer: Layer.Layer<LanguageModel.LanguageModel>,
+  ai: { model: string; provider: AiProvider },
   book: BookSpec
 ): Promise<void> {
   const pdfPath = join(PDF_DIR, book.pdfFilename)
@@ -326,6 +363,7 @@ async function extractBook(
   for (const chunk of chunks) {
     const text = await extractChunkMarkdown(
       pdfModelLayer,
+      ai,
       book,
       src,
       totalPages,
@@ -350,7 +388,11 @@ async function extractBook(
     merged = await generateMarkdown(
       pdfModelLayer,
       FALLBACK_MERGE_SYSTEM_PROMPT,
-      fallbackMergePrompt(book, concatenated)
+      fallbackMergePrompt(book, concatenated),
+      {
+        model: ai.model,
+        provider: ai.provider
+      }
     )
   }
 
@@ -375,14 +417,27 @@ function parseArgs(argv: ReadonlyArray<string>): { bookFilter: string | null } {
 }
 
 const main = Effect.gen(function*() {
-  const apiKey = process.env["ANTHROPIC_API_KEY"]
-  if (!apiKey || apiKey.includes("your-api-key")) {
-    return yield* Effect.die(
+  const resolved = yield* Effect.try({
+    try: () => resolveExtractLayerConfig(),
+    catch: (error: unknown) =>
       new CurriculumExtractConfigError({
-        message: "ANTHROPIC_API_KEY missing or placeholder — set it in the root .env file before running."
+        message: error instanceof Error ? error.message : String(error)
       })
+  })
+  const maxTokens = resolveExtractMaxTokens()
+  const pdfModelLayer = createModelLayersFromResolved({
+    ...resolved,
+    maxTokens,
+    discussionMaxTokens: maxTokens,
+    validationMaxTokens: maxTokens
+  }).pdf
+  const ai = { model: resolved.pdfModel, provider: resolved.provider }
+  yield* Effect.sync(() => {
+    console.log(
+      `[curriculum:extract] provider=${resolved.provider} model=${resolved.pdfModel} maxTokens=${maxTokens}`
     )
-  }
+  })
+
   const { bookFilter } = parseArgs(process.argv.slice(2))
   const targets = bookFilter ? BOOKS.filter((b) => b.slug === bookFilter) : BOOKS
   if (targets.length === 0) {
@@ -393,21 +448,10 @@ const main = Effect.gen(function*() {
     )
   }
 
-  const pdfModelLayer = buildAnthropicModelLayers({
-    provider: "anthropic",
-    apiKey,
-    model: MODEL,
-    pdfModel: MODEL,
-    discussionModel: MODEL,
-    maxTokens: MAX_TOKENS,
-    discussionMaxTokens: MAX_TOKENS,
-    validationMaxTokens: MAX_TOKENS
-  }).pdf
-
   const failed: Array<{ slug: string; error: string }> = []
   for (const book of targets) {
     yield* Effect.tryPromise({
-      try: () => extractBook(pdfModelLayer, book),
+      try: () => extractBook(pdfModelLayer, ai, book),
       catch: (error: unknown) => new CurriculumExtractBookError({ message: errorMessage(error) })
     }).pipe(
       Effect.catchAll((err) =>

@@ -7,10 +7,11 @@
  */
 import {
   CURRICULUM_VERSION,
+  type CurriculumSourceManifestItem,
+  type ExamSubject,
   phaseForGrade,
-  type CurriculumSourceManifestItem
+  SUBJECT_LABEL
 } from "@teacher-exam/shared"
-import { SUBJECT_LABEL, type ExamSubject } from "@teacher-exam/shared"
 
 const GRADES = [1, 2, 3, 4, 5, 6] as const
 
@@ -60,7 +61,7 @@ const FUTURE_SUBJECTS: ReadonlyArray<{ subjectKey: string; label: string }> = [
   },
   {
     subjectKey: "pendidikan_agama_katolik_budi_pekerti",
-    label: "Pendidikan Agama Katolik dan Budi Pekerti",
+    label: "Pendidikan Agama Katolik dan Budi Pekerti"
   },
   {
     subjectKey: "pendidikan_agama_hindu_budi_pekerti",
@@ -162,7 +163,7 @@ function futureSubjectEntry(
 
 export const CURRICULUM_MANIFEST: ReadonlyArray<CurriculumSourceManifestItem> = [
   ...CURRENT_SUBJECTS.flatMap((subjectKey) => GRADES.map((grade) => currentSubjectEntry(subjectKey, grade))),
-  ...FUTURE_SUBJECTS.flatMap(({ subjectKey, label }) =>
+  ...FUTURE_SUBJECTS.flatMap(({ label, subjectKey }) =>
     GRADES.map((grade) => futureSubjectEntry(subjectKey, label, grade))
   )
 ]

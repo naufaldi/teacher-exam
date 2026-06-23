@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { GradeSchema, type Grade } from "./entities.js"
+import { type Grade, GradeSchema } from "./entities.js"
 
 export const CURRICULUM_VERSION = "merdeka-2025" as const
 

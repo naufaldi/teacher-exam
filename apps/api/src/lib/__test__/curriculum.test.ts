@@ -11,7 +11,7 @@ describe("Matematika curriculum corpus", () => {
     expect(curriculumMdFilename("matematika" as ExamSubject, 6)).toBe("matematika-kelas-6.md")
   })
 
-  test("loads Matematika class 5 corpus without diagram topics before D phase", async () => {
+  test("loads Matematika class 5 extracted corpus when markdown is present", async () => {
     const text = await Effect.runPromise(
       Effect.gen(function*() {
         const curriculum = yield* CurriculumService
@@ -19,10 +19,9 @@ describe("Matematika curriculum corpus", () => {
       }).pipe(Effect.provide(CurriculumServiceLive), Effect.provide(NodeContext.layer))
     )
 
-    expect(text).toContain("# Matematika Kelas 5")
+    expect(text).toMatch(/^# Matematika — Kelas (5|V) /m)
     expect(text).toContain("Fase C")
-    expect(text).not.toContain("Bangun Datar")
-    expect(text).not.toContain("Bangun Ruang")
-    expect(text).not.toContain("Bidang Koordinat")
+    expect(text).toContain("**Teks bacaan:**")
+    expect(text).toContain("## Bab ")
   })
 })

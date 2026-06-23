@@ -1,4 +1,6 @@
+import type * as TanStackRouter from "@tanstack/react-router"
 import type { ExamWithQuestions } from "@teacher-exam/shared"
+import type * as UiModule from "@teacher-exam/ui"
 import { render } from "@testing-library/react"
 import React from "react"
 import { beforeEach, vi } from "vitest"
@@ -7,6 +9,7 @@ import {
   mockApiImplementationOnce as mockApiImplementationOnceHelper,
   mockApiResolvedValueOnce as mockApiResolvedValueOnceHelper
 } from "../../../lib/api-test-utils.js"
+import type * as ApiModule from "../../../lib/api.js"
 import { examDraftStore } from "../../../lib/exam-draft-store.js"
 import { makeExamWithQuestions } from "../../../test/fixtures/exam.js"
 
@@ -40,7 +43,7 @@ const { apiMocks, getSearchParams, mockNavigate, mockToast, reviewTestCtx, setSe
 })
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@tanstack/react-router")>()
+  const orig = await importOriginal<typeof TanStackRouter>()
   return {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
@@ -55,7 +58,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 })
 
 vi.mock("../../../lib/api.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../../lib/api.js")>()
+  const orig = await importOriginal<typeof ApiModule>()
   return {
     ...orig,
     api: {
@@ -77,7 +80,7 @@ vi.mock("../../../lib/api.js", async (importOriginal) => {
 })
 
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@teacher-exam/ui")>()
+  const orig = await importOriginal<typeof UiModule>()
   return {
     ...orig,
     useToast: () => ({ toast: mockToast })
