@@ -1,8 +1,10 @@
+import type { ExamSubject } from "@teacher-exam/shared"
 import { existsSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { REQUIRED_FIELDS } from "../../../scripts/lib/merge-bab"
 import { curriculumMdFilename } from "../../lib/curriculum"
+import { listExtractableBooks } from "../readiness.js"
 
 interface BookCase {
   slug: string
@@ -13,30 +15,36 @@ interface BookCase {
   h1Alternates?: ReadonlyArray<string>
 }
 
-const BOOKS: Array<BookCase> = [
-  { slug: "bahasa-indonesia-kelas-5", subject: "Bahasa Indonesia", grade: 5, expectedMinBab: 4 },
-  { slug: "bahasa-indonesia-kelas-6", subject: "Bahasa Indonesia", grade: 6, expectedMinBab: 8 },
-  { slug: "pendidikan-pancasila-kelas-5", subject: "Pendidikan Pancasila", grade: 5, expectedMinBab: 4 },
-  { slug: "pendidikan-pancasila-kelas-6", subject: "Pendidikan Pancasila", grade: 6, expectedMinBab: 7 },
-  {
-    slug: "ipas-kelas-5",
-    subject: "IPAS",
-    grade: 5,
-    expectedMinBab: 4,
-    h1Alternates: ["Ilmu Pengetahuan Alam dan Sosial"]
-  },
-  {
-    slug: "ipas-kelas-6",
-    subject: "IPAS",
-    grade: 6,
-    expectedMinBab: 6,
-    h1Alternates: ["Ilmu Pengetahuan Alam dan Sosial"]
-  },
-  { slug: "bahasa-inggris-kelas-5", subject: "Bahasa Inggris", grade: 5, expectedMinBab: 6 },
-  { slug: "bahasa-inggris-kelas-6", subject: "Bahasa Inggris", grade: 6, expectedMinBab: 6 },
-  { slug: "matematika-kelas-5", subject: "Matematika", grade: 5, expectedMinBab: 4 },
-  { slug: "matematika-kelas-6", subject: "Matematika", grade: 6, expectedMinBab: 4 }
-]
+const EXPECTED_MIN_BAB: Record<string, number> = {
+  "bahasa-indonesia-kelas-5": 4,
+  "bahasa-indonesia-kelas-6": 8,
+  "pendidikan-pancasila-kelas-5": 4,
+  "pendidikan-pancasila-kelas-6": 7,
+  "ipas-kelas-5": 4,
+  "ipas-kelas-6": 6,
+  "bahasa-inggris-kelas-5": 6,
+  "bahasa-inggris-kelas-6": 6
+}
+
+const H1_ALTERNATES: Record<string, ReadonlyArray<string>> = {
+  "ipas-kelas-5": ["Ilmu Pengetahuan Alam dan Sosial"],
+  "ipas-kelas-6": ["Ilmu Pengetahuan Alam dan Sosial"]
+}
+
+const BOOKS: Array<BookCase> = listExtractableBooks().map((entry) => {
+  const slug = curriculumMdFilename(entry.subjectKey as ExamSubject, entry.grade).replace(/\.md$/, "")
+  const expectedMinBab = EXPECTED_MIN_BAB[slug]
+  if (expectedMinBab === undefined) {
+    throw new Error(`missing expectedMinBab test metadata for ${slug}`)
+  }
+  return {
+    slug,
+    subject: entry.label,
+    grade: entry.grade,
+    expectedMinBab,
+    h1Alternates: H1_ALTERNATES[slug] ?? []
+  }
+})
 
 const MD_DIR = join(__dirname, "..", "md")
 

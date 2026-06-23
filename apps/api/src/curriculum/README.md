@@ -1,70 +1,85 @@
 # Curriculum Corpus
 
-Real Buku Siswa (Kurikulum Merdeka, Fase C) extracted into structured markdown
+Real Buku Siswa (Kurikulum Merdeka) extracted into structured markdown
 that grounds every `/api/ai/generate` call in actual textbook content rather
 than the model's general knowledge.
 
-> **Canonical PDF spec:** [RFC: PDF Handling](../../../../docs/rfc/2026-06-10-pdf-handling-rfc.md)
-
 ```
 curriculum/
-├── pdf/   ← inputs (gitignored — too large; re-download from SIBI)
-└── md/    ← committed extracted markdown (consumed at runtime)
+├── manifest.ts   ← subject×grade readiness (single source of truth)
+├── readiness.ts  ← isGeneratable / listExtractableBooks helpers
+├── pdf/          ← inputs (gitignored — too large; re-download from SIBI)
+└── md/           ← committed extracted markdown (consumed at runtime)
 ```
 
----
+## Source manifest
 
-## Operator quickstart
+Every subject×grade combination is declared in `manifest.ts` with a
+`status` gate. Helpers in `readiness.ts` answer:
 
-1. Download PDF from [buku.kemendikdasmen.go.id](https://buku.kemendikdasmen.go.id/) → place in `pdf/` with exact filename from table below.
-2. Register book in `BOOKS` (`scripts/extract-curriculum.ts`) if new mapel — see [RFC §6](../../../../docs/rfc/2026-06-10-pdf-handling-rfc.md#6-new-mapel-playbook).
-3. Extract:
+- **`getManifestEntry(subjectKey, grade)`** — lookup one row
+- **`isGeneratable(status)`** — `ready` or `stubbed` → allowed for generation
+- **`listExtractableBooks()`** — `sibi_pdf` + `ready` only (drives `curriculum:extract`)
+
+Shared schemas live in `@teacher-exam/shared` (`CurriculumSourceManifestItem`,
+`phaseForGrade`, `CURRICULUM_VERSION`).
+
+### Status meanings
+
+| Status | Meaning | Generate allowed? | Extract allowed? |
+|--------|---------|-------------------|------------------|
+| `ready` | md + PDF corpus committed | yes | yes |
+| `stubbed` | hand-authored / CP-only md | yes (flagged) | no |
+| `missing` | no corpus yet | no | no |
+| `disabled` | policy-blocked (e.g. IPAS K1–2) | no | no |
+
+### Add a subject-grade
+
+1. Add a row to `manifest.ts` with `status: "missing"`.
+2. Download the SIBI PDF → `pdf/{sourceFilename}` (exact filename from manifest).
+3. Run extraction: `pnpm --filter @teacher-exam/api curriculum:extract -- --book {slug}`  
+   (`slug` = `{subject-slug}-kelas-{grade}`, e.g. `ipas-kelas-5`).
+4. Ensure `__test__/curriculum-output.test.ts` passes (add `expectedMinBab` if new).
+5. Flip manifest `status` to `ready`.
+
+See [RFC §10 — Curriculum Source Strategy](../../../docs/superpowers/specs/2026-06-11-ujian-sd-all-mapel-kelas-1-6-rfc.md) for the full manifest field spec.
+
+## Source PDFs
+
+Download the latest editions from the official SIBI catalog
+([buku.kemendikdasmen.go.id](https://buku.kemendikdasmen.go.id/)) and place
+them in `pdf/` with these exact filenames:
+
+| File | Subject × Grade | Approx. size |
+|------|-----------------|--------------|
+| `Indonesia_BS_KLS_V_Rev.pdf` | Bahasa Indonesia — Kelas 5 | 8.6 MB |
+| `Bahasa-Indonesia-BS-KLS-VI_compressed.pdf` | Bahasa Indonesia — Kelas 6 | ~15 MB |
+| `Pendidikan-Pancasila-BS-KLS-V.pdf` | Pendidikan Pancasila — Kelas 5 | 7.9 MB |
+| `Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf` | Pendidikan Pancasila — Kelas 6 | 12.8 MB |
+| `IPAS_BS_KLS_V_Rev.pdf` | IPAS — Kelas 5 | ~7 MB |
+| `IPAS_BS_KLS_VI_Rev.pdf` | IPAS — Kelas 6 | ~7 MB |
+| `Inggris_FN_BS_KLS_V.pdf` | Bahasa Inggris — Kelas 5 | ~6 MB |
+| `Inggris_FN_BS_KLS_VI.pdf` | Bahasa Inggris — Kelas 6 | ~6 MB |
+
+**Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` are
+hand-authored stub corpus (non-diagram lingkup materi). Manifest marks them
+`stubbed` / `cp_only` — not in the extractable book list.
+
+PDFs are CC-licensed by Kemendikdasmen but committed-out because GitHub blocks
+files >100 MB and we want clean clones.
+
+## Re-extracting
 
 ```bash
-# All registered books
+# All eight extractable books (BI, PPKN, IPAS, B. Inggris × K5/K6)
 pnpm --filter @teacher-exam/api curriculum:extract
 
-# Single book (slug = "{subject}-kelas-{grade}")
-pnpm --filter @teacher-exam/api curriculum:extract -- --book bahasa-indonesia-kelas-5
+# Just one (slug = "{subject}-kelas-{grade}")
+pnpm --filter @teacher-exam/api curriculum:extract -- --book ipas-kelas-5
 ```
 
-4. Verify (after `curriculum:verify` is implemented):
-
-```bash
-pnpm --filter @teacher-exam/api curriculum:verify -- --book bahasa-indonesia-kelas-5
-```
-
-5. Guru spot-check one Bab against PDF → commit `md/{slug}.md` only.
-
-**Prerequisites:** `ANTHROPIC_API_KEY` in repo root `.env` (real key, not placeholder). Wall-clock ~5–10 minutes per book.
-
----
-
-## Source PDFs — BOOKS manifest
-
-PDFs are CC-licensed by Kemendikdasmen but **gitignored** (large files; GitHub 100 MB limit).
-
-### Registered (8 books)
-
-| Slug | Mapel | Kelas | PDF filename |
-|------|-------|-------|--------------|
-| `bahasa-indonesia-kelas-5` | Bahasa Indonesia | 5 | `Indonesia_BS_KLS_V_Rev.pdf` |
-| `bahasa-indonesia-kelas-6` | Bahasa Indonesia | 6 | `Bahasa-Indonesia-BS-KLS-VI_compressed.pdf` |
-| `pendidikan-pancasila-kelas-5` | Pendidikan Pancasila | 5 | `Pendidikan-Pancasila-BS-KLS-V.pdf` |
-| `pendidikan-pancasila-kelas-6` | Pendidikan Pancasila | 6 | `Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf` |
-| `ipas-kelas-5` | IPAS | 5 | `IPAS_BS_KLS_V_Rev.pdf` |
-| `ipas-kelas-6` | IPAS | 6 | `IPAS_BS_KLS_VI_Rev.pdf` |
-| `bahasa-inggris-kelas-5` | Bahasa Inggris | 5 | `Inggris_FN_BS_KLS_V.pdf` |
-| `bahasa-inggris-kelas-6` | Bahasa Inggris | 6 | `Inggris_FN_BS_KLS_VI.pdf` |
-
-### Pending (local PDF, not in BOOKS yet)
-
-| Target slug | PDF filename | Notes |
-|-------------|--------------|-------|
-| `matematika-kelas-5` | `KKA_BS_KLS_5.pdf` | `matematika` enum + `SUBJECT_SLUG` wired |
-| `matematika-kelas-6` | `Matematika_BS_KLS_VI.pdf` | Roadmap M2 — KaTeX before full rollout |
-
----
+Requires `ANTHROPIC_API_KEY` in the root `.env`. Wall-clock ~5–10 minutes per
+book; full run ~40–80 minutes.
 
 ## Anthropic document-block limits (cheatsheet)
 
@@ -76,47 +91,26 @@ PDFs are CC-licensed by Kemendikdasmen but **gitignored** (large files; GitHub 1
   dedupes overlap-induced duplicate Bab sections. LLM consolidation is the
   fallback when validation fails.
 
----
+## Output schema
 
-## Output schema — v1 (current) vs v2 (target)
-
-Validated by `scripts/lib/merge-bab.ts` and `__test__/curriculum-output.test.ts`. Full spec: [RFC §4](../../../../docs/rfc/2026-06-10-pdf-handling-rfc.md#4-corpus-schema--v1-current-vs-v2-target).
-
-### v1 (production today)
-
-| Field | Content |
-|-------|---------|
-| `## Capaian Pembelajaran` | Bullet list |
-| `## Bab {n}: {Judul}` | Section header |
-| `**Topik utama:**` | Main topic |
-| `**Sub-konsep:**` | Bullet list |
-| `**Sample teks bacaan:**` | Short quote (2–4 sentences) |
-| `**Kosakata kunci:**` | Key vocabulary |
-| `**Kompetensi yang diuji:**` | Assessable competencies |
-
-File size: **5–50 KB**.
-
-### v2 (target)
-
-Same structure except:
-
-| Field | Change |
-|-------|--------|
-| `**Teks bacaan:**` | Replaces `Sample teks bacaan` — **full passage** per Bab (verbatim from PDF) |
-| File size cap | **200 KB** |
-
-Images are **not** included — text-only corpus.
-
-Example v2 Bab block:
+Every generated `md/{slug}-kelas-{n}.md` follows a fixed schema enforced by
+`scripts/extract-curriculum.ts` and re-validated in
+`__test__/curriculum-output.test.ts`:
 
 ```md
-## Bab 1: Aku Anak Indonesia
+# {Mata Pelajaran} — Kelas {N} (Fase C, Kurikulum Merdeka)
+
+## Capaian Pembelajaran
+- ...
+
+## Bab {n}: {Judul}
 **Topik utama:** ...
 **Sub-konsep:**
 - ...
-**Teks bacaan:** |
-  Rana dan Rani adalah sepasang saudara kembar...
-  (full cerita / informasi from the book)
+**Sample teks bacaan:** "..."
 **Kosakata kunci:** ...
 **Kompetensi yang diuji:** ...
 ```
+
+Matematika stub files use `## Lingkup Materi Non-Diagram` with `###` sections
+instead of `## Bab N:` — validated separately in `curriculum.test.ts`.

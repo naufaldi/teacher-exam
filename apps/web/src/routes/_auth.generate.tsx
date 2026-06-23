@@ -25,7 +25,7 @@ import { GenerateErrorDialog } from "../components/generate/generate-error-dialo
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
-import { TOPICS_BY_SUBJECT } from "../lib/generate-topics.js"
+import { getTopicsForGenerate } from "../lib/generate-topics.js"
 import { SUBJECT_OPTIONS, subjectMetaFor } from "../lib/subjects.js"
 
 export const Route = createFileRoute("/_auth/generate")({
@@ -223,7 +223,8 @@ function GeneratePage() {
   }, [clearTimers])
 
   const subjectMeta = subjectMetaFor(mapel)
-  const topikOptions = TOPICS_BY_SUBJECT[mapel]
+  const selectedGrade = kelas === "5" || kelas === "6" ? Number(kelas) as 5 | 6 : undefined
+  const topikOptions = getTopicsForGenerate(mapel, selectedGrade)
 
   // Effective topics array for submission
   const effectiveTopiks: Array<string> = showCustomInput && customTopik.trim() !== ""
@@ -405,7 +406,15 @@ function GeneratePage() {
             {/* Kelas */}
             <div className="space-y-1.5">
               <Label htmlFor="kelas">Kelas</Label>
-              <Select value={kelas} onValueChange={setKelas}>
+              <Select
+                value={kelas}
+                onValueChange={(v) => {
+                  setKelas(v)
+                  setTopiks([])
+                  setCustomTopik("")
+                  setShowCustomInput(false)
+                }}
+              >
                 <SelectTrigger id="kelas">
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
@@ -461,14 +470,19 @@ function GeneratePage() {
             {/* Topik */}
             <div className="space-y-2">
               <Label>Topik</Label>
-              <TopicMultiSelect
-                options={topikOptions}
-                selected={topiks}
-                onChange={setTopiks}
-                onCustom={() => setShowCustomInput(true)}
-                maxItems={5}
-                placeholder="Pilih 1–5 topik..."
-              />
+              <div className={kelas === "" ? "pointer-events-none opacity-60" : undefined}>
+                <TopicMultiSelect
+                  options={topikOptions}
+                  selected={topiks}
+                  onChange={setTopiks}
+                  onCustom={() => setShowCustomInput(true)}
+                  maxItems={5}
+                  placeholder={kelas === "" ? "Pilih kelas dulu" : "Pilih 1–5 topik..."}
+                />
+              </div>
+              {kelas === "" ?
+                <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat topik Bab.</p> :
+                null}
               {showCustomInput ?
                 (
                   <div className="flex gap-2 mt-2 items-center">

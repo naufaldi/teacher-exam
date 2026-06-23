@@ -217,19 +217,22 @@ describe("GeneratePage — runGenerate flow", () => {
 })
 
 describe("GeneratePage — Matematika subject", () => {
-  it("offers Matematika diagram topics for D phase", async () => {
-    const { TOPICS_BY_SUBJECT } = await import("../../lib/generate-topics.js")
+  it("offers Matematika non-diagram topik per grade without diagram topics", async () => {
+    const { getTopicsForGenerate } = await import("../../lib/generate-topics.js")
     const { render: rtlRender } = await import("@testing-library/react")
     const { TopicMultiSelect } = await import("../../components/generate/topic-multi-select.js")
 
-    expect(TOPICS_BY_SUBJECT["matematika"]).toContain("Pecahan, Desimal, dan Persen")
-    expect(TOPICS_BY_SUBJECT["matematika"]).toContain("Bangun Datar")
-    expect(TOPICS_BY_SUBJECT["matematika"]).toContain("Bangun Ruang")
-    expect(TOPICS_BY_SUBJECT["matematika"]).toContain("Bidang Koordinat")
+    const k5 = getTopicsForGenerate("matematika", 5)
+    const k6 = getTopicsForGenerate("matematika", 6)
+
+    expect(k5).toContain("Pecahan, Desimal, dan Persen")
+    expect(k6).toContain("Pecahan, Desimal, Rasio, dan Persen")
+    expect(k5).not.toContain("Bangun Datar")
+    expect(k6).not.toContain("Bidang Koordinat")
 
     rtlRender(
       <TopicMultiSelect
-        options={TOPICS_BY_SUBJECT["matematika"]}
+        options={k5}
         selected={[]}
         onChange={() => {}}
       />
@@ -237,9 +240,15 @@ describe("GeneratePage — Matematika subject", () => {
     fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
 
     expect(screen.getByText("Pecahan, Desimal, dan Persen")).toBeInTheDocument()
-    expect(screen.getByText("Bangun Datar")).toBeInTheDocument()
-    expect(screen.getByText("Bangun Ruang")).toBeInTheDocument()
-    expect(screen.getByText("Bidang Koordinat")).toBeInTheDocument()
+    expect(screen.queryByText("Bangun Datar")).not.toBeInTheDocument()
+  })
+})
+
+describe("GeneratePage — grade-aware topik", () => {
+  it("prompts to pick kelas before topik options are available", () => {
+    renderGeneratePage()
+    expect(screen.getByText("Pilih kelas dulu untuk melihat topik Bab.")).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: /pilih topik/i })).toHaveTextContent("Pilih kelas dulu")
   })
 })
 

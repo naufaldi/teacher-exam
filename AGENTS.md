@@ -117,16 +117,75 @@ Prefer real `Layer` composition over mocks. Provide test layers via `Layer.succe
 
 ### Browser Verification (Mandatory after each frontend task)
 
-After finishing any task that touches the running app (route, component, form, API call), verify it end-to-end with **agent-browser** before declaring done. Read `~/.agents/skills/agent-browser/SKILL.md` first.
+After finishing any task that touches the running app (route, component, form, API call), verify it end-to-end in a real browser before declaring done.
+
+**Tool priority (use the first that works in your environment):**
+
+1. **Cursor IDE Browser (MCP)** — preferred in Cursor. Server: `cursor-ide-browser`. Read tool schemas under the MCP folder before calling.
+2. **`agent-browser` CLI** — fallback when MCP is unavailable or headless automation is required. Read `~/.agents/skills/agent-browser/SKILL.md` first.
 
 Required loop per finished task:
 
 1. Make sure the dev servers are up (`pnpm dev`, web on `:5173`, api on `:3000`).
-2. Drive the affected flow:
-   ```bash
-   agent-browser open http://localhost:5173/<route> && agent-browser wait --load networkidle && agent-browser snapshot -i
+2. **Authenticate locally** (when the flow needs a guru session):
+   - Preconditions in root `.env`: `DEV_AUTH_ENABLED=true`, `VITE_DEV_AUTH=true`, `pnpm db:seed:dev` once. See `docs/qa/m1-browser-verification.md`.
+   - Login page shows **Masuk Guru Dev (lokal)** on `http://localhost:5173/`.
+3. Drive the affected flow to **`/dashboard`** (or the route under test):
+
+   **Cursor IDE Browser (preferred):**
+
    ```
-3. Capture console errors and warnings — they fail the task:
+   browser_navigate → http://localhost:5173/
+   browser_snapshot → find "Masuk Guru Dev (lokal)" or dev-login control
+   browser_click → dev login button
+   browser_navigate → http://localhost:5173/dashboard  (or /<route>)
+   browser_snapshot → confirm page loaded
+   browser_cdp → Runtime.evaluate for console errors/warnings
+   browser_take_screenshot → .agent-browser/<task-slug>.png
+   ```
+
+   Or POST dev login then open dashboard (same origin — Vite proxies `/api`):
+
+   ```
+   browser_navigate → http://localhost:5173/
+   browser_cdp → Runtime.evaluate:
+     fetch('/api/dev/login', { method: 'POST', credentials: 'include' }).then(r => r.status)
+   browser_navigate → http://localhost:5173/dashboard
+   browser_snapshot
+   ```
+
+   **agent-browser CLI (fallback):**
+
+   ```bash
+   agent-browser open http://localhost:5173/ \
+     && agent-browser eval "fetch('/api/dev/login',{method:'POST',credentials:'include'}).then(r=>r.status)" \
+     && agent-browser open http://localhost:5173/dashboard \
+     && agent-browser wait --load networkidle \
+     && agent-browser snapshot -i
+   ```
+
+   For a specific route, replace `/dashboard` with `/<route>` after auth.
+
+4. Capture console errors and warnings — they fail the task.
+
+   **Cursor IDE Browser:** `browser_cdp` → `Runtime.evaluate` to read `console` output, or evaluate a hook:
+
+   ```js
+   (() => {
+     const buf = (window.__agentLogs ||= []);
+     if (!window.__agentLogsHooked) {
+       window.__agentLogsHooked = true;
+       for (const k of ['error', 'warn', 'log']) {
+         const orig = console[k].bind(console);
+         console[k] = (...a) => { buf.push({ k, a: a.map(String) }); orig(...a); };
+       }
+     }
+     return buf;
+   })()
+   ```
+
+   **agent-browser CLI:**
+
    ```bash
    agent-browser eval --stdin <<'EVALEOF'
    (() => {
@@ -142,12 +201,11 @@ Required loop per finished task:
    })()
    EVALEOF
    ```
+
    Re-run the flow, then re-eval `window.__agentLogs` to inspect.
-4. Take a screenshot of the final state for the change record:
-   ```bash
-   agent-browser screenshot .agent-browser/<task-slug>.png
-   ```
-5. **Fix every console error/warning surfaced** (including stray `console.log` left from debugging) and any failed network request in the snapshot. Re-run the loop until clean.
+
+5. Take a screenshot of the final state (`.agent-browser/<task-slug>.png`).
+6. **Fix every console error/warning surfaced** (including stray `console.log` left from debugging) and any failed network request in the snapshot. Re-run the loop until clean.
 
 A task is **not done** until: tests are green, the browser flow completes without console errors/warnings, and there are no leftover `console.log` calls in the diff.
 
