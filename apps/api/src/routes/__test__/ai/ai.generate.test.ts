@@ -67,16 +67,16 @@ describe("POST /api/ai/generate", () => {
     expect(res.status).toBe(400)
   })
 
-  it("rejects stubbed Matematika curriculum before calling AI", async () => {
+  it("rejects non-ready curriculum before calling AI", async () => {
     const app = buildTestApp()
     const res = await app.request("/api/ai/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...VALID_BODY,
-        subject: "matematika",
-        grade: 5,
-        topics: ["Pecahan, Desimal, dan Persen"]
+        subject: "bahasa_indonesia",
+        grade: 4,
+        topics: ["Teks narasi"]
       })
     })
 

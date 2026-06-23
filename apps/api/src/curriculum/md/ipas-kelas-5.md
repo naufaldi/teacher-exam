@@ -1138,3 +1138,5 @@
   3. Kondensasi (pengembunan)
   Uap-uap air di atmosfer terus bergerak, semakin tinggi suhu di atmosfer 
   se makin dingin. Ini menyebabkan uap air kembali berubah menjadi
+**Kosakata kunci:** air, siklus air, aliran air, pencemaran air, penghematan air, air bersih
+**Kompetensi yang diuji:** menjelaskan ketersediaan dan aliran air, mengidentifikasi tahapan siklus air, menganalisis penyebab pencemaran air, serta menyusun tindakan menghemat dan menjaga air bersih.

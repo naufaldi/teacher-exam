@@ -1656,3 +1656,5 @@
   Mengapa begitu?  
   • Berbentuk apakah lantai di ruangan tersebut?  
   • Jika dibanding
+**Kosakata kunci:** luas, satuan luas, persegi satuan, persegi panjang, persegi, segitiga, jajargenjang, trapesium, belah ketupat
+**Kompetensi yang diuji:** menjelaskan konsep luas daerah, menggunakan satuan luas, menghitung luas persegi panjang, persegi, segitiga, jajargenjang, trapesium, dan belah ketupat, serta menerapkan luas bangun datar pada masalah kontekstual.

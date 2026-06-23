@@ -54,7 +54,7 @@ export function mergeBab(concatenated: string): string {
   const grouped = new Map<number, BabBlock>()
   for (const block of blocks) {
     const existing = grouped.get(block.num)
-    if (!existing || block.body.length > existing.body.length) {
+    if (!existing || shouldReplaceBlock(existing, block)) {
       grouped.set(block.num, block)
     }
   }
@@ -120,4 +120,15 @@ function parseBabBlocks(input: string): Array<BabBlock> {
     const body = input.slice(entry.headerEnd, end).replace(/^\n+/, "").trimEnd()
     return { num: entry.num, title: entry.title, body }
   })
+}
+
+function completedFieldCount(block: BabBlock): number {
+  return REQUIRED_FIELDS.filter((field) => block.body.includes(`**${field}:`)).length
+}
+
+function shouldReplaceBlock(existing: BabBlock, candidate: BabBlock): boolean {
+  const existingFields = completedFieldCount(existing)
+  const candidateFields = completedFieldCount(candidate)
+  if (candidateFields !== existingFields) return candidateFields > existingFields
+  return candidate.body.length > existing.body.length
 }

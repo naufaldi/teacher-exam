@@ -53,7 +53,7 @@ them in `pdf/` with these exact filenames:
 | File | Subject × Grade | Approx. size |
 |------|-----------------|--------------|
 | `Indonesia_BS_KLS_V_Rev.pdf` | Bahasa Indonesia — Kelas 5 | 8.6 MB |
-| `Bahasa-Indonesia-BS-KLS-VI_compressed.pdf` | Bahasa Indonesia — Kelas 6 | ~15 MB |
+| `Indonesia_BS_KLS_VI_Rev.pdf` | Bahasa Indonesia — Kelas 6 | ~15 MB |
 | `Pendidikan-Pancasila-BS-KLS-V.pdf` | Pendidikan Pancasila — Kelas 5 | 7.9 MB |
 | `Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf` | Pendidikan Pancasila — Kelas 6 | 12.8 MB |
 | `IPAS_BS_KLS_V_Rev.pdf` | IPAS — Kelas 5 | ~7 MB |
@@ -61,10 +61,9 @@ them in `pdf/` with these exact filenames:
 | `Inggris_FN_BS_KLS_V.pdf` | Bahasa Inggris — Kelas 5 | ~6 MB |
 | `Inggris_FN_BS_KLS_VI.pdf` | Bahasa Inggris — Kelas 6 | ~6 MB |
 
-**Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` are
-hand-authored stub corpus (non-diagram lingkup materi). Manifest marks them
-`stubbed` / `cp_only`, so they are not selectable in Generate and not in the
-extractable book list.
+**Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` now
+come from SIBI PDF extraction. Manifest marks them `ready` / `sibi_pdf`, so
+they are selectable in Generate and included in the extractable book list.
 
 PDFs are CC-licensed by Kemendikdasmen but committed-out because GitHub blocks
 files >100 MB and we want clean clones.
@@ -72,7 +71,7 @@ files >100 MB and we want clean clones.
 ## Re-extracting
 
 ```bash
-# All eight extractable books (BI, PPKN, IPAS, B. Inggris × K5/K6)
+# All current extractable books marked ready in the manifest
 pnpm --filter @teacher-exam/api curriculum:extract
 
 # Just one (slug = "{subject}-kelas-{grade}")

@@ -23,8 +23,8 @@ describe("GET /api/curriculum/catalog", () => {
     )
     expect(matematika?.grades).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ grade: 5, availability: "stubbed" }),
-        expect.objectContaining({ grade: 6, availability: "stubbed" })
+        expect.objectContaining({ grade: 5, availability: "ready" }),
+        expect.objectContaining({ grade: 6, availability: "ready" })
       ])
     )
   })
