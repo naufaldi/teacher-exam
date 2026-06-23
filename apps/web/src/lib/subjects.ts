@@ -7,7 +7,7 @@ export type SubjectBadgeVariant =
   | "subject-bing"
   | "secondary"
 
-interface SubjectMeta {
+export interface SubjectMeta {
   value: ExamSubject
   label: string
   short: string

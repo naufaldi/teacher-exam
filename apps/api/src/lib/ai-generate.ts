@@ -16,6 +16,7 @@ import { BankService } from "../api/services/bank-service"
 import type { CurriculumReadError } from "../api/services/curriculum-service"
 import { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
+import { isReadySibiPdfForGenerate } from "../curriculum/catalog.js"
 import { AiGenerationError } from "../errors"
 import { type AiService } from "../services/AiService"
 import { logAiEvent } from "./ai-log"
@@ -327,6 +328,13 @@ export function generateExam(
     const handlerT0 = Date.now()
     const examType = normalizeExamType(input.examType ?? "formatif")
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
+
+    if (!isReadySibiPdfForGenerate(input.subject, input.grade)) {
+      return {
+        _tag: "validation_error",
+        details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
+      }
+    }
 
     const compositionResult = yield* Effect.either(
       Effect.try({

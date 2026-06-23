@@ -12,6 +12,19 @@ function toJson<T>(value: T): T {
 
 const VALID_EXAM_WITH_QUESTIONS = toJson(makeExamWithQuestions("exam_1"))
 
+const VALID_CURRICULUM_CATALOG = [
+  {
+    key: "bahasa_indonesia",
+    label: "Bahasa Indonesia",
+    family: "bahasa",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "ready" },
+      { grade: 6, phase: "C", availability: "ready" }
+    ]
+  }
+]
+
 beforeEach(() => {
   globalThis.fetch = mockFetch
   mockFetch.mockReset()
@@ -229,6 +242,23 @@ describe("api.ai.generate", () => {
         })
       )
     ).rejects.toSatisfy((err: unknown) => err instanceof RateLimitedError && err.retryAfterSec === 30)
+  })
+})
+
+describe("api.curriculum.catalog", () => {
+  it("GETs /api/curriculum/catalog and decodes the catalog response", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(VALID_CURRICULUM_CATALOG)
+    })
+
+    const result = unwrapApiEither(await api.curriculum.catalog())
+
+    expect(result[0]?.key).toBe("bahasa_indonesia")
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/curriculum/catalog",
+      expect.objectContaining({ credentials: "include" })
+    )
   })
 })
 

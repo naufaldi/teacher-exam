@@ -12,7 +12,7 @@ export function getManifestEntry(
 }
 
 export function isGeneratable(status: CurriculumAvailability): boolean {
-  return status === "ready" || status === "stubbed"
+  return status === "ready"
 }
 
 export function listExtractableBooks(): ReadonlyArray<CurriculumSourceManifestItem> {

@@ -3,6 +3,7 @@ import { ApiDatabaseError } from "./errors/http"
 import { AiGroup } from "./groups/ai"
 import { BankGroup } from "./groups/bank"
 import { BankPublicGroup } from "./groups/bank-public"
+import { CurriculumGroup } from "./groups/curriculum"
 import { DevAuthGroup } from "./groups/dev-auth"
 import { ExamsGroup } from "./groups/exams"
 import { HealthGroup } from "./groups/health"
@@ -15,6 +16,7 @@ export const TeacherExamApi = HttpApi.make("TeacherExamApi")
   .add(DevAuthGroup)
   .add(PublicExamsGroup)
   .add(BankPublicGroup)
+  .add(CurriculumGroup)
   .add(MeGroup)
   .add(ExamsGroup)
   .add(QuestionsGroup)

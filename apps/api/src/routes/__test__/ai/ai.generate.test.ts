@@ -20,6 +20,8 @@ import {
 describe("POST /api/ai/generate", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(fakeAiService.generateRaw as Mock).mockReset()
+    ;(fakeAiService.validateCurriculum as Mock).mockReset()
     ;(fakeAiService.generateRaw as Mock).mockReturnValue(
       Effect.succeed(JSON.stringify(FAKE_AI_QUESTIONS))
     )
@@ -63,6 +65,24 @@ describe("POST /api/ai/generate", () => {
       body: "not-json"
     })
     expect(res.status).toBe(400)
+  })
+
+  it("rejects stubbed Matematika curriculum before calling AI", async () => {
+    const app = buildTestApp()
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...VALID_BODY,
+        subject: "matematika",
+        grade: 5,
+        topics: ["Pecahan, Desimal, dan Persen"]
+      })
+    })
+
+    expect(res.status).toBe(400)
+    expect(fakeAiService.generateRaw as Mock).not.toHaveBeenCalled()
+    expect(db.insert).not.toHaveBeenCalled()
   })
 
   it("does not run curriculum validation during generate", async () => {
@@ -216,138 +236,6 @@ describe("POST /api/ai/generate", () => {
     expect(firstQuestion?.["payload"]).toBeNull()
     expect(firstQuestion?.["validationStatus"]).toBe("needs_review")
     expect(firstQuestion?.["validationReason"]).toContain("FigureSpec")
-  })
-
-  it("retries Matematika generation when LaTeX validation fails", async () => {
-    const invalidLatexQuestions: Array<GeneratedQuestion> = Array.from({ length: 20 }, (_, i) => ({
-      ...makeFakeQuestion(i + 1),
-      text: i === 0 ? "Hitung $\\frac{3}{4}" : `Question ${i + 1}`
-    }))
-    const validLatexQuestions: Array<GeneratedQuestion> = Array.from({ length: 20 }, (_, i) => ({
-      ...makeFakeQuestion(i + 1),
-      text: i === 0 ? "Hitung $\\frac{3}{4}$" : `Question ${i + 1}`
-    }))
-    ;(fakeAiService.generateRaw as Mock)
-      .mockReturnValueOnce(Effect.succeed(JSON.stringify(invalidLatexQuestions)))
-      .mockReturnValueOnce(Effect.succeed(JSON.stringify(validLatexQuestions)))
-
-    const examRow = makeExamRow({ subject: "matematika" })
-    const questionRows = Array.from(
-      { length: 20 },
-      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
-    )
-    const insertChain = makeChain([])
-    ;(db.insert as Mock).mockReturnValue(insertChain)
-    mockGenerateDbSelects({ examRow, questionRows })
-
-    const app = buildTestApp()
-    const res = await app.request("/api/ai/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...VALID_BODY, subject: "matematika" })
-    })
-
-    expect(res.status).toBe(201)
-    expect(fakeAiService.generateRaw as Mock).toHaveBeenCalledTimes(2)
-    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
-      | Array<Record<string, unknown>>
-      | undefined
-    expect(insertedQuestions?.[0]?.["text"]).toBe("Hitung $\\frac{3}{4}$")
-    expect(insertedQuestions?.[0]?.["validationStatus"]).toBeNull()
-  })
-
-  it("normalizes corrupted imes to times when persisting Matematika questions", async () => {
-    const imesQuestions: Array<GeneratedQuestion> = Array.from({ length: 20 }, (_, i) => ({
-      ...makeFakeQuestion(i + 1),
-      text: i === 0 ? "Hasil dari $124 imes 36$ adalah ...." : `Question ${i + 1}`
-    }))
-    ;(fakeAiService.generateRaw as Mock).mockReturnValue(
-      Effect.succeed(JSON.stringify(imesQuestions))
-    )
-
-    const examRow = makeExamRow({ subject: "matematika" })
-    const questionRows = Array.from(
-      { length: 20 },
-      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
-    )
-    const insertChain = makeChain([])
-    ;(db.insert as Mock).mockReturnValue(insertChain)
-    mockGenerateDbSelects({ examRow, questionRows })
-
-    const app = buildTestApp()
-    const res = await app.request("/api/ai/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...VALID_BODY, subject: "matematika" })
-    })
-
-    expect(res.status).toBe(201)
-    expect(fakeAiService.generateRaw as Mock).toHaveBeenCalledTimes(3)
-    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
-      | Array<Record<string, unknown>>
-      | undefined
-    expect(insertedQuestions?.[0]?.["text"]).toBe("Hasil dari $124 \\times 36$ adalah ....")
-    expect(insertedQuestions?.[0]?.["validationStatus"]).toBe("needs_review")
-    expect(insertedQuestions?.[0]?.["validationReason"]).toContain("imes")
-  })
-
-  it("marks Matematika questions as needs_review when LaTeX stays invalid after retries", async () => {
-    const invalidLatexQuestions: Array<GeneratedQuestion> = Array.from({ length: 20 }, (_, i) => ({
-      ...makeFakeQuestion(i + 1),
-      text: i === 0 ? "Hitung $\\frac{3}{4}" : `Question ${i + 1}`
-    }))
-    ;(fakeAiService.generateRaw as Mock).mockReturnValue(
-      Effect.succeed(JSON.stringify(invalidLatexQuestions))
-    )
-
-    const examRow = makeExamRow({ subject: "matematika" })
-    const questionRows = Array.from(
-      { length: 20 },
-      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
-    )
-    const insertChain = makeChain([])
-    ;(db.insert as Mock).mockReturnValue(insertChain)
-    mockGenerateDbSelects({ examRow, questionRows })
-
-    const app = buildTestApp()
-    const res = await app.request("/api/ai/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...VALID_BODY, subject: "matematika" })
-    })
-
-    expect(res.status).toBe(201)
-    expect(fakeAiService.generateRaw as Mock).toHaveBeenCalledTimes(3)
-    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
-      | Array<Record<string, unknown>>
-      | undefined
-    expect(insertedQuestions?.[0]?.["validationStatus"]).toBe("needs_review")
-    expect(insertedQuestions?.[0]?.["validationReason"]).toContain("LaTeX")
-  })
-
-  it("retries Matematika generation when JSON parse fails", async () => {
-    ;(fakeAiService.generateRaw as Mock)
-      .mockReturnValueOnce(Effect.succeed("not json at all"))
-      .mockReturnValueOnce(Effect.succeed(JSON.stringify(FAKE_AI_QUESTIONS)))
-
-    const examRow = makeExamRow({ subject: "matematika" })
-    const questionRows = Array.from(
-      { length: 20 },
-      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
-    )
-    const insertChain = makeChain([])
-    ;(db.insert as Mock).mockReturnValue(insertChain)
-    mockGenerateDbSelects({ examRow, questionRows })
-
-    const app = buildTestApp()
-    const res = await app.request("/api/ai/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...VALID_BODY, subject: "matematika" })
-    })
-
-    expect(res.status).toBe(201)
-    expect(fakeAiService.generateRaw as Mock).toHaveBeenCalledTimes(2)
   })
 
   it("returns 502 and skips DB insert when AiService fails", async () => {

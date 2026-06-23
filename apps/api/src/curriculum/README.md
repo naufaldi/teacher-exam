@@ -18,7 +18,7 @@ Every subject×grade combination is declared in `manifest.ts` with a
 `status` gate. Helpers in `readiness.ts` answer:
 
 - **`getManifestEntry(subjectKey, grade)`** — lookup one row
-- **`isGeneratable(status)`** — `ready` or `stubbed` → allowed for generation
+- **`isGeneratable(status)`** — `ready` → allowed for generation
 - **`listExtractableBooks()`** — `sibi_pdf` + `ready` only (drives `curriculum:extract`)
 
 Shared schemas live in `@teacher-exam/shared` (`CurriculumSourceManifestItem`,
@@ -29,7 +29,7 @@ Shared schemas live in `@teacher-exam/shared` (`CurriculumSourceManifestItem`,
 | Status | Meaning | Generate allowed? | Extract allowed? |
 |--------|---------|-------------------|------------------|
 | `ready` | md + PDF corpus committed | yes | yes |
-| `stubbed` | hand-authored / CP-only md | yes (flagged) | no |
+| `stubbed` | hand-authored / CP-only md | no | no |
 | `missing` | no corpus yet | no | no |
 | `disabled` | policy-blocked (e.g. IPAS K1–2) | no | no |
 
@@ -63,7 +63,8 @@ them in `pdf/` with these exact filenames:
 
 **Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` are
 hand-authored stub corpus (non-diagram lingkup materi). Manifest marks them
-`stubbed` / `cp_only` — not in the extractable book list.
+`stubbed` / `cp_only`, so they are not selectable in Generate and not in the
+extractable book list.
 
 PDFs are CC-licensed by Kemendikdasmen but committed-out because GitHub blocks
 files >100 MB and we want clean clones.

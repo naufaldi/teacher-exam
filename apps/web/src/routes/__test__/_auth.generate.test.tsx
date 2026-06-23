@@ -1,4 +1,5 @@
 import type * as TanStackRouter from "@tanstack/react-router"
+import type { CurriculumCatalogResponse } from "@teacher-exam/shared"
 import type * as UiModule from "@teacher-exam/ui"
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -10,6 +11,59 @@ import { makeExamWithQuestions } from "../../test/fixtures/exam.js"
 import { Route } from "../_auth.generate.js"
 
 const mockNavigate = vi.fn<(opts: unknown) => Promise<void>>()
+
+const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
+  {
+    key: "bahasa_indonesia",
+    label: "Bahasa Indonesia",
+    family: "bahasa",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "ready" },
+      { grade: 6, phase: "C", availability: "ready" }
+    ]
+  },
+  {
+    key: "pendidikan_pancasila",
+    label: "Pendidikan Pancasila",
+    family: "pancasila",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "ready" },
+      { grade: 6, phase: "C", availability: "ready" }
+    ]
+  },
+  {
+    key: "ipas",
+    label: "IPAS",
+    family: "ipas",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "ready" },
+      { grade: 6, phase: "C", availability: "ready" }
+    ]
+  },
+  {
+    key: "bahasa_inggris",
+    label: "Bahasa Inggris",
+    family: "bahasa",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "ready" },
+      { grade: 6, phase: "C", availability: "ready" }
+    ]
+  },
+  {
+    key: "matematika",
+    label: "Matematika",
+    family: "matematika",
+    optional: false,
+    grades: [
+      { grade: 5, phase: "C", availability: "stubbed" },
+      { grade: 6, phase: "C", availability: "stubbed" }
+    ]
+  }
+]
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const orig = await importOriginal<typeof TanStackRouter>()
@@ -30,7 +84,8 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
     ...orig,
     api: {
       ...orig.api,
-      ai: { generate: vi.fn() }
+      ai: { generate: vi.fn() },
+      curriculum: { catalog: vi.fn() }
     }
   }
 })
@@ -40,6 +95,8 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
 // lets us test the generate flow without Radix Select interaction.
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
   const orig = await importOriginal<typeof UiModule>()
+  const React = await import("react")
+  const SelectContext = React.createContext<(value: string) => void>(() => {})
   return {
     ...orig,
     Button: (
@@ -49,14 +106,35 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
         type?: "button" | "submit" | "reset"
       }
     ) => <button type={type ?? "button"} onClick={onClick}>{children}</button>,
+    Select: (
+      { children, onValueChange }: {
+        children: React.ReactNode
+        onValueChange?: (value: string) => void
+      }
+    ) => (
+      <SelectContext.Provider value={onValueChange ?? (() => {})}>
+        <div>{children}</div>
+      </SelectContext.Provider>
+    ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
-      <div data-value={value}>{children}</div>
-    )
+      <SelectContext.Consumer>
+        {(onSelect) => (
+          <button type="button" data-value={value} onClick={() => onSelect(value)}>
+            {children}
+          </button>
+        )}
+      </SelectContext.Consumer>
+    ),
+    SelectTrigger: ({ children, id }: { children: React.ReactNode; id?: string }) => <div id={id}>{children}</div>,
+    SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>
   }
 })
 
-const mockApi = api as unknown as { ai: { generate: ReturnType<typeof vi.fn> } }
+const mockApi = api as unknown as {
+  ai: { generate: ReturnType<typeof vi.fn> }
+  curriculum: { catalog: ReturnType<typeof vi.fn> }
+}
 
 function renderGeneratePage() {
   const GeneratePage = (Route as unknown as { options: { component: React.ComponentType } }).options
@@ -68,6 +146,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   mockNavigate.mockResolvedValue(undefined)
+  mockApi.curriculum.catalog.mockReturnValue(new Promise(() => {}))
 })
 
 afterEach(() => {
@@ -88,11 +167,32 @@ async function clickGenerateAndFlush() {
 }
 
 describe("Jumlah Soal input", () => {
-  it("offers IPAS and Bahasa Inggris in the subject selector", () => {
+  it("offers IPAS and Bahasa Inggris in the subject selector", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
     renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
 
     expect(screen.getByText("IPAS")).toBeInTheDocument()
     expect(screen.getByText("Bahasa Inggris")).toBeInTheDocument()
+  })
+
+  it("shows only ready subjects after choosing Kelas 5", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+
+    expect(screen.getByRole("button", { name: "Bahasa Indonesia" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "IPAS" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Bahasa Inggris" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Matematika" })).not.toBeInTheDocument()
   })
 
   it("defaults to 20 for default jenis (formatif)", () => {
