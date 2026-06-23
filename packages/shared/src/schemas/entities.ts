@@ -7,6 +7,7 @@ import {
   ExamStatusSchema,
   ExamSubjectSchema,
   type ExamType,
+  GradeSchema,
   MultiAnswerSchema,
   QuestionStatusSchema,
   ReviewModeSchema,
@@ -36,9 +37,6 @@ export const brandPdfUploadId = (id: string): PdfUploadId => Schema.decodeSync(P
 export const brandBankQuestionId = (id: string): BankQuestionId => Schema.decodeSync(BankQuestionIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
-export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
-export type Grade = typeof GradeSchema.Type
-
 export const UserProfileSchema = Schema.Struct({
   id: UserIdSchema,
   email: Schema.String,
