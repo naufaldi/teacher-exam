@@ -12,8 +12,16 @@ export interface PdfChunkRange {
   endPage: number
 }
 
+export interface PageSizeChunkInput {
+  pageSizes: ReadonlyArray<number>
+  maxPagesPerChunk?: number
+  overlapPages?: number
+  maxBytesPerChunk?: number
+}
+
 const PAGES_PER_CHUNK = 60
 const OVERLAP_PAGES = 5
+const SAFE_CHUNK_BYTES = 18 * 1024 * 1024
 
 /**
  * Build a new PDF buffer containing only the given inclusive 1-indexed page
@@ -41,22 +49,51 @@ export async function extractPageRange(
  * demand via `extractPageRange`.
  */
 export function planChunks(doc: PDFDocument): Array<PdfChunkRange> {
-  const total = doc.getPageCount()
+  return planChunksFromPageSizes({
+    maxBytesPerChunk: Number.POSITIVE_INFINITY,
+    pageSizes: Array.from({ length: doc.getPageCount() }, () => 1)
+  })
+}
 
-  if (total <= PAGES_PER_CHUNK) {
-    return [{ index: 1, total: 1, startPage: 1, endPage: total }]
-  }
+export function planChunksFromPageSizes(input: PageSizeChunkInput): Array<PdfChunkRange> {
+  const totalPages = input.pageSizes.length
+  if (totalPages === 0) return []
 
+  const maxPagesPerChunk = input.maxPagesPerChunk ?? PAGES_PER_CHUNK
+  const overlapPages = input.overlapPages ?? OVERLAP_PAGES
+  const maxBytesPerChunk = input.maxBytesPerChunk ?? SAFE_CHUNK_BYTES
   const ranges: Array<Omit<PdfChunkRange, "total">> = []
   let start = 0
-  while (start < total) {
-    const end = Math.min(start + PAGES_PER_CHUNK, total)
+
+  while (start < totalPages) {
+    let end = start
+    let bytes = 0
+    while (end < totalPages && end - start < maxPagesPerChunk) {
+      const nextBytes = bytes + (input.pageSizes[end] ?? 0)
+      if (end > start && nextBytes > maxBytesPerChunk) break
+      bytes = nextBytes
+      end += 1
+    }
+
+    if (end === start) end += 1
     ranges.push({ index: ranges.length + 1, startPage: start + 1, endPage: end })
-    if (end >= total) break
-    start = end - OVERLAP_PAGES
+    if (end >= totalPages) break
+
+    const chunkLength = end - start
+    const safeOverlap = Math.min(overlapPages, Math.max(0, chunkLength - 1))
+    start = Math.max(end - safeOverlap, start + 1)
   }
 
   return ranges.map((r) => ({ ...r, total: ranges.length }))
+}
+
+export async function planChunksBySize(doc: PDFDocument): Promise<Array<PdfChunkRange>> {
+  const total = doc.getPageCount()
+  const pageSizes: Array<number> = []
+  for (let page = 1; page <= total; page += 1) {
+    pageSizes.push((await extractPageRange(doc, page, page)).byteLength)
+  }
+  return planChunksFromPageSizes({ pageSizes })
 }
 
 /**

@@ -53,7 +53,7 @@ them in `pdf/` with these exact filenames:
 | File | Subject × Grade | Approx. size |
 |------|-----------------|--------------|
 | `Indonesia_BS_KLS_V_Rev.pdf` | Bahasa Indonesia — Kelas 5 | 8.6 MB |
-| `Bahasa-Indonesia-BS-KLS-VI_compressed.pdf` | Bahasa Indonesia — Kelas 6 | ~15 MB |
+| `Indonesia_BS_KLS_VI_Rev.pdf` | Bahasa Indonesia — Kelas 6 | ~15 MB |
 | `Pendidikan-Pancasila-BS-KLS-V.pdf` | Pendidikan Pancasila — Kelas 5 | 7.9 MB |
 | `Pendidikan-Pancasila-BS-KLS-VI-Rev.pdf` | Pendidikan Pancasila — Kelas 6 | 12.8 MB |
 | `IPAS_BS_KLS_V_Rev.pdf` | IPAS — Kelas 5 | ~7 MB |
