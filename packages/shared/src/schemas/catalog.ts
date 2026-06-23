@@ -1,9 +1,5 @@
 import { Schema } from "effect"
-import {
-  CurriculumAvailabilitySchema,
-  GradeSchema,
-  PhaseSchema
-} from "./primitives.js"
+import { CurriculumAvailabilitySchema, GradeSchema, PhaseSchema } from "./primitives.js"
 
 export const SubjectGradeAvailabilitySchema = Schema.Struct({
   grade: GradeSchema,
