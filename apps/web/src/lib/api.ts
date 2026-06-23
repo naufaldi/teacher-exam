@@ -3,6 +3,7 @@ import type {
   BrowseBankQuery,
   BuildExamFromBankInput,
   BuildExamFromBankResponse,
+  CurriculumCatalogResponse,
   ExamDetailResponse,
   ExamShareResponse,
   ExamWithQuestions,
@@ -20,6 +21,7 @@ import type {
 import {
   BankQuestionSchema,
   BuildExamFromBankResponseSchema,
+  CurriculumCatalogResponseSchema,
   ExamSchema,
   ExamShareResponseSchema,
   ExamWithQuestionsSchema,
@@ -333,6 +335,15 @@ export const api = {
         return raw as Either.Either<ExamWithQuestions, ApiClientFailure>
       }
       return decodeEither(ExamWithQuestionsSchema, raw.right)
+    }
+  },
+  curriculum: {
+    catalog: async (): Promise<Either.Either<CurriculumCatalogResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/curriculum/catalog")
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<CurriculumCatalogResponse, ApiClientFailure>
+      }
+      return decodeEither(CurriculumCatalogResponseSchema, raw.right)
     }
   },
   questions: {

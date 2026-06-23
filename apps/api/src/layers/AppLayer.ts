@@ -7,6 +7,7 @@ import { TeacherExamApi } from "../api/definition"
 import { AiLive } from "../api/handlers/ai"
 import { BankLive } from "../api/handlers/bank"
 import { BankPublicLive } from "../api/handlers/bank-public"
+import { CurriculumLive } from "../api/handlers/curriculum"
 import { DevAuthLive } from "../api/handlers/dev-auth"
 import { ExamsLive } from "../api/handlers/exams"
 import { HealthLive } from "../api/handlers/health"
@@ -50,6 +51,7 @@ const HandlersLive = Layer.mergeAll(
   HealthLive,
   DevAuthLive,
   PublicExamsLive,
+  CurriculumLive,
   MeLive,
   ExamsLive,
   QuestionsLive,

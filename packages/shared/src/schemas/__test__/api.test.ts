@@ -1,6 +1,6 @@
 import { Either, Schema } from "effect"
 import { describe, expect, it, test } from "vitest"
-import { GenerateExamInputSchema } from "../api.js"
+import { CurriculumCatalogResponseSchema, GenerateExamInputSchema } from "../api.js"
 
 const VALID_BASE = {
   subject: "bahasa_indonesia",
@@ -129,6 +129,39 @@ describe("GenerateExamInputSchema — composition", () => {
       ...VALID_BASE,
       composition: { mcqSingle: "fifteen", mcqMulti: 5, trueFalse: 5 }
     })
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("CurriculumCatalogResponseSchema", () => {
+  it("decodes subject catalog rows with grade availability", () => {
+    const result = Schema.decodeUnknownEither(CurriculumCatalogResponseSchema)([
+      {
+        key: "bahasa_indonesia",
+        label: "Bahasa Indonesia",
+        family: "bahasa",
+        optional: false,
+        grades: [
+          { grade: 5, phase: "C", availability: "ready" },
+          { grade: 6, phase: "C", availability: "ready" }
+        ]
+      }
+    ])
+
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  it("rejects invalid curriculum availability in catalog rows", () => {
+    const result = Schema.decodeUnknownEither(CurriculumCatalogResponseSchema)([
+      {
+        key: "matematika",
+        label: "Matematika",
+        family: "matematika",
+        optional: false,
+        grades: [{ grade: 5, phase: "C", availability: "pending_pdf" }]
+      }
+    ])
+
     expect(Either.isLeft(result)).toBe(true)
   })
 })

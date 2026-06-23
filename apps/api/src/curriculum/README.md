@@ -18,7 +18,7 @@ Every subject×grade combination is declared in `manifest.ts` with a
 `status` gate. Helpers in `readiness.ts` answer:
 
 - **`getManifestEntry(subjectKey, grade)`** — lookup one row
-- **`isGeneratable(status)`** — `ready` or `stubbed` → allowed for generation
+- **`isGeneratable(status)`** — `ready` → allowed for generation
 - **`listExtractableBooks()`** — `sibi_pdf` + `ready` only (drives `curriculum:extract`)
 
 Shared schemas live in `@teacher-exam/shared` (`CurriculumSourceManifestItem`,
@@ -29,7 +29,7 @@ Shared schemas live in `@teacher-exam/shared` (`CurriculumSourceManifestItem`,
 | Status | Meaning | Generate allowed? | Extract allowed? |
 |--------|---------|-------------------|------------------|
 | `ready` | md + PDF corpus committed | yes | yes |
-| `stubbed` | hand-authored / CP-only md | yes (flagged) | no |
+| `stubbed` | hand-authored / CP-only md | no | no |
 | `missing` | no corpus yet | no | no |
 | `disabled` | policy-blocked (e.g. IPAS K1–2) | no | no |
 
@@ -61,9 +61,9 @@ them in `pdf/` with these exact filenames:
 | `Inggris_FN_BS_KLS_V.pdf` | Bahasa Inggris — Kelas 5 | ~6 MB |
 | `Inggris_FN_BS_KLS_VI.pdf` | Bahasa Inggris — Kelas 6 | ~6 MB |
 
-**Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` are
-hand-authored stub corpus (non-diagram lingkup materi). Manifest marks them
-`stubbed` / `cp_only` — not in the extractable book list.
+**Matematika (M2):** `matematika-kelas-5.md` and `matematika-kelas-6.md` now
+come from SIBI PDF extraction. Manifest marks them `ready` / `sibi_pdf`, so
+they are selectable in Generate and included in the extractable book list.
 
 PDFs are CC-licensed by Kemendikdasmen but committed-out because GitHub blocks
 files >100 MB and we want clean clones.
@@ -71,7 +71,7 @@ files >100 MB and we want clean clones.
 ## Re-extracting
 
 ```bash
-# All eight extractable books (BI, PPKN, IPAS, B. Inggris × K5/K6)
+# All current extractable books marked ready in the manifest
 pnpm --filter @teacher-exam/api curriculum:extract
 
 # Just one (slug = "{subject}-kelas-{grade}")

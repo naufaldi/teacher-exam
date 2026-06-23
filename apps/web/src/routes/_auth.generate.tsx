@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import type { ExamSubject, ExamType } from "@teacher-exam/shared"
+import type { CurriculumCatalogResponse, ExamSubject, ExamType } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -20,13 +20,14 @@ import {
   Textarea
 } from "@teacher-exam/ui"
 import { AlertTriangle, ArrowLeft, FileText, Lock, Sparkles, X } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GenerateErrorDialog } from "../components/generate/generate-error-dialog.js"
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
+import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
 import { getTopicsForGenerate } from "../lib/generate-topics.js"
-import { SUBJECT_OPTIONS, subjectMetaFor } from "../lib/subjects.js"
+import { subjectMetaFor } from "../lib/subjects.js"
 
 export const Route = createFileRoute("/_auth/generate")({
   component: GeneratePage,
@@ -186,6 +187,8 @@ function GeneratePage() {
   const [contohSoal, setContohSoal] = useState<string>("")
   const [composition, setComposition] = useState<Composition>(() => DEFAULT_COMPOSITION_BY_JENIS["formatif"])
   const [compExpanded, setCompExpanded] = useState(false)
+  const [curriculumCatalog, setCurriculumCatalog] = useState<CurriculumCatalogResponse>([])
+  const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "error">("loading")
 
   const fokusGuruRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -222,9 +225,44 @@ function GeneratePage() {
     return clearTimers
   }, [clearTimers])
 
-  const subjectMeta = subjectMetaFor(mapel)
   const selectedGrade = kelas === "5" || kelas === "6" ? Number(kelas) as 5 | 6 : undefined
+  const readySubjectOptions = useMemo(
+    () => readySubjectsForGrade(curriculumCatalog, selectedGrade),
+    [curriculumCatalog, selectedGrade]
+  )
+  const selectedSubjectReady = readySubjectOptions.some((subject) => subject.value === mapel)
+  const subjectMeta = subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
   const topikOptions = getTopicsForGenerate(mapel, selectedGrade)
+
+  useEffect(() => {
+    let cancelled = false
+
+    void api.curriculum.catalog().then((result) => {
+      const catalog = unwrapApiEither(result)
+      if (cancelled) return
+      setCurriculumCatalog([...catalog])
+      setCatalogStatus("ready")
+    }).catch(() => {
+      if (cancelled) return
+      setCurriculumCatalog([])
+      setCatalogStatus("error")
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedGrade === undefined || catalogStatus !== "ready") return
+    const firstReadySubject = readySubjectOptions[0]
+    if (firstReadySubject !== undefined && !selectedSubjectReady) {
+      setMapel(firstReadySubject.value)
+      setTopiks([])
+      setCustomTopik("")
+      setShowCustomInput(false)
+    }
+  }, [catalogStatus, readySubjectOptions, selectedGrade, selectedSubjectReady])
 
   // Effective topics array for submission
   const effectiveTopiks: Array<string> = showCustomInput && customTopik.trim() !== ""
@@ -326,7 +364,7 @@ function GeneratePage() {
   const isCompositionValid = compositionSum === totalSoal
   const isFormValid = Boolean(
     kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null &&
-      isCompositionValid
+      isCompositionValid && catalogStatus === "ready" && selectedSubjectReady
   )
 
   const topikSummary = effectiveTopiks.join(", ")
@@ -447,6 +485,7 @@ function GeneratePage() {
               <Label htmlFor="mapel">Mata Pelajaran</Label>
               <Select
                 value={mapel}
+                disabled={kelas === "" || catalogStatus !== "ready" || readySubjectOptions.length === 0}
                 onValueChange={(v) => {
                   setMapel(v as ExamSubject)
                   setTopiks([])
@@ -455,16 +494,34 @@ function GeneratePage() {
                 }}
               >
                 <SelectTrigger id="mapel">
-                  <SelectValue placeholder="Pilih mata pelajaran" />
+                  <SelectValue
+                    placeholder={kelas === "" ? "Pilih kelas dulu" : "Pilih mata pelajaran"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUBJECT_OPTIONS.map((subject) => (
+                  {readySubjectOptions.map((subject) => (
                     <SelectItem key={subject.value} value={subject.value}>
                       {subject.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {kelas === "" ?
+                (
+                  <p className="text-caption text-text-tertiary">
+                    Pilih kelas dulu untuk melihat mata pelajaran siap generate.
+                  </p>
+                ) :
+                null}
+              {kelas !== "" && catalogStatus === "loading" ?
+                <p className="text-caption text-text-tertiary">Memuat daftar materi siap generate...</p> :
+                null}
+              {kelas !== "" && catalogStatus === "error" ?
+                <p className="text-caption text-danger-600">Daftar materi siap generate gagal dimuat.</p> :
+                null}
+              {kelas !== "" && catalogStatus === "ready" && readySubjectOptions.length === 0 ?
+                <p className="text-caption text-warning-fg">Belum ada materi PDF yang siap untuk kelas ini.</p> :
+                null}
             </div>
 
             {/* Topik */}

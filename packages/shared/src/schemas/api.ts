@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { SubjectCatalogItemSchema } from "./catalog.js"
 import { PdfUploadIdSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
 import {
@@ -34,6 +35,9 @@ export const GenerateExamInputSchema = Schema.Struct({
   }))
 })
 export type GenerateExamInput = typeof GenerateExamInputSchema.Type
+
+export const CurriculumCatalogResponseSchema = Schema.Array(SubjectCatalogItemSchema)
+export type CurriculumCatalogResponse = typeof CurriculumCatalogResponseSchema.Type
 
 export const UpdateExamInputSchema = Schema.Struct({
   title: Schema.optional(Schema.String),

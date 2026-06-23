@@ -79,7 +79,7 @@ describe("CURRICULUM_MANIFEST", () => {
     }
   })
 
-  it("marks ready and stubbed as generatable, missing and disabled as not", () => {
+  it("marks only ready curriculum as generatable", () => {
     expect(isGeneratable(getManifestEntry("bahasa_indonesia", 5)!.status)).toBe(true)
     expect(isGeneratable(getManifestEntry("matematika", 5)!.status)).toBe(true)
     expect(isGeneratable(getManifestEntry("bahasa_indonesia", 4)!.status)).toBe(false)
