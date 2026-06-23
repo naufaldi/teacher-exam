@@ -2,8 +2,11 @@ import { Either, Schema } from "effect"
 import { describe, expect, test } from "vitest"
 import {
   AnswerLetterSchema,
+  CurriculumAvailabilitySchema,
   ExamSubjectSchema,
+  GradeSchema,
   MultiAnswerSchema,
+  PhaseSchema,
   QuestionTypeSchema,
   SUBJECT_LABEL
 } from "../primitives.js"
@@ -19,6 +22,42 @@ describe("ExamSubjectSchema", () => {
     const result = Schema.decodeUnknownEither(ExamSubjectSchema)(subject)
     expect(Either.isRight(result)).toBe(true)
     expect(SUBJECT_LABEL[subject as keyof typeof SUBJECT_LABEL]).toBe(label)
+  })
+})
+
+describe("GradeSchema", () => {
+  test.each([1, 2, 3, 4, 5, 6])("accepts Kelas %s", (grade) => {
+    const result = Schema.decodeUnknownEither(GradeSchema)(grade)
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test.each([0, 7, "1"])("rejects invalid grade %s", (grade) => {
+    const result = Schema.decodeUnknownEither(GradeSchema)(grade)
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("PhaseSchema", () => {
+  test.each(["A", "B", "C"])("accepts Fase %s", (phase) => {
+    const result = Schema.decodeUnknownEither(PhaseSchema)(phase)
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test.each(["D", "a"])("rejects invalid phase %s", (phase) => {
+    const result = Schema.decodeUnknownEither(PhaseSchema)(phase)
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("CurriculumAvailabilitySchema", () => {
+  test.each(["ready", "stubbed", "missing", "disabled"])("accepts %s", (availability) => {
+    const result = Schema.decodeUnknownEither(CurriculumAvailabilitySchema)(availability)
+    expect(Either.isRight(result)).toBe(true)
+  })
+
+  test("rejects unknown availability", () => {
+    const result = Schema.decodeUnknownEither(CurriculumAvailabilitySchema)("archived")
+    expect(Either.isLeft(result)).toBe(true)
   })
 })
 

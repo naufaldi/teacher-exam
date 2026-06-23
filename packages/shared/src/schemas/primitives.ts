@@ -9,6 +9,20 @@ export const ExamSubjectSchema = Schema.Literal(
 )
 export type ExamSubject = typeof ExamSubjectSchema.Type
 
+export const GradeSchema = Schema.Literal(1, 2, 3, 4, 5, 6)
+export type Grade = typeof GradeSchema.Type
+
+export const PhaseSchema = Schema.Literal("A", "B", "C")
+export type Phase = typeof PhaseSchema.Type
+
+export const CurriculumAvailabilitySchema = Schema.Literal(
+  "ready",
+  "stubbed",
+  "missing",
+  "disabled"
+)
+export type CurriculumAvailability = typeof CurriculumAvailabilitySchema.Type
+
 export const SUBJECT_LABEL: Record<ExamSubject, string> = {
   bahasa_indonesia: "Bahasa Indonesia",
   pendidikan_pancasila: "Pendidikan Pancasila",

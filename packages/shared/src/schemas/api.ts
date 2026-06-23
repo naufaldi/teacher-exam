@@ -1,11 +1,12 @@
 import { Schema } from "effect"
-import { GradeSchema, PdfUploadIdSchema } from "./entities.js"
+import { PdfUploadIdSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
 import {
   AnswerSchema,
   ExamDifficultySchema,
   ExamSubjectSchema,
   ExamTypeSchema,
+  GradeSchema,
   ReviewModeSchema,
   ValidationStatusSchema
 } from "./primitives.js"
@@ -139,4 +140,4 @@ export type QuestionResponse = Question
 export type UserProfileResponse = UserProfile
 
 // Re-export entity types for convenient single-import in apps/web
-export type { Exam, ExamWithQuestions, Grade, PdfUpload, Question, UserProfile } from "./entities.js"
+export type { Exam, ExamWithQuestions, PdfUpload, Question, UserProfile } from "./entities.js"

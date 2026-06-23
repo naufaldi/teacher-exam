@@ -1,18 +1,10 @@
 import { Schema } from "effect"
-import { type Grade, GradeSchema } from "./entities.js"
+import { CurriculumAvailabilitySchema, type Grade, GradeSchema, type Phase, PhaseSchema } from "./primitives.js"
+
+export { CurriculumAvailabilitySchema, PhaseSchema } from "./primitives.js"
+export type { CurriculumAvailability, Phase } from "./primitives.js"
 
 export const CURRICULUM_VERSION = "merdeka-2025" as const
-
-export const PhaseSchema = Schema.Literal("A", "B", "C")
-export type Phase = typeof PhaseSchema.Type
-
-export const CurriculumAvailabilitySchema = Schema.Literal(
-  "ready",
-  "stubbed",
-  "missing",
-  "disabled"
-)
-export type CurriculumAvailability = typeof CurriculumAvailabilitySchema.Type
 
 export const CurriculumSourceTypeSchema = Schema.Literal(
   "sibi_pdf",
