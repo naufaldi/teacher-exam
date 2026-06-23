@@ -1,16 +1,14 @@
 import type { LanguageModel } from "@effect/ai"
 import { NodeRuntime } from "@effect/platform-node"
-import type { ExamSubject } from "@teacher-exam/shared"
 import type { Layer } from "effect"
-import { Data, Effect } from "effect"
+import { Data, Effect, Either } from "effect"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { PDFDocument } from "pdf-lib"
-import { listExtractableBooks } from "../src/curriculum/readiness.js"
+import { CURRICULUM_MANIFEST } from "../src/curriculum/manifest.js"
 import { AiGenerationError } from "../src/errors/index.js"
-import { curriculumMdFilename } from "../src/lib/curriculum.js"
 import {
   type AiProvider,
   createModelLayersFromResolved,
@@ -21,8 +19,13 @@ import {
 } from "../src/lib/effect-ai/layers.js"
 import { buildPrompt } from "../src/lib/effect-ai/prompt.js"
 import { runGenerateText } from "../src/lib/effect-ai/run.js"
+import {
+  type ExtractionTarget,
+  listExtractionTargets,
+  resolveExtractionTargets
+} from "./lib/curriculum-extract-targets.js"
 import { mergeBab, MergeValidationError } from "./lib/merge-bab.js"
-import { extractPageRange, loadPdfDocument, planChunks } from "./lib/pdf-split.js"
+import { extractPageRange, loadPdfDocument, planChunksBySize } from "./lib/pdf-split.js"
 
 /**
  * One-off extraction of Kemendikdasmen textbook PDFs to curriculum markdown (`pnpm curriculum:extract`).
@@ -57,42 +60,15 @@ class CurriculumExtractRunError extends Data.TaggedError("CurriculumExtractRunEr
   failed: ReadonlyArray<{ slug: string; error: string }>
 }> {}
 
-interface BookSpec {
-  slug: string
-  subjectKey: ExamSubject
-  subject: string
-  grade: number
-  pdfFilename: string
-}
+type BookSpec = ExtractionTarget
 
-interface BookInput {
-  subjectKey: ExamSubject
-  subject: string
-  grade: number
-  pdfFilename: string
-}
-
-function defineBook(input: BookInput): BookSpec {
-  return { ...input, slug: curriculumMdFilename(input.subjectKey, input.grade).replace(/\.md$/, "") }
-}
-
-const BOOKS: Array<BookSpec> = listExtractableBooks().map((entry) => {
-  if (entry.sourceFilename === undefined) {
-    throw new Error(`extractable manifest entry ${entry.subjectKey} kelas ${entry.grade} missing sourceFilename`)
-  }
-  return defineBook({
-    subjectKey: entry.subjectKey as ExamSubject,
-    subject: entry.label,
-    grade: entry.grade,
-    pdfFilename: entry.sourceFilename
-  })
-})
+const BOOKS = listExtractionTargets(CURRICULUM_MANIFEST)
 
 const EXTRACTION_SYSTEM_PROMPT = `Anda adalah ekstraktor konten kurikulum. Konversi PDF Buku Siswa Kurikulum Merdeka
 menjadi markdown TERSTRUKTUR sesuai skema ketat berikut. Jangan tambahkan komentar,
 opini, atau pengantar — hanya markdown.
 
-# {Mata Pelajaran} — Kelas {N} (Fase C, Kurikulum Merdeka)
+# {Mata Pelajaran} — Kelas {N} (Fase {A/B/C sesuai kelas}, Kurikulum Merdeka)
 
 ## Capaian Pembelajaran
 - Menyimak: ...
@@ -113,6 +89,7 @@ opini, atau pengantar — hanya markdown.
 Aturan Teks bacaan:
 - Salin seluruh teks bacaan/narasi/informasi yang muncul di bab (bukan cuplikan 2-4 kalimat).
 - Jangan mengarang teks yang tidak ada di PDF.
+- Gunakan fase sesuai kelas: Kelas 1-2 Fase A, Kelas 3-4 Fase B, Kelas 5-6 Fase C.
 - Abaikan petunjuk guru, LKPD kosong, dan glosarium.
 
 (ulangi blok Bab untuk setiap bab dalam PDF)`
@@ -137,6 +114,7 @@ function chunkInstruction(book: BookSpec, startPage: number, endPage: number, to
 ${book.subject} Kelas ${book.grade}.
 
 - Jika potongan ini berisi awal buku: keluarkan header H1 + section Capaian Pembelajaran.
+- Header H1 harus persis: "# ${book.subject} — Kelas ${book.grade} (Fase ${book.phase}, Kurikulum Merdeka)".
 - Untuk potongan tengah/akhir: LANGSUNG mulai dari Bab yang muncul di potongan ini, JANGAN ulangi header.
 - Jika ada Bab yang melintasi batas potongan, ekstrak bagian yang TERLIHAT di potongan ini saja —
   proses merge akan menyatukan dengan potongan lain.
@@ -176,19 +154,23 @@ async function generateMarkdown(
   user: string,
   options: { model: string; provider: AiProvider; pdfBytes?: Buffer }
 ): Promise<string> {
-  return Effect.runPromise(
-    runGenerateText({
-      modelLayer: pdfModelLayer,
-      prompt: buildPrompt({
-        system,
-        user,
-        ...(options.pdfBytes !== undefined ? { pdfBytes: options.pdfBytes } : {})
-      }),
-      model: options.model,
-      logEvent: "curriculum.extract",
-      errorContext: { provider: options.provider }
-    })
+  const result = await Effect.runPromise(
+    Effect.either(
+      runGenerateText({
+        modelLayer: pdfModelLayer,
+        prompt: buildPrompt({
+          system,
+          user,
+          ...(options.pdfBytes !== undefined ? { pdfBytes: options.pdfBytes } : {})
+        }),
+        model: options.model,
+        logEvent: "curriculum.extract",
+        errorContext: { provider: options.provider }
+      })
+    )
   )
+  if (Either.isLeft(result)) throw result.left
+  return result.right
 }
 
 function resolveExtractLayerConfig(env: NodeJS.ProcessEnv = process.env): ResolvedModelLayerConfig {
@@ -311,7 +293,11 @@ async function extractChunkMarkdown(
     return text
   } catch (err) {
     const isEmpty = errorMessage(err).includes("no text block")
-    if (!isPromptTooLong(err) && !isEmpty) throw err
+    if (isEmpty) {
+      console.warn(`\n[${book.slug}] pages ${startPage}-${endPage} returned no text block — treating as empty`)
+      return ""
+    }
+    if (!isPromptTooLong(err)) throw err
 
     const pages = endPage - startPage + 1
     if (pages <= MIN_RETRY_PAGES) {
@@ -354,7 +340,7 @@ async function extractBook(
 
   console.log(`[${book.slug}] planning chunks for ${book.pdfFilename}…`)
   const src = await loadPdfDocument(pdfPath)
-  const chunks = planChunks(src)
+  const chunks = await planChunksBySize(src)
   const totalPages = src.getPageCount()
   console.log(`[${book.slug}] ${chunks.length} planned chunk(s), ${totalPages} pages`)
 
@@ -439,7 +425,10 @@ const main = Effect.gen(function*() {
   })
 
   const { bookFilter } = parseArgs(process.argv.slice(2))
-  const targets = bookFilter ? BOOKS.filter((b) => b.slug === bookFilter) : BOOKS
+  const targets = resolveExtractionTargets({
+    bookFilter,
+    manifest: CURRICULUM_MANIFEST
+  })
   if (targets.length === 0) {
     return yield* Effect.die(
       new CurriculumExtractConfigError({

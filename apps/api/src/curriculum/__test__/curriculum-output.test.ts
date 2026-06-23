@@ -16,17 +16,35 @@ interface BookCase {
 }
 
 const EXPECTED_MIN_BAB: Record<string, number> = {
+  "bahasa-indonesia-kelas-1": 8,
+  "bahasa-indonesia-kelas-2": 8,
+  "bahasa-indonesia-kelas-3": 4,
   "bahasa-indonesia-kelas-5": 4,
   "bahasa-indonesia-kelas-6": 8,
+  "pendidikan-pancasila-kelas-1": 4,
+  "pendidikan-pancasila-kelas-2": 4,
+  "pendidikan-pancasila-kelas-4": 4,
   "pendidikan-pancasila-kelas-5": 4,
   "pendidikan-pancasila-kelas-6": 7,
+  "ipas-kelas-3": 8,
+  "ipas-kelas-4": 8,
   "ipas-kelas-5": 4,
   "ipas-kelas-6": 6,
+  "bahasa-inggris-kelas-3": 6,
+  "bahasa-inggris-kelas-4": 6,
   "bahasa-inggris-kelas-5": 6,
-  "bahasa-inggris-kelas-6": 6
+  "bahasa-inggris-kelas-6": 6,
+  "matematika-kelas-1": 8,
+  "matematika-kelas-2": 8,
+  "matematika-kelas-3": 5,
+  "matematika-kelas-4": 5,
+  "matematika-kelas-5": 5,
+  "matematika-kelas-6": 4
 }
 
 const H1_ALTERNATES: Record<string, ReadonlyArray<string>> = {
+  "ipas-kelas-3": ["Ilmu Pengetahuan Alam dan Sosial"],
+  "ipas-kelas-4": ["Ilmu Pengetahuan Alam dan Sosial"],
   "ipas-kelas-5": ["Ilmu Pengetahuan Alam dan Sosial"],
   "ipas-kelas-6": ["Ilmu Pengetahuan Alam dan Sosial"]
 }
@@ -48,7 +66,7 @@ const BOOKS: Array<BookCase> = listExtractableBooks().map((entry) => {
 
 const MD_DIR = join(__dirname, "..", "md")
 
-const GRADE_ROMAN: Record<number, string> = { 5: "V", 6: "VI" }
+const GRADE_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI" }
 
 function matchesH1(text: string, label: string, grade: number): boolean {
   const roman = GRADE_ROMAN[grade]
@@ -85,7 +103,12 @@ describe("curriculum extraction output", () => {
 
       for (const field of REQUIRED_FIELDS) {
         expect(text).toContain(`**${field}:`)
+        const fieldCount = [...text.matchAll(new RegExp(`^\\*\\*${field}:\\*\\*`, "gm"))].length
+        expect(fieldCount).toBeGreaterThanOrEqual(book.expectedMinBab)
       }
+      const teksBacaanCount = [...text.matchAll(/^\*\*Teks bacaan:\*\*/gm)].length
+      expect(teksBacaanCount).toBeGreaterThanOrEqual(book.expectedMinBab)
+      expect(text).not.toMatch(/Sample teks bacaan/i)
     })
   }
 })
