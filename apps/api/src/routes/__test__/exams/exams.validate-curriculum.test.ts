@@ -96,4 +96,38 @@ describe("POST /api/exams/:id/validate-curriculum", () => {
     expect(body.code).toBe("DATABASE_ERROR")
     expect(body.error).toContain("Curriculum")
   })
+
+  it("uses the AI rate limit for repeated curriculum validation requests", async () => {
+    const examRow = makeExamRow({ userId: "ai-limit-user" })
+    const questionRows = [makeQuestionRow({ examId: "exam-1", number: 1 })]
+    const validatedRows = [{
+      ...questionRows[0]!,
+      validationStatus: "valid",
+      validationReason: "Sesuai CP."
+    }]
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      const step = (selectCount - 1) % 4
+      if (step === 0) return makeChain([examRow])
+      if (step === 1) return makeChain(questionRows)
+      if (step === 2) return makeChain([examRow])
+      return makeChain(validatedRows)
+    })
+
+    const app = buildHttpApiTestApp({
+      userId: "ai-limit-user",
+      aiService: fakeAiService,
+      aiRateLimit: {
+        windows: [{ windowMs: 60_000, max: 2 }]
+      }
+    })
+
+    for (let i = 0; i < 2; i++) {
+      expect((await app.request("/api/exams/exam-1/validate-curriculum", { method: "POST" })).status).toBe(200)
+    }
+    const limited = await app.request("/api/exams/exam-1/validate-curriculum", { method: "POST" })
+    expect(limited.status).toBe(429)
+  })
 })

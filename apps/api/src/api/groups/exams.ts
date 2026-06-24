@@ -13,7 +13,7 @@ import {
   ApiValidationError422
 } from "../errors/http"
 import { Authorization } from "../middleware/auth"
-import { GlobalRateLimit } from "../middleware/rate-limit"
+import { AiGenerateRateLimit, GlobalRateLimit } from "../middleware/rate-limit"
 
 const idParam = HttpApiSchema.param("id", Schema.String)
 
@@ -55,6 +55,7 @@ export const ExamsGroup = HttpApiGroup.make("exams")
       .addSuccess(ExamWithQuestionsSchema)
       .addError(ApiNotFound, { status: 404 })
       .addError(ApiDatabaseError, { status: 500 })
+      .middleware(AiGenerateRateLimit)
   )
   .add(
     HttpApiEndpoint.post("finalizeExam")`/exams/${idParam}/finalize`

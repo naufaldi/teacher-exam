@@ -1,32 +1,19 @@
 import * as HttpApiMiddleware from "@effect/platform/HttpApiMiddleware"
-import * as HttpServerRequest from "@effect/platform/HttpServerRequest"
 import { Effect, Layer } from "effect"
 import { ApiRateLimited } from "../errors/http"
 import { createRateLimitChecker, type RateLimitChecker, type RateWindow } from "../lib/rate-limit-core"
 
 export const PUBLIC_BANK_RATE_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 60_000, max: 60 }]
+const PUBLIC_BANK_ANONYMOUS_RATE_LIMIT_KEY = "public-bank:anonymous"
 
 export class PublicBankIpRateLimit extends HttpApiMiddleware.Tag<PublicBankIpRateLimit>()(
   "PublicBankIpRateLimit",
   { failure: ApiRateLimited }
 ) {}
 
-function resolveClientIp(headers: Record<string, string | undefined>): string {
-  const forwarded = headers["x-forwarded-for"]
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim()
-    if (first) return first
-  }
-  const realIp = headers["x-real-ip"]
-  if (realIp) return realIp
-  return "unknown"
-}
-
 function makeIpRateLimitMiddleware(checker: RateLimitChecker): PublicBankIpRateLimit["Type"] {
   return Effect.gen(function*() {
-    const request = yield* HttpServerRequest.HttpServerRequest
-    const ip = resolveClientIp(request.headers)
-    const result = checker.check(ip)
+    const result = checker.check(PUBLIC_BANK_ANONYMOUS_RATE_LIMIT_KEY)
     if (!result.allowed) {
       return yield* Effect.fail(
         new ApiRateLimited({

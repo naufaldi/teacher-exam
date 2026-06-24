@@ -42,6 +42,21 @@ function makeRateLimitMiddleware(checker: RateLimitChecker): GlobalRateLimit["Ty
   }) as unknown as GlobalRateLimit["Type"]
 }
 
+function makeTestRateLimitMiddleware(checker: RateLimitChecker): AiGenerateRateLimit["Type"] {
+  return Effect.gen(function*() {
+    const result = checker.check("test-user")
+    if (!result.allowed) {
+      return yield* Effect.fail(
+        new ApiRateLimited({
+          error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
+          code: "RATE_LIMITED",
+          retryAfterSec: result.retryAfterSec
+        })
+      )
+    }
+  }) as unknown as AiGenerateRateLimit["Type"]
+}
+
 export const GlobalRateLimitLive = Layer.succeed(
   GlobalRateLimit,
   makeRateLimitMiddleware(createRateLimitChecker(GLOBAL_RATE_WINDOWS))
@@ -62,4 +77,16 @@ export function createTestGlobalRateLimitLive(opts: {
     now !== undefined ? { now } : {}
   )
   return Layer.succeed(GlobalRateLimit, makeRateLimitMiddleware(checker))
+}
+
+export function createTestAiGenerateRateLimitLive(opts: {
+  windows: ReadonlyArray<{ windowMs: number; max: number }>
+  now?: () => number
+}) {
+  const now = opts.now
+  const checker = createRateLimitChecker(
+    opts.windows,
+    now !== undefined ? { now } : {}
+  )
+  return Layer.succeed(AiGenerateRateLimit, makeTestRateLimitMiddleware(checker))
 }

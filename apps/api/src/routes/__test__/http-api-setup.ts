@@ -18,6 +18,10 @@ export function buildHttpApiTestApp(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  aiRateLimit?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
 } = {}) {
   return buildTestHandler({
     ...(opts.userId !== undefined ? { userId: opts.userId } : {}),
@@ -28,6 +32,7 @@ export function buildHttpApiTestApp(opts: {
     ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
     ...(opts.publicBankRateLimit !== undefined
       ? { publicBankRateLimit: opts.publicBankRateLimit }
-      : {})
+      : {}),
+    ...(opts.aiRateLimit !== undefined ? { aiRateLimit: opts.aiRateLimit } : {})
   })
 }

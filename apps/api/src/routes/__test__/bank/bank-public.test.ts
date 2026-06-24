@@ -99,4 +99,35 @@ describe("GET /api/bank/public", () => {
     const limited = await app.request("/api/bank/public")
     expect(limited.status).toBe(429)
   })
+
+  it("does not let rotated forwarding headers bypass the anonymous rate limit", async () => {
+    let t = 0
+    const app = buildHttpApiTestApp({
+      authenticated: false,
+      publicBankRateLimit: {
+        windows: [{ windowMs: 60_000, max: 2 }],
+        now: () => {
+          t += 1
+          return t
+        }
+      }
+    })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount % 2 === 1) return makeChain([{ count: 0 }])
+      return makeChain([])
+    })
+
+    const makeHeaders = (ip: string) => ({
+      "x-forwarded-for": ip,
+      "x-real-ip": ip
+    })
+
+    expect((await app.request("/api/bank/public", { headers: makeHeaders("203.0.113.10") })).status).toBe(200)
+    expect((await app.request("/api/bank/public", { headers: makeHeaders("203.0.113.11") })).status).toBe(200)
+    const limited = await app.request("/api/bank/public", { headers: makeHeaders("203.0.113.12") })
+    expect(limited.status).toBe(429)
+  })
 })

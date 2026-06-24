@@ -17,7 +17,12 @@ import { QuestionsLive } from "../handlers/questions"
 import { attachRateLimitHeaders } from "../lib/rate-limit-response"
 import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
 import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
-import { AiGenerateRateLimitLive, createTestGlobalRateLimitLive, GlobalRateLimitLive } from "../middleware/rate-limit"
+import {
+  AiGenerateRateLimitLive,
+  createTestAiGenerateRateLimitLive,
+  createTestGlobalRateLimitLive,
+  GlobalRateLimitLive
+} from "../middleware/rate-limit"
 import { type AiClient, TestAiLayer } from "../services/ai"
 import type { AuthService } from "../services/auth-service"
 import { AuthServiceLive } from "../services/auth-service"
@@ -66,6 +71,10 @@ function createMiddlewareLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  aiRateLimit?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
   authLayer?: Layer.Layer<AuthService>
 }) {
   const authMiddlewareLayer = opts.userId
@@ -77,8 +86,11 @@ function createMiddlewareLayer(opts: {
   const publicBankRateLayer = opts.publicBankRateLimit
     ? createTestPublicBankIpRateLimitLive(opts.publicBankRateLimit)
     : PublicBankIpRateLimitLive
+  const aiRateLayer = opts.aiRateLimit
+    ? createTestAiGenerateRateLimitLive(opts.aiRateLimit)
+    : AiGenerateRateLimitLive
 
-  return Layer.mergeAll(authMiddlewareLayer, rateLayer, AiGenerateRateLimitLive, publicBankRateLayer)
+  return Layer.mergeAll(authMiddlewareLayer, rateLayer, aiRateLayer, publicBankRateLayer)
 }
 
 const TestDbLayer = createTestDbLayer(db as unknown as AppDb)
@@ -95,6 +107,10 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
+  aiRateLimit?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
   authLayer?: Layer.Layer<AuthService>
   curriculumLayer?: Layer.Layer<CurriculumService>
 } = {}) {
@@ -107,6 +123,7 @@ export function createHttpApiTestLayer(opts: {
         ...(opts.publicBankRateLimit !== undefined
           ? { publicBankRateLimit: opts.publicBankRateLimit }
           : {}),
+        ...(opts.aiRateLimit !== undefined ? { aiRateLimit: opts.aiRateLimit } : {}),
         ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {})
       })
     )
