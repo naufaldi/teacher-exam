@@ -114,6 +114,13 @@ describe("curriculum download book filtering", () => {
       .toBe("Indonesia_BS_KLS_III_Rev+.pdf")
   })
 
+  it("rejects decoded traversal in attachment filenames", () => {
+    expect(() =>
+      filenameFromAttachment("https://static-sc.cloudapp.web.id/content/pdf/bukuteks/kurikulum21/%2e%2e%2fowned.pdf")
+    )
+      .toThrow("unsafe SIBI PDF filename")
+  })
+
   it("discovers scoped books from the paged SIBI textbook endpoint", async () => {
     const pdfDir = await mkdtemp(join(tmpdir(), "curriculum-download-books-"))
     const fetchImpl = async (input: string | URL | Request) => {

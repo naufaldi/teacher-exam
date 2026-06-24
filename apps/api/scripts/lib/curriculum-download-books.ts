@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
-import { basename, join } from "node:path"
+import { basename, resolve, sep } from "node:path"
 import { DEFAULT_CURRICULUM_PDF_DIR } from "./curriculum-report.js"
 
 const API_BASE_URL = "https://api.buku.cloudapp.web.id/api/catalogue"
@@ -169,7 +169,30 @@ export function isOfficialSibiPdfUrl(value: string | null | undefined): boolean 
 
 export function filenameFromAttachment(value: string): string {
   const url = new URL(value)
-  return decodeURIComponent(basename(url.pathname))
+  return sanitizePdfFilename(decodeURIComponent(basename(url.pathname)))
+}
+
+function sanitizePdfFilename(value: string): string {
+  const filename = value.trim()
+  if (
+    filename.length === 0 ||
+    filename === "." ||
+    filename === ".." ||
+    filename.includes("/") ||
+    filename.includes("\\") ||
+    !filename.toLowerCase().endsWith(".pdf")
+  ) {
+    throw new Error("unsafe SIBI PDF filename")
+  }
+  return filename
+}
+
+function safeFilenameFromAttachment(value: string): string | null {
+  try {
+    return filenameFromAttachment(value)
+  } catch {
+    return null
+  }
 }
 
 function normalizeAttachmentUrl(value: string): string {
@@ -186,7 +209,7 @@ export function classifyCatalogueItem(item: SibiCatalogueItem): ClassifiedCatalo
   const subjectKey = normalizeSubject(item.subject)
   const attachment = item.attachment
   const filename = isOfficialSibiPdfUrl(attachment) && attachment !== null && attachment !== undefined
-    ? filenameFromAttachment(attachment)
+    ? safeFilenameFromAttachment(attachment)
     : null
 
   if (hasExcludedTitle(title)) return { item, reason: "excluded_title", grade, subjectKey, filename }
@@ -206,6 +229,7 @@ export function classifyCatalogueItem(item: SibiCatalogueItem): ClassifiedCatalo
   if (!isOfficialSibiPdfUrl(attachment)) {
     return { item, reason: "not_official_pdf_url", grade, subjectKey, filename }
   }
+  if (filename === null) return { item, reason: "unsafe_pdf_filename", grade, subjectKey, filename }
   return { item, reason: "keep", grade, subjectKey, filename }
 }
 
@@ -360,7 +384,11 @@ async function downloadCandidate(
   candidate: DownloadCandidate,
   options: Required<Pick<DownloadOptions, "dryRun" | "force" | "pdfDir" | "fetchImpl">>
 ): Promise<DownloadCandidate> {
-  const path = join(options.pdfDir, candidate.filename)
+  const pdfDir = resolve(options.pdfDir)
+  const path = resolve(pdfDir, candidate.filename)
+  if (path !== pdfDir && !path.startsWith(`${pdfDir}${sep}`)) {
+    return { ...candidate, status: "failed", message: "unsafe output path" }
+  }
   if (options.dryRun) return { ...candidate, status: "dry_run", message: path }
   if (!options.force && existsSync(path)) {
     return { ...candidate, status: "skipped_existing", message: path }
