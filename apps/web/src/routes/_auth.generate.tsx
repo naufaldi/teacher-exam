@@ -26,7 +26,7 @@ import { GenerateProgressDialog } from "../components/generate/generate-progress
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
-import { getTopicsForGenerate } from "../lib/generate-topics.js"
+import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
 import { parseGrade, phaseCopyForGrade, phaseLabelForGrade } from "../lib/phase-copy.js"
 import { subjectMetaFor } from "../lib/subjects.js"
 
@@ -191,6 +191,8 @@ function GeneratePage() {
   const [compExpanded, setCompExpanded] = useState(false)
   const [curriculumCatalog, setCurriculumCatalog] = useState<CurriculumCatalogResponse>([])
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "error">("loading")
+  const [babTopicOptions, setBabTopicOptions] = useState<Array<string>>([])
+  const [babTopicsStatus, setBabTopicsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle")
 
   const fokusGuruRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -243,7 +245,6 @@ function GeneratePage() {
   }, [catalogStatus, curriculumCatalog])
   const selectedSubjectReady = readySubjectOptions.some((subject) => subject.value === mapel)
   const subjectMeta = subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
-  const topikOptions = getTopicsForGenerate(mapel, selectedGrade)
 
   useEffect(() => {
     let cancelled = false
@@ -276,9 +277,29 @@ function GeneratePage() {
   }, [catalogStatus, readySubjectOptions, selectedGrade, selectedSubjectReady])
 
   useEffect(() => {
-    if (selectedGrade === undefined || topiks.length > 0 || showCustomInput || topikOptions.length !== 1) return
-    setTopiks([topikOptions[0] ?? ""])
-  }, [selectedGrade, showCustomInput, topikOptions, topiks.length])
+    if (selectedGrade === undefined || !selectedSubjectReady || catalogStatus !== "ready") {
+      setBabTopicOptions([])
+      setBabTopicsStatus("idle")
+      return
+    }
+
+    let cancelled = false
+    setBabTopicsStatus("loading")
+
+    void fetchBabTopicLabels(mapel, selectedGrade).then((labels) => {
+      if (cancelled) return
+      setBabTopicOptions(labels)
+      setBabTopicsStatus("ready")
+    }).catch(() => {
+      if (cancelled) return
+      setBabTopicOptions([])
+      setBabTopicsStatus("error")
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [catalogStatus, mapel, selectedGrade, selectedSubjectReady])
 
   // Effective topics array for submission
   const effectiveTopiks: Array<string> = showCustomInput && customTopik.trim() !== ""
@@ -541,21 +562,34 @@ function GeneratePage() {
                 null}
             </div>
 
-            {/* Topik */}
+            {/* Materi */}
             <div className="space-y-2">
-              <Label>Topik</Label>
+              <Label>Materi</Label>
               <div className={kelas === "" ? "pointer-events-none opacity-60" : undefined}>
                 <TopicMultiSelect
-                  options={topikOptions}
+                  options={babTopicOptions}
                   selected={topiks}
                   onChange={setTopiks}
                   onCustom={() => setShowCustomInput(true)}
-                  maxItems={5}
-                  placeholder={kelas === "" ? "Pilih kelas dulu" : "Pilih 1–5 topik..."}
+                  maxItems={8}
+                  placeholder={
+                    kelas === "" ? "Pilih kelas dulu" :
+                    babTopicsStatus === "loading" ? "Memuat daftar Bab..." :
+                    "Pilih 1–8 materi Bab..."
+                  }
                 />
               </div>
               {kelas === "" ?
-                <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat topik Bab.</p> :
+                <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat materi Bab.</p> :
+                null}
+              {kelas !== "" && babTopicsStatus === "loading" ?
+                <p className="text-caption text-text-tertiary">Memuat daftar Bab...</p> :
+                null}
+              {kelas !== "" && babTopicsStatus === "error" ?
+                <p className="text-caption text-danger-600">Daftar materi Bab gagal dimuat.</p> :
+                null}
+              {kelas !== "" && babTopicsStatus === "ready" && babTopicOptions.length === 0 ?
+                <p className="text-caption text-warning-fg">Materi belum tersedia untuk kelas ini.</p> :
                 null}
               {showCustomInput ?
                 (
@@ -581,7 +615,7 @@ function GeneratePage() {
                 ) :
                 null}
               {effectiveTopiks.length === 0 ?
-                <p className="text-caption text-text-tertiary">Pilih minimal 1 topik.</p> :
+                <p className="text-caption text-text-tertiary">Pilih minimal 1 materi.</p> :
                 null}
             </div>
           </section>
@@ -954,7 +988,7 @@ function GeneratePage() {
               </div>
 
               <div className="flex justify-between items-start gap-2">
-                <span className="text-text-tertiary shrink-0">Topik</span>
+                <span className="text-text-tertiary shrink-0">Materi</span>
                 <span className="text-text-primary max-w-[160px] text-right">
                   {effectiveTopiks.length > 0
                     ? topikSummary.length > 50

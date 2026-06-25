@@ -1,6 +1,7 @@
 import * as FileSystem from "@effect/platform/FileSystem"
-import type { ExamSubject } from "@teacher-exam/shared"
+import type { CurriculumBabTopic, ExamSubject } from "@teacher-exam/shared"
 import { Context, Data, Effect, Layer, Ref } from "effect"
+import { listBabTopicsFromCorpusText } from "../../curriculum/bab-topics.js"
 import { curriculumMdPath, getCurriculumFallback, SUBJECT_SLUG } from "../../lib/curriculum"
 import { logWarn } from "../../lib/server-log"
 
@@ -13,6 +14,10 @@ export interface CurriculumServiceApi {
     subject: ExamSubject,
     grade: number
   ) => Effect.Effect<string, CurriculumReadError>
+  readonly listBabTopics: (
+    subject: ExamSubject,
+    grade: number
+  ) => Effect.Effect<ReadonlyArray<CurriculumBabTopic>, CurriculumReadError>
   readonly resetCache: () => Effect.Effect<void>
 }
 
@@ -69,13 +74,23 @@ export const CurriculumServiceLive = Layer.effect(
 
     const resetCache = (): Effect.Effect<void> => Ref.set(cacheRef, new Map())
 
-    return { getText, resetCache }
+    const listBabTopics = (
+      subject: ExamSubject,
+      grade: number
+    ): Effect.Effect<ReadonlyArray<CurriculumBabTopic>, CurriculumReadError> =>
+      Effect.gen(function*() {
+        const text = yield* getText(subject, grade)
+        return listBabTopicsFromCorpusText(text)
+      })
+
+    return { getText, listBabTopics, resetCache }
   })
 )
 
 export function TestCurriculumLayer(text: string = "mock curriculum text") {
   return Layer.succeed(CurriculumService, {
     getText: () => Effect.succeed(text),
+    listBabTopics: () => Effect.succeed(listBabTopicsFromCorpusText(text)),
     resetCache: () => Effect.void
   })
 }
@@ -83,6 +98,7 @@ export function TestCurriculumLayer(text: string = "mock curriculum text") {
 export function TestCurriculumFailingLayer() {
   return Layer.succeed(CurriculumService, {
     getText: () => Effect.fail(new CurriculumReadError({ cause: "curriculum unavailable" })),
+    listBabTopics: () => Effect.fail(new CurriculumReadError({ cause: "curriculum unavailable" })),
     resetCache: () => Effect.void
   })
 }

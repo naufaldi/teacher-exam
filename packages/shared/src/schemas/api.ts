@@ -20,7 +20,7 @@ export const GenerateExamInputSchema = Schema.Struct({
   difficulty: ExamDifficultySchema,
   topics: Schema.Array(Schema.NonEmptyString).pipe(
     Schema.minItems(1),
-    Schema.maxItems(5)
+    Schema.maxItems(8)
   ),
   reviewMode: ReviewModeSchema,
   examType: Schema.optional(ExamTypeSchema),
