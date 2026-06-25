@@ -8,6 +8,8 @@
  * sections.
  */
 
+import { type BabBlock, parseBabBlocks } from "../../src/curriculum/parse-bab.js"
+
 export const REQUIRED_FIELDS = [
   "Topik utama",
   "Sub-konsep",
@@ -24,12 +26,6 @@ export class MergeValidationError extends Error {
     super(message)
     this.name = "MergeValidationError"
   }
-}
-
-interface BabBlock {
-  num: number
-  title: string
-  body: string
 }
 
 /**
@@ -96,30 +92,6 @@ function extractH1(input: string): string | null {
 function extractCapaianPembelajaran(input: string): string | null {
   const match = input.match(/^## Capaian Pembelajaran\s*\n([\s\S]*?)(?=^## |$)/m)
   return match ? (match[1] ?? "").trim() : null
-}
-
-function parseBabBlocks(input: string): Array<BabBlock> {
-  const regex = /^## Bab (\d+):\s*(.+?)\s*$/gm
-  const matches: Array<{ num: number; title: string; start: number; headerEnd: number }> = []
-  let m: RegExpExecArray | null
-  while ((m = regex.exec(input)) !== null) {
-    const numStr = m[1]
-    const title = m[2]
-    if (numStr === undefined || title === undefined) continue
-    matches.push({
-      num: Number.parseInt(numStr, 10),
-      title,
-      start: m.index,
-      headerEnd: regex.lastIndex
-    })
-  }
-
-  return matches.map((entry, i) => {
-    const next = matches[i + 1]
-    const end = next ? next.start : input.length
-    const body = input.slice(entry.headerEnd, end).replace(/^\n+/, "").trimEnd()
-    return { num: entry.num, title: entry.title, body }
-  })
 }
 
 function completedFieldCount(block: BabBlock): number {

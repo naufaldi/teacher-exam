@@ -54,6 +54,34 @@ export interface BuiltPrompt {
 const MCQ_SINGLE_EXAMPLE =
   "{ \"_tag\": \"mcq_single\", \"number\": 1, \"text\": \"Berapakah hasil dari $12 \\\\times 5$?\", \"option_a\": \"50\", \"option_b\": \"60\", \"option_c\": \"70\", \"option_d\": \"80\", \"correct_answer\": \"b\", \"topic\": \"Operasi Hitung\", \"difficulty\": \"mudah\", \"cognitive_level\": \"C2\" }"
 
+const BAB_TOPIC_PATTERN = /^Bab \d+:/
+
+export function isBabTopic(topic: string): boolean {
+  return BAB_TOPIC_PATTERN.test(topic.trim())
+}
+
+function buildTopicsInstruction(topics: ReadonlyArray<string>, totalSoal: number): string {
+  const allBabTopics = topics.length > 0 && topics.every((topic) => isBabTopic(topic))
+
+  if (allBabTopics && topics.length === 1) {
+    return "Hanya gunakan konten dari Bab yang dipilih. Jangan mengambil materi dari Bab lain di korpus."
+  }
+
+  if (allBabTopics && topics.length > 1) {
+    return `Distribusikan soal secara merata di antara semua Bab yang dipilih (sekitar ${
+      Math.round(totalSoal / topics.length)
+    } soal per Bab). Setiap soal harus berasal dari salah satu Bab yang dipilih saja dan mencantumkan nama Bab-nya di field "topic".`
+  }
+
+  if (topics.length > 1) {
+    return `Distribusikan soal secara merata di antara semua topik (sekitar ${
+      Math.round(totalSoal / topics.length)
+    } soal per topik). Setiap soal harus mencantumkan nama topiknya di field "topic".`
+  }
+
+  return "Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik."
+}
+
 function buildBahasaInggrisRules(): ReadonlyArray<string> {
   return [
     "Bahasa Inggris language rules:",
@@ -150,11 +178,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     ? (input.topics[0] ?? "")
     : input.topics.map((t, i) => `${i + 1}. ${t}`).join("\n")
 
-  const topicsInstruction = input.topics.length > 1
-    ? `Distribusikan soal secara merata di antara semua topik (sekitar ${
-      Math.round(input.totalSoal / input.topics.length)
-    } soal per topik). Setiap soal harus mencantumkan nama topiknya di field "topic".`
-    : "Topik bersifat directive (fokus utama), bukan filter — Anda boleh mengambil konteks dari bab manapun di korpus selama relevan dengan topik."
+  const topicsInstruction = buildTopicsInstruction(input.topics, input.totalSoal)
 
   const typeParts: Array<string> = []
   if (comp.mcqSingle > 0) typeParts.push(`${comp.mcqSingle} soal pilihan ganda`)

@@ -1,5 +1,5 @@
 import { describe, expect, it, test } from "vitest"
-import { buildExamPrompt } from "../prompt"
+import { buildExamPrompt, isBabTopic } from "../prompt"
 
 const FAKE_CURRICULUM = `# Bahasa Indonesia — Kelas 6 (Fase C, Kurikulum Merdeka)
 
@@ -442,5 +442,67 @@ describe("buildExamPrompt — Matematika LaTeX rules", () => {
     expect(system).toContain("# Verifikasi")
     expect(system).toContain("Contoh minimal mcq_single")
     expect(system).toContain("\"mcq_single\"")
+  })
+})
+
+describe("isBabTopic", () => {
+  it("detects Bab-prefixed topic labels", () => {
+    expect(isBabTopic("Bab 1: Aku dan Teman-Temanku")).toBe(true)
+    expect(isBabTopic("Pemahaman Bacaan")).toBe(false)
+  })
+})
+
+describe("buildExamPrompt — Bab topic filtering", () => {
+  it("restricts single Bab selection to that Bab only", () => {
+    const { user } = buildExamPrompt({
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "pendidikan_pancasila",
+      subjectLabel: "Pendidikan Pancasila",
+      grade: 1,
+      topics: ["Bab 1: Aku dan Teman-Temanku"],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
+    })
+
+    expect(user).toContain("Hanya gunakan konten dari Bab yang dipilih")
+    expect(user).not.toContain("Topik bersifat directive")
+  })
+
+  it("distributes multiple Bab selections evenly and restricts corpus scope", () => {
+    const { user } = buildExamPrompt({
+      examType: "sts",
+      difficulty: "campuran",
+      examSubject: "pendidikan_pancasila",
+      subjectLabel: "Pendidikan Pancasila",
+      grade: 1,
+      topics: [
+        "Bab 1: Aku dan Teman-Temanku",
+        "Bab 2: Aku Patuh pada Aturan"
+      ],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
+    })
+
+    expect(user).toContain("Distribusikan soal secara merata di antara semua Bab yang dipilih")
+    expect(user).toContain("Setiap soal harus berasal dari salah satu Bab yang dipilih saja")
+  })
+
+  it("keeps directive behavior for custom free-text topics", () => {
+    const { user } = buildExamPrompt({
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
+      grade: 1,
+      topics: ["Materi sesuai Buku Siswa"],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
+    })
+
+    expect(user).toContain("Topik bersifat directive (fokus utama), bukan filter")
   })
 })

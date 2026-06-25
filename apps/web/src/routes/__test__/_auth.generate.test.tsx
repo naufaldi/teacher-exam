@@ -12,6 +12,22 @@ import { Route } from "../_auth.generate.js"
 
 const mockNavigate = vi.fn<(opts: unknown) => Promise<void>>()
 
+const PPKN_K1_BAB_TOPICS = [
+  { bab: 1, title: "Aku dan Teman-Temanku", label: "Bab 1: Aku dan Teman-Temanku" },
+  { bab: 2, title: "Aku Patuh pada Aturan", label: "Bab 2: Aku Patuh pada Aturan" },
+  { bab: 3, title: "Aku Mengenal Indonesia", label: "Bab 3: Aku Mengenal Indonesia" },
+  { bab: 4, title: "Aku dan Lingkunganku", label: "Bab 4: Aku dan Lingkunganku" }
+] as const
+
+const BI_K1_BAB_TOPICS = [
+  { bab: 1, title: "Bunyi Apa?", label: "Bab 1: Bunyi Apa?" }
+] as const
+
+const MATEMATIKA_K5_BAB_TOPICS = [
+  { bab: 1, title: "Bilangan Cacah Sampai 100.000", label: "Bab 1: Bilangan Cacah Sampai 100.000" },
+  { bab: 2, title: "Pecahan", label: "Bab 2: Pecahan" }
+] as const
+
 const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
   {
     key: "bahasa_indonesia",
@@ -105,7 +121,7 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
     api: {
       ...orig.api,
       ai: { generate: vi.fn() },
-      curriculum: { catalog: vi.fn() }
+      curriculum: { catalog: vi.fn(), babTopics: vi.fn() }
     }
   }
 })
@@ -153,7 +169,7 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
 
 const mockApi = api as unknown as {
   ai: { generate: ReturnType<typeof vi.fn> }
-  curriculum: { catalog: ReturnType<typeof vi.fn> }
+  curriculum: { catalog: ReturnType<typeof vi.fn>; babTopics: ReturnType<typeof vi.fn> }
 }
 
 function renderGeneratePage() {
@@ -168,6 +184,7 @@ beforeEach(() => {
   mockNavigate.mockResolvedValue(undefined)
   mockApi.ai.generate.mockReset()
   mockApi.curriculum.catalog.mockReturnValue(new Promise(() => {}))
+  mockApi.curriculum.babTopics.mockReturnValue(new Promise(() => {}))
 })
 
 afterEach(() => {
@@ -219,8 +236,9 @@ describe("Jumlah Soal input", () => {
     expect(screen.queryByRole("button", { name: "Bahasa Inggris" })).not.toBeInTheDocument()
   })
 
-  it("submits Bahasa Indonesia Kelas 1 with a fallback topic", async () => {
+  it("submits Bahasa Indonesia Kelas 1 with a selected Bab topic", async () => {
     mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
     mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions("exam_k1"))
     renderGeneratePage()
     await act(async () => {
@@ -231,13 +249,17 @@ describe("Jumlah Soal input", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
+
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+    fireEvent.click(screen.getByText("Bab 1: Bunyi Apa?"))
+
     await clickGenerateAndFlush()
 
     expect(mockApi.ai.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: "bahasa_indonesia",
         grade: 1,
-        topics: ["Materi sesuai Buku Siswa"]
+        topics: ["Bab 1: Bunyi Apa?"]
       })
     )
   })
@@ -404,38 +426,54 @@ describe("GeneratePage — runGenerate flow", () => {
   })
 })
 
-describe("GeneratePage — Matematika subject", () => {
-  it("offers Matematika non-diagram topik per grade without diagram topics", async () => {
-    const { getTopicsForGenerate } = await import("../../lib/generate-topics.js")
+describe("GeneratePage — Bab materi picker", () => {
+  it("loads Bab options for PPKN Kelas 1 from the API", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...PPKN_K1_BAB_TOPICS])
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Pendidikan Pancasila" }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+
+    expect(screen.getByText("Bab 1: Aku dan Teman-Temanku")).toBeInTheDocument()
+    expect(screen.getByText("Bab 4: Aku dan Lingkunganku")).toBeInTheDocument()
+    expect(screen.queryByText("Materi sesuai Buku Siswa")).not.toBeInTheDocument()
+  })
+
+  it("shows Bab titles from the API in TopicMultiSelect", async () => {
     const { render: rtlRender } = await import("@testing-library/react")
     const { TopicMultiSelect } = await import("../../components/generate/topic-multi-select.js")
 
-    const k5 = getTopicsForGenerate("matematika", 5)
-    const k6 = getTopicsForGenerate("matematika", 6)
-
-    expect(k5).toContain("Pecahan, Desimal, dan Persen")
-    expect(k6).toContain("Pecahan, Desimal, Rasio, dan Persen")
-    expect(k5).not.toContain("Bangun Datar")
-    expect(k6).not.toContain("Bidang Koordinat")
-
     rtlRender(
       <TopicMultiSelect
-        options={k5}
+        options={MATEMATIKA_K5_BAB_TOPICS.map((topic) => topic.label)}
         selected={[]}
         onChange={() => {}}
       />
     )
     fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
 
-    expect(screen.getByText("Pecahan, Desimal, dan Persen")).toBeInTheDocument()
-    expect(screen.queryByText("Bangun Datar")).not.toBeInTheDocument()
+    expect(screen.getByText("Bab 1: Bilangan Cacah Sampai 100.000")).toBeInTheDocument()
+    expect(screen.getByText("Bab 2: Pecahan")).toBeInTheDocument()
   })
 })
 
-describe("GeneratePage — grade-aware topik", () => {
-  it("prompts to pick kelas before topik options are available", () => {
+describe("GeneratePage — grade-aware materi", () => {
+  it("prompts to pick kelas before materi options are available", () => {
     renderGeneratePage()
-    expect(screen.getByText("Pilih kelas dulu untuk melihat topik Bab.")).toBeInTheDocument()
+    expect(screen.getByText("Pilih kelas dulu untuk melihat materi Bab.")).toBeInTheDocument()
     expect(screen.getByRole("combobox", { name: /pilih topik/i })).toHaveTextContent("Pilih kelas dulu")
   })
 })

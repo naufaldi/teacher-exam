@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { CurriculumAvailabilitySchema, type Grade, GradeSchema, type Phase, PhaseSchema } from "./primitives.js"
+import { CurriculumAvailabilitySchema, ExamSubjectSchema, type Grade, GradeSchema, type Phase, PhaseSchema } from "./primitives.js"
 
 export { CurriculumAvailabilitySchema, PhaseSchema } from "./primitives.js"
 export type { CurriculumAvailability, Phase } from "./primitives.js"
@@ -31,3 +31,19 @@ export function phaseForGrade(grade: Grade): Phase {
   if (grade === 3 || grade === 4) return "B"
   return "C"
 }
+
+export const CurriculumBabTopicSchema = Schema.Struct({
+  bab: Schema.Int.pipe(Schema.greaterThanOrEqualTo(1)),
+  title: Schema.NonEmptyString,
+  label: Schema.NonEmptyString
+})
+export type CurriculumBabTopic = typeof CurriculumBabTopicSchema.Type
+
+export const CurriculumBabTopicsResponseSchema = Schema.Array(CurriculumBabTopicSchema)
+export type CurriculumBabTopicsResponse = typeof CurriculumBabTopicsResponseSchema.Type
+
+export const CurriculumBabTopicsUrlParamsSchema = Schema.Struct({
+  subject: ExamSubjectSchema,
+  grade: Schema.NumberFromString.pipe(Schema.int(), Schema.between(1, 6))
+})
+export type CurriculumBabTopicsUrlParams = typeof CurriculumBabTopicsUrlParamsSchema.Type

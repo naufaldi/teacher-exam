@@ -4,6 +4,7 @@ import type {
   BuildExamFromBankInput,
   BuildExamFromBankResponse,
   CurriculumCatalogResponse,
+  CurriculumBabTopicsResponse,
   ExamDetailResponse,
   ExamShareResponse,
   ExamWithQuestions,
@@ -21,6 +22,7 @@ import type {
 import {
   BankQuestionSchema,
   BuildExamFromBankResponseSchema,
+  CurriculumBabTopicsResponseSchema,
   CurriculumCatalogResponseSchema,
   ExamSchema,
   ExamShareResponseSchema,
@@ -344,6 +346,17 @@ export const api = {
         return raw as Either.Either<CurriculumCatalogResponse, ApiClientFailure>
       }
       return decodeEither(CurriculumCatalogResponseSchema, raw.right)
+    },
+    babTopics: async (
+      subject: GenerateExamInput["subject"],
+      grade: GenerateExamInput["grade"]
+    ): Promise<Either.Either<CurriculumBabTopicsResponse, ApiClientFailure>> => {
+      const params = new URLSearchParams({ subject, grade: String(grade) })
+      const raw = await apiFetchEither<unknown>(`/curriculum/bab-topics?${params.toString()}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<CurriculumBabTopicsResponse, ApiClientFailure>
+      }
+      return decodeEither(CurriculumBabTopicsResponseSchema, raw.right)
     }
   },
   questions: {
