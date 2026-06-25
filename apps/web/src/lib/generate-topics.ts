@@ -1,4 +1,4 @@
-import type { ExamSubject } from "@teacher-exam/shared"
+import type { ExamSubject, Grade } from "@teacher-exam/shared"
 
 const TOPIK_BI = [
   "Pemahaman Bacaan",
@@ -92,11 +92,12 @@ const TOPIK_MATEMATIKA_K6 = [
   "Data dan Peluang Awal"
 ] as const
 
-type GenerateGrade = 5 | 6
+const FALLBACK_READY_TOPIC = "Materi sesuai Buku Siswa"
+const FALLBACK_READY_TOPICS = [FALLBACK_READY_TOPIC] as const
 
 export const TOPICS_BY_SUBJECT_AND_GRADE: Record<
   ExamSubject,
-  Record<GenerateGrade, ReadonlyArray<string>>
+  Partial<Record<Grade, ReadonlyArray<string>>>
 > = {
   bahasa_indonesia: { 5: TOPIK_BI, 6: TOPIK_BI },
   pendidikan_pancasila: { 5: TOPIK_PPKN, 6: TOPIK_PPKN },
@@ -107,12 +108,12 @@ export const TOPICS_BY_SUBJECT_AND_GRADE: Record<
 
 export function getTopicsForGenerate(
   subject: ExamSubject,
-  grade: GenerateGrade | null | undefined
+  grade: Grade | null | undefined
 ): ReadonlyArray<string> {
   if (grade === undefined || grade === null) {
     return []
   }
-  return TOPICS_BY_SUBJECT_AND_GRADE[subject][grade]
+  return TOPICS_BY_SUBJECT_AND_GRADE[subject][grade] ?? FALLBACK_READY_TOPICS
 }
 
 /** @deprecated Use getTopicsForGenerate(subject, grade) for grade-aware topik. */

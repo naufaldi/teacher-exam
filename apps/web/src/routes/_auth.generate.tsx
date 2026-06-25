@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import type { CurriculumCatalogResponse, ExamSubject, ExamType } from "@teacher-exam/shared"
+import type { CurriculumCatalogResponse, ExamSubject, ExamType, Grade } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -27,6 +27,7 @@ import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
 import { getTopicsForGenerate } from "../lib/generate-topics.js"
+import { parseGrade, phaseCopyForGrade, phaseLabelForGrade } from "../lib/phase-copy.js"
 import { subjectMetaFor } from "../lib/subjects.js"
 
 export const Route = createFileRoute("/_auth/generate")({
@@ -74,6 +75,7 @@ const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
 ) as Record<ExamType, string>
 
 const FOKUS_GURU_MAX = 500
+const FALLBACK_GENERATE_GRADES: ReadonlyArray<Grade> = [1, 2, 3, 4, 5, 6]
 
 // ── Default total soal per jenis (PRD §8.x) ───────────────────────────────────
 
@@ -225,11 +227,20 @@ function GeneratePage() {
     return clearTimers
   }, [clearTimers])
 
-  const selectedGrade = kelas === "5" || kelas === "6" ? Number(kelas) as 5 | 6 : undefined
+  const selectedGrade = parseGrade(kelas)
+  const phaseCopy = phaseCopyForGrade(selectedGrade)
+  const phaseLabel = phaseLabelForGrade(selectedGrade)
   const readySubjectOptions = useMemo(
     () => readySubjectsForGrade(curriculumCatalog, selectedGrade),
     [curriculumCatalog, selectedGrade]
   )
+  const gradeOptions = useMemo(() => {
+    if (catalogStatus !== "ready") return FALLBACK_GENERATE_GRADES
+    const grades = Array.from(
+      new Set(curriculumCatalog.flatMap((item) => item.grades.map((entry) => entry.grade)))
+    ).sort((a, b) => a - b)
+    return grades.length > 0 ? grades : FALLBACK_GENERATE_GRADES
+  }, [catalogStatus, curriculumCatalog])
   const selectedSubjectReady = readySubjectOptions.some((subject) => subject.value === mapel)
   const subjectMeta = subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
   const topikOptions = getTopicsForGenerate(mapel, selectedGrade)
@@ -264,6 +275,11 @@ function GeneratePage() {
     }
   }, [catalogStatus, readySubjectOptions, selectedGrade, selectedSubjectReady])
 
+  useEffect(() => {
+    if (selectedGrade === undefined || topiks.length > 0 || showCustomInput || topikOptions.length !== 1) return
+    setTopiks([topikOptions[0] ?? ""])
+  }, [selectedGrade, showCustomInput, topikOptions, topiks.length])
+
   // Effective topics array for submission
   const effectiveTopiks: Array<string> = showCustomInput && customTopik.trim() !== ""
     ? [...topiks, customTopik.trim()]
@@ -295,7 +311,7 @@ function GeneratePage() {
 
     void api.ai.generate({
       subject: mapel,
-      grade: Number(kelas) as 5 | 6,
+      grade: Number(kelas) as Grade,
       difficulty: kesulitan as "mudah" | "sedang" | "sulit" | "campuran",
       topics,
       reviewMode,
@@ -416,7 +432,7 @@ function GeneratePage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Badge variant="pill">
                   <Lock size={11} />
-                  Kurikulum Merdeka · Fase C
+                  Kurikulum Merdeka · {phaseLabel}
                 </Badge>
                 <Badge variant={subjectMeta.badgeVariant}>{subjectMeta.label}</Badge>
                 <Badge variant="secondary">{EXAM_TYPE_LABEL_MAP[examType]}</Badge>
@@ -457,8 +473,9 @@ function GeneratePage() {
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">Kelas 5 SD</SelectItem>
-                  <SelectItem value="6">Kelas 6 SD</SelectItem>
+                  {gradeOptions.map((grade) => (
+                    <SelectItem key={grade} value={String(grade)}>Kelas {grade} SD</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -477,7 +494,7 @@ function GeneratePage() {
                   <SelectItem value="merdeka">Kurikulum Merdeka</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-caption text-text-tertiary mt-1">Fase C (Kelas 5–6)</p>
+              <p className="text-caption text-text-tertiary mt-1">{phaseCopy}</p>
             </div>
 
             {/* Mata Pelajaran */}
@@ -882,7 +899,7 @@ function GeneratePage() {
                 Generate Lembar
               </Button>
               <p className="text-caption text-text-tertiary text-center mt-2">
-                AI akan membuat {totalSoal} soal sesuai Capaian Pembelajaran Fase C
+                AI akan membuat {totalSoal} soal sesuai Capaian Pembelajaran {phaseLabel}
               </p>
             </div>
           </section>
@@ -997,6 +1014,7 @@ function GeneratePage() {
       {/* ── Loading + error dialogs ─────────────────────────────────────── */}
       <GenerateProgressDialog
         open={isGenerating}
+        phaseLabel={phaseLabel}
         progress={progress}
         totalSoal={totalSoal}
       />

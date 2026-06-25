@@ -9,6 +9,7 @@ const CATALOG: CurriculumCatalogResponse = [
     family: "bahasa",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "ready" },
       { grade: 5, phase: "C", availability: "ready" },
       { grade: 6, phase: "C", availability: "ready" }
     ]
@@ -26,6 +27,12 @@ const CATALOG: CurriculumCatalogResponse = [
 ]
 
 describe("readySubjectsForGrade", () => {
+  it("returns ready subjects for Kelas 1", () => {
+    expect(readySubjectsForGrade(CATALOG, 1).map((subject) => subject.value)).toEqual([
+      "bahasa_indonesia"
+    ])
+  })
+
   it("returns only ready subjects for the selected grade", () => {
     expect(readySubjectsForGrade(CATALOG, 5).map((subject) => subject.value)).toEqual([
       "bahasa_indonesia"

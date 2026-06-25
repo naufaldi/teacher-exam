@@ -7,6 +7,7 @@ import {
   type PembahasanTrueFalseQuestion,
   serializeQuestionForPrompt
 } from "./pembahasan-prompt"
+import { phaseRoleCopyForGrade } from "./phase-prompt.js"
 import type { BuiltPrompt } from "./prompt"
 import {
   completenessBlock,
@@ -75,7 +76,9 @@ export function buildValidatorPrompt(input: BuildValidatorInput): BuiltPrompt {
 
   const system = joinPromptSections([
     roleBlock(
-      `Kamu adalah Penjaga Kurikulum untuk soal ulangan SD Kurikulum Merdeka Fase C (Kelas 5–6). Mata pelajaran: ${input.exam.subject}, kelas ${input.exam.grade}, jenis ujian: ${input.exam.examType}.`
+      `Kamu adalah Penjaga Kurikulum untuk soal ulangan SD Kurikulum Merdeka ${
+        phaseRoleCopyForGrade(input.exam.grade)
+      }. Mata pelajaran: ${input.exam.subject}, kelas ${input.exam.grade}, jenis ujian: ${input.exam.examType}.`
     ),
     goalBlock("Evaluasi SETIAP soal pada daftar JSON user terhadap CP/TP pada korpus di bawah."),
     successCriteriaBlock([

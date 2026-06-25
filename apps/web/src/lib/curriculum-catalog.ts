@@ -1,11 +1,9 @@
-import type { CurriculumCatalogResponse, ExamSubject } from "@teacher-exam/shared"
+import type { CurriculumCatalogResponse, ExamSubject, Grade } from "@teacher-exam/shared"
 import { SUBJECT_OPTIONS, type SubjectMeta } from "./subjects.js"
-
-type GenerateGrade = 5 | 6
 
 export function readySubjectsForGrade(
   catalog: CurriculumCatalogResponse,
-  grade: GenerateGrade | undefined
+  grade: Grade | undefined
 ): ReadonlyArray<SubjectMeta> {
   if (grade === undefined) return []
 

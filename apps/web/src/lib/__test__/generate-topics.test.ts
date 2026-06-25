@@ -19,6 +19,10 @@ describe("getTopicsForGenerate", () => {
     expect(k6.length).toBe(6)
   })
 
+  it("returns a safe corpus-backed fallback topic for ready lower grades without curated topics", () => {
+    expect(getTopicsForGenerate("bahasa_indonesia", 1)).toEqual(["Materi sesuai Buku Siswa"])
+  })
+
   it("returns grade-specific Bahasa Inggris Bab titles", () => {
     const k5 = getTopicsForGenerate("bahasa_inggris", 5)
     const k6 = getTopicsForGenerate("bahasa_inggris", 6)

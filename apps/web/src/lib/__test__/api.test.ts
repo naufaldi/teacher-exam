@@ -162,7 +162,7 @@ describe("api.ai.generate", () => {
 
     const input = {
       subject: "bahasa_indonesia" as const,
-      grade: 6,
+      grade: 6 as const,
       difficulty: "sedang" as const,
       topics: ["Teks Narasi"],
       reviewMode: "fast" as const
