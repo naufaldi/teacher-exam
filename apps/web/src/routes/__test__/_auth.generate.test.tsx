@@ -19,6 +19,10 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     family: "bahasa",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "ready" },
+      { grade: 2, phase: "A", availability: "ready" },
+      { grade: 3, phase: "B", availability: "ready" },
+      { grade: 4, phase: "B", availability: "missing" },
       { grade: 5, phase: "C", availability: "ready" },
       { grade: 6, phase: "C", availability: "ready" }
     ]
@@ -29,6 +33,10 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     family: "pancasila",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "ready" },
+      { grade: 2, phase: "A", availability: "ready" },
+      { grade: 3, phase: "B", availability: "missing" },
+      { grade: 4, phase: "B", availability: "ready" },
       { grade: 5, phase: "C", availability: "ready" },
       { grade: 6, phase: "C", availability: "ready" }
     ]
@@ -39,6 +47,10 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     family: "ipas",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "disabled" },
+      { grade: 2, phase: "A", availability: "disabled" },
+      { grade: 3, phase: "B", availability: "ready" },
+      { grade: 4, phase: "B", availability: "ready" },
       { grade: 5, phase: "C", availability: "ready" },
       { grade: 6, phase: "C", availability: "ready" }
     ]
@@ -49,6 +61,10 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     family: "bahasa",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "missing" },
+      { grade: 2, phase: "A", availability: "missing" },
+      { grade: 3, phase: "B", availability: "ready" },
+      { grade: 4, phase: "B", availability: "ready" },
       { grade: 5, phase: "C", availability: "ready" },
       { grade: 6, phase: "C", availability: "ready" }
     ]
@@ -59,6 +75,10 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     family: "matematika",
     optional: false,
     grades: [
+      { grade: 1, phase: "A", availability: "ready" },
+      { grade: 2, phase: "A", availability: "ready" },
+      { grade: 3, phase: "B", availability: "ready" },
+      { grade: 4, phase: "B", availability: "ready" },
       { grade: 5, phase: "C", availability: "stubbed" },
       { grade: 6, phase: "C", availability: "stubbed" }
     ]
@@ -146,6 +166,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   mockNavigate.mockResolvedValue(undefined)
+  mockApi.ai.generate.mockReset()
   mockApi.curriculum.catalog.mockReturnValue(new Promise(() => {}))
 })
 
@@ -167,6 +188,73 @@ async function clickGenerateAndFlush() {
 }
 
 describe("Jumlah Soal input", () => {
+  it("shows Kelas 1-6 in the grade selector", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    expect(screen.getByText("Kelas 1 SD")).toBeInTheDocument()
+    expect(screen.getByText("Kelas 2 SD")).toBeInTheDocument()
+    expect(screen.getByText("Kelas 3 SD")).toBeInTheDocument()
+    expect(screen.getByText("Kelas 4 SD")).toBeInTheDocument()
+    expect(screen.getByText("Kelas 5 SD")).toBeInTheDocument()
+    expect(screen.getByText("Kelas 6 SD")).toBeInTheDocument()
+  })
+
+  it("shows only ready subjects after choosing Kelas 1", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+
+    expect(screen.getByRole("button", { name: "Bahasa Indonesia" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Matematika" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "IPAS" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Bahasa Inggris" })).not.toBeInTheDocument()
+  })
+
+  it("submits Bahasa Indonesia Kelas 1 with a fallback topic", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions("exam_k1"))
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "bahasa_indonesia",
+        grade: 1,
+        topics: ["Materi sesuai Buku Siswa"]
+      })
+    )
+  })
+
+  it("updates curriculum phase copy after choosing Kelas 1", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+
+    expect(screen.getByText("Fase A (Kelas 1–2)")).toBeInTheDocument()
+    expect(screen.queryByText("Fase C (Kelas 5–6)")).not.toBeInTheDocument()
+  })
+
   it("offers IPAS and Bahasa Inggris in the subject selector", async () => {
     mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
     renderGeneratePage()

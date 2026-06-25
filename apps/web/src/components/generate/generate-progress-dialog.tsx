@@ -17,20 +17,20 @@ function useElapsedSeconds(active: boolean) {
 }
 
 const STEPS = [
-  { id: 0, label: "Menganalisis materi & CP Fase C", threshold: 0 },
+  { id: 0, threshold: 0 },
   { id: 1, label: "Menyusun soal pilihan ganda", threshold: 20 },
   { id: 2, label: "Membuat kunci jawaban", threshold: 60 },
   { id: 3, label: "Validasi akhir", threshold: 90 }
 ] as const
 
-const TIPS = [
-  "AI menyertakan Capaian Pembelajaran Fase C secara otomatis.",
+const BASE_TIPS = [
   "Setiap lembar berisi soal pilihan ganda — siap dicetak ke A4.",
   "Setelah selesai, Anda bisa edit setiap soal sebelum dicetak."
 ] as const
 
 export interface GenerateProgressDialogProps {
   open: boolean
+  phaseLabel?: string
   progress: number
   totalSoal: number
 }
@@ -41,10 +41,15 @@ export interface GenerateProgressDialogProps {
  */
 export function GenerateProgressDialog({
   open,
+  phaseLabel = "Fase C",
   progress,
   totalSoal
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
+  const tips = [
+    `AI menyertakan Capaian Pembelajaran ${phaseLabel} secara otomatis.`,
+    ...BASE_TIPS
+  ] as const
   const isOvertime = progress >= 99 && progress < 100
   const isComplete = progress >= 100
   const overtimeSeconds = useElapsedSeconds(open && isOvertime)
@@ -55,10 +60,10 @@ export function GenerateProgressDialog({
       return
     }
     const id = setInterval(() => {
-      setTipIndex((i) => (i + 1) % TIPS.length)
+      setTipIndex((i) => (i + 1) % tips.length)
     }, 2500)
     return () => clearInterval(id)
-  }, [open])
+  }, [open, tips.length])
 
   // Counter starts ramping when step 2 begins and caps at the requested total.
   const soalCount = Math.max(
@@ -91,7 +96,7 @@ export function GenerateProgressDialog({
             <div className="space-y-1">
               <DialogTitle className="text-h3">Membuat lembar ujian Anda</DialogTitle>
               <DialogDescription className="text-body-sm">
-                AI sedang menyusun soal sesuai Kurikulum Merdeka Fase C.
+                AI sedang menyusun soal sesuai Kurikulum Merdeka {phaseLabel}.
               </DialogDescription>
             </div>
           </div>
@@ -137,6 +142,7 @@ export function GenerateProgressDialog({
             {STEPS.map((step) => {
               const isDone = progress > 100 || activeStepIndex > step.id || progress >= 100
               const isActive = !isDone && activeStepIndex === step.id
+              const label = step.id === 0 ? `Menganalisis materi & CP ${phaseLabel}` : step.label
               return (
                 <li
                   key={step.id}
@@ -166,7 +172,7 @@ export function GenerateProgressDialog({
                       ? "text-text-primary font-medium"
                       : "text-text-tertiary"}
                   >
-                    {step.label}
+                    {label}
                   </span>
                 </li>
               )
@@ -178,7 +184,7 @@ export function GenerateProgressDialog({
             <p className="text-caption text-text-secondary">
               <span className="font-semibold text-text-primary">Tip ·</span>
               <span key={tipIndex} className="animate-fade-up inline-block">
-                {TIPS[tipIndex]}
+                {tips[tipIndex]}
               </span>
             </p>
           </div>

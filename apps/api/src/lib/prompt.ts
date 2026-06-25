@@ -2,6 +2,7 @@ import type { ExamDifficulty, ExamSubject, ExamType } from "@teacher-exam/shared
 import type { Composition } from "./exam-type-profile"
 import { EXAM_TYPE_PROFILE, resolveDifficultyDist } from "./exam-type-profile"
 import { buildMatematikaLatexPromptRules } from "./matematika-latex-prompt.js"
+import { gradeAppropriatenessRules, phaseRoleCopyForGrade } from "./phase-prompt.js"
 import {
   authorityOrderBlock,
   corpusBlock,
@@ -102,12 +103,13 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
   const matematikaRules = input.subjectLabel === "Matematika" ? [...buildMatematikaLatexPromptRules()] : []
 
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
+  const gradeRules = gradeAppropriatenessRules(input.grade)
 
   const comp = input.composition ?? { mcqSingle: input.totalSoal, mcqMulti: 0, trueFalse: 0 }
 
   const system = joinPromptSections([
     roleBlock(
-      "Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka Fase C (Kelas 5–6)."
+      `Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka ${phaseRoleCopyForGrade(input.grade)}.`
     ),
     goalBlock(
       `Hasilkan tepat ${input.totalSoal} soal sesuai composition_soal, distribusi kesulitan, dan level kognitif jenis lembar ini.`
@@ -127,6 +129,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     "",
     ...bahasaInggrisRules,
     ...matematikaRules,
+    ...gradeRules,
     "",
     `- Gaya soal: ${profile.stemHint}`,
     `- Hormati distribusi kesulitan target dan level kognitif yang diizinkan untuk jenis lembar ini.`,
@@ -204,7 +207,7 @@ export function buildRegeneratePrompt(input: BuildRegeneratePromptInput): BuiltP
 
   const system = joinPromptSections([
     roleBlock(
-      "Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka Fase C (Kelas 5–6)."
+      `Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka ${phaseRoleCopyForGrade(input.grade)}.`
     ),
     goalBlock("Hasilkan tepat 1 soal pilihan ganda (mcq_single) pengganti yang berbeda dari soal yang ada."),
     successCriteriaBlock([
@@ -216,6 +219,7 @@ export function buildRegeneratePrompt(input: BuildRegeneratePromptInput): BuiltP
     ...corpusSections,
     ...bahasaInggrisRules,
     ...matematikaRules,
+    ...gradeAppropriatenessRules(input.grade),
     outputBlock([
       "Format wajib (semua field diperlukan):",
       "  { \"_tag\": \"mcq_single\", \"number\": 1, \"text\": \"...\", \"option_a\": \"...\", \"option_b\": \"...\", \"option_c\": \"...\", \"option_d\": \"...\", \"correct_answer\": \"a|b|c|d\", \"topic\": \"...\", \"difficulty\": \"mudah|sedang|sulit\" }",

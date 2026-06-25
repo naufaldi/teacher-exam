@@ -20,6 +20,18 @@ const SAMPLE_QUESTION: Question = {
 }
 
 describe("buildValidatorPrompt", () => {
+  it("uses phase-aware role copy for Kelas 1 validation", () => {
+    const { system } = buildValidatorPrompt({
+      exam: { subject: "bahasa_indonesia", grade: 1, examType: "formatif" },
+      curriculumText: "corpus",
+      questions: [SAMPLE_QUESTION]
+    })
+
+    expect(system).toContain("Fase A")
+    expect(system).toContain("kelas 1")
+    expect(system).not.toContain("Fase C (Kelas 5–6)")
+  })
+
   it("includes curriculum corpus in the system prompt", () => {
     const corpus = "--- KORPUS CP Fase C ---\nCapaian Pembelajaran"
     const { system } = buildValidatorPrompt({

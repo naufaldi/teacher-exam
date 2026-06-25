@@ -22,6 +22,24 @@ function parsePromptParams(user: string) {
 }
 
 describe("buildExamPrompt", () => {
+  it("uses phase-aware low-grade instructions for Kelas 1", () => {
+    const { system } = buildExamPrompt({
+      examType: "formatif",
+      difficulty: "campuran",
+      examSubject: "bahasa_indonesia",
+      subjectLabel: "Bahasa Indonesia",
+      grade: 1,
+      topics: ["Materi sesuai Buku Siswa"],
+      totalSoal: 20,
+      curriculumText: FAKE_CURRICULUM,
+      composition: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 }
+    })
+
+    expect(system).toContain("Fase A (Kelas 1)")
+    expect(system).toContain("kalimat pendek")
+    expect(system).not.toContain("Fase C (Kelas 5–6)")
+  })
+
   it("puts the full curriculum corpus in the system message, not in user", () => {
     const { system, user } = buildExamPrompt({
       examType: "formatif",

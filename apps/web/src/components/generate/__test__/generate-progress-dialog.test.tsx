@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest"
 import { GenerateProgressDialog } from "../generate-progress-dialog"
 
 describe("GenerateProgressDialog", () => {
+  it("uses the selected phase in progress copy", () => {
+    render(<GenerateProgressDialog open progress={5} totalSoal={20} phaseLabel="Fase A" />)
+
+    expect(screen.getByRole("dialog")).toHaveTextContent("CP Fase A")
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("Fase C")
+  })
+
   it("uses the requested totalSoal in the generated-question counter", () => {
     render(<GenerateProgressDialog open progress={95} totalSoal={30} />)
 

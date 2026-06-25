@@ -11,6 +11,14 @@ const VALID_BASE = {
 } as const
 
 describe("GenerateExamInputSchema.topics", () => {
+  it("accepts ready lower elementary grades for generate", () => {
+    const result = Schema.decodeUnknownEither(GenerateExamInputSchema)({
+      ...VALID_BASE,
+      grade: 1
+    })
+    expect(Either.isRight(result)).toBe(true)
+  })
+
   it("accepts 1 topic", () => {
     const result = Schema.decodeUnknownEither(GenerateExamInputSchema)(VALID_BASE)
     expect(Either.isRight(result)).toBe(true)
