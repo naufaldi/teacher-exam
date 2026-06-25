@@ -118,6 +118,13 @@ For our deployment, certs issued successfully even with Cloudflare proxy on (CF 
 **Fix:** Changed to `chown node:node /app/uploads` — only the uploads directory needs to be writable by the `node` runtime user; source files are owned by root at build time.  
 **File:** `apps/api/Dockerfile`
 
+### Bug 4 — Google sign-in blocked by CORS on auth routes
+
+**Symptom:** Clicking "Masuk dengan Google" on `https://ujian-sekolah.faldi.xyz` fails in Chrome with `blocked by CORS policy` on `POST https://api-ujian-sekolah.faldi.xyz/api/auth/sign-in/social`.  
+**Root cause:** Production uses subdomain-split origins (web vs API). HttpApi routes get CORS via `createCorsLayer()`, but the bridge server forwards `/api/auth/*` directly to better-auth with no CORS wrapper. Browser `OPTIONS` preflight on auth paths returned **404** with no `Access-Control-Allow-Origin`.  
+**Fix:** Added `auth-cors.ts` and wired it in `create-bridge-server.ts` — handle auth `OPTIONS` preflight and apply the same allowed-origin policy (`APP_URL` / `resolveAllowedCorsOrigins`) to all auth responses.  
+**Files:** `apps/api/src/api/auth-cors.ts`, `apps/api/src/api/bridge/create-bridge-server.ts`
+
 ---
 
 ## Deployment Commands

@@ -1,6 +1,7 @@
 import type { Auth } from "better-auth"
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import { logError } from "../../lib/server-log"
+import { applyAuthCors, authPreflightResponse } from "../auth-cors"
 import { isAuthPath, isHttpApiPath } from "./migrated-routes"
 import { nodeRequestToWebRequest, writeWebResponse } from "./node-http"
 
@@ -52,8 +53,14 @@ async function handleRequest(
 
   if (isAuthPath(pathname)) {
     const webReq = await nodeRequestToWebRequest(req)
+
+    if (webReq.method === "OPTIONS") {
+      await writeWebResponse(res, authPreflightResponse(webReq))
+      return
+    }
+
     const authResponse = await opts.authHandler(webReq)
-    await writeWebResponse(res, authResponse)
+    await writeWebResponse(res, applyAuthCors(webReq, authResponse))
     return
   }
 
