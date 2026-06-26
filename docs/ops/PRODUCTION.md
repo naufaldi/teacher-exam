@@ -1,6 +1,6 @@
 # Production Reference — teacher-exam
 
-> **Last updated:** 2026-04-26  
+> **Last updated:** 2026-06-26  
 > **Status:** Live ✅  
 > AI agents: read this entire file before making any infrastructure changes.
 
@@ -27,7 +27,7 @@ Internet
 edge-proxy-caddy  (lucaslorentz/caddy-docker-proxy:2.8-alpine)
    │  external Docker network: edge
    ├─► ujian-sekolah.faldi.xyz ──► teacher-exam-web-1 (caddy:alpine, :80, /srv)
-   └─► api-ujian-sekolah.faldi.xyz ──► teacher-exam-api-1 (node:22-alpine, :3001)
+   └─► api-ujian-sekolah.faldi.xyz ──► teacher-exam-api-1 (node:22-bookworm, :3001, +Playwright Chromium)
                                              │
                                    Docker network: teacher-exam-private
                                              │
@@ -99,13 +99,11 @@ For our deployment, certs issued successfully even with Cloudflare proxy on (CF 
 
 The export endpoints (`GET /api/exams/:id/export`, `GET /api/public/exams/:slug/export`) render PDF via **headless Chromium** (Playwright) and DOCX via the `docx` npm package, behind `ExportService` (`apps/api/src/api/services/export-service.ts`). Chromium is launched lazily and reused for the process lifetime.
 
-### Critical: Alpine is not supported by Playwright's bundled Chromium
+### Base image: node:22-bookworm (glibc) — required for Playwright Chromium
 
-The current API image is `node:22-alpine` (musl libc). **Playwright's bundled Chromium build is glibc-linked and does not run on musl/Alpine** — see https://playwright.dev/docs/docker ("Alpine Linux and other distributions based on the musl standard library are not supported"). PDF export will fail with `ExportError` ("Failed to launch Chromium browser") on the current Alpine image.
+The API image uses **`node:22-bookworm`** (Debian 12, glibc), **not** Alpine. Playwright's bundled Chromium build is glibc-linked and does not run on musl/Alpine — see https://playwright.dev/docs/docker ("Alpine Linux and other distributions based on the musl standard library are not supported"). On the previous `node:22-alpine` image, PDF export failed with `ExportError` ("Failed to launch Chromium browser") and the endpoint returned 500.
 
-### Recommended production fix (needs confirmation before deploy)
-
-Switch the API base image from `node:22-alpine` to **`node:22-bookworm`** (Debian 12, glibc) and install Chromium in the Dockerfile `app` stage, before `USER node`:
+Chromium is installed in the Dockerfile `app` stage, before `USER node`:
 
 ```dockerfile
 FROM node:22-bookworm AS base
@@ -114,7 +112,7 @@ FROM node:22-bookworm AS base
 FROM deps AS app
 COPY . .
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
-# Install Playwright Chromium + its system deps (glibc). Pinned to the api's playwright version.
+# Playwright's bundled Chromium is glibc-only; needs the bookworm (Debian) base.
 RUN pnpm --filter @teacher-exam/api exec playwright install --with-deps chromium
 USER node
 WORKDIR /app/apps/api
@@ -122,21 +120,30 @@ EXPOSE 3001
 CMD ["node", "--import", "tsx/esm", "src/index.ts"]
 ```
 
-`--with-deps` runs `apt-get` to install libnss3, libatk1.0, libgbm, etc. The browser binary lands in `/ms-playwright` (root-writable at build, readable by `node` at runtime). No `PLAYWRIGHT_BROWSERS_PATH` override is needed.
+`--with-deps` runs `apt-get` to install libnss3, libatk1.0, libgbm, etc. The browser binary lands in `/ms-playwright` (root-writable at build, readable by `node` at runtime). No `PLAYWRIGHT_BROWSERS_PATH` override is needed. This base-image change affects the whole API image (Feature A/C too) and increased image size by ~400 MB; the VPS has ~50 GB total and the deploy workflow prunes before each pull.
 
-> This base-image change affects the whole API image (Feature A/C too) and increases image size (~400 MB). It should be a deliberate, reviewed deploy — **not** slipped in with Feature B. Until it lands, PDF export returns 500 (`ApiDatabaseError`) on production; DOCX export works everywhere (pure JS, no browser).
+### Runtime flags (compose)
 
-### Runtime recommendations (compose)
-
-When the bookworm image is live, add these to the `api` service in `docker-compose.prod.yml` for Chromium stability:
+The `api` service in `docker-compose.prod.yml` sets Playwright's Docker-recommended flags for Chromium stability:
 
 ```yaml
   api:
-    init: true            # avoid zombie Chromium processes (PID 1 = node)
-    ipc: host             # Chromium needs shared memory; without this it can OOM-crash
+    init: true            # PID 1 = init, avoids zombie Chromium processes
+    ipc: host             # Chromium needs shared memory; without this it can OOM-crash on launch
 ```
 
 `init: true` and `ipc: host` are the Playwright Docker recommendations. `--cap-add=SYS_ADMIN` is only needed if the Chromium sandbox is enabled; the service launches headless without sandbox (`chromium.launch({ headless: true })`), so it is **not** required.
+
+### Healthcheck: use `node fetch`, not `wget`
+
+`wget` ships on Alpine but is **absent on `node:22-bookworm`**. The `api` healthcheck therefore uses Node's built-in `fetch`:
+
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+```
+
+Do not reintroduce `wget` (or `curl`) in the healthcheck while the base image is bookworm — the binary won't exist and the container will report unhealthy, which stops Caddy from routing to it.
 
 ### Local dev
 
@@ -384,4 +391,6 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 
 10. **Do not leave local edits on the VPS git clone.** Patching files under `~/projects/teacher-exam` (e.g. SCP a fixed migration) makes `git pull` fail on the next deploy. Deploy uses `git reset --hard origin/main`. For one-off DB fixes, use `docker compose ... run migrate` with a volume mount or fix via a merged PR — not uncommitted files on the server.
 
-11. **PDF export needs glibc Chromium (not Alpine).** The API image must move to `node:22-bookworm` + `playwright install --with-deps chromium` for PDF export to work in production. On the current `node:22-alpine` image, `exportExamPdf` fails with `ExportError` and the endpoint returns 500; DOCX works everywhere. See the "Feature B — PDF/DOCX export" section above. Add `init: true` + `ipc: host` to the `api` compose service when you switch.
+11. **PDF export needs glibc Chromium (not Alpine).** The API image runs `node:22-bookworm` + `playwright install --with-deps chromium` so `exportExamPdf` works in production; DOCX works everywhere (pure JS). On `node:22-alpine` (musl), Playwright's Chromium does not launch and the endpoint returns 500. See the "Feature B — PDF/DOCX export" section. The `api` compose service sets `init: true` + `ipc: host` for Chromium stability.
+
+12. **The `api` healthcheck uses `node fetch`, not `wget`.** `wget` is present on Alpine but absent on `node:22-bookworm`. The healthcheck runs `node -e "fetch('http://localhost:3001/api/health')..."`. Do not switch it back to `wget`/`curl` while the base image is bookworm, or the container reports unhealthy and Caddy stops routing to it.

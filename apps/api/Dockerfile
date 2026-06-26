@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:22-bookworm AS base
 RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 
 FROM base AS deps
@@ -13,6 +13,9 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS app
 COPY . .
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
+# Playwright's bundled Chromium is glibc-only; needs the bookworm (Debian) base.
+# --with-deps runs apt-get for libnss3/libatk1.0/libgbm/etc. Binary lands in /ms-playwright.
+RUN pnpm --filter @teacher-exam/api exec playwright install --with-deps chromium
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3001
