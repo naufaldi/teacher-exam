@@ -1,10 +1,27 @@
 import { brandExamId, brandUserId, type ExamWithQuestions } from "@teacher-exam/shared"
 import { Effect } from "effect"
+import fs from "node:fs"
 import { describe, expect, it } from "vitest"
 import { renderExamHtml } from "../export-render.js"
 import { ExportService, ExportServiceLive } from "../export-service.js"
 
 const NOW = "2024-01-01T00:00:00.000Z"
+
+/**
+ * Playwright ships the chromium module whether or not the browser binary is
+ * installed. The PDF path needs the actual binary, so we resolve its
+ * executable path and confirm it exists on disk. CI runners without
+ * `playwright install` skip the PDF test; local dev and any runner with the
+ * browser installed run it for real.
+ */
+async function chromiumBinaryAvailable(): Promise<boolean> {
+  try {
+    const { chromium } = await import("playwright")
+    return fs.existsSync(chromium.executablePath())
+  } catch {
+    return false
+  }
+}
 
 function makeExam(): ExamWithQuestions {
   return {
@@ -81,26 +98,19 @@ describe("ExportService", () => {
     expect(bytes[1]).toBe(0x4b) // K
   })
 
-  it("exportExamPdf returns bytes beginning with the PDF signature", async () => {
+  it("exportExamPdf returns bytes beginning with the PDF signature", async (ctx) => {
+    if (!(await chromiumBinaryAvailable())) {
+      ctx.skip()
+      return
+    }
     const layer = ExportServiceLive
     const program = Effect.gen(function*() {
       const service = yield* ExportService
       return yield* service.exportExamPdf(makeExam(), { variant: "soal" })
     })
-    // If Chromium is unavailable in this environment, surface a clear ExportError
-    // rather than faking a green test — but the happy path must produce %PDF.
-    try {
-      const bytes = await Effect.runPromise(program.pipe(Effect.provide(layer)))
-      expect(bytes.length).toBeGreaterThan(0)
-      const head = String.fromCharCode(...Array.from(bytes.slice(0, 4)))
-      expect(head).toBe("%PDF")
-    } catch (err) {
-      const tag = (err as { _tag?: string })._tag
-      if (tag === "ExportError") {
-        expect((err as { reason?: string }).reason).toMatch(/chromium|playwright|browser/i)
-      } else {
-        throw err
-      }
-    }
+    const bytes = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+    expect(bytes.length).toBeGreaterThan(0)
+    const head = String.fromCharCode(...Array.from(bytes.slice(0, 4)))
+    expect(head).toBe("%PDF")
   })
 })
