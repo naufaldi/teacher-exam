@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import type { Answer } from "@teacher-exam/shared"
+import type { Answer, SessionResultsResponse } from "@teacher-exam/shared"
 import {
   Button,
   EmptyState,
@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow
 } from "@teacher-exam/ui"
+import { Either } from "effect"
 import { ArrowLeft, Printer, Users } from "lucide-react"
-import { memo, useCallback, useEffect, useMemo, useReducer, useRef } from "react"
+import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react"
 import { api, unwrapApiEither } from "../lib/api.js"
-import { MOCK_STUDENTS } from "../lib/mock-data.js"
+import { DELIVERY_ENABLED } from "../lib/feature-flags.js"
 import { matchQuestion } from "../lib/question-render.js"
 
 export const Route = createFileRoute("/_auth/correction/$examId")({
@@ -105,11 +106,10 @@ function correctionReducer(state: CorrectionState, action: CorrectionAction): Co
         wrong,
         score
       }
-      const suggestedName = MOCK_STUDENTS[state.studentNumber] ?? ""
       return {
         ...state,
         currentAnswers: Array<Answer | null>(state.answerKey.length).fill(null),
-        studentName: suggestedName,
+        studentName: "",
         studentNumber: state.studentNumber + 1,
         activeIndex: 0,
         rekapList: [...state.rekapList, result]
@@ -321,6 +321,54 @@ function RekapTable({ activeStudentNumber, rekapList }: RekapTableProps) {
   )
 }
 
+type SessionResultsPanelProps = {
+  data: SessionResultsResponse
+}
+
+function SessionResultsPanel({ data }: SessionResultsPanelProps) {
+  const { results, stats } = data
+  if (results.length === 0) {
+    return (
+      <EmptyState
+        title="Belum ada hasil otomatis"
+        description="Siswa yang menyetorkan jawaban via sesi ujian akan muncul di sini setelah dinilai."
+        className="py-8"
+      />
+    )
+  }
+  return (
+    <div className="space-y-3">
+      <div className="rounded-sm border border-border-ui bg-bg-surface p-3 text-body-sm text-text-secondary">
+        Peserta: <span className="font-semibold text-text-primary tabular-nums">{stats.participantCount}</span>
+        {" | "}Rata-rata: <span className="font-semibold text-text-primary tabular-nums">{stats.averageScore}</span>
+        {" | "}Lulus: <span className="font-semibold text-text-primary tabular-nums">{stats.passingCount}</span>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-xs">Nama</TableHead>
+            <TableHead className="text-xs text-center">Benar</TableHead>
+            <TableHead className="text-xs text-center">Nilai</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {results.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="py-2 text-body-sm font-medium text-text-primary">{r.studentName}</TableCell>
+              <TableCell className="py-2 text-center text-body-sm text-success-700 font-semibold tabular-nums">
+                {r.correctCount}
+              </TableCell>
+              <TableCell className="py-2 text-center text-body-sm font-bold text-text-primary tabular-nums">
+                {r.score}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function CorrectionPage() {
@@ -431,7 +479,18 @@ function CorrectionPage() {
     delete document.body.dataset["printMode"]
   }, [])
 
-  const suggestedPlaceholder = MOCK_STUDENTS[state.studentNumber - 1] ?? `Murid ${state.studentNumber}`
+  const [sessionResults, setSessionResults] = useState<SessionResultsResponse | null>(null)
+  useEffect(() => {
+    if (!DELIVERY_ENABLED) return
+    void (async () => {
+      const result = await api.results.listByExam(exam.id)
+      if (Either.isRight(result)) {
+        setSessionResults(result.right)
+      }
+    })()
+  }, [exam.id])
+
+  const suggestedPlaceholder = `Murid ${state.studentNumber}`
 
   return (
     <div className="space-y-4">
@@ -453,11 +512,13 @@ function CorrectionPage() {
         </p>
       </div>
 
-      {/* Warning banner */}
-      <div className="rounded-sm border border-warning-200 bg-warning-50 px-4 py-3 text-body-sm text-warning-700">
-        ⚠ Data koreksi tersimpan di browser saja. Data akan hilang jika halaman ditutup. Cetak terlebih dahulu jika
-        perlu.
-      </div>
+      {/* Warning banner — manual/offline mode only */}
+      {!DELIVERY_ENABLED && (
+        <div className="rounded-sm border border-warning-200 bg-warning-50 px-4 py-3 text-body-sm text-warning-700">
+          ⚠ Data koreksi tersimpan di browser saja. Data akan hilang jika halaman ditutup. Cetak terlebih dahulu jika
+          perlu.
+        </div>
+      )}
 
       {/* Two-panel layout */}
       <div className="flex flex-col lg:flex-row gap-6">
@@ -561,6 +622,8 @@ function CorrectionPage() {
             <Users size={16} className="text-text-tertiary" />
             <h2 className="text-body font-semibold text-text-primary">Rekap Kelas (sesi ini)</h2>
           </div>
+
+          {DELIVERY_ENABLED && sessionResults && <SessionResultsPanel data={sessionResults} />}
 
           <RekapTable
             rekapList={state.rekapList}

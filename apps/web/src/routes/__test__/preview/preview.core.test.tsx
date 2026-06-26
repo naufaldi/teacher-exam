@@ -148,14 +148,16 @@ describe("PreviewPage print flow", () => {
     const printable = document.querySelector("[data-print-content]")
     expect(printable).toBeInstanceOf(HTMLElement)
     expect(within(printable as HTMLElement).queryByText("Preview Lembar")).not.toBeInTheDocument()
-    expect(within(printable as HTMLElement).queryByRole("button", { name: /cetak semua/i })).not.toBeInTheDocument()
+    expect(
+      within(printable as HTMLElement).queryByRole("button", { name: /unduh \/ cetak/i })
+    ).not.toBeInTheDocument()
 
     const previewTitle = screen.getByRole("heading", { name: "Preview Lembar" })
     const previewHeader = closestByAttr(previewTitle, "data-screen-only")
     expect(previewHeader).toHaveAttribute("data-no-print")
 
-    const printAllButton = screen.getByRole("button", { name: /cetak semua/i })
-    const toolbar = closestByAttr(printAllButton, "data-screen-only")
+    const exportButton = screen.getByRole("button", { name: /unduh \/ cetak/i })
+    const toolbar = closestByAttr(exportButton, "data-screen-only")
     expect(toolbar).toHaveAttribute("data-no-print")
   })
 

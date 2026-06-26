@@ -14,6 +14,7 @@ permissions:
 env:
   VITE_API_URL: /api
   VITE_APP_ORIGIN: http://localhost:5173
+  VITE_DELIVERY_ENABLED: "true"
 
 jobs:
   quality:

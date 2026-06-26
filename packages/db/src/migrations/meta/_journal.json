@@ -64,6 +64,34 @@
       "when": 1779780613807,
       "tag": "0008_clean_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780324800000,
+      "tag": "0009_add_exam_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780324900000,
+      "tag": "0010_add_classes_students",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780325000000,
+      "tag": "0011_add_exam_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780325100000,
+      "tag": "0012_add_session_results",
+      "breakpoints": true
     }
   ]
 }

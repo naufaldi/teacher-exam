@@ -1,6 +1,7 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import { brandExamId, brandQuestionId, type PublicExamDetailResponse } from "@teacher-exam/shared"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ComponentType } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
@@ -8,11 +9,13 @@ import type * as ApiModule from "../../lib/api.js"
 
 import { Route } from "../share.$slug.js"
 
-const { mockPublicExamGet } = vi.hoisted(() => ({
-  mockPublicExamGet: vi.fn()
+const { mockPublicExamExport, mockPublicExamGet } = vi.hoisted(() => ({
+  mockPublicExamGet: vi.fn(),
+  mockPublicExamExport: vi.fn()
 }))
 
 let mockLoaderData: PublicExamDetailResponse | undefined
+let mockParams: { slug: string } = { slug: "share-abc123" }
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const orig = await importOriginal<typeof TanStackRouter>()
@@ -20,7 +23,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...orig,
     createFileRoute: () => (opts: Record<string, unknown>) => ({
       options: opts,
-      useLoaderData: () => mockLoaderData
+      useLoaderData: () => mockLoaderData,
+      useParams: () => mockParams
     })
   }
 })
@@ -32,7 +36,8 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
     api: {
       ...orig.api,
       publicExams: {
-        get: mockPublicExamGet
+        get: mockPublicExamGet,
+        export: mockPublicExamExport
       }
     }
   }
@@ -97,6 +102,8 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
   mockLoaderData = makePublicExam()
+  mockParams = { slug: "share-abc123" }
+  mockPublicExamExport.mockResolvedValue(undefined)
 })
 
 describe("share/$slug route", () => {
@@ -118,14 +125,27 @@ describe("share/$slug route", () => {
     expect(screen.getByText("Pembahasan")).toBeInTheDocument()
   })
 
-  it("print and download actions call window.print", () => {
+  it("export dropdown offers PDF/DOCX and Cetak; Cetak calls window.print", async () => {
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {})
+    const user = userEvent.setup()
     renderPage()
 
-    fireEvent.click(screen.getByRole("button", { name: /^Cetak$/i }))
-    fireEvent.click(screen.getByRole("button", { name: /unduh pdf/i }))
+    // Open the Unduh dropdown
+    await user.click(screen.getByRole("button", { name: /unduh/i }))
 
-    expect(printSpy).toHaveBeenCalledTimes(2)
+    // "Cetak" menu item triggers the browser print dialog
+    await user.click(screen.getByRole("button", { name: "Cetak" }))
+    expect(printSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("export dropdown PDF item calls api.publicExams.export with the slug", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole("button", { name: /unduh/i }))
+    await user.click(screen.getByRole("button", { name: "PDF" }))
+
+    expect(mockPublicExamExport).toHaveBeenCalledWith("share-abc123", "pdf", "soal")
   })
 
   it("renders LaTeX in public question text and options", () => {

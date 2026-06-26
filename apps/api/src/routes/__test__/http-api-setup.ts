@@ -2,6 +2,7 @@ import type { Layer } from "effect"
 import { buildTestHandler } from "../../api/__test__/test-harness"
 import type { AuthService } from "../../api/services/auth-service"
 import type { CurriculumService } from "../../api/services/curriculum-service"
+import type { ExportService } from "../../api/services/export-service"
 import type { AiService } from "../../services/AiService"
 
 export function buildHttpApiTestApp(opts: {
@@ -10,6 +11,7 @@ export function buildHttpApiTestApp(opts: {
   aiService?: AiService
   authLayer?: Layer.Layer<AuthService>
   curriculumLayer?: Layer.Layer<CurriculumService>
+  exportServiceLayer?: Layer.Layer<ExportService>
   rateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
@@ -29,6 +31,7 @@ export function buildHttpApiTestApp(opts: {
     ...(opts.aiService !== undefined ? { aiService: opts.aiService } : {}),
     ...(opts.authLayer !== undefined ? { authLayer: opts.authLayer } : {}),
     ...(opts.curriculumLayer !== undefined ? { curriculumLayer: opts.curriculumLayer } : {}),
+    ...(opts.exportServiceLayer !== undefined ? { exportServiceLayer: opts.exportServiceLayer } : {}),
     ...(opts.rateLimit !== undefined ? { rateLimit: opts.rateLimit } : {}),
     ...(opts.publicBankRateLimit !== undefined
       ? { publicBankRateLimit: opts.publicBankRateLimit }

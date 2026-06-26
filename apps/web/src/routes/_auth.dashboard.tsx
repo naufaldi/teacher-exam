@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { Badge, Button } from "@teacher-exam/ui"
 import {
   ArrowRight,
+  BarChart3,
   BookOpen,
   CalendarDays,
   CheckSquare,
@@ -20,7 +21,7 @@ import { StatSummary } from "../components/dashboard/stat-summary.js"
 import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
-import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
+import { DELIVERY_ENABLED, KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
 export const Route = createFileRoute("/_auth/dashboard")({
   loader: async () => ({ exams: unwrapApiEither(await api.exams.list()) }),
@@ -102,6 +103,21 @@ const ACTION_CARDS = [
     description:
       "Soal dari generate otomatis tersimpan di bank. Bagikan ujian dari Riwayat untuk mempublikasikan soal terkait.",
     cta: "Buka bank soal",
+    kbd: null,
+    cardBg: "bg-bg-surface border-border-default",
+    disabled: false
+  },
+  {
+    id: "templates",
+    to: "/templates" as const,
+    variant: "secondary" as const,
+    iconBg: "bg-accent-50",
+    iconColor: "text-accent-700",
+    ctaColor: "text-accent-700",
+    icon: Copy,
+    title: "Template",
+    description: "Simpan konfigurasi generate (mapel, kelas, topik, komposisi) dan jalankan ulang dalam satu klik.",
+    cta: "Buka template",
     kbd: null,
     cardBg: "bg-bg-surface border-border-default",
     disabled: false
@@ -415,6 +431,20 @@ function DashboardPage() {
                             <CheckSquare size={13} />
                             Koreksi
                           </Button>
+                          {DELIVERY_ENABLED && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                void navigate({
+                                  to: "/analytics",
+                                  search: { examId: lastExam.id }
+                                })}
+                            >
+                              <BarChart3 size={13} />
+                              Analitik
+                            </Button>
+                          )}
                         </>
                       ) :
                       (

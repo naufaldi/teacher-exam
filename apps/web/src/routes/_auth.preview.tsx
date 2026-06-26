@@ -3,6 +3,7 @@ import type { ExamDetailResponse, ExamType, Question } from "@teacher-exam/share
 import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
 import { useState } from "react"
+import { ExportMenu } from "../components/export-menu.js"
 import { FigureSvg } from "../components/figure-svg.js"
 import { MarkdownMath } from "../components/markdown-math.js"
 import { MathText } from "../components/math-text.js"
@@ -145,9 +146,11 @@ function PreviewPage() {
           <Button variant="ghost" size="sm" onClick={() => triggerPrint("pembahasan")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
           </Button>
-          <Button onClick={() => triggerPrint("all")}>
-            <Printer className="h-4 w-4 mr-2" /> Cetak Semua
-          </Button>
+          <ExportMenu
+            onExport={(format) => api.exams.export(exam.id, format, "soal")}
+            onPrint={() => triggerPrint("all")}
+            triggerLabel="Unduh / Cetak"
+          />
         </div>
       </div>
 
