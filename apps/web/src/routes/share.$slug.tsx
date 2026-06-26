@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { SUBJECT_LABEL } from "@teacher-exam/shared"
 import type { PublicExamDetailResponse } from "@teacher-exam/shared"
-import { Badge, Button, PageHeader } from "@teacher-exam/ui"
-import { BookOpen, Download, Key, Printer } from "lucide-react"
+import { Badge, PageHeader } from "@teacher-exam/ui"
+import { BookOpen, Key } from "lucide-react"
+import { ExportMenu } from "../components/export-menu.js"
 import { FigureSvg } from "../components/figure-svg.js"
 import { MarkdownMath } from "../components/markdown-math.js"
 import { MathText } from "../components/math-text.js"
@@ -17,12 +18,17 @@ export const Route = createFileRoute("/share/$slug")({
 
 function PublicSharePage() {
   const exam = Route.useLoaderData()
+  const { slug } = Route.useParams()
   const subjectLabel = SUBJECT_LABEL[exam.subject] ?? exam.subject
   const publishedDate = new Date(exam.publishedAt).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric"
   })
+
+  const handleExport = async (format: "pdf" | "docx") => {
+    await api.publicExams.export(slug, format, "soal")
+  }
 
   return (
     <div className="min-h-screen bg-bg-app">
@@ -40,18 +46,11 @@ function PublicSharePage() {
               Dibagikan pada {publishedDate}
             </p>
             <p className="text-body-sm text-text-tertiary">
-              Halaman ini bersifat read-only. Gunakan tombol cetak untuk menyimpan sebagai PDF.
+              Unduh sebagai PDF/DOCX atau cetak langsung dari browser.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-1.5" />
-              Cetak
-            </Button>
-            <Button size="sm" onClick={() => window.print()}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Unduh PDF
-            </Button>
+            <ExportMenu onExport={handleExport} onPrint={() => window.print()} />
           </div>
         </div>
 

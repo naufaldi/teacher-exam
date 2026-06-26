@@ -141,7 +141,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByText(/3 dari 3/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it("shows latest final exam Koreksi as disabled because correction is upcoming", () => {
+  it("shows latest final exam Koreksi as enabled and routes to correction", () => {
     mockLoaderData.exams = [
       makeExam({ id: "final-latest", status: "final", title: "Final Latest Exam" })
     ]
@@ -149,11 +149,14 @@ describe("DashboardPage", () => {
     renderDashboard()
 
     const koreksiButtons = screen.getAllByRole("button", { name: "Koreksi" })
-    expect(koreksiButtons[0]).toBeDisabled()
+    expect(koreksiButtons[0]).not.toBeDisabled()
 
     fireEvent.click(koreksiButtons[0]!)
 
-    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/correction/$examId",
+      params: { examId: "final-latest" }
+    })
   })
 
   it("does not offer Koreksi on latest draft exam and routes Edit back to review", () => {
@@ -173,7 +176,7 @@ describe("DashboardPage", () => {
     })
   })
 
-  it("shows dashboard recent final row Koreksi as disabled because correction is upcoming", () => {
+  it("shows dashboard recent final row Koreksi as enabled and routes to correction", () => {
     mockLoaderData.exams = [
       makeExam({ id: "draft-latest", status: "draft", title: "Draft Latest Exam" }),
       makeExam({ id: "final-row", status: "final", title: "Final Row Exam" })
@@ -186,10 +189,13 @@ describe("DashboardPage", () => {
     expect(row).toBeTruthy()
 
     const koreksiButton = within(row!).getByRole("button", { name: "Koreksi" })
-    expect(koreksiButton).toBeDisabled()
+    expect(koreksiButton).not.toBeDisabled()
 
     fireEvent.click(koreksiButton)
 
-    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/correction/$examId",
+      params: { examId: "final-row" }
+    })
   })
 })

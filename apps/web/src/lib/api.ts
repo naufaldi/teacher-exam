@@ -3,10 +3,17 @@ import type {
   BrowseBankQuery,
   BuildExamFromBankInput,
   BuildExamFromBankResponse,
-  CurriculumCatalogResponse,
+  ClassAnalyticsResponse,
+  ClassEntity,
+  ClassWithStudents,
+  CreateClassInput,
+  CreateTemplateInput,
   CurriculumBabTopicsResponse,
+  CurriculumCatalogResponse,
+  ExamAnalyticsResponse,
   ExamDetailResponse,
   ExamShareResponse,
+  ExamTemplate,
   ExamWithQuestions,
   GenerateExamInput,
   PaginatedBankResponse,
@@ -14,24 +21,47 @@ import type {
   PublicExamDetailResponse,
   RegenerateQuestionInput,
   SaveToBankInput,
+  SessionDetailResponse,
+  SessionResult,
+  SessionResultsResponse,
+  SessionStudent,
+  StartSessionInput,
+  StudentEntity,
+  SubmitSessionInput,
+  SubmitSessionResponse,
+  TemplateApplyResponse,
   UpdateBankQuestionInput,
+  UpdateClassInput,
   UpdateExamInput,
   UpdateProfileInput,
-  UpdateQuestionInput
+  UpdateQuestionInput,
+  UpdateTemplateInput
 } from "@teacher-exam/shared"
 import {
   BankQuestionSchema,
   BuildExamFromBankResponseSchema,
+  ClassAnalyticsResponseSchema,
+  ClassSchema,
+  ClassWithStudentsSchema,
   CurriculumBabTopicsResponseSchema,
   CurriculumCatalogResponseSchema,
+  ExamAnalyticsResponseSchema,
   ExamSchema,
   ExamShareResponseSchema,
+  ExamTemplateSchema,
   ExamWithQuestionsSchema,
   HealthResponseSchema,
   PaginatedBankResponseSchema,
   PaginatedPublicBankResponseSchema,
   PublicExamWithQuestionsSchema,
   QuestionSchema,
+  SessionDetailResponseSchema,
+  SessionResultSchema,
+  SessionResultsResponseSchema,
+  SessionStudentSchema,
+  StudentSchema,
+  SubmitSessionResponseSchema,
+  TemplateApplyResponseSchema,
   UserProfileSchema
 } from "@teacher-exam/shared"
 import { Either, Match, Schema } from "effect"
@@ -183,6 +213,71 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return unwrapApiEither(await apiFetchEither<T>(path, init))
 }
 
+/** Fetches a binary export (PDF/DOCX) and triggers a client-side download. Returns the Blob. */
+export async function downloadExport(
+  path: string,
+  fallbackFileName: string
+): Promise<void> {
+  const t0 = performance.now()
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, { credentials: "include" })
+  } catch (err) {
+    const failure = new NetworkClientError({
+      message: err instanceof Error ? err.message : String(err)
+    })
+    logClientError(failure, { scope: "api.network", path, method: "GET" })
+    throw failure
+  }
+
+  const durationMs = Math.round(performance.now() - t0)
+  devLog("api.fetch", { path, method: "GET", status: res.status, ok: res.ok, durationMs })
+
+  if (res.status === 401) {
+    const err = new UnauthorizedClientError({})
+    if (onUnauthorized) onUnauthorized(err)
+    logClientError(err, { scope: "api.unauthorized", path, method: "GET" })
+    throw err
+  }
+  if (res.status === 429) {
+    const header = res.headers.get("Retry-After")
+    const retryAfterSec = header ? Number(header) : 60
+    const err = new RateLimitedClientError({
+      retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : 60
+    })
+    logClientError(err, { scope: "api.rate_limited", path, method: "GET" })
+    throw err
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText, code: "UNKNOWN" }))
+    const errorBody = body as { error?: string; message?: string; code?: string }
+    const err = new ApiClientError({
+      message: errorBody.message ?? errorBody.error ?? res.statusText,
+      code: errorBody.code ?? "UNKNOWN",
+      status: res.status
+    })
+    logClientError(err, { scope: "api.api_error", path, method: "GET" })
+    throw err
+  }
+
+  const blob = await res.blob()
+  const disposition = res.headers.get("content-disposition") ?? ""
+  const fileNameMatch = disposition.match(/filename="?([^";]+)"?/i)
+  const fileName = fileNameMatch?.[1] ?? fallbackFileName
+  triggerBrowserDownload(blob, fileName)
+}
+
+function triggerBrowserDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 function decodeEither<A, I>(
   schema: Schema.Schema<A, I, never>,
   raw: unknown
@@ -254,6 +349,10 @@ export const api = {
     },
     generateDiscussion: (id: string) =>
       fetchDecoded(`/exams/${id}/discussion`, ExamWithQuestionsSchema, { method: "POST" }),
+    export: (id: string, format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
+      const params = new URLSearchParams({ format, variant })
+      return downloadExport(`/exams/${id}/export?${params.toString()}`, `ujian.${format}`)
+    },
     streamDiscussion: async (
       id: string,
       onDone: (exam: ExamDetailResponse) => void,
@@ -386,6 +485,10 @@ export const api = {
         return raw as Either.Either<PublicExamDetailResponse, ApiClientFailure>
       }
       return decodeEither(PublicExamWithQuestionsSchema, raw.right)
+    },
+    export: (slug: string, format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
+      const params = new URLSearchParams({ format, variant })
+      return downloadExport(`/public/exams/${slug}/export?${params.toString()}`, `ujian.${format}`)
     }
   },
   bank: {
@@ -445,5 +548,197 @@ export const api = {
       return decodeEither(BankQuestionSchema, raw.right)
     },
     remove: (id: string) => apiFetchEither<void>(`/bank/${id}`, { method: "DELETE" })
+  },
+  templates: {
+    list: async (): Promise<Either.Either<ReadonlyArray<ExamTemplate>, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/templates")
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ReadonlyArray<ExamTemplate>, ApiClientFailure>
+      }
+      return decodeEither(Schema.Array(ExamTemplateSchema), raw.right)
+    },
+    create: async (
+      input: CreateTemplateInput
+    ): Promise<Either.Either<ExamTemplate, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/templates", {
+        method: "POST",
+        body: JSON.stringify(input)
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamTemplate, ApiClientFailure>
+      }
+      return decodeEither(ExamTemplateSchema, raw.right)
+    },
+    update: async (
+      id: string,
+      body: UpdateTemplateInput
+    ): Promise<Either.Either<ExamTemplate, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/templates/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body)
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamTemplate, ApiClientFailure>
+      }
+      return decodeEither(ExamTemplateSchema, raw.right)
+    },
+    remove: (id: string) => apiFetchEither<void>(`/templates/${id}`, { method: "DELETE" }),
+    apply: async (id: string): Promise<Either.Either<TemplateApplyResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/templates/${id}/apply`, { method: "POST" })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<TemplateApplyResponse, ApiClientFailure>
+      }
+      return decodeEither(TemplateApplyResponseSchema, raw.right)
+    }
+  },
+  classes: {
+    list: async (
+      withStudents = false
+    ): Promise<Either.Either<ReadonlyArray<ClassEntity | ClassWithStudents>, ApiClientFailure>> => {
+      const qs = withStudents ? "?withStudents=true" : ""
+      const raw = await apiFetchEither<unknown>(`/classes${qs}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ReadonlyArray<ClassEntity | ClassWithStudents>, ApiClientFailure>
+      }
+      return decodeEither(Schema.Array(Schema.Union(ClassWithStudentsSchema, ClassSchema)), raw.right)
+    },
+    create: async (
+      input: CreateClassInput
+    ): Promise<Either.Either<ClassEntity, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/classes", {
+        method: "POST",
+        body: JSON.stringify(input)
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ClassEntity, ApiClientFailure>
+      }
+      return decodeEither(ClassSchema, raw.right)
+    },
+    update: async (
+      id: string,
+      body: UpdateClassInput
+    ): Promise<Either.Either<ClassEntity, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/classes/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body)
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ClassEntity, ApiClientFailure>
+      }
+      return decodeEither(ClassSchema, raw.right)
+    },
+    remove: (id: string) => apiFetchEither<void>(`/classes/${id}`, { method: "DELETE" }),
+    students: {
+      list: async (
+        classId: string
+      ): Promise<Either.Either<ReadonlyArray<StudentEntity>, ApiClientFailure>> => {
+        const raw = await apiFetchEither<unknown>(`/classes/${classId}/students`)
+        if (Either.isLeft(raw)) {
+          return raw as Either.Either<ReadonlyArray<StudentEntity>, ApiClientFailure>
+        }
+        return decodeEither(Schema.Array(StudentSchema), raw.right)
+      },
+      bulkCreate: async (
+        classId: string,
+        input: { students: ReadonlyArray<{ name: string; identifier?: string }> }
+      ): Promise<Either.Either<ReadonlyArray<StudentEntity>, ApiClientFailure>> => {
+        const raw = await apiFetchEither<unknown>(`/classes/${classId}/students`, {
+          method: "POST",
+          body: JSON.stringify(input)
+        })
+        if (Either.isLeft(raw)) {
+          return raw as Either.Either<ReadonlyArray<StudentEntity>, ApiClientFailure>
+        }
+        return decodeEither(Schema.Array(StudentSchema), raw.right)
+      },
+      remove: (classId: string, studentId: string) =>
+        apiFetchEither<void>(`/classes/${classId}/students/${studentId}`, { method: "DELETE" })
+    }
+  },
+  sessions: {
+    public: {
+      get: async (
+        code: string
+      ): Promise<Either.Either<SessionDetailResponse, ApiClientFailure>> => {
+        const raw = await apiFetchEither<unknown>(`/sessions/${code}`)
+        if (Either.isLeft(raw)) {
+          return raw as Either.Either<SessionDetailResponse, ApiClientFailure>
+        }
+        return decodeEither(SessionDetailResponseSchema, raw.right)
+      },
+      start: async (
+        code: string,
+        input: StartSessionInput
+      ): Promise<Either.Either<SessionStudent, ApiClientFailure>> => {
+        const raw = await apiFetchEither<unknown>(`/sessions/${code}/start`, {
+          method: "POST",
+          body: JSON.stringify(input)
+        })
+        if (Either.isLeft(raw)) {
+          return raw as Either.Either<SessionStudent, ApiClientFailure>
+        }
+        return decodeEither(SessionStudentSchema, raw.right)
+      },
+      submit: async (
+        code: string,
+        input: SubmitSessionInput
+      ): Promise<Either.Either<SubmitSessionResponse, ApiClientFailure>> => {
+        const raw = await apiFetchEither<unknown>(`/sessions/${code}/submit`, {
+          method: "POST",
+          body: JSON.stringify(input)
+        })
+        if (Either.isLeft(raw)) {
+          return raw as Either.Either<SubmitSessionResponse, ApiClientFailure>
+        }
+        return decodeEither(SubmitSessionResponseSchema, raw.right)
+      }
+    }
+  },
+  results: {
+    listByExam: async (
+      examId: string
+    ): Promise<Either.Either<SessionResultsResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/exams/${examId}/results`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<SessionResultsResponse, ApiClientFailure>
+      }
+      return decodeEither(SessionResultsResponseSchema, raw.right)
+    },
+    list: async (
+      sessionId: string
+    ): Promise<Either.Either<SessionResultsResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/sessions/${sessionId}/results`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<SessionResultsResponse, ApiClientFailure>
+      }
+      return decodeEither(SessionResultsResponseSchema, raw.right)
+    },
+    get: async (id: string): Promise<Either.Either<SessionResult, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/results/${id}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<SessionResult, ApiClientFailure>
+      }
+      return decodeEither(SessionResultSchema, raw.right)
+    }
+  },
+  analytics: {
+    getByExam: async (
+      examId: string
+    ): Promise<Either.Either<ExamAnalyticsResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/analytics/exams/${examId}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ExamAnalyticsResponse, ApiClientFailure>
+      }
+      return decodeEither(ExamAnalyticsResponseSchema, raw.right)
+    },
+    getByClass: async (
+      classId: string
+    ): Promise<Either.Either<ClassAnalyticsResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/analytics/classes/${classId}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<ClassAnalyticsResponse, ApiClientFailure>
+      }
+      return decodeEither(ClassAnalyticsResponseSchema, raw.right)
+    }
   }
 }

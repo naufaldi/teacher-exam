@@ -1,5 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import type { CurriculumCatalogResponse, ExamSubject, ExamType, Grade } from "@teacher-exam/shared"
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router"
+import type {
+  CurriculumCatalogResponse,
+  ExamSubject,
+  ExamType,
+  Grade,
+  TemplateApplyResponse
+} from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -25,8 +31,8 @@ import { GenerateErrorDialog } from "../components/generate/generate-error-dialo
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
-import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
 import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
+import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
 import { parseGrade, phaseCopyForGrade, phaseLabelForGrade } from "../lib/phase-copy.js"
 import { subjectMetaFor } from "../lib/subjects.js"
 
@@ -228,6 +234,36 @@ function GeneratePage() {
   useEffect(() => {
     return clearTimers
   }, [clearTimers])
+
+  // Prefill from a template applied via router navigation state (see /templates).
+  const location = useLocation()
+  const appliedTemplate = (location.state as { templateApply?: TemplateApplyResponse } | null)?.templateApply ?? null
+  useEffect(() => {
+    if (!appliedTemplate) return
+    const t = appliedTemplate
+    setMapel(t.subject)
+    setKelas(String(t.grade))
+    setKesulitan(t.difficulty)
+    setReviewMode(t.reviewMode)
+    if (t.examType !== undefined) {
+      handleJenisChange(t.examType)
+    }
+    if (t.totalSoal !== undefined) {
+      setTotalSoal(t.totalSoal)
+    }
+    if (t.composition !== undefined) {
+      setComposition(t.composition)
+    }
+    if (t.topics.length > 0) {
+      setTopiks([...t.topics])
+    }
+    if (t.classContext !== undefined) {
+      setFokusGuru(t.classContext)
+    }
+    if (t.exampleQuestions !== undefined) {
+      setContohSoal(t.exampleQuestions)
+    }
+  }, [])
 
   const selectedGrade = parseGrade(kelas)
   const phaseCopy = phaseCopyForGrade(selectedGrade)
@@ -572,11 +608,11 @@ function GeneratePage() {
                   onChange={setTopiks}
                   onCustom={() => setShowCustomInput(true)}
                   maxItems={8}
-                  placeholder={
-                    kelas === "" ? "Pilih kelas dulu" :
-                    babTopicsStatus === "loading" ? "Memuat daftar Bab..." :
-                    "Pilih 1–8 materi Bab..."
-                  }
+                  placeholder={kelas === "" ?
+                    "Pilih kelas dulu" :
+                    babTopicsStatus === "loading" ?
+                    "Memuat daftar Bab..." :
+                    "Pilih 1–8 materi Bab..."}
                 />
               </div>
               {kelas === "" ?

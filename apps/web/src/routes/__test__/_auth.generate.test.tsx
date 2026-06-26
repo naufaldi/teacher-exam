@@ -11,6 +11,7 @@ import { makeExamWithQuestions } from "../../test/fixtures/exam.js"
 import { Route } from "../_auth.generate.js"
 
 const mockNavigate = vi.fn<(opts: unknown) => Promise<void>>()
+let locationState: Record<string, unknown> | null = null
 
 const PPKN_K1_BAB_TOPICS = [
   { bab: 1, title: "Aku dan Teman-Temanku", label: "Bab 1: Aku dan Teman-Temanku" },
@@ -110,7 +111,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       useSearch: () => ({ simulate: undefined })
     }),
     useNavigate: () => mockNavigate,
-    useSearch: () => ({ simulate: undefined })
+    useSearch: () => ({ simulate: undefined }),
+    useLocation: () => ({ state: locationState })
   }
 })
 
@@ -182,6 +184,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   mockNavigate.mockResolvedValue(undefined)
+  locationState = null
   mockApi.ai.generate.mockReset()
   mockApi.curriculum.catalog.mockReturnValue(new Promise(() => {}))
   mockApi.curriculum.babTopics.mockReturnValue(new Promise(() => {}))
@@ -203,6 +206,43 @@ async function clickGenerateAndFlush() {
     await vi.advanceTimersByTimeAsync(20_000)
   })
 }
+
+describe("Template prefill", () => {
+  it("prefills subject, grade, topics, and totalSoal from router state", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.ai.generate, makeExamWithQuestions("exam_tpl"))
+    locationState = {
+      templateApply: {
+        subject: "bahasa_indonesia",
+        grade: 1,
+        difficulty: "sedang",
+        topics: ["Bab 1: Bunyi Apa?"],
+        reviewMode: "fast",
+        examType: "latihan",
+        totalSoal: 15,
+        templateId: "tpl-1"
+      }
+    }
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "bahasa_indonesia",
+        grade: 1,
+        topics: ["Bab 1: Bunyi Apa?"],
+        totalSoal: 15,
+        examType: "latihan",
+        difficulty: "sedang"
+      })
+    )
+  })
+})
 
 describe("Jumlah Soal input", () => {
   it("shows Kelas 1-6 in the grade selector", async () => {

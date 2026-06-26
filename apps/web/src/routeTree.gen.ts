@@ -12,15 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as BankSoalPublikRouteImport } from './routes/bank-soal-publik'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UjianCodeRouteImport } from './routes/ujian.$code'
 import { Route as ShareSlugRouteImport } from './routes/share.$slug'
+import { Route as AuthTemplatesRouteImport } from './routes/_auth.templates'
 import { Route as AuthReviewRouteImport } from './routes/_auth.review'
 import { Route as AuthProfileRouteImport } from './routes/_auth.profile'
 import { Route as AuthPreviewRouteImport } from './routes/_auth.preview'
 import { Route as AuthOnboardingRouteImport } from './routes/_auth.onboarding'
+import { Route as AuthKelasRouteImport } from './routes/_auth.kelas'
 import { Route as AuthHistoryRouteImport } from './routes/_auth.history'
 import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
 import { Route as AuthBankSoalRouteImport } from './routes/_auth.bank-soal'
+import { Route as AuthAnalyticsRouteImport } from './routes/_auth.analytics'
 import { Route as AuthHelpNotasiMatematikaRouteImport } from './routes/_auth.help.notasi-matematika'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
@@ -38,10 +42,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UjianCodeRoute = UjianCodeRouteImport.update({
+  id: '/ujian/$code',
+  path: '/ujian/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareSlugRoute = ShareSlugRouteImport.update({
   id: '/share/$slug',
   path: '/share/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthTemplatesRoute = AuthTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthReviewRoute = AuthReviewRouteImport.update({
   id: '/review',
@@ -61,6 +75,11 @@ const AuthPreviewRoute = AuthPreviewRouteImport.update({
 const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthKelasRoute = AuthKelasRouteImport.update({
+  id: '/kelas',
+  path: '/kelas',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthHistoryRoute = AuthHistoryRouteImport.update({
@@ -83,6 +102,11 @@ const AuthBankSoalRoute = AuthBankSoalRouteImport.update({
   path: '/bank-soal',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthAnalyticsRoute = AuthAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthHelpNotasiMatematikaRoute =
   AuthHelpNotasiMatematikaRouteImport.update({
     id: '/help/notasi-matematika',
@@ -98,30 +122,38 @@ const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/analytics': typeof AuthAnalyticsRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
   '/history': typeof AuthHistoryRoute
+  '/kelas': typeof AuthKelasRoute
   '/onboarding': typeof AuthOnboardingRoute
   '/preview': typeof AuthPreviewRoute
   '/profile': typeof AuthProfileRoute
   '/review': typeof AuthReviewRoute
+  '/templates': typeof AuthTemplatesRoute
   '/share/$slug': typeof ShareSlugRoute
+  '/ujian/$code': typeof UjianCodeRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
   '/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/analytics': typeof AuthAnalyticsRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
   '/generate': typeof AuthGenerateRoute
   '/history': typeof AuthHistoryRoute
+  '/kelas': typeof AuthKelasRoute
   '/onboarding': typeof AuthOnboardingRoute
   '/preview': typeof AuthPreviewRoute
   '/profile': typeof AuthProfileRoute
   '/review': typeof AuthReviewRoute
+  '/templates': typeof AuthTemplatesRoute
   '/share/$slug': typeof ShareSlugRoute
+  '/ujian/$code': typeof UjianCodeRoute
   '/correction/$examId': typeof AuthCorrectionExamIdRoute
   '/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
@@ -130,15 +162,19 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/_auth/analytics': typeof AuthAnalyticsRoute
   '/_auth/bank-soal': typeof AuthBankSoalRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/generate': typeof AuthGenerateRoute
   '/_auth/history': typeof AuthHistoryRoute
+  '/_auth/kelas': typeof AuthKelasRoute
   '/_auth/onboarding': typeof AuthOnboardingRoute
   '/_auth/preview': typeof AuthPreviewRoute
   '/_auth/profile': typeof AuthProfileRoute
   '/_auth/review': typeof AuthReviewRoute
+  '/_auth/templates': typeof AuthTemplatesRoute
   '/share/$slug': typeof ShareSlugRoute
+  '/ujian/$code': typeof UjianCodeRoute
   '/_auth/correction/$examId': typeof AuthCorrectionExamIdRoute
   '/_auth/help/notasi-matematika': typeof AuthHelpNotasiMatematikaRoute
 }
@@ -147,30 +183,38 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/bank-soal-publik'
+    | '/analytics'
     | '/bank-soal'
     | '/dashboard'
     | '/generate'
     | '/history'
+    | '/kelas'
     | '/onboarding'
     | '/preview'
     | '/profile'
     | '/review'
+    | '/templates'
     | '/share/$slug'
+    | '/ujian/$code'
     | '/correction/$examId'
     | '/help/notasi-matematika'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/bank-soal-publik'
+    | '/analytics'
     | '/bank-soal'
     | '/dashboard'
     | '/generate'
     | '/history'
+    | '/kelas'
     | '/onboarding'
     | '/preview'
     | '/profile'
     | '/review'
+    | '/templates'
     | '/share/$slug'
+    | '/ujian/$code'
     | '/correction/$examId'
     | '/help/notasi-matematika'
   id:
@@ -178,15 +222,19 @@ export interface FileRouteTypes {
     | '/'
     | '/_auth'
     | '/bank-soal-publik'
+    | '/_auth/analytics'
     | '/_auth/bank-soal'
     | '/_auth/dashboard'
     | '/_auth/generate'
     | '/_auth/history'
+    | '/_auth/kelas'
     | '/_auth/onboarding'
     | '/_auth/preview'
     | '/_auth/profile'
     | '/_auth/review'
+    | '/_auth/templates'
     | '/share/$slug'
+    | '/ujian/$code'
     | '/_auth/correction/$examId'
     | '/_auth/help/notasi-matematika'
   fileRoutesById: FileRoutesById
@@ -196,6 +244,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   BankSoalPublikRoute: typeof BankSoalPublikRoute
   ShareSlugRoute: typeof ShareSlugRoute
+  UjianCodeRoute: typeof UjianCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -221,12 +270,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ujian/$code': {
+      id: '/ujian/$code'
+      path: '/ujian/$code'
+      fullPath: '/ujian/$code'
+      preLoaderRoute: typeof UjianCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$slug': {
       id: '/share/$slug'
       path: '/share/$slug'
       fullPath: '/share/$slug'
       preLoaderRoute: typeof ShareSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_auth/templates': {
+      id: '/_auth/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AuthTemplatesRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/review': {
       id: '/_auth/review'
@@ -254,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/kelas': {
+      id: '/_auth/kelas'
+      path: '/kelas'
+      fullPath: '/kelas'
+      preLoaderRoute: typeof AuthKelasRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/history': {
@@ -284,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBankSoalRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/analytics': {
+      id: '/_auth/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthAnalyticsRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/help/notasi-matematika': {
       id: '/_auth/help/notasi-matematika'
       path: '/help/notasi-matematika'
@@ -302,27 +379,33 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteChildren {
+  AuthAnalyticsRoute: typeof AuthAnalyticsRoute
   AuthBankSoalRoute: typeof AuthBankSoalRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthGenerateRoute: typeof AuthGenerateRoute
   AuthHistoryRoute: typeof AuthHistoryRoute
+  AuthKelasRoute: typeof AuthKelasRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthPreviewRoute: typeof AuthPreviewRoute
   AuthProfileRoute: typeof AuthProfileRoute
   AuthReviewRoute: typeof AuthReviewRoute
+  AuthTemplatesRoute: typeof AuthTemplatesRoute
   AuthCorrectionExamIdRoute: typeof AuthCorrectionExamIdRoute
   AuthHelpNotasiMatematikaRoute: typeof AuthHelpNotasiMatematikaRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthAnalyticsRoute: AuthAnalyticsRoute,
   AuthBankSoalRoute: AuthBankSoalRoute,
   AuthDashboardRoute: AuthDashboardRoute,
   AuthGenerateRoute: AuthGenerateRoute,
   AuthHistoryRoute: AuthHistoryRoute,
+  AuthKelasRoute: AuthKelasRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
   AuthPreviewRoute: AuthPreviewRoute,
   AuthProfileRoute: AuthProfileRoute,
   AuthReviewRoute: AuthReviewRoute,
+  AuthTemplatesRoute: AuthTemplatesRoute,
   AuthCorrectionExamIdRoute: AuthCorrectionExamIdRoute,
   AuthHelpNotasiMatematikaRoute: AuthHelpNotasiMatematikaRoute,
 }
@@ -334,6 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   BankSoalPublikRoute: BankSoalPublikRoute,
   ShareSlugRoute: ShareSlugRoute,
+  UjianCodeRoute: UjianCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

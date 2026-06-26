@@ -87,6 +87,70 @@ export function createMockDbModule() {
       timezone: "user.timezone",
       updatedAt: "user.updatedAt"
     },
+    examTemplates: {
+      id: "exam_templates.id",
+      userId: "exam_templates.userId",
+      name: "exam_templates.name",
+      description: "exam_templates.description",
+      config: "exam_templates.config",
+      usageCount: "exam_templates.usageCount",
+      createdAt: "exam_templates.createdAt",
+      updatedAt: "exam_templates.updatedAt"
+    },
+    classes: {
+      id: "classes.id",
+      userId: "classes.userId",
+      name: "classes.name",
+      grade: "classes.grade",
+      subject: "classes.subject",
+      createdAt: "classes.createdAt",
+      updatedAt: "classes.updatedAt"
+    },
+    students: {
+      id: "students.id",
+      classId: "students.classId",
+      name: "students.name",
+      identifier: "students.identifier",
+      createdAt: "students.createdAt"
+    },
+    examSessions: {
+      id: "exam_sessions.id",
+      examId: "exam_sessions.examId",
+      classId: "exam_sessions.classId",
+      sessionCode: "exam_sessions.sessionCode",
+      opensAt: "exam_sessions.opensAt",
+      closesAt: "exam_sessions.closesAt",
+      durationMinutes: "exam_sessions.durationMinutes",
+      status: "exam_sessions.status",
+      createdAt: "exam_sessions.createdAt",
+      updatedAt: "exam_sessions.updatedAt"
+    },
+    sessionStudents: {
+      id: "session_students.id",
+      sessionId: "session_students.sessionId",
+      studentId: "session_students.studentId",
+      studentName: "session_students.studentName",
+      identifier: "session_students.identifier",
+      token: "session_students.token",
+      joinedAt: "session_students.joinedAt",
+      submittedAt: "session_students.submittedAt",
+      answers: "session_students.answers"
+    },
+    sessionResults: {
+      id: "session_results.id",
+      sessionStudentId: "session_results.sessionStudentId",
+      sessionId: "session_results.sessionId",
+      examId: "session_results.examId",
+      studentName: "session_results.studentName",
+      score: "session_results.score",
+      correctCount: "session_results.correctCount",
+      totalCount: "session_results.totalCount",
+      gradedStatus: "session_results.gradedStatus",
+      answers: "session_results.answers",
+      gradedAt: "session_results.gradedAt",
+      createdAt: "session_results.createdAt",
+      updatedAt: "session_results.updatedAt"
+    },
     session: {},
     account: {},
     verification: {}

@@ -30,11 +30,15 @@ export type PdfUploadId = typeof PdfUploadIdSchema.Type
 export const BankQuestionIdSchema = Schema.String.pipe(Schema.brand("BankQuestionId"))
 export type BankQuestionId = typeof BankQuestionIdSchema.Type
 
+export const TemplateIdSchema = Schema.String.pipe(Schema.brand("TemplateId"))
+export type TemplateId = typeof TemplateIdSchema.Type
+
 export const brandUserId = (id: string): UserId => Schema.decodeSync(UserIdSchema)(id)
 export const brandExamId = (id: string): ExamId => Schema.decodeSync(ExamIdSchema)(id)
 export const brandQuestionId = (id: string): QuestionId => Schema.decodeSync(QuestionIdSchema)(id)
 export const brandPdfUploadId = (id: string): PdfUploadId => Schema.decodeSync(PdfUploadIdSchema)(id)
 export const brandBankQuestionId = (id: string): BankQuestionId => Schema.decodeSync(BankQuestionIdSchema)(id)
+export const brandTemplateId = (id: string): TemplateId => Schema.decodeSync(TemplateIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
 export const UserProfileSchema = Schema.Struct({
