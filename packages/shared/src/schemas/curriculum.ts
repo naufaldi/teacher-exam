@@ -1,5 +1,12 @@
 import { Schema } from "effect"
-import { CurriculumAvailabilitySchema, ExamSubjectSchema, type Grade, GradeSchema, type Phase, PhaseSchema } from "./primitives.js"
+import {
+  CurriculumAvailabilitySchema,
+  ExamSubjectSchema,
+  type Grade,
+  GradeSchema,
+  type Phase,
+  PhaseSchema
+} from "./primitives.js"
 
 export { CurriculumAvailabilitySchema, PhaseSchema } from "./primitives.js"
 export type { CurriculumAvailability, Phase } from "./primitives.js"

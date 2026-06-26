@@ -24,8 +24,8 @@ describe("GenerateExamInputSchema.topics", () => {
     expect(Either.isRight(result)).toBe(true)
   })
 
-  it("accepts up to 5 topics", () => {
-    const input = { ...VALID_BASE, topics: ["A", "B", "C", "D", "E"] }
+  it("accepts up to 8 topics", () => {
+    const input = { ...VALID_BASE, topics: ["A", "B", "C", "D", "E", "F", "G", "H"] }
     const result = Schema.decodeUnknownEither(GenerateExamInputSchema)(input)
     expect(Either.isRight(result)).toBe(true)
   })
@@ -36,8 +36,8 @@ describe("GenerateExamInputSchema.topics", () => {
     expect(Either.isLeft(result)).toBe(true)
   })
 
-  it("rejects more than 5 topics", () => {
-    const input = { ...VALID_BASE, topics: ["A", "B", "C", "D", "E", "F"] }
+  it("rejects more than 8 topics", () => {
+    const input = { ...VALID_BASE, topics: ["A", "B", "C", "D", "E", "F", "G", "H", "I"] }
     const result = Schema.decodeUnknownEither(GenerateExamInputSchema)(input)
     expect(Either.isLeft(result)).toBe(true)
   })
