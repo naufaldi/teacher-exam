@@ -8,6 +8,7 @@ import type {
   CreateTemplateInput,
   CurriculumBabTopicsResponse,
   CurriculumCatalogResponse,
+  CurriculumTipsResponse,
   ExamAnalyticsResponse,
   ExamDetailResponse,
   ExamShareResponse,
@@ -43,6 +44,7 @@ import {
   ClassWithStudentsSchema,
   CurriculumBabTopicsResponseSchema,
   CurriculumCatalogResponseSchema,
+  CurriculumTipsResponseSchema,
   ExamAnalyticsResponseSchema,
   ExamSchema,
   ExamShareResponseSchema,
@@ -454,6 +456,20 @@ export const api = {
         return raw as Either.Either<CurriculumBabTopicsResponse, ApiClientFailure>
       }
       return decodeEither(CurriculumBabTopicsResponseSchema, raw.right)
+    },
+    tips: async (input: {
+      subject: GenerateExamInput["subject"]
+      grade: GenerateExamInput["grade"]
+    }): Promise<Either.Either<CurriculumTipsResponse, ApiClientFailure>> => {
+      const params = new URLSearchParams({
+        subject: input.subject,
+        grade: String(input.grade)
+      })
+      const raw = await apiFetchEither<unknown>(`/curriculum/tips?${params.toString()}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<CurriculumTipsResponse, ApiClientFailure>
+      }
+      return decodeEither(CurriculumTipsResponseSchema, raw.right)
     }
   },
   questions: {

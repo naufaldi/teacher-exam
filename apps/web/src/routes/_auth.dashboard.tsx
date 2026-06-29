@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
+import type { Grade } from "@teacher-exam/shared"
 import { Badge, Button, useToast } from "@teacher-exam/ui"
 import {
   ArrowRight,
@@ -26,11 +27,30 @@ import {
 } from "../components/sheet/index.js"
 import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
 import { api, ApiError, unwrapApiEither } from "../lib/api.js"
+import {
+  formatAcademicPeriod,
+  formatGradeSpan,
+  generateCardDescription,
+  heroCurriculumParagraph,
+  readyGradeSpan,
+  readySubjectMetas,
+  resolveTipsContext
+} from "../lib/dashboard-copy.js"
 import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
 import { DELIVERY_ENABLED, KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
 export const Route = createFileRoute("/_auth/dashboard")({
-  loader: async () => ({ exams: unwrapApiEither(await api.exams.list()) }),
+  loader: async () => {
+    const exams = unwrapApiEither(await api.exams.list())
+    const catalog = unwrapApiEither(await api.curriculum.catalog())
+    const lastExam = getRecentSheets(exams, 1)[0] ?? null
+    const tipsContext = resolveTipsContext(
+      catalog,
+      lastExam ? { subject: lastExam.subject, grade: lastExam.grade as Grade } : null
+    )
+    const tips = unwrapApiEither(await api.curriculum.tips(tipsContext))
+    return { exams, catalog, tips }
+  },
   pendingComponent: DashboardSkeleton,
   errorComponent: DashboardError,
   component: DashboardPage
@@ -75,8 +95,7 @@ const ACTION_CARDS = [
     ctaColor: "text-primary-700",
     icon: Sparkles,
     title: "Generate Lembar (AI)",
-    description:
-      "Satu paket soal pilihan ganda selaras Capaian Pembelajaran Fase C — BI, PPKN, IPAS, dan Bahasa Inggris (kelas 5–6).",
+    description: null as string | null,
     cta: "Mulai generate",
     kbd: "G",
     cardBg: "bg-gradient-to-b from-white to-primary-50 border-primary-100",
@@ -182,7 +201,7 @@ function DashboardError({ error }: { error: Error }) {
 
 function DashboardPage() {
   const { user } = Route.useRouteContext()
-  const { exams } = Route.useLoaderData()
+  const { catalog, exams, tips } = Route.useLoaderData()
   const navigate = useNavigate()
   const router = useRouter()
   const { toast } = useToast()
@@ -205,6 +224,9 @@ function DashboardPage() {
   const recent = useMemo(() => getRecentSheets(exams, 5), [exams])
   const recentRows = useMemo(() => recent.map((exam) => examToSheetRow(exam)), [recent])
   const lastExam = recent[0] ?? null
+  const subjectBadges = useMemo(() => readySubjectMetas(catalog), [catalog])
+  const gradeSpanLabel = useMemo(() => formatGradeSpan(readyGradeSpan(catalog)), [catalog])
+  const generateDescription = useMemo(() => generateCardDescription(catalog), [catalog])
 
   const sheetHandlers = useSheetTableHandlers({
     onPreview: sheetPreview.openPreview,
@@ -238,7 +260,7 @@ function DashboardPage() {
 
           <div className="relative">
             <div className="text-caption font-semibold tracking-wider uppercase text-primary-700">
-              Tahun Pelajaran 2025/2026 · Semester 2
+              {formatAcademicPeriod(new Date())}
             </div>
 
             <h1 className="text-h1 font-bold text-text-primary mt-2 mb-1.5">
@@ -246,19 +268,19 @@ function DashboardPage() {
             </h1>
 
             <p className="text-body text-text-secondary max-w-[560px]">
-              Siap menyiapkan lembar ujian hari ini? Kurikulum Merdeka Fase C sudah terpasang otomatis untuk Bahasa
-              Indonesia, Pendidikan Pancasila, IPAS, dan Bahasa Inggris.
+              {heroCurriculumParagraph(catalog)}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
               <Badge variant="pill">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary-600 inline-block" />
-                Kurikulum Merdeka · Fase C
+                Kurikulum Merdeka · {gradeSpanLabel}
               </Badge>
-              <Badge variant="subject-bi">Bahasa Indonesia</Badge>
-              <Badge variant="subject-ppkn">Pendidikan Pancasila</Badge>
-              <Badge variant="subject-ipas">IPAS</Badge>
-              <Badge variant="subject-bing">Bahasa Inggris</Badge>
+              {subjectBadges.map((subject) => (
+                <Badge key={subject.value} variant={subject.badgeVariant}>
+                  {subject.label}
+                </Badge>
+              ))}
               <Badge variant="pill">
                 <CalendarDays size={11} />
                 {formatTodayLong()}
@@ -331,7 +353,7 @@ function DashboardPage() {
                 </h3>
 
                 <p className="text-body-sm text-text-secondary leading-relaxed m-0 max-w-[42ch]">
-                  {card.description}
+                  {card.description ?? (card.id === "generate" ? generateDescription : "")}
                 </p>
 
                 <span
@@ -513,7 +535,7 @@ function DashboardPage() {
         </div>
 
         {/* Curriculum tips */}
-        <CurriculumTipsCard />
+        <CurriculumTipsCard tips={tips} />
       </section>
 
       {/* ── Section 4: History Table ─────────────────────────────────────── */}

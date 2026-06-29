@@ -3,7 +3,9 @@ import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
 import {
   CurriculumBabTopicsResponseSchema,
   CurriculumBabTopicsUrlParamsSchema,
-  CurriculumCatalogResponseSchema
+  CurriculumCatalogResponseSchema,
+  CurriculumTipsResponseSchema,
+  CurriculumTipsUrlParamsSchema
 } from "@teacher-exam/shared"
 import { GlobalRateLimit } from "../middleware/rate-limit"
 
@@ -16,5 +18,10 @@ export const CurriculumGroup = HttpApiGroup.make("curriculum")
     HttpApiEndpoint.get("getCurriculumBabTopics", "/curriculum/bab-topics")
       .setUrlParams(CurriculumBabTopicsUrlParamsSchema)
       .addSuccess(CurriculumBabTopicsResponseSchema)
+  )
+  .add(
+    HttpApiEndpoint.get("getCurriculumTips", "/curriculum/tips")
+      .setUrlParams(CurriculumTipsUrlParamsSchema)
+      .addSuccess(CurriculumTipsResponseSchema)
   )
   .middleware(GlobalRateLimit)

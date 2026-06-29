@@ -1,18 +1,111 @@
 import type * as TanStackRouter from "@tanstack/react-router"
-import type { Exam } from "@teacher-exam/shared"
+import type { CurriculumCatalogResponse, CurriculumTipsResponse, Exam } from "@teacher-exam/shared"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { makeExam } from "../../test/fixtures/exam.js"
 
 import { Route } from "../_auth.dashboard.js"
 
-const { mockInvalidate, mockLoaderData, mockNavigate, mockRouteContext, mockToast } = vi.hoisted(() => ({
-  mockNavigate: vi.fn(),
-  mockInvalidate: vi.fn(),
-  mockToast: vi.fn(),
-  mockLoaderData: { exams: [] as Array<Exam> },
-  mockRouteContext: { user: { name: "Naufaldi Rafii", id: "user-1", email: "test@test.com" } }
-}))
+const {
+  MOCK_BI_TIPS,
+  MOCK_CATALOG,
+  MOCK_MTK_TIPS,
+  mockInvalidate,
+  mockLoaderData,
+  mockNavigate,
+  mockRouteContext,
+  mockToast
+} = vi.hoisted(() => {
+  const catalog: CurriculumCatalogResponse = [
+    {
+      key: "bahasa_indonesia",
+      label: "Bahasa Indonesia",
+      family: "bahasa",
+      optional: false,
+      grades: [
+        { grade: 5, phase: "C", availability: "ready" },
+        { grade: 6, phase: "C", availability: "ready" }
+      ]
+    },
+    {
+      key: "matematika",
+      label: "Matematika",
+      family: "matematika",
+      optional: false,
+      grades: [
+        { grade: 5, phase: "C", availability: "ready" },
+        { grade: 6, phase: "C", availability: "ready" }
+      ]
+    },
+    {
+      key: "pendidikan_pancasila",
+      label: "Pendidikan Pancasila",
+      family: "pancasila",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
+    },
+    {
+      key: "ipas",
+      label: "IPAS",
+      family: "ipas",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
+    },
+    {
+      key: "bahasa_inggris",
+      label: "Bahasa Inggris",
+      family: "bahasa",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
+    }
+  ]
+
+  const biTips: CurriculumTipsResponse = {
+    subject: "bahasa_indonesia",
+    grade: 5,
+    phase: "C",
+    subjectLabel: "Bahasa Indonesia",
+    title: "Capaian Pembelajaran Bahasa Indonesia",
+    intro: "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Bahasa Indonesia.",
+    elements: [
+      { label: "Menyimak.", description: "Menganalisis informasi dari teks lisan." },
+      { label: "Membaca.", description: "Memahami ide pokok teks." },
+      { label: "Berbicara.", description: "Menyampaikan gagasan secara logis." },
+      { label: "Menulis.", description: "Menulis teks kompleks." }
+    ],
+    footer: "CP identik untuk Kelas 5 dan 6 — tidak perlu input manual.",
+    source: "corpus"
+  }
+
+  const mtkTips: CurriculumTipsResponse = {
+    ...biTips,
+    subject: "matematika",
+    subjectLabel: "Matematika",
+    title: "Capaian Pembelajaran Matematika",
+    intro: "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Matematika.",
+    elements: [
+      { label: "Bilangan.", description: "Memahami bilangan cacah dan operasi hitung." },
+      { label: "Aljabar.", description: "Mengenali pola dan kalimat matematika." },
+      { label: "Pengukuran.", description: "Menggunakan satuan baku." },
+      { label: "Analisis data.", description: "Membaca tabel dan diagram." }
+    ]
+  }
+
+  return {
+    mockNavigate: vi.fn(),
+    mockInvalidate: vi.fn(),
+    mockToast: vi.fn(),
+    mockLoaderData: {
+      exams: [] as Array<Exam>,
+      catalog,
+      tips: biTips
+    },
+    mockRouteContext: { user: { name: "Naufaldi Rafii", id: "user-1", email: "test@test.com" } },
+    MOCK_CATALOG: catalog,
+    MOCK_BI_TIPS: biTips,
+    MOCK_MTK_TIPS: mtkTips
+  }
+})
 
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
   const orig = await importOriginal()
@@ -74,6 +167,8 @@ function renderDashboard() {
 beforeEach(() => {
   vi.clearAllMocks()
   mockLoaderData.exams = []
+  mockLoaderData.catalog = MOCK_CATALOG
+  mockLoaderData.tips = MOCK_BI_TIPS
 })
 
 describe("DashboardPage", () => {
@@ -157,6 +252,23 @@ describe("DashboardPage", () => {
     renderDashboard()
     // Header + footer both show "3 dari 3"; getAllByText is fine
     expect(screen.getAllByText(/3 dari 3/).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it("shows Matematika in hero badges when catalog includes it", () => {
+    renderDashboard()
+    expect(screen.getByText("Matematika")).toBeInTheDocument()
+    expect(screen.getByText(/5 mapel siap generate/i)).toBeInTheDocument()
+  })
+
+  it("shows Matematika CP tips when tips payload is Matematika", () => {
+    mockLoaderData.tips = MOCK_MTK_TIPS
+    mockLoaderData.exams = [makeExam({ id: "1", subject: "matematika", grade: 5, title: "Ujian MTK" })]
+
+    renderDashboard()
+
+    expect(screen.getByText("Capaian Pembelajaran Matematika")).toBeInTheDocument()
+    expect(screen.getByText(/Bilangan\./)).toBeInTheDocument()
+    expect(screen.queryByText(/Empat elemen Bahasa Indonesia/i)).not.toBeInTheDocument()
   })
 
   it("shows latest final exam Koreksi as enabled and routes to correction", () => {

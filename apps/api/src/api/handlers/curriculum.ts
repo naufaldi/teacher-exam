@@ -1,7 +1,9 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import type { ExamSubject, Grade } from "@teacher-exam/shared"
 import { Effect } from "effect"
+import { buildCurriculumTipsResponse } from "../../curriculum/build-curriculum-tips.js"
 import { isReadySibiPdfForGenerate, listGenerateCurriculumCatalog } from "../../curriculum/catalog.js"
+import { getCurriculumFallback } from "../../lib/curriculum.js"
 import { TeacherExamApi } from "../definition"
 import { CurriculumService } from "../services/curriculum-service"
 
@@ -23,5 +25,15 @@ export const CurriculumLive = HttpApiBuilder.group(
             Effect.catchTag("CurriculumReadError", () => Effect.succeed([]))
           )
           return [...topics]
+        }))
+      .handle("getCurriculumTips", ({ urlParams }) =>
+        Effect.gen(function*() {
+          const subject = urlParams.subject as ExamSubject
+          const grade = urlParams.grade as Grade
+          const curriculum = yield* CurriculumService
+          const text = yield* curriculum.getText(subject, grade).pipe(
+            Effect.catchTag("CurriculumReadError", () => Effect.succeed(getCurriculumFallback(subject)))
+          )
+          return buildCurriculumTipsResponse(subject, grade, text)
         }))
 )

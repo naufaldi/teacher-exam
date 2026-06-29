@@ -14,13 +14,19 @@ export {
   CurriculumBabTopicsUrlParamsSchema,
   CurriculumSourceManifestItemSchema,
   CurriculumSourceTypeSchema,
+  CurriculumTipElementSchema,
+  CurriculumTipsResponseSchema,
+  CurriculumTipsUrlParamsSchema,
   phaseForGrade
 } from "./schemas/curriculum.js"
 export type {
   CurriculumBabTopic,
   CurriculumBabTopicsResponse,
   CurriculumSourceManifestItem,
-  CurriculumSourceType
+  CurriculumSourceType,
+  CurriculumTipElement,
+  CurriculumTipsResponse,
+  CurriculumTipsUrlParams
 } from "./schemas/curriculum.js"
 export * from "./schemas/entities.js"
 export * from "./schemas/export.js"
