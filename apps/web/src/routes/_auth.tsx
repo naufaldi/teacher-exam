@@ -4,7 +4,6 @@ import { HelpCircle, LogOut } from "lucide-react"
 import { useEffect, useState } from "react"
 import { setUnauthorizedHandler } from "../lib/api"
 import { authClient, signOut } from "../lib/auth-client"
-import { DELIVERY_ENABLED } from "../lib/feature-flags"
 import { useThrottle } from "../lib/use-throttle"
 
 const NAV_LINKS = [
@@ -13,8 +12,8 @@ const NAV_LINKS = [
   { to: "/bank-soal" as const, label: "Bank Soal" },
   { to: "/templates" as const, label: "Template" },
   { to: "/generate" as const, label: "Generate" },
-  ...(DELIVERY_ENABLED ? [{ to: "/kelas" as const, label: "Kelas" }] : []),
-  ...(DELIVERY_ENABLED ? [{ to: "/analytics" as const, label: "Analitik" }] : [])
+  { to: "/kelas" as const, label: "Kelas" },
+  { to: "/analytics" as const, label: "Analitik" }
 ] as const
 
 type RouteUser = {
