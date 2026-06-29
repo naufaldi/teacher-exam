@@ -12,7 +12,8 @@ export type LatexValidationResult =
   | { _tag: "valid" }
   | { _tag: "invalid"; reason: string }
 
-const UNDELIMITED_MATH_RE = /\\(?:div|frac|sqrt|times)\b|(?<![a-z\\])rac\{|(?<![a-z\\])\bqrt\{|\bimes\b|(\d[\d.,]*)\s+div\s+(\d[\d.,]*)/
+const UNDELIMITED_MATH_RE =
+  /\\(?:div|frac|sqrt|times)\b|(?<![a-z\\])rac\{|(?<![a-z\\])\bqrt\{|\bimes\b|(\d[\d.,]*)\s+div\s+(\d[\d.,]*)/
 
 export function validateLatexText(text: string): LatexValidationResult {
   const broken = detectBrokenMatematikaLatex(text)
