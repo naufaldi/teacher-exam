@@ -1,0 +1,56 @@
+name: Task
+description: Single implementation task linked to a parent epic
+title: "Task: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Link to parent epic and add a row to `docs/ISSUE_INDEX.md`.
+  - type: input
+    id: parent_epic
+    attributes:
+      label: Parent epic
+      description: GitHub issue number of parent epic
+      placeholder: "#148"
+    validations:
+      required: true
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone key
+      placeholder: RFC-E3
+    validations:
+      required: true
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User story
+    validations:
+      required: true
+  - type: textarea
+    id: definition_of_done
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Acceptance criterion 1
+        - [ ] Tests pass
+        - [ ] Browser verification (if UI)
+    validations:
+      required: true
+  - type: input
+    id: code_signal
+    attributes:
+      label: Code signal hint
+      description: File path or test glob proving done (for ISSUE_INDEX)
+      placeholder: apps/api/src/routes/__test__/curriculum.test.ts
+  - type: input
+    id: area
+    attributes:
+      label: Area label
+      description: area:api, area:web, area:db, area:shared
+      placeholder: area:api
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Blocks / blocked by issues

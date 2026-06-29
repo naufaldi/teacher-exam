@@ -1,0 +1,52 @@
+name: Epic
+description: RFC or milestone epic with child tasks
+title: "Epic: "
+labels:
+  - epic
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use for RFC epics (#146–#150 style) or PRD milestone epics.
+        Add a row to `docs/ISSUE_INDEX.md` when creating the epic.
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone
+      description: ROADMAP milestone or RFC epic key (e.g. M4, RFC-E3)
+      placeholder: RFC-E3
+    validations:
+      required: true
+  - type: input
+    id: prd
+    attributes:
+      label: PRD version
+      placeholder: prd:v3
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User story
+      description: As a … I want … so that …
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Child tasks
+      description: Checklist of task issues to create
+      value: |
+        - [ ] Task 1
+        - [ ] Task 2
+    validations:
+      required: true
+  - type: textarea
+    id: definition_of_done
+    attributes:
+      label: Definition of Done
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source doc
+      placeholder: docs/superpowers/specs/2026-06-11-ujian-sd-all-mapel-kelas-1-6-rfc.md

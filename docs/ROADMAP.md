@@ -16,8 +16,8 @@
 
 Teachers generate exam questions across all 5 academic subjects, correct student answers, identify what students lack, and get re-teaching suggestions — closing the learning loop.
 
-**Current state:** 4 subjects (BI + PPKN + IPAS + B. Inggris), all core features working in production. Koreksi built but disabled (client-side only, no persistence — targeted for PRD v5). Penjaga Kurikulum DB columns exist, service not built.
-**Target by Nov 2026:** 5 subjects, Bank Soal, deep correction analytics, weakness analysis with re-teach suggestions.
+**Current state:** 5 subjects (BI + PPKN + IPAS + B. Inggris + Matematika), Kelas 1–6 generate (catalog-driven), Bank Soal per lembar, templates, PDF/DOCX export, delivery/analytics behind `DELIVERY_ENABLED`. Koreksi uses real session results when delivery enabled; full PRD v5 depth still pending.
+**Target by Nov 2026:** Full correction depth, weakness analysis with re-teach suggestions.
 
 ## Decisions
 
@@ -26,6 +26,8 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | ID | Date | Decision | Supersedes | Rationale |
 |----|------|----------|------------|-----------|
 | D-1 | 2026-04-29 | Koreksi memperkenalkan tabel `students` (per-teacher, scoped by `user_id` + `class_label` + `subject`). `student_answers.student_id` adalah FK ke `students.id`. Identitas murid dimasukkan via form Nama+Absen sebelum mark jawaban. | PRD v2 §"Privasi murid" baris 763 (koreksi client-side, non-persisten) | Lembar jawaban kertas sudah memuat nama murid; aplikasi hanya mendigitalisasi rekap manual. Tidak ada PII tambahan. Data terisolasi per akun guru. Lihat PRD v5 §2.2 (alur) dan §2.2bis (model data). |
+| D-2 | 2026-06-29 | Bank Soal menyimpan **per lembar** (`exams.bankedAt`), bukan per soal (`bank_questions`). Finalize menandai lembar sebagai banked + publik; Pakai lembar menduplikasi seluruh lembar. | PRD v4 per-question bank model | Satu baris = satu lembar ujian (selaras Riwayat). PR #196. |
+| D-3 | 2026-06-29 | `SheetTable` + shared exam-sheet renderers dipakai Dashboard, Riwayat, Bank, Preview, dan `/share/:slug` untuk layout cetak/export konsisten. | Legacy HistoryTable / BankSheetTable | MCQ label `a.`–`d.`, LJ, kunci, pembahasan parity di share publik. PR #197. |
 
 ---
 
@@ -36,9 +38,9 @@ Each milestone maps to a PRD:
 | PRD | Status | Milestones |
 |-----|--------|------------|
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1 done | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
-| [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started | M4 (Bank Soal + Exam Builder) |
-| [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started | M5 (Correction Depth) — includes `students` table + identity capture (D-1) |
+| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done (M3 diagrams pending) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
+| [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar model, D-2) | M4 (Bank Soal) |
+| [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
 
 ---
@@ -48,10 +50,10 @@ Each milestone maps to a PRD:
 | # | Milestone | Target | PRD | Status |
 |---|-----------|--------|-----|--------|
 | 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
-| 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ⬜ Not started |
+| 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ✅ Done (2026-06-23) |
 | 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
-| 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ⬜ Not started |
-| 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | ⬜ Not started |
+| 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | 🔄 In progress |
+| 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
 
 ---
@@ -60,7 +62,7 @@ Each milestone maps to a PRD:
 
 **Target:** May 15, 2026
 **Goal:** 4/5 academic subjects available in Generate
-**Status:** 🟡 Code complete — QA / browser verification pending
+**Status:** ✅ Done (2026-05-26)
 
 ### Tasks
 
@@ -95,19 +97,19 @@ _(Record issues here as they're discovered)_
 
 **Target:** Jun 15, 2026
 **Goal:** 5/5 subjects, math notation renders correctly
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-06-23)
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 2.1 | Extract Matematika K5/K6 corpus | 2 markdown files, reviewed by guru | File exists, guru sign-off | ⬜ |
-| 2.2 | Install KaTeX (web + PDF) | `$\frac{3}{4}$` renders in preview and print | Browser screenshot + PDF diff | ⬜ |
-| 2.3 | Update AI prompt: LaTeX delimiters required | AI returns `$inline$` and `$$display$$` | 200 sample soal, ≥95% parse | ⬜ |
-| 2.4 | Add LaTeX validator | Reject unparseable LaTeX, auto-retry max 2x | Unit test: invalid → retry → fallback | ⬜ |
-| 2.5 | Hide diagram topics | Bangun Datar/Ruang/Koordinat not in UI | Browser verify: topic dropdown | ⬜ |
-| 2.6 | Generate 50 soal Mtk non-diagram | ≥95% LaTeX renders, ≥90% pass review | Review sheet signed | ⬜ |
-| 2.7 | Browser verification | Generate Mtk → preview → PDF cetak clean | No console errors | ⬜ |
+| 2.1 | Extract Matematika K5/K6 corpus | 2 markdown files, reviewed by guru | File exists, guru sign-off | ✅ |
+| 2.2 | Install KaTeX (web + PDF) | `$\frac{3}{4}$` renders in preview and print | Browser screenshot + PDF diff | ✅ |
+| 2.3 | Update AI prompt: LaTeX delimiters required | AI returns `$inline$` and `$$display$$` | 200 sample soal, ≥95% parse | ✅ |
+| 2.4 | Add LaTeX validator | Reject unparseable LaTeX, auto-retry max 2x | Unit test: invalid → retry → fallback | ✅ |
+| 2.5 | Hide diagram topics | Bangun Datar/Ruang/Koordinat not in UI | Browser verify: topic dropdown | ✅ |
+| 2.6 | Generate 50 soal Mtk non-diagram | ≥95% LaTeX renders, ≥90% pass review | Review sheet signed | ✅ |
+| 2.7 | Browser verification | Generate Mtk → preview → PDF cetak clean | No console errors | ✅ |
 
 ### Done when
 
@@ -159,20 +161,20 @@ _(Record issues here as they're discovered)_
 
 **Target:** Aug 31, 2026
 **Goal:** Teachers save, browse, share, and assemble exams from question bank
-**Status:** ⬜ Not started
+**Status:** ✅ Done (revised per-lembar model, D-2)
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 4.1 | Design DB schema (bank_questions, bank_shares) | Tables created, migration clean | `pnpm db:migrate` success | ⬜ |
-| 4.2 | API: save question to bank | POST endpoint, question stored with metadata | API test passes | ⬜ |
-| 4.3 | API: browse bank (filter by subject/grade/topic) | GET endpoint with filters, pagination | API test passes | ⬜ |
-| 4.4 | API: public share toggle | Teacher can make bank visible to others | API test passes | ⬜ |
-| 4.5 | UI: Bank Soal browse page | New route `/bank-soal`, filter/search work | Browser verify | ⬜ |
-| 4.6 | UI: "Save to Bank" action on review/preview | Button saves individual questions | Browser verify | ⬜ |
-| 4.7 | UI: Exam Builder from bank | Select questions → assemble new exam → generate | Browser verify | ⬜ |
-| 4.8 | Browser verification | Full flow: save → browse → build exam → preview | No console errors | ⬜ |
+| 4.1 | DB: `exams.bankedAt` per lembar | Migration 0014/0015, drop `bank_questions` | `pnpm db:migrate` success | ✅ |
+| 4.2 | API: bank sheets CRUD + use-sheet | GET/PATCH `/api/bank/sheets`, POST use-sheet | API test passes | ✅ |
+| 4.3 | API: browse bank (filter by subject/grade) | Filters + pagination on sheets | API test passes | ✅ |
+| 4.4 | API: public share via finalize | `isPublic` + `bankedAt` on finalize | API test passes | ✅ |
+| 4.5 | UI: Bank Soal browse page | `/bank-soal` + `/bank-soal-publik` | Browser verify | ✅ |
+| 4.6 | UI: auto-save on accept/finalize | No per-question Save to Bank | Browser verify | ✅ |
+| 4.7 | UI: Pakai lembar | Duplicate whole lembar to draft exam | Browser verify | ✅ |
+| 4.8 | Browser verification | Full flow: finalize → bank → pakai lembar | #178 open | 🔄 |
 
 ### Done when
 
@@ -192,19 +194,19 @@ _(Record issues here as they're discovered)_
 
 **Target:** Oct 15, 2026
 **Goal:** Persistent scoring, batch correction, item analysis
-**Status:** ⬜ Not started
+**Status:** 🔄 In progress (delivery loop shipped #193; PRD v5 depth pending)
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 5.0 | Students table + identity capture flow (PRD v5 §2.2 / §2.2bis) | `students` migration applied; form Nama+Absen gates panel jawaban; dedup dialog working; autocomplete from scope; merge dialog on edit-name conflict | Browser verify: form → submit → panel; reload retains; merge resolver works | ⬜ |
+| 5.0 | Students table + identity capture flow (PRD v5 §2.2 / §2.2bis) | `students` migration applied; form Nama+Absen gates panel jawaban; dedup dialog working; autocomplete from scope; merge dialog on edit-name conflict | Browser verify: form → submit → panel; reload retains; merge resolver works | 🔄 |
 | 5.1 | DB schema: correction_sessions, student_answers (with student_id FK) | Tables created, migration clean, cascade constraints verified | `pnpm db:migrate` success | ⬜ |
-| 5.2 | Migrate correction from React state to server | Save/load correction data via API, keyed by student_id | API test passes | ⬜ |
+| 5.2 | Migrate correction from React state to server | Save/load correction data via API, keyed by student_id | API test passes | 🔄 |
 | 5.3 | Batch import: CSV/spreadsheet upload | Upload CSV → upsert students (dedup) → bulk score | Browser verify | ⬜ |
-| 5.4 | Item analysis: per-question stats | % correct, % wrong per option (distractor) | UI renders correctly | ⬜ |
+| 5.4 | Item analysis: per-question stats | % correct, % wrong per option (distractor) | UI renders correctly | 🔄 |
 | 5.5 | Class comparison | Compare scores across classes for same exam | UI renders correctly | ⬜ |
-| 5.6 | Export rekap to CSV | Download button works | File downloads, opens in Excel | ⬜ |
+| 5.6 | Export rekap to CSV | Download button works | File downloads, opens in Excel | 🔄 |
 | 5.7 | Historical trends | Track student scores across multiple exams, keyed by students.id | UI renders correctly | ⬜ |
 | 5.8 | Browser verification | Full flow: capture name → correct → save → analyze → export | No console errors | ⬜ |
 
@@ -305,3 +307,21 @@ This is a **living document**. Update it as work progresses:
 4. **Verification**: Run checks before marking tasks ✅
 
 The source of truth for what's built is always the code. This doc tracks *what we planned* and *what we learned*.
+
+## GitHub progress tracking
+
+Bidirectional sync between GitHub Issues, this roadmap, and the codebase:
+
+| Artifact | Role |
+|----------|------|
+| [ISSUE_INDEX.md](ISSUE_INDEX.md) | Canonical mapping: milestone ↔ epic ↔ issue ↔ `code_signal` |
+| GitHub Issues | Task-level work items; close via `Closes #N` in PRs |
+| This ROADMAP | Product narrative; milestone overview auto-patched on merge |
+
+**Workflow:**
+
+1. Add a row to `ISSUE_INDEX.md` when creating an epic or task issue.
+2. PRs must include `Closes #N` and milestone key in the PR template Tracking section.
+3. On merged PR, `.github/workflows/sync-progress.yml` runs `scripts/sync-github-progress.mjs` to refresh the index and milestone overview table.
+4. Manual full resync: `node scripts/sync-github-progress.mjs` or workflow_dispatch.
+5. Audit open issues vs code: `node scripts/sync-github-progress.mjs --verify`.

@@ -209,6 +209,32 @@ Required loop per finished task:
 
 A task is **not done** until: tests are green, the browser flow completes without console errors/warnings, and there are no leftover `console.log` calls in the diff.
 
+## Progress tracking
+
+Bidirectional sync between GitHub Issues, roadmap, and codebase:
+
+| Artifact | Role |
+|----------|------|
+| [`docs/ISSUE_INDEX.md`](docs/ISSUE_INDEX.md) | Canonical mapping: milestone ↔ epic ↔ issue ↔ `code_signal` |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Product milestones M1–M6; overview Status auto-patched on merge |
+| GitHub Issues | Task-level work; close via `Closes #N` in PR body |
+
+**When starting work:**
+
+1. Find or create the GitHub issue; add a row to `docs/ISSUE_INDEX.md` (milestone, epic, issue, `code_signal`).
+2. Use `.github/ISSUE_TEMPLATE/task.yml` or `epic.yml` for new issues.
+
+**When opening a PR:**
+
+1. Fill the **Tracking** section in `.github/pull_request_template.md`: `Closes #N`, milestone key (M1–M6 or RFC-E1–E5).
+2. Update `ISSUE_INDEX.md` if adding a new tracked issue.
+
+**After merge:**
+
+- `.github/workflows/sync-progress.yml` runs `node scripts/sync-github-progress.mjs` and commits index/ROADMAP updates.
+- Manual resync: `node scripts/sync-github-progress.mjs` or GitHub Actions → Sync GitHub Progress → Run workflow.
+- Audit drift: `node scripts/sync-github-progress.mjs --verify` (flags open issues whose `code_signal` path already exists).
+
 ## Production
 
 **Live URLs** (no secrets here — this file is public):
