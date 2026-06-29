@@ -126,7 +126,8 @@ export const ExamSchema = Schema.Struct({
   classContext: Schema.NullOr(Schema.String),
   discussionMd: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
-  updatedAt: Schema.String
+  updatedAt: Schema.String,
+  questionCount: Schema.optional(Schema.Int)
 })
 export type Exam = typeof ExamSchema.Type
 

@@ -11,8 +11,7 @@ import type {
   UseBankSheetInput,
   UseBankSheetResponse
 } from "@teacher-exam/shared"
-import { formatExamTitle, normalizeExamType, SUBJECT_LABEL } from "@teacher-exam/shared"
-import { ExamIdSchema, UserIdSchema } from "@teacher-exam/shared"
+import { ExamIdSchema, formatExamTitle, normalizeExamType, SUBJECT_LABEL, UserIdSchema } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, isNotNull, ne, or, sql } from "drizzle-orm"
 import { Context, Data, Effect, Layer, Schema } from "effect"
 import type { ApiDatabaseError } from "../errors/http"
@@ -213,9 +212,7 @@ export const BankServiceLive = Layer.effect(
         const questionCounts = yield* loadQuestionCounts(rows.map((row) => row.exam.id))
 
         return {
-          data: rows.map((row) =>
-            toBankSheet(row.exam, questionCounts.get(row.exam.id) ?? 0)
-          ),
+          data: rows.map((row) => toBankSheet(row.exam, questionCounts.get(row.exam.id) ?? 0)),
           total,
           page,
           limit

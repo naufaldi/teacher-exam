@@ -3,9 +3,8 @@ import { SqlClient } from "@effect/sql/SqlClient"
 import { exams, questions } from "@teacher-exam/db"
 import { formatExamTitle, SUBJECT_LABEL, UpdateExamInputSchema } from "@teacher-exam/shared"
 import type { ExamShareResponse, ExamSubject, ExamWithQuestions } from "@teacher-exam/shared"
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
-import { logDomainError } from "../../lib/effect-log"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
 import { rowToQuestion } from "../../lib/question-mapper"
@@ -34,7 +33,24 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         const rows = yield* runDb(
           db.select().from(exams).where(eq(exams.userId, userId)).orderBy(desc(exams.createdAt))
         )
-        return rows.map((r) => toExam(r))
+        const examIds = rows.map((row) => row.id)
+        const countRows = examIds.length === 0
+          ? []
+          : yield* runDb(
+            db
+              .select({
+                examId: questions.examId,
+                questionCount: sql<number>`count(*)::int`
+              })
+              .from(questions)
+              .where(and(inArray(questions.examId, examIds), eq(questions.status, "accepted")))
+              .groupBy(questions.examId)
+          )
+        const counts = new Map(countRows.map((row) => [row.examId, row.questionCount]))
+        return rows.map((r) => ({
+          ...toExam(r),
+          questionCount: counts.get(r.id) ?? 0
+        }))
       }))
     .handle("getExam", ({ path }) =>
       Effect.gen(function*() {
@@ -58,8 +74,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         }
 
         const isOwner = examRow.userId === userId
-        const isPublicBankSheet =
-          examRow.isPublic &&
+        const isPublicBankSheet = examRow.isPublic &&
           examRow.status === "final" &&
           examRow.bankedAt !== null
 

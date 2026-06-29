@@ -1,6 +1,5 @@
 export { HistoryEmpty } from "./history-empty.js"
 export { HistoryHeader } from "./history-header.js"
 export { HistoryPagination } from "./history-pagination.js"
-export { HistoryTable } from "./history-table.js"
 export { HistoryToolbar } from "./history-toolbar.js"
 export type { GradeFilter, PeriodFilter, SortOrder, StatusFilter, SubjectFilter } from "./history-toolbar.js"
