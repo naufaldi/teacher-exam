@@ -31,6 +31,7 @@ export type {
 export * from "./schemas/entities.js"
 export * from "./schemas/export.js"
 export * from "./schemas/figures.js"
+export * from "./schemas/pdf-upload.js"
 export * from "./schemas/primitives.js"
 export * from "./schemas/results.js"
 export * from "./schemas/sessions.js"

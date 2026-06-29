@@ -17,6 +17,7 @@ import type {
   GenerateExamInput,
   PaginatedBankSheetsResponse,
   PaginatedPublicBankSheetsResponse,
+  PdfUploadResponse,
   PublicExamDetailResponse,
   RegenerateQuestionInput,
   SessionDetailResponse,
@@ -53,6 +54,7 @@ import {
   HealthResponseSchema,
   PaginatedBankSheetsResponseSchema,
   PaginatedPublicBankSheetsResponseSchema,
+  PdfUploadResponseSchema,
   PublicExamWithQuestionsSchema,
   QuestionSchema,
   SessionDetailResponseSchema,
@@ -146,11 +148,15 @@ export async function apiFetchEither<T>(
 ): Promise<Either.Either<T, ApiClientFailure>> {
   const method = init?.method ?? "GET"
   const t0 = performance.now()
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData
+  const headers = isFormData
+    ? { ...init?.headers }
+    : { "Content-Type": "application/json", ...init?.headers }
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers,
       ...init
     })
   } catch (err) {
@@ -436,6 +442,20 @@ export const api = {
         return raw as Either.Either<ExamWithQuestions, ApiClientFailure>
       }
       return decodeEither(ExamWithQuestionsSchema, raw.right)
+    }
+  },
+  pdfUploads: {
+    create: async (file: File): Promise<Either.Either<PdfUploadResponse, ApiClientFailure>> => {
+      const form = new FormData()
+      form.append("file", file)
+      const raw = await apiFetchEither<unknown>("/pdf-uploads", {
+        method: "POST",
+        body: form
+      })
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PdfUploadResponse, ApiClientFailure>
+      }
+      return decodeEither(PdfUploadResponseSchema, raw.right)
     }
   },
   curriculum: {

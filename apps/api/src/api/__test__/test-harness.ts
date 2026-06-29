@@ -1,3 +1,4 @@
+import { NodeContext } from "@effect/platform-node"
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import * as HttpServer from "@effect/platform/HttpServer"
 import { db } from "@teacher-exam/db"
@@ -39,6 +40,7 @@ import { type CurriculumService, TestCurriculumLayer } from "../services/curricu
 import type { ExportService } from "../services/export-service"
 import { ExportServiceLive } from "../services/export-service"
 import { GradingServiceLive } from "../services/grading-service"
+import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
 import { SessionServiceLive } from "../services/session-service"
 import { TemplateServiceLive } from "../services/template-service"
 import { createTestDbLayer, TestSqlLayer } from "../services/test-db"
@@ -162,6 +164,7 @@ export function createHttpApiTestLayer(opts: {
     SessionServiceLive.pipe(Layer.provide(TestDbLayer)),
     GradingServiceLive.pipe(Layer.provide(TestDbLayer)),
     AnalyticsServiceLive.pipe(Layer.provide(TestDbLayer)),
+    FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer)),
     opts.exportServiceLayer ?? ExportServiceLive,
     opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,

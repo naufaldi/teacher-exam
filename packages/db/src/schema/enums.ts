@@ -15,6 +15,13 @@ export const examDifficultyEnum = pgEnum("exam_difficulty", [
 ])
 export const reviewModeEnum = pgEnum("review_mode", ["fast", "slow"])
 export const examStatusEnum = pgEnum("exam_status", ["draft", "final"])
+export const pdfUploadStatusEnum = pgEnum("pdf_upload_status", [
+  "uploaded",
+  "processing",
+  "ready",
+  "failed"
+])
+export const sourceModeEnum = pgEnum("source_mode", ["default", "pdf_guru", "combine"])
 export const questionStatusEnum = pgEnum("question_status", [
   "pending",
   "accepted",

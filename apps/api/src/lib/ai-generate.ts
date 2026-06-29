@@ -6,7 +6,8 @@ import {
   formatExamTitle,
   normalizeExamType,
   QuestionIdSchema,
-  SUBJECT_LABEL
+  SUBJECT_LABEL,
+  validateGenerateExamInput
 } from "@teacher-exam/shared"
 import type { FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
 import { Data, Effect, Either, Match, Schema } from "effect"
@@ -15,6 +16,7 @@ import { runDb } from "../api/lib/db-effect"
 import type { CurriculumReadError } from "../api/services/curriculum-service"
 import { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
+import type { ObjectStorage } from "../api/services/object-storage"
 import { isReadySibiPdfForGenerate } from "../curriculum/catalog.js"
 import { AiGenerationError } from "../errors"
 import { type AiService } from "../services/AiService"
@@ -25,6 +27,7 @@ import { fetchExamWithQuestions } from "./exams-query"
 import { type LatexValidationResult, validateGeneratedQuestionLatex } from "./latex-validator"
 import { normalizeGeneratedQuestionLatexFields } from "./normalize-matematika-latex.js"
 import { type ParsedItemFailure, parseGeneratedQuestions } from "./parse-generated-questions"
+import { loadReadyPdfUpload } from "./pdf-upload-service"
 import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 
@@ -149,6 +152,7 @@ async function generateWithSalvage(
   request: {
     system: string
     user: string
+    pdfBytes?: Buffer
     expectedCount: number
     shouldValidateLatex: boolean
     reviewMode: "fast" | "slow"
@@ -186,7 +190,8 @@ async function generateWithSalvage(
         Effect.either(
           aiService.generateRaw({
             system: request.system,
-            user: request.user
+            user: request.user,
+            ...(request.pdfBytes !== undefined ? { pdfBytes: request.pdfBytes } : {})
           })
         )
       )
@@ -320,14 +325,20 @@ export function generateExam(
 ): Effect.Effect<
   GenerateExamResult,
   AiGenerationError | ApiDatabaseError | CurriculumReadError,
-  DbClient | SqlClient | CurriculumService
+  DbClient | SqlClient | CurriculumService | ObjectStorage
 > {
   return Effect.gen(function*() {
     const handlerT0 = Date.now()
+    const sourceMode = input.sourceMode ?? "default"
+    const modeError = validateGenerateExamInput(input)
+    if (modeError !== null) {
+      return { _tag: "validation_error", details: modeError }
+    }
+
     const examType = normalizeExamType(input.examType ?? "formatif")
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
-    if (!isReadySibiPdfForGenerate(input.subject, input.grade)) {
+    if (sourceMode === "default" && !isReadySibiPdfForGenerate(input.subject, input.grade)) {
       return {
         _tag: "validation_error",
         details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
@@ -348,18 +359,37 @@ export function generateExam(
     }
     const composition = compositionResult.right
 
-    const curriculum = yield* CurriculumService
-    const curriculumText = yield* curriculum.getText(input.subject, input.grade)
+    let curriculumText = ""
+    if (sourceMode !== "pdf_guru") {
+      const curriculum = yield* CurriculumService
+      curriculumText = yield* curriculum.getText(input.subject, input.grade)
+    }
+
+    let pdfBytes: Buffer | undefined
+    const effectivePdfUploadId = sourceMode === "default" ? undefined : input.pdfUploadId
+    if (effectivePdfUploadId !== undefined) {
+      const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
+      if (Either.isLeft(loadResult)) {
+        return { _tag: "validation_error", details: loadResult.left.message }
+      }
+      pdfBytes = loadResult.right.bytes
+    }
+
+    const promptTopics = sourceMode === "pdf_guru"
+      ? (input.topics.length > 0 ? [...input.topics] : [input.freeTopic?.trim() ?? ""])
+      : [...input.topics]
+
     const { system, user } = buildExamPrompt({
       examType,
       difficulty: input.difficulty,
       examSubject: input.subject,
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
-      topics: [...input.topics],
+      topics: promptTopics,
       totalSoal,
       composition,
       curriculumText,
+      sourceMode,
       classContext: input.classContext,
       exampleQuestions: input.exampleQuestions
     })
@@ -369,7 +399,7 @@ export function generateExam(
       grade: input.grade,
       examType,
       examDate: null,
-      topics: [...input.topics]
+      topics: promptTopics
     })
     const examId = crypto.randomUUID()
     const now = new Date()
@@ -379,6 +409,7 @@ export function generateExam(
         generateWithSalvage(aiService, {
           system,
           user,
+          ...(pdfBytes !== undefined ? { pdfBytes } : {}),
           expectedCount: totalSoal,
           shouldValidateLatex: input.subject === "matematika",
           reviewMode: input.reviewMode,
@@ -413,11 +444,14 @@ export function generateExam(
             subject: input.subject,
             grade: input.grade,
             difficulty: input.difficulty,
-            topics: [...input.topics],
+            topics: promptTopics,
             reviewMode: input.reviewMode,
             status: "draft",
             examType,
             classContext: input.classContext ?? null,
+            sourceMode,
+            pdfUploadId: effectivePdfUploadId ?? null,
+            freeTopic: input.freeTopic?.trim() ?? null,
             createdAt: now,
             updatedAt: now
           })

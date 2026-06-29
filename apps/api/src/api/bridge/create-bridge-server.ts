@@ -4,6 +4,7 @@ import { logError } from "../../lib/server-log"
 import { applyAuthCors, authPreflightResponse } from "../auth-cors"
 import { isAuthPath, isHttpApiPath } from "./migrated-routes"
 import { nodeRequestToWebRequest, writeWebResponse } from "./node-http"
+import { handlePdfUploadPost } from "./pdf-upload-route"
 
 export type BridgeServer = {
   readonly server: ReturnType<typeof createServer>
@@ -61,6 +62,13 @@ async function handleRequest(
 
     const authResponse = await opts.authHandler(webReq)
     await writeWebResponse(res, applyAuthCors(webReq, authResponse))
+    return
+  }
+
+  if (pathname === "/api/pdf-uploads" && req.method === "POST") {
+    const webReq = await nodeRequestToWebRequest(req)
+    const response = await handlePdfUploadPost(webReq)
+    await writeWebResponse(res, response)
     return
   }
 

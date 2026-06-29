@@ -123,7 +123,8 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
     api: {
       ...orig.api,
       ai: { generate: vi.fn() },
-      curriculum: { catalog: vi.fn(), babTopics: vi.fn() }
+      curriculum: { catalog: vi.fn(), babTopics: vi.fn() },
+      pdfUploads: { create: vi.fn() }
     }
   }
 })
@@ -578,5 +579,29 @@ describe("Atur komposisi panel", () => {
     expect((screen.getByLabelText(/PG Pilihan Tunggal/i) as HTMLInputElement).value).toBe("30")
     expect((screen.getByLabelText(/PG Pilihan Jamak/i) as HTMLInputElement).value).toBe("10")
     expect((screen.getByLabelText(/Benar\/Salah/i) as HTMLInputElement).value).toBe("10")
+  })
+
+  it("shows source mode selector with Buku Siswa default and hides PDF upload", () => {
+    renderGeneratePage()
+    expect(screen.getByText("Buku Siswa")).toBeInTheDocument()
+    expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
+    expect(screen.queryByText(/Drag.*drop/i)).not.toBeInTheDocument()
+  })
+
+  it("shows kurikulum warning and free topic in pdf_guru mode", () => {
+    renderGeneratePage()
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    expect(screen.getByText(/Periksa kurikulum/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Topik bebas/i)).toBeInTheDocument()
+  })
+
+  it("clears pdf_guru fields when switching back to default", () => {
+    renderGeneratePage()
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Ekosistem lingkungan sekolah" }
+    })
+    fireEvent.click(screen.getByText("Buku Siswa"))
+    expect(screen.queryByLabelText(/Topik bebas/i)).not.toBeInTheDocument()
   })
 })

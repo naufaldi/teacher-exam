@@ -123,7 +123,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | Extra | — | #183 | Codex security remediation | closed | docs/security/2026-06-24-codex-security-remediation.md | PR #184 |
 | M7 | — | — | M7 PRD v8 + RFC generate PDF enhancement docs | open | docs/PRD-v8-generate-pdf-enhancement.md | — |
 | M7 | — | — | M7.F0 corpus v2 richer text | open | apps/api/src/curriculum/md/ | — |
-| M7 | — | — | M7.F1 R2 upload + 3-mode schema + basic generate | open | — | — |
+| M7 | — | — | M7.F1 R2 upload + 3-mode schema + basic generate | open | apps/api/src/lib/pdf-upload-service.ts, apps/web/src/routes/_auth.generate.tsx | — |
 | M7 | — | — | M7.F2 perpustakaan PDF + async ingest | open | — | — |
 | M7 | — | — | M7.F3 pgvector RAG topic-focused | open | — | — |
 | M7 | — | — | M7.F4 agentic search | open | — | — |

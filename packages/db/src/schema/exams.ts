@@ -1,5 +1,6 @@
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-import { examDifficultyEnum, examStatusEnum, examSubjectEnum, reviewModeEnum } from "./enums"
+import { examDifficultyEnum, examStatusEnum, examSubjectEnum, reviewModeEnum, sourceModeEnum } from "./enums"
+import { pdfUploads } from "./pdf-uploads"
 import { user } from "./users"
 
 export const exams = pgTable("exams", {
@@ -20,6 +21,10 @@ export const exams = pgTable("exams", {
   durationMinutes: integer("duration_minutes"),
   instructions: text("instructions"),
   classContext: text("class_context"),
+  sourceMode: sourceModeEnum("source_mode").default("default").notNull(),
+  pdfUploadId: uuid("pdf_upload_id")
+    .references(() => pdfUploads.id, { onDelete: "set null" }),
+  freeTopic: text("free_topic"),
   discussionMd: text("discussion_md"),
   isPublic: boolean("is_public").default(false).notNull(),
   publicShareSlug: text("public_share_slug").unique(),
