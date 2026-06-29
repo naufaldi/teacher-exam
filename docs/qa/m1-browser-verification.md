@@ -32,6 +32,8 @@ pnpm db:seed:dev
 
 Login page shows **Masuk Guru Dev (lokal)** when `VITE_DEV_AUTH=true` and Vite is in dev mode.
 
+After table-unification work (2026-06-29), browser QA should confirm **Pratinjau modal** on Dashboard Riwayat terbaru, `/history`, and `/bank-soal` (not direct `/preview` on eye click).
+
 Headless shortcut (same origin — Vite proxies `/api` to API):
 
 ```bash

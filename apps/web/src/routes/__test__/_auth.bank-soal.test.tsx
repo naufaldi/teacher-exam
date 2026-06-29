@@ -97,6 +97,10 @@ describe("BankSoalPage", () => {
     const Page = Route.options.component as React.ComponentType
     render(<Page />)
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Bank Publik" })).toBeInTheDocument()
+    })
+
     await user.click(screen.getByRole("button", { name: "Bank Publik" }))
 
     await waitFor(() => {

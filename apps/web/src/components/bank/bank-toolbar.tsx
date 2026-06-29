@@ -8,8 +8,10 @@ export type BankGradeFilter = "" | "5" | "6"
 export type BankDifficultyFilter = "" | ExamDifficulty
 export type BankTypeFilter = "" | QuestionType
 export type BankSortFilter = BankSort
+export type BankTab = "mine" | "public"
 
 interface BankToolbarProps {
+  tab?: BankTab
   search: string
   subject: BankSubjectFilter
   grade: BankGradeFilter
@@ -24,6 +26,7 @@ interface BankToolbarProps {
   isFiltered: boolean
   matchCount: number
   totalCount: number
+  onTabChange?: (tab: BankTab) => void
   onSearchChange: (value: string) => void
   onSubjectChange: (value: BankSubjectFilter) => void
   onGradeChange: (value: BankGradeFilter) => void
@@ -67,6 +70,11 @@ const SORT_OPTIONS: Array<{ value: BankSortFilter; label: string }> = [
   { value: "kesulitan", label: "Kesulitan" }
 ]
 
+const BANK_TABS: Array<{ id: BankTab; label: string }> = [
+  { id: "mine", label: "Bank Saya" },
+  { id: "public", label: "Bank Publik" }
+]
+
 function BankToolbar({
   author,
   difficulty,
@@ -80,6 +88,7 @@ function BankToolbar({
   onSearchChange,
   onSortChange,
   onSubjectChange,
+  onTabChange,
   onTopicChange,
   onTypeChange,
   search,
@@ -88,13 +97,41 @@ function BankToolbar({
   itemLabel = "soal",
   sort,
   subject,
+  tab,
   topic,
   totalCount,
   type
 }: BankToolbarProps) {
   return (
     <div className="rounded-md border border-border-default bg-bg-surface">
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border-default">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-border-default">
+        {onTabChange && tab ?
+          (
+            <div className="inline-flex items-center rounded-pill border border-border-default bg-kertas-50 p-1">
+              {BANK_TABS.map((bankTab) => {
+                const active = tab === bankTab.id
+                return (
+                  <button
+                    key={bankTab.id}
+                    type="button"
+                    onClick={() => onTabChange(bankTab.id)}
+                    className={[
+                      "h-7 px-3 rounded-pill text-body-sm font-medium transition-colors duration-[120ms]",
+                      active
+                        ? "bg-bg-surface text-primary-700 shadow-xs border border-border-default"
+                        : "text-text-tertiary hover:text-text-primary"
+                    ].join(" ")}
+                    aria-pressed={active}
+                  >
+                    {bankTab.label}
+                  </button>
+                )
+              })}
+            </div>
+          ) :
+          null}
+
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
         <div className="relative flex-1 min-w-[200px]">
           <Search
             size={14}
@@ -205,6 +242,7 @@ function BankToolbar({
             </option>
           ))}
         </select>
+        </div>
       </div>
 
       <div className="flex items-center justify-between px-4 py-2 bg-kertas-50">

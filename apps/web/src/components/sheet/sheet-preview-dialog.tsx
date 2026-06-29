@@ -1,23 +1,34 @@
 import type { ExamWithQuestions } from "@teacher-exam/shared"
 import {
+  Button,
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   LoadingSpinner
 } from "@teacher-exam/ui"
+import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
-import { BankQuestionReadonlyBody } from "./bank-question-readonly-body.js"
+import { BankQuestionReadonlyBody } from "../bank/bank-question-readonly-body.js"
 import { api, unwrapApiEither } from "../../lib/api.js"
 
-interface BankSheetPreviewDialogProps {
+interface SheetPreviewDialogProps {
   examId: string | null
   title?: string
   open: boolean
   onClose: () => void
+  showPrintFooter?: boolean
 }
 
-function BankSheetPreviewDialog({ examId, onClose, open, title }: BankSheetPreviewDialogProps) {
+function SheetPreviewDialog({
+  examId,
+  onClose,
+  open,
+  showPrintFooter = true,
+  title
+}: SheetPreviewDialogProps) {
+  const navigate = useNavigate()
   const [exam, setExam] = useState<ExamWithQuestions | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,9 +58,15 @@ function BankSheetPreviewDialog({ examId, onClose, open, title }: BankSheetPrevi
 
   const acceptedQuestions = exam?.questions.filter((q) => q.status === "accepted") ?? []
 
+  function handleOpenPrintPage() {
+    if (!examId) return
+    onClose()
+    void navigate({ to: "/preview", search: { examId } })
+  }
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto flex flex-col">
         <DialogHeader>
           <DialogTitle>{title ?? exam?.title ?? "Pratinjau lembar"}</DialogTitle>
         </DialogHeader>
@@ -63,9 +80,14 @@ function BankSheetPreviewDialog({ examId, onClose, open, title }: BankSheetPrevi
         {!loading && error ?
           <p className="text-body-sm text-danger-700">{error}</p> :
           null}
-        {!loading && !error ?
+        {!loading && !error && acceptedQuestions.length === 0 ?
+          <p className="text-body-sm text-text-tertiary py-8 text-center">
+            Belum ada soal diterima.
+          </p> :
+          null}
+        {!loading && !error && acceptedQuestions.length > 0 ?
           (
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1 overflow-y-auto">
               {acceptedQuestions.map((question) => (
                 <div key={question.id} className="rounded-md border border-border-default p-4">
                   <p className="text-caption font-semibold text-text-tertiary mb-2">
@@ -77,9 +99,21 @@ function BankSheetPreviewDialog({ examId, onClose, open, title }: BankSheetPrevi
             </div>
           ) :
           null}
+        <DialogFooter className="gap-2 sm:gap-2 pt-4 border-t border-border-default mt-4">
+          <Button variant="secondary" size="md" onClick={onClose}>
+            Tutup
+          </Button>
+          {showPrintFooter && examId ?
+            (
+              <Button variant="primary" size="md" onClick={handleOpenPrintPage}>
+                Buka halaman cetak
+              </Button>
+            ) :
+            null}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-export { BankSheetPreviewDialog }
+export { SheetPreviewDialog }

@@ -39,7 +39,10 @@ describe("GET /api/public/exams/:slug", () => {
     ;(db.select as Mock).mockImplementation(() => {
       callCount++
       if (callCount === 1) return makeChain([examRow])
-      return makeChain([makeQuestionRow({ examId: "exam-1", status: "accepted" })])
+      return makeChain([
+        makeQuestionRow({ examId: "exam-1", status: "accepted", number: 1 }),
+        makeQuestionRow({ examId: "exam-1", status: "pending", number: 2, id: "q-pending" })
+      ])
     })
 
     const app = buildTestApp()
@@ -50,6 +53,8 @@ describe("GET /api/public/exams/:slug", () => {
     expect(body["id"]).toBe("exam-1")
     expect(body["publishedAt"]).toBe("2026-05-08T09:00:00.000Z")
     expect(body).not.toHaveProperty("userId")
-    expect(body["questions"]).toEqual(expect.any(Array))
+    const questions = body["questions"] as Array<Record<string, unknown>>
+    expect(questions).toHaveLength(1)
+    expect(questions[0]?.["status"]).toBe("accepted")
   })
 })

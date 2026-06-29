@@ -3,8 +3,13 @@ import type { BrowseBankSheetsQuery, PublicBankSheet } from "@teacher-exam/share
 import { Button, EmptyState, LoadingSpinner, PageHeader } from "@teacher-exam/ui"
 import { BookOpen } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { BankSheetPreviewDialog } from "../components/bank/bank-sheet-preview-dialog.js"
-import { BankSheetTable } from "../components/bank/bank-sheet-table.js"
+import {
+  bankSheetToSheetRow,
+  SheetPreviewDialog,
+  SheetTable,
+  useSheetPreview,
+  useSheetTableHandlers
+} from "../components/sheet/index.js"
 import {
   type BankDifficultyFilter,
   type BankGradeFilter,
@@ -35,7 +40,7 @@ function BankSoalPublikPage() {
   const [type, setType] = useState<BankTypeFilter>("")
   const [author, setAuthor] = useState("")
   const [sort, setSort] = useState<BankSortFilter>("terbaru")
-  const [previewSheet, setPreviewSheet] = useState<PublicBankSheet | null>(null)
+  const sheetPreview = useSheetPreview()
 
   const query = useMemo((): BrowseBankSheetsQuery => {
     return {
@@ -78,6 +83,13 @@ function BankSoalPublikPage() {
   }, [loadBank])
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
+  const displayRows = items.map((item) => bankSheetToSheetRow(item))
+
+  const sheetHandlers = useSheetTableHandlers({
+    onPreview: sheetPreview.openPreview,
+    onDuplicate: () => {},
+    onDelete: async () => {}
+  })
 
   const handleResetFilters = () => {
     setPage(1)
@@ -193,12 +205,11 @@ function BankSoalPublikPage() {
         {!loading && !error && items.length > 0 ?
           (
             <>
-              <BankSheetTable
-                items={items}
-                showAuthor
+              <SheetTable
+                variant="bank-public"
+                rows={displayRows}
                 readOnly
-                onPreview={(item) => setPreviewSheet(item as PublicBankSheet)}
-                onUseSheet={() => {}}
+                handlers={sheetHandlers}
               />
               {totalPages > 1 ?
                 (
@@ -229,11 +240,12 @@ function BankSoalPublikPage() {
           ) :
           null}
 
-        <BankSheetPreviewDialog
-          examId={previewSheet?.id ?? null}
-          {...(previewSheet?.title ? { title: previewSheet.title } : {})}
-          open={previewSheet !== null}
-          onClose={() => setPreviewSheet(null)}
+        <SheetPreviewDialog
+          examId={sheetPreview.previewExamId}
+          {...(sheetPreview.previewTitle ? { title: sheetPreview.previewTitle } : {})}
+          open={sheetPreview.previewOpen}
+          onClose={sheetPreview.closePreview}
+          showPrintFooter={false}
         />
       </div>
     </PublicPageShell>

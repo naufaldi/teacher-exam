@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mockApiFailOnce, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
 import type * as ApiModule from "../../lib/api.js"
 import { api, ApiError } from "../../lib/api.js"
-import { makeExam } from "../../test/fixtures/exam.js"
+import { makeExam, makeExamWithQuestions } from "../../test/fixtures/exam.js"
 
 import { Route } from "../_auth.history.js"
 
@@ -37,7 +37,8 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
         list: vi.fn(),
         remove: vi.fn(),
         duplicate: vi.fn(),
-        share: vi.fn()
+        share: vi.fn(),
+        get: vi.fn()
       }
     }
   }
@@ -49,6 +50,7 @@ const mockApi = api as unknown as {
     remove: ReturnType<typeof vi.fn>
     duplicate: ReturnType<typeof vi.fn>
     share: ReturnType<typeof vi.fn>
+    get: ReturnType<typeof vi.fn>
   }
 }
 
@@ -208,19 +210,30 @@ describe("HistoryPage", () => {
     })
   })
 
-  it("final exam title opens preview with examId", async () => {
+  it("final exam title opens preview modal", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: "exam-final-title", status: "final", title: "Final Bahasa Indonesia" })
     ])
+    mockApiResolvedValueOnce(
+      mockApi.exams.get,
+      makeExamWithQuestions(["Teks"], {
+        id: "exam-final-title",
+        overrides: { status: "final", title: "Final Bahasa Indonesia" }
+      })
+    )
     renderHistoryPage()
 
     await user.click(await screen.findByRole("button", { name: "Final Bahasa Indonesia" }))
 
-    expect(mockNavigate).toHaveBeenCalledWith({
-      to: "/preview",
-      search: { examId: "exam-final-title" }
+    await waitFor(() => {
+      expect(mockApi.exams.get).toHaveBeenCalledWith(expect.stringContaining("exam-final-title"))
     })
+    expect(mockNavigate).not.toHaveBeenCalledWith({
+      to: "/preview",
+      search: { examId: expect.any(String) }
+    })
+    expect(await screen.findByText("Soal 1")).toBeInTheDocument()
   })
 
   it("draft exam title opens review with examId and mode", async () => {

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
-import { Badge, Button } from "@teacher-exam/ui"
+import { Badge, Button, useToast } from "@teacher-exam/ui"
 import {
   ArrowRight,
   BarChart3,
@@ -15,11 +15,17 @@ import {
 import { useMemo } from "react"
 import { CurriculumTipsCard } from "../components/dashboard/curriculum-tips-card.js"
 import { DuplicateConfirmDialog } from "../components/dashboard/duplicate-confirm-dialog.js"
-import { ExamHistoryRow } from "../components/dashboard/exam-history-row.js"
 import { MiniPaperPreview } from "../components/dashboard/mini-paper-preview.js"
 import { StatSummary } from "../components/dashboard/stat-summary.js"
+import {
+  examToSheetRow,
+  SheetPreviewDialog,
+  SheetTable,
+  useSheetPreview,
+  useSheetTableHandlers
+} from "../components/sheet/index.js"
 import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
-import { api, unwrapApiEither } from "../lib/api.js"
+import { api, ApiError, unwrapApiEither } from "../lib/api.js"
 import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
 import { DELIVERY_ENABLED, KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
@@ -178,12 +184,38 @@ function DashboardPage() {
   const { user } = Route.useRouteContext()
   const { exams } = Route.useLoaderData()
   const navigate = useNavigate()
+  const router = useRouter()
+  const { toast } = useToast()
   const duplicate = useDuplicateExam()
+  const sheetPreview = useSheetPreview()
+
+  async function handleDelete(id: string) {
+    try {
+      unwrapApiEither(await api.exams.remove(id))
+      toast({ variant: "success", title: "Lembar berhasil dihapus" })
+      await router.invalidate()
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : "Gagal menghapus lembar"
+      toast({ variant: "error", title: message })
+    }
+  }
 
   const stats = useMemo(() => computeStats(exams), [exams])
   const weekly = useMemo(() => computeWeeklyActivity(exams, new Date()), [exams])
   const recent = useMemo(() => getRecentSheets(exams, 5), [exams])
+  const recentRows = useMemo(() => recent.map((exam) => examToSheetRow(exam)), [recent])
   const lastExam = recent[0] ?? null
+
+  const sheetHandlers = useSheetTableHandlers({
+    onPreview: sheetPreview.openPreview,
+    onDuplicate: (row) => {
+      const exam = exams.find((e) => e.id === row.id)
+      if (exam) {
+        duplicate.openFor(exam)
+      }
+    },
+    onDelete: handleDelete
+  })
 
   const firstName = user.name.split(" ")[0] ?? user.name
   const greeting = getGreetingTime()
@@ -496,50 +528,31 @@ function DashboardPage() {
           </span>
         </div>
 
-        <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden">
-          {/* Table header */}
-          <div className="grid items-center px-5 py-3 bg-kertas-50 border-b border-border-default grid-cols-[2.4fr_1fr_0.8fr] lg:grid-cols-[2.4fr_1fr_0.8fr_0.9fr_1.2fr]">
-            <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary">
-              Lembar
-            </span>
-            <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary">
-              Mata Pelajaran
-            </span>
-            <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary">
-              Tanggal
-            </span>
-            <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary hidden lg:block">
-              Status
-            </span>
-            <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary hidden lg:block text-right">
-              Aksi
-            </span>
-          </div>
+        {recent.length > 0 ?
+          (
+            <SheetTable variant="dashboard-recent" rows={recentRows} handlers={sheetHandlers} />
+          ) :
+          (
+            <div className="py-8 text-center text-text-tertiary text-body-sm border border-border-default rounded-md bg-bg-surface">
+              Belum ada riwayat ujian.
+            </div>
+          )}
 
-          {/* Rows */}
-          {recent.length > 0 ?
-            (
-              recent.map((exam) => <ExamHistoryRow key={exam.id} exam={exam} onDuplicate={duplicate.openFor} />)
-            ) :
-            (
-              <div className="py-8 text-center text-text-tertiary text-body-sm">
-                Belum ada riwayat ujian.
-              </div>
-            )}
-
-          {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-3.5 bg-kertas-50 border-t border-border-default">
-            <span className="text-body-sm text-text-tertiary">
-              Tampilkan {recent.length} dari {stats.totalSheets} lembar
-            </span>
-            <Link
-              to="/history"
-              className="text-body-sm font-semibold text-primary-700 hover:underline"
-            >
-              Lihat semua riwayat →
-            </Link>
-          </div>
-        </div>
+        {recent.length > 0 ?
+          (
+            <div className="flex items-center justify-between px-5 py-3.5 bg-kertas-50 border border-t border-border-default rounded-b-md -mt-px">
+              <span className="text-body-sm text-text-tertiary">
+                Tampilkan {recent.length} dari {stats.totalSheets} lembar
+              </span>
+              <Link
+                to="/history"
+                className="text-body-sm font-semibold text-primary-700 hover:underline"
+              >
+                Lihat semua riwayat →
+              </Link>
+            </div>
+          ) :
+          null}
       </section>
 
       {duplicate.confirmingExam && (
@@ -555,6 +568,13 @@ function DashboardPage() {
           isPending={duplicate.isPending}
         />
       )}
+
+      <SheetPreviewDialog
+        examId={sheetPreview.previewExamId}
+        {...(sheetPreview.previewTitle ? { title: sheetPreview.previewTitle } : {})}
+        open={sheetPreview.previewOpen}
+        onClose={sheetPreview.closePreview}
+      />
     </div>
   )
 }

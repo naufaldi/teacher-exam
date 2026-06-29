@@ -24,7 +24,7 @@ For production-quality sign-off, generate 50 real Matematika non-diagram questio
 
 Review criteria:
 - All fractions, exponents, roots, comparisons, and formulas render through KaTeX.
-- No raw `$` delimiters appear in Review, Preview, public share, or print.
+- No raw `$` delimiters appear in Review, Preview, public share (`/share/:slug`), or print. See [RFC 2026-06-29-public-exam-share](../rfc/2026-06-29-public-exam-share-rfc.md).
 - Invalid or ambiguous notation is regenerated or marked `needs_review`.
 - Teacher reviewer signs off that notation is age-appropriate for class 5/6.
 

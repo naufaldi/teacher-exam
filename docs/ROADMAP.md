@@ -26,6 +26,8 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | ID | Date | Decision | Supersedes | Rationale |
 |----|------|----------|------------|-----------|
 | D-1 | 2026-04-29 | Koreksi memperkenalkan tabel `students` (per-teacher, scoped by `user_id` + `class_label` + `subject`). `student_answers.student_id` adalah FK ke `students.id`. Identitas murid dimasukkan via form Nama+Absen sebelum mark jawaban. | PRD v2 §"Privasi murid" baris 763 (koreksi client-side, non-persisten) | Lembar jawaban kertas sudah memuat nama murid; aplikasi hanya mendigitalisasi rekap manual. Tidak ada PII tambahan. Data terisolasi per akun guru. Lihat PRD v5 §2.2 (alur) dan §2.2bis (model data). |
+| D-2 | 2026-06-29 | Tabel lembar disatukan (`SheetTable`) di Dashboard Riwayat terbaru, Riwayat, Bank Saya, Bank Publik. Pratinjau modal untuk browse; `/preview` untuk cetak/export. | — | Konsistensi UI; guru melihat isi soal cepat tanpa meninggalkan halaman. Lihat [RFC 2026-06-29-unified-sheet-table](rfc/2026-06-29-unified-sheet-table-rfc.md). |
+| D-3 | 2026-06-29 | Halaman `/share/:slug` = pratinjau anonim penuh (soal + LJ + kunci + pembahasan) untuk guru rekan; renderers dibagi via `exam-sheet`. | — | Link Bagikan dari Riwayat harus printable seperti `/preview`. Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md). |
 
 ---
 

@@ -1,10 +1,13 @@
 import type * as TanStackRouter from "@tanstack/react-router"
-import { brandExamId, brandQuestionId, type PublicExamDetailResponse } from "@teacher-exam/shared"
-import { render, screen } from "@testing-library/react"
+import { brandExamId, type PublicExamDetailResponse } from "@teacher-exam/shared"
+import { Either } from "effect"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ComponentType } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
+import { makeMcqSingle, makeTrueFalse } from "../../test/fixtures/exam.js"
 import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import { ApiClientError } from "../../lib/api-errors.js"
 import type * as ApiModule from "../../lib/api.js"
 
 import { Route } from "../share.$slug.js"
@@ -25,7 +28,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       options: opts,
       useLoaderData: () => mockLoaderData,
       useParams: () => mockParams
-    })
+    }),
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>
   }
 })
 
@@ -45,10 +49,11 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
 
 type RouteOptions = {
   component: ComponentType
+  errorComponent: ComponentType<{ error: Error }>
   loader: (ctx: { params: { slug: string } }) => Promise<unknown>
 }
 
-function makePublicExam(): PublicExamDetailResponse {
+function makePublicExam(overrides: Partial<PublicExamDetailResponse> = {}): PublicExamDetailResponse {
   return {
     id: brandExamId("public-exam-1"),
     title: "Lembar Publik Bahasa Indonesia",
@@ -58,39 +63,19 @@ function makePublicExam(): PublicExamDetailResponse {
     topics: ["Teks Narasi"],
     reviewMode: "fast",
     status: "final",
-    schoolName: null,
-    academicYear: null,
+    schoolName: "SD Negeri Contoh",
+    academicYear: "2025/2026",
     examType: "formatif",
-    examDate: null,
-    durationMinutes: null,
-    instructions: null,
+    examDate: "29 Juni 2026",
+    durationMinutes: 60,
+    instructions: "Pilih jawaban terbaik.",
     classContext: null,
     discussionMd: "## Pembahasan singkat",
     publishedAt: "2026-05-08T00:00:00.000Z",
     createdAt: "2026-05-08T00:00:00.000Z",
     updatedAt: "2026-05-08T00:00:00.000Z",
-    questions: [
-      {
-        _tag: "mcq_single",
-        id: brandQuestionId("q-1"),
-        examId: brandExamId("public-exam-1"),
-        number: 1,
-        text: "Ibu kota Indonesia adalah...",
-        options: {
-          a: "Jakarta",
-          b: "Bandung",
-          c: "Medan",
-          d: "Surabaya"
-        },
-        correct: "a",
-        topic: "Teks Narasi",
-        difficulty: "sedang",
-        status: "accepted",
-        validationStatus: null,
-        validationReason: null,
-        createdAt: "2026-05-08T00:00:00.000Z"
-      }
-    ]
+    questions: [makeMcqSingle(1, "a", { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z" })],
+    ...overrides
   }
 }
 
@@ -99,11 +84,20 @@ function renderPage() {
   return render(<PublicSharePage />)
 }
 
+function renderError(error: Error) {
+  const ErrorPage = (Route as unknown as { options: RouteOptions }).options.errorComponent
+  return render(<ErrorPage error={error} />)
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockLoaderData = makePublicExam()
   mockParams = { slug: "share-abc123" }
   mockPublicExamExport.mockResolvedValue(undefined)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe("share/$slug route", () => {
@@ -116,52 +110,116 @@ describe("share/$slug route", () => {
     expect(mockPublicExamGet).toHaveBeenCalledWith("share-abc123")
   })
 
-  it("renders the public exam content without auth context", () => {
+  it("loader throws PublicShareNotFoundError on API 404", async () => {
+    mockPublicExamGet.mockResolvedValueOnce(
+      Either.left(new ApiClientError({ message: "Not found", code: "NOT_FOUND", status: 404 }))
+    )
+    const loader = (Route as unknown as { options: RouteOptions }).options.loader
+
+    await expect(loader({ params: { slug: "missing" } })).rejects.toMatchObject({
+      name: "PublicShareNotFoundError"
+    })
+  })
+
+  it("error page shows friendly not-found copy with login CTA", () => {
+    renderError(Object.assign(new Error("Public exam not found"), { name: "PublicShareNotFoundError" }))
+
+    expect(screen.getByText("Lembar tidak ditemukan")).toBeInTheDocument()
+    expect(screen.getByText(/tidak lagi publik/i)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /halaman login/i })).toHaveAttribute("href", "/")
+  })
+
+  it("renders exam sheet sections without auth context", () => {
     renderPage()
 
     expect(screen.getByText("Lembar Publik Bahasa Indonesia")).toBeInTheDocument()
-    expect(screen.getByText("Soal Ujian")).toBeInTheDocument()
-    expect(screen.getByText("Kunci Jawaban")).toBeInTheDocument()
-    expect(screen.getByText("Pembahasan")).toBeInTheDocument()
+    expect(screen.getByText("LEMBAR JAWABAN")).toBeInTheDocument()
+    expect(screen.getByText("KUNCI JAWABAN")).toBeInTheDocument()
+    expect(screen.getByText("PEMBAHASAN")).toBeInTheDocument()
   })
 
-  it("export dropdown offers PDF/DOCX and Cetak; Cetak calls window.print", async () => {
+  it("mcq_single shows a. b. c. d. option labels", () => {
+    renderPage()
+
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
+    expect(soalSection).not.toBeNull()
+    expect(within(soalSection as HTMLElement).getByText("a.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("b.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("c.")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("d.")).toBeInTheDocument()
+  })
+
+  it("true_false renders Pernyataan/B/S table", () => {
+    mockLoaderData = makePublicExam({
+      questions: [makeTrueFalse(1, [true, false], { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z" })]
+    })
+    renderPage()
+
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
+    expect(soalSection).not.toBeNull()
+    expect(within(soalSection as HTMLElement).getByText("Pernyataan")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("B")).toBeInTheDocument()
+    expect(within(soalSection as HTMLElement).getByText("S")).toBeInTheDocument()
+  })
+
+  it("lembar jawaban section renders MCQ bubble rows", () => {
+    renderPage()
+
+    const ljSection = document.querySelector("[data-print-section=\"lj\"]")
+    expect(ljSection).not.toBeNull()
+    expect(within(ljSection as HTMLElement).getByText("A")).toBeInTheDocument()
+    expect(within(ljSection as HTMLElement).getByText("D")).toBeInTheDocument()
+  })
+
+  it("hides pembahasan when discussionMd is null", () => {
+    mockLoaderData = makePublicExam({ discussionMd: null })
+    renderPage()
+
+    expect(screen.queryByText("PEMBAHASAN")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /PDF Pembahasan/i })).not.toBeInTheDocument()
+  })
+
+  it("export dropdown Cetak calls window.print", async () => {
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {})
     const user = userEvent.setup()
     renderPage()
 
-    // Open the Unduh dropdown
-    await user.click(screen.getByRole("button", { name: /unduh/i }))
-
-    // "Cetak" menu item triggers the browser print dialog
+    await user.click(screen.getByRole("button", { name: /unduh soal/i }))
     await user.click(screen.getByRole("button", { name: "Cetak" }))
-    expect(printSpy).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(printSpy).toHaveBeenCalledTimes(1)
+    })
   })
 
-  it("export dropdown PDF item calls api.publicExams.export with the slug", async () => {
+  it("export dropdown PDF item calls api.publicExams.export with soal variant", async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole("button", { name: /unduh/i }))
+    await user.click(screen.getByRole("button", { name: /unduh soal/i }))
     await user.click(screen.getByRole("button", { name: "PDF" }))
 
     expect(mockPublicExamExport).toHaveBeenCalledWith("share-abc123", "pdf", "soal")
   })
 
-  it("renders LaTeX in public question text and options", () => {
-    const exam = makePublicExam()
-    const question = exam.questions[0]
-    if (question?._tag !== "mcq_single") throw new Error("Expected mcq_single fixture")
+  it("PDF Kunci button exports kunci variant", async () => {
+    const user = userEvent.setup()
+    renderPage()
 
-    mockLoaderData = {
-      ...exam,
+    await user.click(screen.getByRole("button", { name: "PDF Kunci" }))
+    expect(mockPublicExamExport).toHaveBeenCalledWith("share-abc123", "pdf", "kunci")
+  })
+
+  it("renders LaTeX in public question text and options", () => {
+    const question = makeMcqSingle(1, "a", { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z" })
+
+    mockLoaderData = makePublicExam({
       subject: "matematika",
       questions: [{
         ...question,
         text: "Hitung $\\frac{3}{4}$ dari 20.",
         options: { a: "$15$", b: "$10$", c: "$5$", d: "$20$" }
       }]
-    }
+    })
 
     const { container } = renderPage()
 
@@ -170,11 +228,10 @@ describe("share/$slug route", () => {
   })
 
   it("renders LaTeX in public pembahasan markdown", () => {
-    mockLoaderData = {
-      ...makePublicExam(),
+    mockLoaderData = makePublicExam({
       subject: "matematika",
       discussionMd: "## 1. Pecahan\n**Jawaban Benar: A**\n\nGunakan $\\frac{1}{2}$ bagian."
-    }
+    })
 
     const { container } = renderPage()
 
@@ -183,12 +240,9 @@ describe("share/$slug route", () => {
   })
 
   it("renders generated figure specs in public questions", () => {
-    const exam = makePublicExam()
-    const question = exam.questions[0]
-    if (question?._tag !== "mcq_single") throw new Error("Expected mcq_single fixture")
+    const question = makeMcqSingle(1, "a", { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z" })
 
-    mockLoaderData = {
-      ...exam,
+    mockLoaderData = makePublicExam({
       subject: "matematika",
       topics: ["Bangun Datar"],
       questions: [{
@@ -197,10 +251,24 @@ describe("share/$slug route", () => {
         text: "Perhatikan lingkaran berikut.",
         figure: { type: "circle", radius: 7, label: "r = 7 cm" }
       }]
-    }
+    })
 
     const { container } = renderPage()
 
     expect(container.querySelector("[data-figure-svg]")).not.toBeNull()
+  })
+
+  it("does not render pending questions in the sheet", () => {
+    mockLoaderData = makePublicExam({
+      questions: [
+        makeMcqSingle(1, "a", { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z", status: "accepted" }),
+        makeMcqSingle(2, "b", { examId: "public-exam-1", now: "2026-05-08T00:00:00.000Z", status: "pending" })
+      ]
+    })
+    renderPage()
+
+    const soalSection = document.querySelector("[data-print-section=\"soal\"]")
+    expect(soalSection?.textContent).toContain("Soal nomor 1")
+    expect(soalSection?.textContent).not.toContain("Soal nomor 2")
   })
 })
