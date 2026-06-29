@@ -150,7 +150,7 @@ describe("POST /api/ai/generate", () => {
     expect((body["questions"] as Array<unknown>).length).toBe(20)
     expect(((body["questions"] as Array<Record<string, unknown>>)[0] ?? {})["number"]).toBe(1)
     expect(db.insert).toHaveBeenCalled()
-    expect(db.insert).toHaveBeenCalledTimes(3)
+    expect(db.insert).toHaveBeenCalledTimes(2)
   })
 
   it("inserts questions with status=accepted when reviewMode is fast", async () => {

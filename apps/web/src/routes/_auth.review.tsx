@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import type { ExamType, Question, SaveToBankInput, UpdateExamInput } from "@teacher-exam/shared"
+import type { ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -21,7 +21,6 @@ import {
 import { Match } from "effect"
 import { CheckCircle2, ChevronRight, Pencil, RefreshCw, Undo2, XCircle } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { SaveToBankButton } from "../components/bank/save-to-bank-button.js"
 import { FigureSvg } from "../components/figure-svg.js"
 import { MathText } from "../components/math-text.js"
 import { CurriculumValidationBadge, needsCurriculumReview } from "../components/review/curriculum-validation-badge.js"
@@ -760,10 +759,6 @@ function ReviewPage() {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        <SaveToBankButton
-                          questionId={q.id as SaveToBankInput["questionId"]}
-                          assumeSaved
-                        />
                       </>
                     )}
                 </div>
@@ -1081,10 +1076,6 @@ function ReviewPage() {
                                   )),
                                   Match.exhaustive
                                 )}
-                              <SaveToBankButton
-                                questionId={q.id as SaveToBankInput["questionId"]}
-                                assumeSaved={status === "accepted"}
-                              />
                             </div>
                           </>
                         )}

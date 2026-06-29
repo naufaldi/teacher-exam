@@ -23,7 +23,6 @@ import { runDb } from "../lib/db-effect"
 import { runDiscussionSse } from "../lib/sse-discussion"
 import { CurrentUser } from "../middleware/auth"
 import { AiClient } from "../services/ai"
-import { BankService } from "../services/bank-service"
 import { DbClient } from "../services/db"
 
 export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers) =>
@@ -47,12 +46,24 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
           db
             .select()
             .from(exams)
-            .where(and(eq(exams.id, id), eq(exams.userId, userId)))
+            .where(eq(exams.id, id))
             .limit(1)
         )
 
         const examRow = examRows[0]
         if (!examRow) {
+          return yield* Effect.fail(
+            new ApiNotFound({ error: "Exam not found", code: "NOT_FOUND" })
+          )
+        }
+
+        const isOwner = examRow.userId === userId
+        const isPublicBankSheet =
+          examRow.isPublic &&
+          examRow.status === "final" &&
+          examRow.bankedAt !== null
+
+        if (!isOwner && !isPublicBankSheet) {
           return yield* Effect.fail(
             new ApiNotFound({ error: "Exam not found", code: "NOT_FOUND" })
           )
@@ -309,19 +320,6 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
             .where(and(eq(exams.id, id), eq(exams.userId, userId)))
         )
 
-        yield* Effect.gen(function*() {
-          const bankService = yield* BankService
-          yield* bankService.propagatePublish(userId, id)
-        }).pipe(
-          Effect.tapError((e) =>
-            logDomainError("exams.share.propagatePublish", e, {
-              kind: "expected",
-              extra: { userId, examId: id }
-            })
-          ),
-          Effect.catchAll(() => Effect.void)
-        )
-
         const result: ExamShareResponse = {
           slug,
           publicUrlPath: `/share/${slug}`,
@@ -402,7 +400,12 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         yield* runDb(
           db
             .update(exams)
-            .set({ status: "final", updatedAt: new Date() })
+            .set({
+              status: "final",
+              bankedAt: new Date(),
+              isPublic: true,
+              updatedAt: new Date()
+            })
             .where(and(eq(exams.id, id), eq(exams.userId, userId)))
         )
 

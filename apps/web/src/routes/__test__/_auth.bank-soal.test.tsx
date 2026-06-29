@@ -1,5 +1,5 @@
 import type * as TanStackRouter from "@tanstack/react-router"
-import type { BankQuestion, PaginatedBankResponse, PaginatedPublicBankResponse } from "@teacher-exam/shared"
+import type { BankSheet, PaginatedBankSheetsResponse, PaginatedPublicBankSheetsResponse } from "@teacher-exam/shared"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -24,41 +24,41 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   }
 })
 
-const browseMock = vi.fn()
-const browsePublicMock = vi.fn()
+const browseSheetsMock = vi.fn()
+const browsePublicSheetsMock = vi.fn()
+const useSheetMock = vi.fn()
 
 vi.mock("../../lib/api.js", () => ({
   api: {
     bank: {
-      browse: (...args: Array<unknown>) => browseMock(...args),
-      browsePublic: (...args: Array<unknown>) => browsePublicMock(...args),
-      buildExam: vi.fn()
+      browseSheets: (...args: Array<unknown>) => browseSheetsMock(...args),
+      browsePublicSheets: (...args: Array<unknown>) => browsePublicSheetsMock(...args),
+      useSheet: (...args: Array<unknown>) => useSheetMock(...args),
+      updateSheet: vi.fn()
+    },
+    exams: {
+      get: vi.fn()
     }
   },
   unwrapApiEither: (result: { _tag: "Right"; right: unknown }) => result.right
 }))
 
-const sampleResponse: PaginatedBankResponse = {
+const sampleSheetResponse: PaginatedBankSheetsResponse = {
   data: [
     {
-      id: "bank-1" as BankQuestion["id"],
-      questionId: "q-1" as BankQuestion["questionId"],
-      userId: "user-1" as BankQuestion["userId"],
+      id: "exam-1" as BankSheet["id"],
+      userId: "user-1" as BankSheet["userId"],
+      title: "IPAS / Kelas 5 / formatif",
       subject: "ipas",
       grade: 5,
       topics: ["Energi"],
       difficulty: "sedang",
-      type: "mcq_single",
-      payload: {},
-      isPublic: false,
-      usageCount: 0,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      text: "Apa itu energi?",
-      optionA: "A",
-      optionB: "B",
-      optionC: "C",
-      optionD: "D",
-      correctAnswer: "a"
+      examType: "formatif",
+      status: "final",
+      isPublic: true,
+      questionCount: 18,
+      bankedAt: "2024-01-01T00:00:00.000Z",
+      createdAt: "2024-01-01T00:00:00.000Z"
     }
   ],
   total: 1,
@@ -66,7 +66,7 @@ const sampleResponse: PaginatedBankResponse = {
   limit: 20
 }
 
-const emptyPublic: PaginatedPublicBankResponse = {
+const emptyPublic: PaginatedPublicBankSheetsResponse = {
   data: [],
   total: 0,
   page: 1,
@@ -75,62 +75,32 @@ const emptyPublic: PaginatedPublicBankResponse = {
 
 describe("BankSoalPage", () => {
   beforeEach(() => {
-    browseMock.mockReset()
-    browsePublicMock.mockReset()
-    browseMock.mockResolvedValue({ _tag: "Right", right: sampleResponse })
-    browsePublicMock.mockResolvedValue({ _tag: "Right", right: emptyPublic })
+    browseSheetsMock.mockReset()
+    browsePublicSheetsMock.mockReset()
+    browseSheetsMock.mockResolvedValue({ _tag: "Right", right: sampleSheetResponse })
+    browsePublicSheetsMock.mockResolvedValue({ _tag: "Right", right: emptyPublic })
   })
 
-  it("renders empty state when bank has no questions", async () => {
-    browseMock.mockResolvedValue({
-      _tag: "Right",
-      right: { data: [], total: 0, page: 1, limit: 20 }
-    })
-
-    const BankSoalPage = Route.options.component as React.ComponentType
-    render(<BankSoalPage />)
-
-    expect(await screen.findByText(/Bank soal masih kosong/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Generate ujian/i })).toHaveAttribute("href", "/generate")
-  })
-
-  it("renders bank question cards and toolbar on Bank Saya tab", async () => {
-    const BankSoalPage = Route.options.component as React.ComponentType
-    render(<BankSoalPage />)
+  it("renders lembar rows in Bank Saya tab", async () => {
+    const Page = Route.options.component as React.ComponentType
+    render(<Page />)
 
     await waitFor(() => {
-      expect(screen.getByText("Apa itu energi?")).toBeInTheDocument()
+      expect(screen.getByText("IPAS / Kelas 5 / formatif")).toBeInTheDocument()
     })
-    expect(screen.getByText(/Pribadi/i)).toBeInTheDocument()
-    expect(screen.getByText(/Menampilkan/)).toHaveTextContent("1")
-    expect(screen.getByRole("button", { name: "Bank Saya" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Bank Publik" })).toBeInTheDocument()
+    expect(screen.getByText("18")).toBeInTheDocument()
+    expect(screen.getByText(/lembar tersimpan/i)).toBeInTheDocument()
   })
 
-  it("loads public bank when Bank Publik tab is clicked", async () => {
+  it("switches to Bank Publik tab", async () => {
     const user = userEvent.setup()
-    const BankSoalPage = Route.options.component as React.ComponentType
-    render(<BankSoalPage />)
+    const Page = Route.options.component as React.ComponentType
+    render(<Page />)
 
     await user.click(screen.getByRole("button", { name: "Bank Publik" }))
 
     await waitFor(() => {
-      expect(browsePublicMock).toHaveBeenCalled()
+      expect(browsePublicSheetsMock).toHaveBeenCalled()
     })
-  })
-
-  it("opens preview dialog when a card is clicked", async () => {
-    const user = userEvent.setup()
-    const BankSoalPage = Route.options.component as React.ComponentType
-    render(<BankSoalPage />)
-
-    await waitFor(() => {
-      expect(screen.getByText("Apa itu energi?")).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByRole("button", { name: /Pratinjau soal/i }))
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument()
-    expect(screen.getByText("Kunci A")).toBeInTheDocument()
   })
 })

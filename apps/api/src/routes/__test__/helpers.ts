@@ -26,6 +26,10 @@ export function makeExamRow(overrides: Record<string, unknown> = {}) {
     instructions: null,
     classContext: null,
     discussionMd: null,
+    isPublic: false,
+    publicShareSlug: null,
+    publishedAt: null,
+    bankedAt: null,
     createdAt: new Date(NOW),
     updatedAt: new Date(NOW),
     ...overrides

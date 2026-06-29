@@ -1,141 +1,97 @@
 import { Schema } from "effect"
-import { BankQuestionIdSchema, ExamIdSchema, QuestionIdSchema, UserIdSchema } from "./entities.js"
-import {
-  AnswerSchema,
-  ExamDifficultySchema,
-  ExamSubjectSchema,
-  ExamTypeSchema,
-  QuestionTypeSchema
-} from "./primitives.js"
+import { ExamIdSchema, UserIdSchema } from "./entities.js"
+import { ExamDifficultySchema, ExamSubjectSchema } from "./primitives.js"
 
 export const BankSortSchema = Schema.Literal("terbaru", "terpopuler", "kesulitan")
 export type BankSort = typeof BankSortSchema.Type
 
-// ── Bank Question Input Schemas ────────────────────────────
-
-export const SaveToBankInputSchema = Schema.Struct({
-  questionId: QuestionIdSchema
-})
-export type SaveToBankInput = typeof SaveToBankInputSchema.Type
-
-const browseBankQueryFields = {
+export const BrowseBankSheetsQuerySchema = Schema.Struct({
   subject: Schema.optional(ExamSubjectSchema),
   grade: Schema.optional(Schema.Number),
   difficulty: Schema.optional(ExamDifficultySchema),
   topic: Schema.optional(Schema.String),
-  type: Schema.optional(QuestionTypeSchema),
   author: Schema.optional(Schema.String),
   search: Schema.optional(Schema.String),
   sort: Schema.optional(BankSortSchema),
   page: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.greaterThan(0))),
   limit: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.between(1, 100)))
-} as const
+})
+export type BrowseBankSheetsQuery = typeof BrowseBankSheetsQuerySchema.Type
 
-export const BrowseBankQuerySchema = Schema.Struct(browseBankQueryFields)
-export type BrowseBankQuery = typeof BrowseBankQuerySchema.Type
-
-export const BrowseBankUrlParamsSchema = Schema.Struct({
-  subject: browseBankQueryFields.subject,
+export const BrowseBankSheetsUrlParamsSchema = Schema.Struct({
+  subject: BrowseBankSheetsQuerySchema.fields.subject,
   grade: Schema.optional(Schema.NumberFromString),
-  difficulty: browseBankQueryFields.difficulty,
-  topic: browseBankQueryFields.topic,
-  type: browseBankQueryFields.type,
-  author: browseBankQueryFields.author,
-  search: browseBankQueryFields.search,
-  sort: browseBankQueryFields.sort,
+  difficulty: BrowseBankSheetsQuerySchema.fields.difficulty,
+  topic: BrowseBankSheetsQuerySchema.fields.topic,
+  author: BrowseBankSheetsQuerySchema.fields.author,
+  search: BrowseBankSheetsQuerySchema.fields.search,
+  sort: BrowseBankSheetsQuerySchema.fields.sort,
   page: Schema.optional(Schema.NumberFromString.pipe(Schema.int(), Schema.greaterThan(0))),
   limit: Schema.optional(Schema.NumberFromString.pipe(Schema.int(), Schema.between(1, 100)))
 })
-export type BrowseBankUrlParams = typeof BrowseBankUrlParamsSchema.Type
+export type BrowseBankSheetsUrlParams = typeof BrowseBankSheetsUrlParamsSchema.Type
 
-export const UpdateBankQuestionInputSchema = Schema.Struct({
+export const BankSheetSchema = Schema.Struct({
+  id: ExamIdSchema,
+  userId: UserIdSchema,
+  title: Schema.String,
+  subject: ExamSubjectSchema,
+  grade: Schema.Int,
+  difficulty: ExamDifficultySchema,
+  topics: Schema.Array(Schema.String),
+  examType: Schema.String,
+  status: Schema.Literal("final"),
+  isPublic: Schema.Boolean,
+  questionCount: Schema.Number,
+  bankedAt: Schema.String,
+  createdAt: Schema.String
+})
+export type BankSheet = typeof BankSheetSchema.Type
+
+export const PublicBankSheetSchema = Schema.Struct({
+  id: ExamIdSchema,
+  title: Schema.String,
+  subject: ExamSubjectSchema,
+  grade: Schema.Int,
+  difficulty: ExamDifficultySchema,
+  topics: Schema.Array(Schema.String),
+  examType: Schema.String,
+  status: Schema.Literal("final"),
+  isPublic: Schema.Boolean,
+  questionCount: Schema.Number,
+  authorName: Schema.String,
+  bankedAt: Schema.String,
+  createdAt: Schema.String
+})
+export type PublicBankSheet = typeof PublicBankSheetSchema.Type
+
+export const PaginatedBankSheetsResponseSchema = Schema.Struct({
+  data: Schema.Array(BankSheetSchema),
+  total: Schema.Number,
+  page: Schema.Number,
+  limit: Schema.Number
+})
+export type PaginatedBankSheetsResponse = typeof PaginatedBankSheetsResponseSchema.Type
+
+export const PaginatedPublicBankSheetsResponseSchema = Schema.Struct({
+  data: Schema.Array(PublicBankSheetSchema),
+  total: Schema.Number,
+  page: Schema.Number,
+  limit: Schema.Number
+})
+export type PaginatedPublicBankSheetsResponse = typeof PaginatedPublicBankSheetsResponseSchema.Type
+
+export const UpdateBankSheetInputSchema = Schema.Struct({
   isPublic: Schema.optional(Schema.Boolean)
 })
-export type UpdateBankQuestionInput = typeof UpdateBankQuestionInputSchema.Type
+export type UpdateBankSheetInput = typeof UpdateBankSheetInputSchema.Type
 
-// ── Bank Question Response Schemas ─────────────────────────
-
-export const BankQuestionSchema = Schema.Struct({
-  id: BankQuestionIdSchema,
-  questionId: QuestionIdSchema,
-  userId: UserIdSchema,
-  subject: ExamSubjectSchema,
-  grade: Schema.Number,
-  topics: Schema.Array(Schema.String),
-  difficulty: ExamDifficultySchema,
-  type: Schema.String,
-  payload: Schema.Unknown,
-  isPublic: Schema.Boolean,
-  usageCount: Schema.Number,
-  createdAt: Schema.String,
-  text: Schema.String,
-  optionA: Schema.optional(Schema.NullOr(Schema.String)),
-  optionB: Schema.optional(Schema.NullOr(Schema.String)),
-  optionC: Schema.optional(Schema.NullOr(Schema.String)),
-  optionD: Schema.optional(Schema.NullOr(Schema.String)),
-  correctAnswer: Schema.optional(Schema.NullOr(AnswerSchema))
+export const UseBankSheetInputSchema = Schema.Struct({
+  sourceExamId: ExamIdSchema
 })
-export type BankQuestion = typeof BankQuestionSchema.Type
+export type UseBankSheetInput = typeof UseBankSheetInputSchema.Type
 
-export const PaginatedBankResponseSchema = Schema.Struct({
-  data: Schema.Array(BankQuestionSchema),
-  total: Schema.Number,
-  page: Schema.Number,
-  limit: Schema.Number
-})
-export type PaginatedBankResponse = typeof PaginatedBankResponseSchema.Type
-
-export const PublicBankQuestionSchema = Schema.Struct({
-  id: BankQuestionIdSchema,
-  questionId: QuestionIdSchema,
-  authorName: Schema.String,
-  subject: ExamSubjectSchema,
-  grade: Schema.Number,
-  topics: Schema.Array(Schema.String),
-  difficulty: ExamDifficultySchema,
-  type: Schema.String,
-  payload: Schema.Unknown,
-  usageCount: Schema.Number,
-  createdAt: Schema.String,
-  text: Schema.String,
-  optionA: Schema.optional(Schema.NullOr(Schema.String)),
-  optionB: Schema.optional(Schema.NullOr(Schema.String)),
-  optionC: Schema.optional(Schema.NullOr(Schema.String)),
-  optionD: Schema.optional(Schema.NullOr(Schema.String)),
-  correctAnswer: Schema.optional(Schema.NullOr(AnswerSchema))
-})
-export type PublicBankQuestion = typeof PublicBankQuestionSchema.Type
-
-export const PaginatedPublicBankResponseSchema = Schema.Struct({
-  data: Schema.Array(PublicBankQuestionSchema),
-  total: Schema.Number,
-  page: Schema.Number,
-  limit: Schema.Number
-})
-export type PaginatedPublicBankResponse = typeof PaginatedPublicBankResponseSchema.Type
-
-export const BuildExamFromBankMetadataSchema = Schema.Struct({
-  subject: ExamSubjectSchema,
-  grade: Schema.Int.pipe(Schema.between(5, 6)),
-  difficulty: Schema.optional(ExamDifficultySchema),
-  topics: Schema.optional(Schema.Array(Schema.String)),
-  schoolName: Schema.optional(Schema.String),
-  academicYear: Schema.optional(Schema.String),
-  examType: Schema.optional(ExamTypeSchema),
-  examDate: Schema.optional(Schema.String),
-  durationMinutes: Schema.optional(Schema.Int),
-  instructions: Schema.optional(Schema.String),
-  classContext: Schema.optional(Schema.String)
-})
-export type BuildExamFromBankMetadata = typeof BuildExamFromBankMetadataSchema.Type
-
-export const BuildExamFromBankInputSchema = Schema.Struct({
-  bankQuestionIds: Schema.Array(BankQuestionIdSchema).pipe(Schema.minItems(5), Schema.maxItems(50)),
-  metadata: BuildExamFromBankMetadataSchema
-})
-export type BuildExamFromBankInput = typeof BuildExamFromBankInputSchema.Type
-
-export const BuildExamFromBankResponseSchema = Schema.Struct({
+export const UseBankSheetResponseSchema = Schema.Struct({
   examId: ExamIdSchema
 })
-export type BuildExamFromBankResponse = typeof BuildExamFromBankResponseSchema.Type
+export type UseBankSheetResponse = typeof UseBankSheetResponseSchema.Type

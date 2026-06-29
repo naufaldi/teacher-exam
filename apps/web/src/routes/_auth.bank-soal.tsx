@@ -1,17 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import type {
-  BankQuestion,
-  BankQuestionId,
-  BrowseBankQuery,
-  ExamSubject,
-  PublicBankQuestion
+  BankSheet,
+  BrowseBankSheetsQuery,
+  PublicBankSheet
 } from "@teacher-exam/shared"
 import { Button, EmptyState, LoadingSpinner, PageHeader } from "@teacher-exam/ui"
 import { BookOpen } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { BankBuilderDialog } from "../components/bank/bank-builder-dialog.js"
-import { BankQuestionCard } from "../components/bank/bank-question-card.js"
-import { BankQuestionPreviewDialog } from "../components/bank/bank-question-preview-dialog.js"
+import { BankSheetPreviewDialog } from "../components/bank/bank-sheet-preview-dialog.js"
+import { BankSheetTable } from "../components/bank/bank-sheet-table.js"
 import { BankStatsSummary } from "../components/bank/bank-stats-summary.js"
 import {
   type BankDifficultyFilter,
@@ -28,12 +25,13 @@ export const Route = createFileRoute("/_auth/bank-soal")({
 })
 
 type BankTab = "mine" | "public"
+type BankSheetRow = BankSheet | PublicBankSheet
 
 function BankSoalPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<BankTab>("mine")
-  const [ownItems, setOwnItems] = useState<Array<BankQuestion>>([])
-  const [publicItems, setPublicItems] = useState<Array<PublicBankQuestion>>([])
+  const [ownItems, setOwnItems] = useState<Array<BankSheet>>([])
+  const [publicItems, setPublicItems] = useState<Array<PublicBankSheet>>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [limit] = useState(20)
@@ -47,12 +45,10 @@ function BankSoalPage() {
   const [type, setType] = useState<BankTypeFilter>("")
   const [author, setAuthor] = useState("")
   const [sort, setSort] = useState<BankSortFilter>("terbaru")
-  const [previewItem, setPreviewItem] = useState<BankQuestion | PublicBankQuestion | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Array<BankQuestionId>>([])
-  const [builderOpen, setBuilderOpen] = useState(false)
-  const [builderLoading, setBuilderLoading] = useState(false)
+  const [previewSheet, setPreviewSheet] = useState<BankSheetRow | null>(null)
+  const [useSheetLoadingId, setUseSheetLoadingId] = useState<string | null>(null)
 
-  const query = useMemo((): BrowseBankQuery => {
+  const query = useMemo((): BrowseBankSheetsQuery => {
     return {
       page,
       limit,
@@ -61,30 +57,31 @@ function BankSoalPage() {
       ...(grade ? { grade: Number(grade) } : {}),
       ...(difficulty ? { difficulty } : {}),
       ...(topic.trim() ? { topic: topic.trim() } : {}),
-      ...(type ? { type } : {}),
       ...(tab === "public" && author.trim() ? { author: author.trim() } : {}),
       ...(search.trim() ? { search: search.trim() } : {})
     }
-  }, [subject, grade, difficulty, topic, type, author, sort, search, page, limit, tab])
+  }, [subject, grade, difficulty, topic, author, sort, search, page, limit, tab])
 
   const isFiltered = Boolean(
-    subject || grade || difficulty || topic.trim() || type || author.trim() || search.trim()
+    subject || grade || difficulty || topic.trim() || author.trim() || search.trim()
   )
 
   const loadBank = useCallback(() => {
     setLoading(true)
     setError(null)
     const request = tab === "mine"
-      ? api.bank.browse(query)
-      : api.bank.browsePublic(query)
+      ? api.bank.browseSheets(query)
+      : api.bank.browsePublicSheets(query)
     request
       .then((result) => {
         if (tab === "mine") {
-          const response = unwrapApiEither(result as Awaited<ReturnType<typeof api.bank.browse>>)
+          const response = unwrapApiEither(result as Awaited<ReturnType<typeof api.bank.browseSheets>>)
           setOwnItems([...response.data])
           setTotal(response.total)
         } else {
-          const response = unwrapApiEither(result as Awaited<ReturnType<typeof api.bank.browsePublic>>)
+          const response = unwrapApiEither(
+            result as Awaited<ReturnType<typeof api.bank.browsePublicSheets>>
+          )
           setPublicItems([...response.data])
           setTotal(response.total)
         }
@@ -116,44 +113,39 @@ function BankSoalPage() {
     setSort("terbaru")
   }
 
-  const toggleSelect = (id: BankQuestionId) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((x) => x !== id)
-      }
-      if (prev.length >= 50) return prev
-      return [...prev, id]
-    })
-  }
-
-  const defaultSubject: ExamSubject = ownItems.find((item) => selectedIds.includes(item.id))?.subject ?? "ipas"
-  const defaultGrade = ownItems.find((item) => selectedIds.includes(item.id))?.grade ?? 5
-
-  const handleBuildExam = (metadata: Parameters<typeof api.bank.buildExam>[0]["metadata"]) => {
-    setBuilderLoading(true)
+  const handleUseSheet = (item: BankSheetRow) => {
+    setUseSheetLoadingId(item.id)
     void api.bank
-      .buildExam({
-        bankQuestionIds: selectedIds,
-        metadata
-      })
+      .useSheet({ sourceExamId: item.id })
       .then((result) => {
         const response = unwrapApiEither(result)
-        setBuilderOpen(false)
         void navigate({ to: "/preview", search: { examId: response.examId } })
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Gagal membuat ujian")
+        setError(err instanceof Error ? err.message : "Gagal memakai lembar")
       })
       .finally(() => {
-        setBuilderLoading(false)
+        setUseSheetLoadingId(null)
+      })
+  }
+
+  const handleTogglePublic = (item: BankSheet) => {
+    void api.bank
+      .updateSheet(item.id, { isPublic: !item.isPublic })
+      .then((result) => {
+        const updated = unwrapApiEither(result)
+        setOwnItems((prev) => prev.map((row) => (row.id === updated.id ? updated : row)))
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Gagal memperbarui visibilitas lembar")
       })
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-8">
       <PageHeader
         title="Bank Soal"
-        subtitle="Soal yang diterima dari generate otomatis tersimpan di sini. Bagikan ujian dari Riwayat untuk memublikasikan soal terkait."
+        subtitle="Lembar ujian yang sudah Final otomatis tersimpan di Bank Saya dan tampil di Bank Publik agar guru lain bisa memakainya utuh."
       />
 
       <div className="flex flex-wrap gap-2 border-b border-border-default">
@@ -199,6 +191,8 @@ function BankSoalPage() {
         author={author}
         sort={sort}
         showAuthorFilter={tab === "public"}
+        showTypeFilter={false}
+        itemLabel="lembar"
         isFiltered={isFiltered}
         matchCount={displayItems.length}
         totalCount={total}
@@ -263,12 +257,10 @@ function BankSoalPage() {
         (
           <EmptyState
             icon={<BookOpen size={24} className="text-text-tertiary" />}
-            title={tab === "mine" ? "Bank soal masih kosong" : "Belum ada soal publik"}
+            title={tab === "mine" ? "Bank soal masih kosong" : "Belum ada lembar publik"}
             description={tab === "mine"
-              ? "Generate ujian dan terima soal di Review. Soal yang diterima akan otomatis masuk ke bank."
-              : ownItems.some((i) => i.isPublic)
-              ? "Anda belum membagikan soal ke publik. Buka Bank Saya dan tandai soal sebagai Publik agar muncul di sini."
-              : "Soal publik dari guru lain akan muncul di sini."}
+              ? "Finalisasi ujian dari Review atau Preview. Lembar Final otomatis masuk ke bank."
+              : "Lembar Final dari guru lain akan muncul di sini setelah mereka menyelesaikan ujian."}
             action={tab === "mine" ?
               (
                 <Button asChild variant="primary" size="md">
@@ -283,28 +275,15 @@ function BankSoalPage() {
       {!loading && !error && displayItems.length > 0 ?
         (
           <>
-            <div className="grid gap-4">
-              {tab === "mine"
-                ? ownItems.map((item) => (
-                  <BankQuestionCard
-                    key={item.id}
-                    item={item}
-                    selectable
-                    selected={selectedIds.includes(item.id)}
-                    onSelect={(selected) => setPreviewItem(selected as BankQuestion)}
-                    onToggleSelect={(selected) => toggleSelect(selected.id)}
-                  />
-                ))
-                : publicItems.map((item) => (
-                  <BankQuestionCard
-                    key={item.id}
-                    item={item}
-                    authorName={item.authorName}
-                    showUsageByOthers
-                    onSelect={(selected) => setPreviewItem(selected as PublicBankQuestion)}
-                  />
-                ))}
-            </div>
+            <BankSheetTable
+              items={displayItems}
+              showAuthor={tab === "public"}
+              showVisibility={tab === "mine"}
+              onPreview={(item) => setPreviewSheet(item)}
+              onUseSheet={handleUseSheet}
+              {...(tab === "mine" ? { onTogglePublic: handleTogglePublic } : {})}
+              useSheetLoadingId={useSheetLoadingId}
+            />
             {totalPages > 1 ?
               (
                 <div className="flex items-center justify-between pt-2">
@@ -334,40 +313,11 @@ function BankSoalPage() {
         ) :
         null}
 
-      <BankQuestionPreviewDialog
-        item={previewItem}
-        open={previewItem !== null}
-        onClose={() => setPreviewItem(null)}
-      />
-
-      {tab === "mine" && selectedIds.length > 0 ?
-        (
-          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border-default bg-bg-surface/95 backdrop-blur-sm">
-            <div className="max-w-[var(--container-app)] mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-body-sm font-medium text-text-primary">
-                {selectedIds.length} soal dipilih
-              </span>
-              <Button
-                variant="primary"
-                size="md"
-                disabled={selectedIds.length < 5}
-                onClick={() => setBuilderOpen(true)}
-              >
-                Buat Ujian
-              </Button>
-            </div>
-          </div>
-        ) :
-        null}
-
-      <BankBuilderDialog
-        open={builderOpen}
-        selectedCount={selectedIds.length}
-        defaultSubject={defaultSubject}
-        defaultGrade={defaultGrade}
-        loading={builderLoading}
-        onClose={() => setBuilderOpen(false)}
-        onSubmit={handleBuildExam}
+      <BankSheetPreviewDialog
+        examId={previewSheet?.id ?? null}
+        {...(previewSheet?.title ? { title: previewSheet.title } : {})}
+        open={previewSheet !== null}
+        onClose={() => setPreviewSheet(null)}
       />
     </div>
   )

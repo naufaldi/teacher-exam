@@ -101,7 +101,7 @@ const ACTION_CARDS = [
     icon: BookOpen,
     title: "Bank Soal",
     description:
-      "Soal dari generate otomatis tersimpan di bank. Bagikan ujian dari Riwayat untuk mempublikasikan soal terkait.",
+      "Soal dari generate otomatis tersimpan di bank dan otomatis tampil di Bank Publik untuk dipakai guru lain.",
     cta: "Buka bank soal",
     kbd: null,
     cardBg: "bg-bg-surface border-border-default",

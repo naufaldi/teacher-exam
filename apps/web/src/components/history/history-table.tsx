@@ -24,7 +24,7 @@ import {
   TooltipTrigger
 } from "@teacher-exam/ui"
 import { CheckSquare, Copy, Eye, Link2, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../../lib/feature-flags"
 import { subjectMetaFor } from "../../lib/subjects"
 
@@ -38,6 +38,34 @@ function formatShortDate(dateStr: string): string {
   })
 }
 
+interface IconActionProps {
+  label: string
+  icon: ReactNode
+  onClick: () => void
+  disabled?: boolean
+  disabledTitle?: string
+}
+
+function IconAction({ disabled, disabledTitle, icon, label, onClick }: IconActionProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          className="w-8 px-0 shrink-0"
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{disabled && disabledTitle ? disabledTitle : label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 interface HistoryTableProps {
   exams: ReadonlyArray<Exam>
   onDelete: (id: string) => Promise<void>
@@ -48,18 +76,18 @@ interface HistoryTableProps {
 function HistoryTable({ exams, onDelete, onDuplicate, onShare }: HistoryTableProps) {
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden [&>div]:overflow-hidden">
-        <Table className="table-fixed">
+      <div className="bg-bg-surface border border-border-default rounded-md overflow-hidden [&>div]:overflow-x-auto">
+        <Table className="table-fixed min-w-[880px]">
           <TableHeader className="bg-kertas-50">
             <TableRow className="border-b border-border-default hover:bg-kertas-50">
-              <TableHead className={`${HEAD_CLS} w-[34%]`}>Lembar</TableHead>
+              <TableHead className={`${HEAD_CLS} w-[32%]`}>Lembar</TableHead>
               <TableHead className={`${HEAD_CLS} w-[14%]`}>Mata Pelajaran</TableHead>
-              <TableHead className={`${HEAD_CLS} w-[10%]`}>Tanggal</TableHead>
-              <TableHead className={`${HEAD_CLS} w-[8%] tabular-nums`}>Soal</TableHead>
+              <TableHead className={`${HEAD_CLS} w-[11%]`}>Tanggal</TableHead>
+              <TableHead className={`${HEAD_CLS} w-[7%] tabular-nums`}>Soal</TableHead>
               <TableHead className={`${HEAD_CLS} hidden lg:table-cell w-[12%] text-center`}>
                 Status
               </TableHead>
-              <TableHead className={`${HEAD_CLS} hidden lg:table-cell w-[22%] text-center`}>
+              <TableHead className={`${HEAD_CLS} hidden lg:table-cell w-[24%] text-right`}>
                 Aksi
               </TableHead>
             </TableRow>
@@ -198,40 +226,39 @@ function HistoryTableRow({ exam, onDelete, onDuplicate, onShare }: HistoryTableR
 
         {/* Aksi column */}
         <TableCell className="hidden lg:table-cell px-5 py-3.5 align-middle">
-          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap min-w-0">
             {isFinal ?
               (
                 <>
-                  <Button variant="secondary" size="sm" onClick={handlePreview}>
+                  <Button variant="secondary" size="sm" onClick={handlePreview} className="shrink-0">
                     <Eye size={13} />
                     Preview
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  <IconAction
+                    label="Koreksi"
+                    icon={<CheckSquare size={14} />}
                     onClick={handleCorrection}
                     disabled={!KOREKSI_ENABLED}
-                    title={KOREKSI_ENABLED ? undefined : KOREKSI_DISABLED_TITLE}
-                  >
-                    <CheckSquare size={13} />
-                    Koreksi
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => void onShare(exam)}>
-                    <Link2 size={13} />
-                    Bagikan
-                  </Button>
+                    disabledTitle={KOREKSI_DISABLED_TITLE}
+                  />
+                  <IconAction
+                    label="Bagikan"
+                    icon={<Link2 size={14} />}
+                    onClick={() => void onShare(exam)}
+                  />
                 </>
               ) :
               (
                 <>
-                  <Button variant="secondary" size="sm" onClick={handleEdit}>
+                  <Button variant="secondary" size="sm" onClick={handleEdit} className="shrink-0">
                     <Pencil size={13} />
                     Edit
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={handleDuplicate}>
-                    <Copy size={13} />
-                    Duplikat
-                  </Button>
+                  <IconAction
+                    label="Duplikat"
+                    icon={<Copy size={14} />}
+                    onClick={handleDuplicate}
+                  />
                 </>
               )}
             <Popover>

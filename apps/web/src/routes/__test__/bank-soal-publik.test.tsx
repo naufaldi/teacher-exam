@@ -1,5 +1,5 @@
 import type * as TanStackRouter from "@tanstack/react-router"
-import type { PaginatedPublicBankResponse } from "@teacher-exam/shared"
+import type { PaginatedPublicBankSheetsResponse } from "@teacher-exam/shared"
 import { render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -22,12 +22,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   }
 })
 
-const browsePublicMock = vi.fn()
+const browsePublicSheetsMock = vi.fn()
 
 vi.mock("../../lib/api.js", () => ({
   api: {
     bank: {
-      browsePublic: (...args: Array<unknown>) => browsePublicMock(...args)
+      browsePublicSheets: (...args: Array<unknown>) => browsePublicSheetsMock(...args)
     }
   },
   unwrapApiEither: (result: { _tag: "Right"; right: unknown }) => result.right
@@ -35,15 +35,15 @@ vi.mock("../../lib/api.js", () => ({
 
 describe("BankSoalPublikPage", () => {
   beforeEach(() => {
-    browsePublicMock.mockReset()
-    browsePublicMock.mockResolvedValue({
+    browsePublicSheetsMock.mockReset()
+    browsePublicSheetsMock.mockResolvedValue({
       _tag: "Right",
       right: {
         data: [],
         total: 0,
         page: 1,
         limit: 20
-      } satisfies PaginatedPublicBankResponse
+      } satisfies PaginatedPublicBankSheetsResponse
     })
   })
 
@@ -52,16 +52,16 @@ describe("BankSoalPublikPage", () => {
     render(<Page />)
 
     expect(
-      await screen.findByRole("link", { name: /Login untuk simpan/i })
+      await screen.findByRole("link", { name: /Login untuk pakai lembar/i })
     ).toHaveAttribute("href", "/")
   })
 
-  it("calls browsePublic on load", async () => {
+  it("calls browsePublicSheets on load", async () => {
     const Page = Route.options.component as React.ComponentType
     render(<Page />)
 
     await waitFor(() => {
-      expect(browsePublicMock).toHaveBeenCalled()
+      expect(browsePublicSheetsMock).toHaveBeenCalled()
     })
   })
 })

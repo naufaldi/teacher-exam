@@ -19,6 +19,8 @@ interface BankToolbarProps {
   author: string
   sort: BankSortFilter
   showAuthorFilter?: boolean
+  showTypeFilter?: boolean
+  itemLabel?: string
   isFiltered: boolean
   matchCount: number
   totalCount: number
@@ -82,6 +84,8 @@ function BankToolbar({
   onTypeChange,
   search,
   showAuthorFilter = false,
+  showTypeFilter = true,
+  itemLabel = "soal",
   sort,
   subject,
   topic,
@@ -157,19 +161,23 @@ function BankToolbar({
           ))}
         </select>
 
-        <select
-          value={type}
-          onChange={(e) => onTypeChange(e.target.value as BankTypeFilter)}
-          className={SELECT_CLASS}
-          style={{ backgroundImage: SELECT_CHEVRON }}
-          aria-label="Filter tipe soal"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.label} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        {showTypeFilter ?
+          (
+            <select
+              value={type}
+              onChange={(e) => onTypeChange(e.target.value as BankTypeFilter)}
+              className={SELECT_CLASS}
+              style={{ backgroundImage: SELECT_CHEVRON }}
+              aria-label="Filter tipe soal"
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) :
+          null}
 
         {showAuthorFilter ?
           (
@@ -202,7 +210,7 @@ function BankToolbar({
       <div className="flex items-center justify-between px-4 py-2 bg-kertas-50">
         <span className="text-body-sm text-text-tertiary">
           Menampilkan <span className="text-text-primary font-semibold tabular-nums">{matchCount}</span> dari{" "}
-          <span className="tabular-nums">{totalCount}</span> soal
+          <span className="tabular-nums">{totalCount}</span> {itemLabel}
         </span>
         {isFiltered ?
           (

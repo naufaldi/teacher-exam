@@ -107,20 +107,9 @@ function mockGenerateDbSelects(opts: {
   questionRows: ReadonlyArray<Record<string, unknown>>
   reviewMode?: "fast" | "slow"
 }) {
-  const reviewMode = opts.reviewMode ??
-    (typeof opts.examRow["reviewMode"] === "string"
-      ? (opts.examRow["reviewMode"] as "fast" | "slow")
-      : "fast")
-
   let selectCount = 0
   ;(db.select as Mock).mockImplementation(() => {
     selectCount++
-    if (reviewMode === "fast") {
-      if (selectCount === 1) return makeChain([...opts.questionRows])
-      if (selectCount === 2) return makeChain([opts.examRow])
-      if (selectCount === 3) return makeChain([opts.examRow])
-      return makeChain([...opts.questionRows])
-    }
     if (selectCount === 1) return makeChain([opts.examRow])
     return makeChain([...opts.questionRows])
   })
