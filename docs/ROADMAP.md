@@ -29,6 +29,7 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | D-2 | 2026-06-29 | Bank Soal menyimpan **per lembar** (`exams.bankedAt`), bukan per soal (`bank_questions`). Finalize menandai lembar sebagai banked + publik; Pakai lembar menduplikasi seluruh lembar. | PRD v4 per-question bank model | Satu baris = satu lembar ujian (selaras Riwayat). PR #196. |
 | D-3 | 2026-06-29 | Tabel lembar disatukan (`SheetTable`) di Dashboard Riwayat terbaru, Riwayat, Bank Saya, Bank Publik. Pratinjau modal untuk browse; `/preview` untuk cetak/export. | — | Konsistensi UI; guru melihat isi soal cepat tanpa meninggalkan halaman. Lihat [RFC 2026-06-29-unified-sheet-table](rfc/2026-06-29-unified-sheet-table-rfc.md). |
 | D-4 | 2026-06-29 | Halaman `/share/:slug` = pratinjau anonim penuh (soal + LJ + kunci + pembahasan) untuk guru rekan; renderers dibagi via `exam-sheet`. | — | Link Bagikan dari Riwayat harus printable seperti `/preview`. Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md). |
+| D-5 | 2026-06-29 | Generate enhancement v8: tiga mode materi (`default` / `pdf_guru` / `combine`); default = Buku Siswa; PDF guru + gambar di **Cloudflare R2** (bukan VPS disk); perpustakaan PDF per guru; RAG topik + agentic search; streaming + durable jobs — phased F0–F5. | RFC 2026-06-10 Flow B `UPLOAD_DIR` (guru PDF) | Guru worksheet + combine materi; reuse PDF; selaras PRD v2 intent upload. Lihat [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29-generate-pdf-enhancement](rfc/2026-06-29-generate-pdf-enhancement-rfc.md). |
 
 ---
 
@@ -43,6 +44,7 @@ Each milestone maps to a PRD:
 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar model, D-2) | M4 (Bank Soal) |
 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
+| [PRD v8](PRD-v8-generate-pdf-enhancement.md) | 📝 Draft | M7 (Generate PDF Enhancement) — docs only; implementation F0–F5 |
 
 ---
 
@@ -56,6 +58,7 @@ Each milestone maps to a PRD:
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar, 2026-06-29) |
 | 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
+| 7 | Generate PDF Enhancement | TBD (parallel M3+) | [PRD v8](PRD-v8-generate-pdf-enhancement.md) | 📝 Draft (docs 2026-06-29) |
 
 ---
 
@@ -254,6 +257,29 @@ _(Record decisions here as they're made)_
 ### Known Issues
 
 _(Record issues here as they're discovered)_
+
+---
+
+## Milestone 7: Generate PDF Enhancement
+
+**Target:** TBD (may run parallel to M3 after F0 corpus v2)
+**Goal:** Three source modes, teacher PDF library on R2, RAG + agentic retrieval, optional PDF images, durable streaming generate
+**Status:** 📝 Draft — [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29](rfc/2026-06-29-generate-pdf-enhancement-rfc.md) (2026-06-29); no implementation yet
+
+### Phases (from PRD v8 / RFC)
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| F0 | Corpus v2 richer text (operator track) | 🔄 Existing RFC-E2 work |
+| F1 | R2 upload + 3-mode schema + basic generate | ⬜ Not started |
+| F2 | Perpustakaan + async ingest | ⬜ Not started |
+| F3 | pgvector RAG topic-focused | ⬜ Not started |
+| F4 | Agentic search | ⬜ Not started |
+| F5 | PDF images + streaming + durable jobs | ⬜ Not started |
+
+### Decisions
+
+- 2026-06-29: **D-5** — R2 only for guru PDF/images; default mode Buku Siswa; see Decisions table above.
 
 ---
 

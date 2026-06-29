@@ -21,6 +21,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
+| M7 | 6 | 0 | 0 | not_started |
 | RFC-E1 | 0 | 6 | 0 | done |
 | RFC-E2 | 4 | 1 | 1 | in_progress |
 | RFC-E3 | 3 | 4 | 0 | in_progress |
@@ -120,6 +121,13 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | Extra | — | #192 | Real PDF/DOCX export | closed | apps/api/src/api/services/export-service.ts | PR #194 |
 | Extra | — | #193 | Student delivery + analytics | closed | apps/web/src/routes/_auth.analytics.tsx | PR #194 |
 | Extra | — | #183 | Codex security remediation | closed | docs/security/2026-06-24-codex-security-remediation.md | PR #184 |
+| M7 | — | — | M7 PRD v8 + RFC generate PDF enhancement docs | open | docs/PRD-v8-generate-pdf-enhancement.md | — |
+| M7 | — | — | M7.F0 corpus v2 richer text | open | apps/api/src/curriculum/md/ | — |
+| M7 | — | — | M7.F1 R2 upload + 3-mode schema + basic generate | open | — | — |
+| M7 | — | — | M7.F2 perpustakaan PDF + async ingest | open | — | — |
+| M7 | — | — | M7.F3 pgvector RAG topic-focused | open | — | — |
+| M7 | — | — | M7.F4 agentic search | open | — | — |
+| M7 | — | — | M7.F5 PDF images + streaming + durable jobs | open | — | — |
 
 ## Related PRs (recent)
 
