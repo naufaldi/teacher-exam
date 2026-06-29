@@ -7,65 +7,33 @@ import { BankService } from "../services/bank-service"
 
 export const BankLive = HttpApiBuilder.group(TeacherExamApi, "bank", (handlers) =>
   handlers
-    .handle("saveQuestion", ({ payload }) =>
+    .handle("browseBankSheets", ({ urlParams }) =>
       Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
-        return yield* bankService.saveQuestion(userId, payload)
-      }).pipe(
-        Effect.catchTags({
-          BankSaveError: (e) =>
-            Effect.fail(
-              new ApiNotFound({
-                error: String(e.cause),
-                code: "NOT_FOUND"
-              })
-            )
-        })
-      ))
-    .handle("browseBank", ({ urlParams }) =>
-      Effect.gen(function*() {
-        const { userId } = yield* CurrentUser
-        const bankService = yield* BankService
-        return yield* bankService.browseOwn(userId, urlParams)
+        return yield* bankService.browseSheets(userId, urlParams)
       }))
-    .handle("updateBankQuestion", ({ path, payload }) =>
+    .handle("updateBankSheet", ({ path, payload }) =>
       Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
-        return yield* bankService.update(userId, path.id, payload)
+        return yield* bankService.updateSheet(userId, path.id, payload)
       }).pipe(
         Effect.catchTags({
           BankNotFoundError: (e) =>
             Effect.fail(
               new ApiNotFound({
-                error: `Bank question ${e.id} not found`,
+                error: `Bank sheet ${e.id} not found`,
                 code: "NOT_FOUND"
               })
             )
         })
       ))
-    .handle("removeBankQuestion", ({ path }) =>
+    .handle("useBankSheet", ({ payload }) =>
       Effect.gen(function*() {
         const { userId } = yield* CurrentUser
         const bankService = yield* BankService
-        yield* bankService.remove(userId, path.id)
-      }).pipe(
-        Effect.catchTags({
-          BankNotFoundError: (e) =>
-            Effect.fail(
-              new ApiNotFound({
-                error: `Bank question ${e.id} not found`,
-                code: "NOT_FOUND"
-              })
-            )
-        })
-      ))
-    .handle("buildExamFromBank", ({ payload }) =>
-      Effect.gen(function*() {
-        const { userId } = yield* CurrentUser
-        const bankService = yield* BankService
-        return yield* bankService.buildExam(userId, payload)
+        return yield* bankService.useSheet(userId, payload)
       }).pipe(
         Effect.catchTags({
           BankBuildError: (e) =>
@@ -74,6 +42,22 @@ export const BankLive = HttpApiBuilder.group(TeacherExamApi, "bank", (handlers) 
                 error: "Validation failed",
                 code: "VALIDATION_ERROR",
                 details: e.message
+              })
+            )
+        })
+      ))
+    .handle("getBankSheet", ({ path }) =>
+      Effect.gen(function*() {
+        const { userId } = yield* CurrentUser
+        const bankService = yield* BankService
+        return yield* bankService.getSheet(userId, path.id)
+      }).pipe(
+        Effect.catchTags({
+          BankNotFoundError: (e) =>
+            Effect.fail(
+              new ApiNotFound({
+                error: `Bank sheet ${e.id} not found`,
+                code: "NOT_FOUND"
               })
             )
         })

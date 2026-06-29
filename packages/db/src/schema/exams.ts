@@ -24,6 +24,7 @@ export const exams = pgTable("exams", {
   isPublic: boolean("is_public").default(false).notNull(),
   publicShareSlug: text("public_share_slug").unique(),
   publishedAt: timestamp("published_at", { withTimezone: true }),
+  bankedAt: timestamp("banked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 })

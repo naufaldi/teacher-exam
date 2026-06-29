@@ -34,6 +34,7 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   isPublic: false,
   publicShareSlug: null,
   publishedAt: null,
+  bankedAt: null,
   createdAt: new Date(NOW),
   updatedAt: new Date(NOW),
   ...overrides

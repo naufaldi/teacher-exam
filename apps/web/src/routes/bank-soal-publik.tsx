@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import type { BrowseBankQuery, PublicBankQuestion } from "@teacher-exam/shared"
+import type { BrowseBankSheetsQuery, PublicBankSheet } from "@teacher-exam/shared"
 import { Button, EmptyState, LoadingSpinner, PageHeader } from "@teacher-exam/ui"
 import { BookOpen } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { BankQuestionCard } from "../components/bank/bank-question-card.js"
-import { BankQuestionPreviewDialog } from "../components/bank/bank-question-preview-dialog.js"
+import { BankSheetPreviewDialog } from "../components/bank/bank-sheet-preview-dialog.js"
+import { BankSheetTable } from "../components/bank/bank-sheet-table.js"
 import {
   type BankDifficultyFilter,
   type BankGradeFilter,
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/bank-soal-publik")({
 })
 
 function BankSoalPublikPage() {
-  const [items, setItems] = useState<Array<PublicBankQuestion>>([])
+  const [items, setItems] = useState<Array<PublicBankSheet>>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [limit] = useState(20)
@@ -35,9 +35,9 @@ function BankSoalPublikPage() {
   const [type, setType] = useState<BankTypeFilter>("")
   const [author, setAuthor] = useState("")
   const [sort, setSort] = useState<BankSortFilter>("terbaru")
-  const [previewItem, setPreviewItem] = useState<PublicBankQuestion | null>(null)
+  const [previewSheet, setPreviewSheet] = useState<PublicBankSheet | null>(null)
 
-  const query = useMemo((): BrowseBankQuery => {
+  const query = useMemo((): BrowseBankSheetsQuery => {
     return {
       page,
       limit,
@@ -46,21 +46,20 @@ function BankSoalPublikPage() {
       ...(grade ? { grade: Number(grade) } : {}),
       ...(difficulty ? { difficulty } : {}),
       ...(topic.trim() ? { topic: topic.trim() } : {}),
-      ...(type ? { type } : {}),
       ...(author.trim() ? { author: author.trim() } : {}),
       ...(search.trim() ? { search: search.trim() } : {})
     }
-  }, [subject, grade, difficulty, topic, type, author, sort, search, page, limit])
+  }, [subject, grade, difficulty, topic, author, sort, search, page, limit])
 
   const isFiltered = Boolean(
-    subject || grade || difficulty || topic.trim() || type || author.trim() || search.trim()
+    subject || grade || difficulty || topic.trim() || author.trim() || search.trim()
   )
 
   const loadBank = useCallback(() => {
     setLoading(true)
     setError(null)
     api.bank
-      .browsePublic(query)
+      .browsePublicSheets(query)
       .then((result) => {
         const response = unwrapApiEither(result)
         setItems([...response.data])
@@ -97,16 +96,16 @@ function BankSoalPublikPage() {
       <div className="space-y-6">
         <div className="rounded-md border border-info-border bg-info-bg px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-body-sm text-text-secondary">
-            Jelajahi soal publik dari guru lain. Login untuk menyimpan dan merakit ujian sendiri.
+            Jelajahi lembar ujian publik dari guru lain. Login untuk memakai lembar utuh di ujian Anda.
           </p>
           <Button asChild variant="primary" size="sm">
-            <Link to="/">Login untuk simpan &amp; buat ujian sendiri</Link>
+            <Link to="/">Login untuk pakai lembar</Link>
           </Button>
         </div>
 
         <PageHeader
           title="Bank Soal Publik"
-          subtitle="Soal yang dibagikan guru lain. Read-only — tidak ada simpan atau edit."
+          subtitle="Lembar ujian final yang dibagikan guru lain. Pratinjau read-only — login untuk Pakai lembar."
         />
 
         <BankToolbar
@@ -119,6 +118,8 @@ function BankSoalPublikPage() {
           author={author}
           sort={sort}
           showAuthorFilter
+          showTypeFilter={false}
+          itemLabel="lembar"
           isFiltered={isFiltered}
           matchCount={items.length}
           totalCount={total}
@@ -183,8 +184,8 @@ function BankSoalPublikPage() {
           (
             <EmptyState
               icon={<BookOpen size={24} className="text-text-tertiary" />}
-              title="Belum ada soal publik"
-              description="Soal akan muncul setelah guru membagikan ujian dari Riwayat."
+              title="Belum ada lembar publik"
+              description="Lembar akan muncul setelah guru menyelesaikan (Final) ujian."
             />
           ) :
           null}
@@ -192,16 +193,13 @@ function BankSoalPublikPage() {
         {!loading && !error && items.length > 0 ?
           (
             <>
-              <div className="grid gap-4">
-                {items.map((item) => (
-                  <BankQuestionCard
-                    key={item.id}
-                    item={item}
-                    authorName={item.authorName}
-                    onSelect={(selected) => setPreviewItem(selected as PublicBankQuestion)}
-                  />
-                ))}
-              </div>
+              <BankSheetTable
+                items={items}
+                showAuthor
+                readOnly
+                onPreview={(item) => setPreviewSheet(item as PublicBankSheet)}
+                onUseSheet={() => {}}
+              />
               {totalPages > 1 ?
                 (
                   <div className="flex items-center justify-between pt-2">
@@ -231,10 +229,11 @@ function BankSoalPublikPage() {
           ) :
           null}
 
-        <BankQuestionPreviewDialog
-          item={previewItem}
-          open={previewItem !== null}
-          onClose={() => setPreviewItem(null)}
+        <BankSheetPreviewDialog
+          examId={previewSheet?.id ?? null}
+          {...(previewSheet?.title ? { title: previewSheet.title } : {})}
+          open={previewSheet !== null}
+          onClose={() => setPreviewSheet(null)}
         />
       </div>
     </PublicPageShell>

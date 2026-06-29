@@ -163,6 +163,21 @@ describe("HistoryPage", () => {
     expect(screen.queryByRole("button", { name: /^duplikat$/i })).not.toBeInTheDocument()
   })
 
+  it("renders status badge alongside all actions for a final row", async () => {
+    mockApiResolvedValueOnce(mockApi.exams.list, [
+      makeExam({ id: "exam-final-row", status: "final", title: "Lembar Ujian Akhir" })
+    ])
+    renderHistoryPage()
+
+    await screen.findByText("Lembar Ujian Akhir")
+
+    expect(screen.getByText("Final", { selector: "span" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /koreksi/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^bagikan$/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /aksi lain/i })).toBeInTheDocument()
+  })
+
   it("shows edit/duplicate actions for draft exams", async () => {
     mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: "exam-draft", status: "draft" })

@@ -1,54 +1,41 @@
 import { Either, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
-  BankQuestionSchema,
-  BrowseBankQuerySchema,
-  PaginatedBankResponseSchema,
-  SaveToBankInputSchema
+  BankSheetSchema,
+  BrowseBankSheetsQuerySchema,
+  PaginatedBankSheetsResponseSchema,
+  UseBankSheetInputSchema
 } from "../../schemas/bank.js"
 
 describe("bank schemas", () => {
-  it("decodes SaveToBankInput", () => {
-    const decoded = Schema.decodeUnknownEither(SaveToBankInputSchema)({
-      questionId: "q-1"
-    })
-    expect(Either.isRight(decoded)).toBe(true)
-  })
-
-  it("decodes BrowseBankQuery with sort and type filters", () => {
-    const decoded = Schema.decodeUnknownEither(BrowseBankQuerySchema)({
+  it("decodes BrowseBankSheetsQuery", () => {
+    const decoded = Schema.decodeUnknownEither(BrowseBankSheetsQuerySchema)({
       subject: "ipas",
       grade: 5,
-      sort: "terpopuler",
-      type: "mcq_single",
+      sort: "terbaru",
       page: 1,
-      limit: 20
+      limit: 8
     })
     expect(Either.isRight(decoded)).toBe(true)
   })
 
-  it("decodes PaginatedBankResponse", () => {
-    const decoded = Schema.decodeUnknownEither(PaginatedBankResponseSchema)({
+  it("decodes PaginatedBankSheetsResponse", () => {
+    const decoded = Schema.decodeUnknownEither(PaginatedBankSheetsResponseSchema)({
       data: [
         {
-          id: "bank-1",
-          questionId: "q-1",
+          id: "00000000-0000-4000-8000-000000000001",
           userId: "user-1",
+          title: "IPAS / Kelas 5 / formatif",
           subject: "ipas",
           grade: 5,
           topics: ["Energi"],
           difficulty: "sedang",
-          type: "mcq_single",
-          payload: {},
-          isPublic: false,
-          usageCount: 0,
-          createdAt: "2024-01-01T00:00:00.000Z",
-          text: "Soal contoh",
-          optionA: "A",
-          optionB: "B",
-          optionC: "C",
-          optionD: "D",
-          correctAnswer: "a"
+          examType: "formatif",
+          status: "final",
+          isPublic: true,
+          questionCount: 20,
+          bankedAt: "2024-01-01T00:00:00.000Z",
+          createdAt: "2024-01-01T00:00:00.000Z"
         }
       ],
       total: 1,
@@ -56,26 +43,30 @@ describe("bank schemas", () => {
       limit: 20
     })
     expect(Either.isRight(decoded)).toBe(true)
-    if (Either.isRight(decoded)) {
-      expect(decoded.right.data[0]?.text).toBe("Soal contoh")
-    }
   })
 
-  it("decodes BankQuestion with public flag", () => {
-    const decoded = Schema.decodeUnknownEither(BankQuestionSchema)({
-      id: "bank-1",
-      questionId: "q-1",
+  it("decodes UseBankSheetInput", () => {
+    const decoded = Schema.decodeUnknownEither(UseBankSheetInputSchema)({
+      sourceExamId: "00000000-0000-4000-8000-000000000002"
+    })
+    expect(Either.isRight(decoded)).toBe(true)
+  })
+
+  it("decodes BankSheet", () => {
+    const decoded = Schema.decodeUnknownEither(BankSheetSchema)({
+      id: "00000000-0000-4000-8000-000000000001",
       userId: "user-1",
-      subject: "ipas",
+      title: "Matematika / Kelas 5",
+      subject: "matematika",
       grade: 5,
-      topics: [],
+      topics: ["Pecahan"],
       difficulty: "mudah",
-      type: "mcq_single",
-      payload: {},
-      isPublic: true,
-      usageCount: 2,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      text: "Publik"
+      examType: "formatif",
+      status: "final",
+      isPublic: false,
+      questionCount: 15,
+      bankedAt: "2024-01-01T00:00:00.000Z",
+      createdAt: "2024-01-01T00:00:00.000Z"
     })
     expect(Either.isRight(decoded)).toBe(true)
   })

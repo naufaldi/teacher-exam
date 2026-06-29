@@ -1,8 +1,6 @@
 import type {
-  BankQuestion,
-  BrowseBankQuery,
-  BuildExamFromBankInput,
-  BuildExamFromBankResponse,
+  BankSheet,
+  BrowseBankSheetsQuery,
   ClassAnalyticsResponse,
   ClassEntity,
   ClassWithStudents,
@@ -16,11 +14,11 @@ import type {
   ExamTemplate,
   ExamWithQuestions,
   GenerateExamInput,
-  PaginatedBankResponse,
-  PaginatedPublicBankResponse,
+  PaginatedBankSheetsResponse,
+  PaginatedPublicBankSheetsResponse,
+  PublicBankSheet,
   PublicExamDetailResponse,
   RegenerateQuestionInput,
-  SaveToBankInput,
   SessionDetailResponse,
   SessionResult,
   SessionResultsResponse,
@@ -30,16 +28,17 @@ import type {
   SubmitSessionInput,
   SubmitSessionResponse,
   TemplateApplyResponse,
-  UpdateBankQuestionInput,
+  UpdateBankSheetInput,
   UpdateClassInput,
   UpdateExamInput,
   UpdateProfileInput,
+  UseBankSheetInput,
+  UseBankSheetResponse,
   UpdateQuestionInput,
   UpdateTemplateInput
 } from "@teacher-exam/shared"
 import {
-  BankQuestionSchema,
-  BuildExamFromBankResponseSchema,
+  BankSheetSchema,
   ClassAnalyticsResponseSchema,
   ClassSchema,
   ClassWithStudentsSchema,
@@ -51,8 +50,9 @@ import {
   ExamTemplateSchema,
   ExamWithQuestionsSchema,
   HealthResponseSchema,
-  PaginatedBankResponseSchema,
-  PaginatedPublicBankResponseSchema,
+  PaginatedBankSheetsResponseSchema,
+  PaginatedPublicBankSheetsResponseSchema,
+  PublicBankSheetSchema,
   PublicExamWithQuestionsSchema,
   QuestionSchema,
   SessionDetailResponseSchema,
@@ -62,6 +62,7 @@ import {
   StudentSchema,
   SubmitSessionResponseSchema,
   TemplateApplyResponseSchema,
+  UseBankSheetResponseSchema,
   UserProfileSchema
 } from "@teacher-exam/shared"
 import { Either, Match, Schema } from "effect"
@@ -303,13 +304,12 @@ async function fetchDecoded<A, I>(
   return decodeEither(schema, raw.right)
 }
 
-function buildBankQueryParams(query: BrowseBankQuery = {}): string {
+function buildBankSheetsQueryParams(query: BrowseBankSheetsQuery = {}): string {
   const params = new URLSearchParams()
   if (query.subject) params.set("subject", query.subject)
   if (query.grade !== undefined) params.set("grade", String(query.grade))
   if (query.difficulty) params.set("difficulty", query.difficulty)
   if (query.topic) params.set("topic", query.topic)
-  if (query.type) params.set("type", query.type)
   if (query.author) params.set("author", query.author)
   if (query.search) params.set("search", query.search)
   if (query.sort) params.set("sort", query.sort)
@@ -492,62 +492,51 @@ export const api = {
     }
   },
   bank: {
-    save: async (input: SaveToBankInput): Promise<Either.Either<BankQuestion, ApiClientFailure>> => {
-      const raw = await apiFetchEither<unknown>("/bank", {
+    browseSheets: async (
+      query: BrowseBankSheetsQuery = {}
+    ): Promise<Either.Either<PaginatedBankSheetsResponse, ApiClientFailure>> => {
+      const qs = buildBankSheetsQueryParams(query)
+      const raw = await apiFetchEither<unknown>(`/bank/sheets${qs ? `?${qs}` : ""}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PaginatedBankSheetsResponse, ApiClientFailure>
+      }
+      return decodeEither(PaginatedBankSheetsResponseSchema, raw.right)
+    },
+    browsePublicSheets: async (
+      query: BrowseBankSheetsQuery = {}
+    ): Promise<Either.Either<PaginatedPublicBankSheetsResponse, ApiClientFailure>> => {
+      const qs = buildBankSheetsQueryParams(query)
+      const raw = await apiFetchEither<unknown>(`/bank/sheets/public${qs ? `?${qs}` : ""}`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PaginatedPublicBankSheetsResponse, ApiClientFailure>
+      }
+      return decodeEither(PaginatedPublicBankSheetsResponseSchema, raw.right)
+    },
+    useSheet: async (
+      input: UseBankSheetInput
+    ): Promise<Either.Either<UseBankSheetResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/bank/use-sheet", {
         method: "POST",
         body: JSON.stringify(input)
       })
       if (Either.isLeft(raw)) {
-        return raw as Either.Either<BankQuestion, ApiClientFailure>
+        return raw as Either.Either<UseBankSheetResponse, ApiClientFailure>
       }
-      return decodeEither(BankQuestionSchema, raw.right)
+      return decodeEither(UseBankSheetResponseSchema, raw.right)
     },
-    browse: async (
-      query: BrowseBankQuery = {}
-    ): Promise<Either.Either<PaginatedBankResponse, ApiClientFailure>> => {
-      const qs = buildBankQueryParams(query)
-      const raw = await apiFetchEither<unknown>(`/bank${qs ? `?${qs}` : ""}`)
-      if (Either.isLeft(raw)) {
-        return raw as Either.Either<PaginatedBankResponse, ApiClientFailure>
-      }
-      return decodeEither(PaginatedBankResponseSchema, raw.right)
-    },
-    browsePublic: async (
-      query: BrowseBankQuery = {}
-    ): Promise<Either.Either<PaginatedPublicBankResponse, ApiClientFailure>> => {
-      const qs = buildBankQueryParams(query)
-      const raw = await apiFetchEither<unknown>(`/bank/public${qs ? `?${qs}` : ""}`)
-      if (Either.isLeft(raw)) {
-        return raw as Either.Either<PaginatedPublicBankResponse, ApiClientFailure>
-      }
-      return decodeEither(PaginatedPublicBankResponseSchema, raw.right)
-    },
-    buildExam: async (
-      input: BuildExamFromBankInput
-    ): Promise<Either.Either<BuildExamFromBankResponse, ApiClientFailure>> => {
-      const raw = await apiFetchEither<unknown>("/bank/build-exam", {
-        method: "POST",
-        body: JSON.stringify(input)
-      })
-      if (Either.isLeft(raw)) {
-        return raw as Either.Either<BuildExamFromBankResponse, ApiClientFailure>
-      }
-      return decodeEither(BuildExamFromBankResponseSchema, raw.right)
-    },
-    update: async (
+    updateSheet: async (
       id: string,
-      body: UpdateBankQuestionInput
-    ): Promise<Either.Either<BankQuestion, ApiClientFailure>> => {
-      const raw = await apiFetchEither<unknown>(`/bank/${id}`, {
+      body: UpdateBankSheetInput
+    ): Promise<Either.Either<BankSheet, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/bank/sheets/${id}`, {
         method: "PATCH",
         body: JSON.stringify(body)
       })
       if (Either.isLeft(raw)) {
-        return raw as Either.Either<BankQuestion, ApiClientFailure>
+        return raw as Either.Either<BankSheet, ApiClientFailure>
       }
-      return decodeEither(BankQuestionSchema, raw.right)
-    },
-    remove: (id: string) => apiFetchEither<void>(`/bank/${id}`, { method: "DELETE" })
+      return decodeEither(BankSheetSchema, raw.right)
+    }
   },
   templates: {
     list: async (): Promise<Either.Either<ReadonlyArray<ExamTemplate>, ApiClientFailure>> => {

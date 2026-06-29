@@ -41,26 +41,13 @@ describe("subject enum matematika migration", () => {
   })
 })
 
-describe("bank_questions migration", () => {
-  test("creates bank_questions table with indexes and unique constraint", () => {
-    const files = readdirSync(join(process.cwd(), "src/migrations"))
-      .filter((name) => name.startsWith("0008_") && name.endsWith(".sql"))
-    expect(files.length).toBeGreaterThan(0)
-    const sql = readFileSync(join(process.cwd(), "src/migrations", files[0]!), "utf8")
+describe("drop bank_questions migration", () => {
+  test("drops bank_questions table", () => {
+    const sql = readFileSync(
+      join(process.cwd(), "src/migrations/0015_drop_bank_questions.sql"),
+      "utf8"
+    )
 
-    expect(sql).toContain("CREATE TABLE \"bank_questions\"")
-    expect(sql).toContain("bank_questions_user_id_idx")
-    expect(sql).toContain("bank_questions_public_browse_idx")
-    expect(sql).toContain("bank_questions_user_id_question_id_unique")
-  })
-
-  test("does not re-add exam_subject enum values from 0005 or 0007", () => {
-    const files = readdirSync(join(process.cwd(), "src/migrations"))
-      .filter((name) => name.startsWith("0008_") && name.endsWith(".sql"))
-    const sql = readFileSync(join(process.cwd(), "src/migrations", files[0]!), "utf8")
-
-    expect(sql).not.toMatch(/ADD VALUE ['"]matematika['"]/)
-    expect(sql).not.toMatch(/ADD VALUE ['"]ipas['"]/)
-    expect(sql).not.toMatch(/ADD VALUE ['"]bahasa_inggris['"]/)
+    expect(sql).toContain("DROP TABLE IF EXISTS \"bank_questions\"")
   })
 })

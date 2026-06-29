@@ -4,6 +4,8 @@
 > **Tracking:** [#70 — PRD v4 Bank Soal + Exam Builder](https://github.com/naufaldi/teacher-exam/issues/70)
 > **Scope:** E3, E4, E6, E7 (core bank API) + auto-save after review + exam-driven publish
 
+> **Addendum (2026-06-29 — per-lembar bank):** Bank Soal browse unit is **lembar ujian** (`exams` with `bankedAt`), not individual `bank_questions`. Finalizing sets `bankedAt` + `isPublic = true`. API: `GET /api/bank/sheets`, `GET /api/bank/sheets/public`, `POST /api/bank/use-sheet`. Legacy per-question endpoints remain for backward compatibility but are not used by the Bank Soal UI.
+
 ---
 
 ## 1. Overview

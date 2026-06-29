@@ -1,4 +1,3 @@
-import type { BankQuestion } from "@teacher-exam/shared"
 import { MathText } from "../math-text.js"
 
 const OPTION_FIELDS = [
@@ -8,10 +7,14 @@ const OPTION_FIELDS = [
   { key: "d", field: "optionD" }
 ] as const
 
-type BankQuestionReadonlyBodyProps = Pick<
-  BankQuestion,
-  "text" | "optionA" | "optionB" | "optionC" | "optionD" | "correctAnswer"
->
+type BankQuestionReadonlyBodyProps = {
+  text: string
+  optionA?: string | null
+  optionB?: string | null
+  optionC?: string | null
+  optionD?: string | null
+  correctAnswer?: string | null
+}
 
 function formatCorrectAnswer(correctAnswer: string | null | undefined): string {
   if (!correctAnswer) return "—"

@@ -72,6 +72,7 @@ describe("POST /api/exams/:id/finalize", () => {
 
     const updateChain = makeChain([])
     ;(db.update as Mock).mockReturnValue(updateChain)
+    ;(db.insert as Mock).mockReturnValue(makeChain([]))
 
     const app = buildTestApp()
     const res = await app.request("/api/exams/exam-1/finalize", { method: "POST" })
@@ -98,6 +99,7 @@ describe("POST /api/exams/:id/finalize", () => {
 
     const updateChain = makeChain([])
     ;(db.update as Mock).mockReturnValue(updateChain)
+    ;(db.insert as Mock).mockReturnValue(makeChain([]))
 
     const app = buildTestApp()
     const res = await app.request("/api/exams/exam-1/finalize", { method: "POST" })
@@ -105,6 +107,40 @@ describe("POST /api/exams/:id/finalize", () => {
     const body = await res.json() as Record<string, unknown>
     expect(body["status"]).toBe("final")
     expect(Array.isArray(body["questions"])).toBe(true)
+  })
+
+  it("marks the lembar as banked and public on finalize", async () => {
+    const examRow = makeExamRow()
+    const finalExamRow = makeExamRow({ status: "final", isPublic: true, bankedAt: new Date() })
+    const acceptedQ = makeQuestionRow({ status: "accepted" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      if (selectCount === 2) return makeChain([acceptedQ])
+      if (selectCount === 3) return makeChain([finalExamRow])
+      return makeChain([acceptedQ])
+    })
+
+    let capturedUpdate: Record<string, unknown> | undefined
+    ;(db.update as Mock).mockImplementation(() => {
+      const chain = makeChain([]) as ReturnType<typeof makeChain> & { set: Mock }
+      const originalSet = chain.set
+      chain.set = vi.fn((v: Record<string, unknown>) => {
+        capturedUpdate = v
+        return originalSet(v)
+      }) as unknown as Mock
+      return chain
+    })
+    ;(db.insert as Mock).mockReturnValue(makeChain([]))
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1/finalize", { method: "POST" })
+    expect(res.status).toBe(200)
+    expect(capturedUpdate?.["status"]).toBe("final")
+    expect(capturedUpdate?.["isPublic"]).toBe(true)
+    expect(capturedUpdate?.["bankedAt"]).toBeInstanceOf(Date)
   })
 })
 

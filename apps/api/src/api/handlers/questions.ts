@@ -5,14 +5,12 @@ import {
   type McqMultiQuestion,
   type McqSingleQuestion,
   RegenerateQuestionInputSchema,
-  type SaveToBankInput,
   SUBJECT_LABEL,
   type TrueFalseQuestion,
   UpdateQuestionInputSchema
 } from "@teacher-exam/shared"
 import { and, eq, ne } from "drizzle-orm"
 import { Effect, Either, Match, Schema } from "effect"
-import { logDomainError } from "../../lib/effect-log.js"
 import { validateGeneratedQuestionLatex } from "../../lib/latex-validator.js"
 import { normalizeMatematikaLatexField } from "../../lib/normalize-matematika-latex.js"
 import { buildRegeneratePrompt } from "../../lib/prompt"
@@ -28,7 +26,6 @@ import {
 import { runDb } from "../lib/db-effect"
 import { CurrentUser } from "../middleware/auth"
 import { AiClient } from "../services/ai"
-import { BankService } from "../services/bank-service"
 import { CurriculumService } from "../services/curriculum-service"
 import { DbClient } from "../services/db"
 
@@ -170,26 +167,6 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         if (!updated) {
           return yield* Effect.fail(
             new ApiDatabaseError({ error: "Question disappeared", code: "DATABASE_ERROR" })
-          )
-        }
-
-        if (
-          input.status === "accepted" &&
-          existingQuestion.status !== "accepted"
-        ) {
-          yield* Effect.gen(function*() {
-            const bankService = yield* BankService
-            yield* bankService.saveQuestion(userId, {
-              questionId: id as SaveToBankInput["questionId"]
-            })
-          }).pipe(
-            Effect.tapError((e) =>
-              logDomainError("questions.accept.autoSave", e, {
-                kind: "expected",
-                extra: { userId, questionId: id }
-              })
-            ),
-            Effect.catchAll(() => Effect.void)
           )
         }
 

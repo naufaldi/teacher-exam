@@ -38,51 +38,44 @@ Tambah dua fitur utama ke pipeline yang ada:
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Bank Soal** | Simpan soal individu dari hasil generate ke bank persisten. Browse, filter, cari. Toggle public/private. |
-| **Exam Builder** | Susun ujian baru dari soal-soal di bank. Pilih → atur → finalize → preview/cetak. |
+| **Bank Soal** | Simpan **lembar ujian Final** ke bank persisten. Browse per lembar, filter, cari. Toggle publik/privat per lembar. |
+| **Exam Builder** | Buat ujian baru dari **seluruh lembar** di bank (`Pakai lembar`). |
 
 ### 2.2 Bank Soal
 
-**Simpan ke Bank:**
-- Dari halaman Review (slow track): tombol "Simpan ke Bank" per soal
-- Dari halaman Preview: tombol "Simpan ke Bank" per soal
-- Dari halaman Fast Track: tombol "Simpan ke Bank" per soal
-- Soal tersimpan beserta metadata: mapel, kelas, topik, kesulitan, tipe soal
-- Soal yang disimpan tetap ada di bank meskipun ujian asal dihapus
+**Simpan ke Bank (per lembar — updated 2026-06-29):**
+- Saat guru **finalize** lembar ujian, lembar otomatis masuk **Bank Saya** (`exams.bankedAt`)
+- Default **publik** — lembar Final otomatis tampil di **Bank Publik** (`exams.isPublic = true`)
+- Guru bisa menjadikan lembar privat lewat `PATCH /api/bank/sheets/:id` (`isPublic: false`)
+- Jumlah soal di bank = jumlah soal **accepted** pada lembar (bisa < 20 jika slow track)
 
 **Browse Bank:**
-- Route baru: `/bank-soal`
-- Filter: mapel, kelas, topik, kesulitan, tipe soal, penulis (guru)
-- Search: teks soal
-- Pagination: 20 soal per halaman
+- Route `/bank-soal`
+- **1 baris = 1 lembar** (judul, mapel, tanggal, jumlah soal, visibilitas)
+- Filter: mapel, kelas, topik, kesulitan, penulis (Bank Publik)
+- Search: judul lembar + teks soal di dalam lembar
+- Pagination per lembar
 - Sort: terbaru, terpopuler, kesulitan
 
-**Public/Private Toggle:**
-- Setiap guru bisa membuat bank-nya visible ke guru lain (read-only)
-- Default: private (hanya pemilik yang bisa lihat)
-- Public bank bisa dilihat guru lain, tapi tidak bisa diedit
-- Guru lain bisa "gunakan" soal dari public bank ke ujian mereka
+**Public/Private (per lembar, publik on finalize):**
+- Default setelah finalize: **publik**
+- Bank Publik menampilkan lembar Final guru lain (read-only preview seluruh lembar)
+- Guru lain memakai lembar utuh via **Pakai lembar** → draft ujian baru
 
 **Bank Statistics:**
-- Jumlah soal di bank per mapel
-- Berapa kali soal digunakan di ujian
-- Acceptance rate (berapa % soal yang diterima guru saat review)
+- Jumlah lembar di bank per mapel (halaman Bank Saya)
 
 ### 2.3 Exam Builder
 
 **Alur:**
-1. Guru masuk ke `/bank-soal`
-2. Pilih soal-soal yang ingin digunakan (checkbox)
-3. Klik "Buat Ujian dari Pilihan"
-4. Masuk ke halaman konfigurasi (seperti Generate, tapi soal sudah dipilih)
-5. Atur urutan soal, tambah soal baru jika perlu (opsional: generate AI untuk mengisi kekurangan)
-6. Finalize → Preview → Cetak
+1. Guru masuk ke `/bank-soal` (Bank Saya atau Bank Publik)
+2. Klik **Pakai lembar** pada satu lembar
+3. Sistem menduplikasi seluruh soal accepted ke draft ujian baru
+4. Preview → edit metadata → finalize → cetak
 
 **Fitur Exam Builder:**
-- Pilih minimal 5 soal, maksimal 50 soal
-- Atur urutan soal (drag & drop atau nomor)
-- Opsi: generate AI untuk mengisi soal yang kurang (jika guru pilih 15 soal, AI bisa tambah 5)
-- Metadata lembar sama dengan Generate (sekolah, tahun pelajaran, jenis ujian, dll)
+- Import **seluruh lembar** (tidak ada cherry-pick per soal)
+- Metadata lembar baru bisa diedit sebelum preview/finalize
 - Preview dan cetak sama dengan Generate
 
 ### 2.4 Integrasi dengan Alur Existing
@@ -90,8 +83,8 @@ Tambah dua fitur utama ke pipeline yang ada:
 Bank Soal dan Exam Builder **tidak menggantikan** alur Generate yang ada. Keduanya adalah **tambahan**:
 
 - **Generate** (existing): AI membuat 20 soal dari nol → review → preview → cetak
-- **Bank Soal** (new): simpan soal dari generate → browse → share
-- **Exam Builder** (new): susun ujian dari bank → preview → cetak
+- **Bank Soal** (new): lembar Final tersimpan otomatis → browse per lembar → Bank Publik
+- **Exam Builder** (new): pakai lembar dari bank → preview → cetak
 
 Guru bisa menggunakan salah satu atau keduanya.
 
@@ -128,11 +121,11 @@ Penomoran melanjutkan konvensi PRD v2 dan v3; prefix `BS` = Bank Soal.
 
 > **Sebagai** guru, **saya ingin** membuat bank soal saya visible ke guru lain **agar** mereka bisa menggunakan soal yang sudah saya buat.
 
-**Acceptance Criteria:**
-- Toggle di halaman Bank Soal: "Bank Publik" on/off
-- Default: off (private)
-- Saat on: guru lain bisa melihat soal di bank (read-only)
-- Saat off: hanya pemilik yang bisa lihat
+**Acceptance Criteria (updated 2026-06 — public by default):**
+- Default: **on (public)** — soal yang diterima/di-generate dan ujian yang difinalisasi otomatis tampil di Bank Publik
+- Guru bisa menjadikan soal privat lewat `PATCH /api/bank/:id` (`isPublic: false`)
+- Saat public: guru lain bisa melihat soal di bank (read-only)
+- Saat private: hanya pemilik yang bisa lihat
 - Guru lain tidak bisa mengedit soal di bank publik
 
 ### US-BS-4: Bangun ujian dari bank
