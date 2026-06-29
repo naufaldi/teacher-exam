@@ -61,7 +61,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M4 | #70 | — | M4 public bank browse | closed | apps/web/src/routes/bank-soal-publik.tsx | — |
 | M4 | #70 | #177 | Verify Bank Soal legacy visibility | open | — | — |
 | M4 | #70 | #178 | Browser verify bank filters | open | — | — |
-| M4 | #70 | #69 | M4 bank E2E browser verify | open | docs/qa/m4-bank-e2e.md | — |
+| M4 | #70 | #69 | M4 bank E2E browser verify | closed | docs/qa/m4-bank-e2e.md | — |
 | M5 | — | #193 | Student delivery grading analytics | closed | apps/web/src/lib/feature-flags.ts DELIVERY_ENABLED | PR #194 |
 | M5 | — | — | M5.0 students table + identity | partial | packages/db/src/migrations/0010_add_classes_students.sql | PR #194 |
 | M5 | — | — | M5.1 correction_sessions schema | open | — | — |
