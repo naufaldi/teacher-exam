@@ -12,9 +12,26 @@ function repairMathSegment(math: string): string {
   return s
 }
 
-/** Fix common corrupted LaTeX commands inside `$...$` / `$$...$$` segments. */
+function repairPlainTextSegment(text: string): string {
+  let s = text
+  s = s.replace(/(?<![a-z\\])rac\{([^}]*)\}\{([^}]*)\}/g, (_, num, den) => `$\\frac{${num}}{${den}}$`)
+  s = s.replace(/(?<![a-z\\])\bqrt\{([^}]*)\}/g, (_, n) => `$\\sqrt{${n}}$`)
+  s = s.replace(/(\d[\d.,]*)\s+imes\s+(\d[\d.,]*)/g, (_, a, b) => `$${a} \\times ${b}$`)
+  s = s.replace(/(\d[\d.,]*)\s+div\s+(\d[\d.,]*)/g, (_, a, b) => `$${a} \\div ${b}$`)
+  s = s.replace(/(?<![$\\a-z])\\frac\{([^}]*)\}\{([^}]*)\}/g, (_, num, den) => `$\\frac{${num}}{${den}}$`)
+  return s
+}
+
+/** Fix common corrupted LaTeX commands inside `$...$` / `$$...$$` segments and bare plain text. */
 export function repairMatematikaLatexInText(text: string): string {
-  return parseMathText(text)
+  const withPlainRepaired = parseMathText(text)
+    .map((part) => {
+      if (part._tag === "math") return part.raw
+      return repairPlainTextSegment(part.value)
+    })
+    .join("")
+
+  return parseMathText(withPlainRepaired)
     .map((part) => {
       if (part._tag === "text") return part.value
       const repaired = repairMathSegment(part.value)
@@ -23,17 +40,19 @@ export function repairMatematikaLatexInText(text: string): string {
     .join("")
 }
 
+function detectBrokenInSegment(segment: string, issues: Array<string>): void {
+  if (/\bimes\b/.test(segment) || /\t+imes\b/.test(segment)) issues.push("imes → \\times")
+  if (/\brac\{/.test(segment)) issues.push("rac{ → \\frac{")
+  if (/\bqrt\{/.test(segment)) issues.push("qrt{ → \\sqrt{")
+  if (/(\d[\d.,]*)\s+div\s+(\d[\d.,]*)/.test(segment)) issues.push("div → \\div")
+}
+
 /** Detect corrupted LaTeX tokens that KaTeX may silently mis-render. */
 export function detectBrokenMatematikaLatex(text: string): Array<string> {
   const issues: Array<string> = []
 
   for (const part of parseMathText(text)) {
-    if (part._tag !== "math") continue
-    const v = part.value
-    if (/\bimes\b/.test(v) || /\t+imes\b/.test(v)) issues.push("imes → \\times")
-    if (/\brac\{/.test(v)) issues.push("rac{ → \\frac{")
-    if (/\bqrt\{/.test(v)) issues.push("qrt{ → \\sqrt{")
-    if (/(\d[\d.,]*)\s+div\s+(\d[\d.,]*)/.test(v)) issues.push("div → \\div")
+    detectBrokenInSegment(part.value, issues)
   }
 
   return [...new Set(issues)]
