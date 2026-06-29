@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { db } from "@teacher-exam/db"
 import { Effect, Layer } from "effect"
-import { type Mock, vi } from "vitest"
+import { type Mock } from "vitest"
 import { makeChain } from "../../../routes/__test__/helpers"
 import { BankService, BankServiceLive } from "../bank-service"
 import { DbClient } from "../db"

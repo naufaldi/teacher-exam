@@ -4,6 +4,10 @@
 > **Tracking:** [#70 — PRD v4 Bank Soal + Exam Builder](https://github.com/naufaldi/teacher-exam/issues/70)
 > **Scope:** E3, E4, E6, E7 (core bank API) + auto-save after review + exam-driven publish
 
+> **Addendum (2026-06-29 — public share page):** `POST /api/exams/:id/share` creates a public slug; recipients open `/share/:slug` (anonymous) with full print/export parity to `/preview`. See [RFC 2026-06-29-public-exam-share](../../rfc/2026-06-29-public-exam-share-rfc.md).
+
+> **Addendum (2026-06-29 — unified SheetTable):** Bank Soal UI memakai `SheetTable` (`bank-mine` / `bank-public`) bersama Dashboard dan Riwayat. Pratinjau lembar via `SheetPreviewDialog`; **Pakai lembar** tetap mengarah ke `/preview` dengan exam baru. Lihat [RFC 2026-06-29-unified-sheet-table](../../rfc/2026-06-29-unified-sheet-table-rfc.md).
+
 > **Addendum (2026-06-29 — per-lembar bank):** Bank Soal browse unit is **lembar ujian** (`exams` with `bankedAt`), not individual `bank_questions`. Finalizing sets `bankedAt` + `isPublic = true`. API: `GET /api/bank/sheets`, `GET /api/bank/sheets/public`, `POST /api/bank/use-sheet`. Legacy per-question endpoints remain for backward compatibility but are not used by the Bank Soal UI.
 
 ---

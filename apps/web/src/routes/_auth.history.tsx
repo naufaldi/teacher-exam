@@ -8,13 +8,19 @@ import {
   HistoryEmpty,
   HistoryHeader,
   HistoryPagination,
-  HistoryTable,
   HistoryToolbar,
   type PeriodFilter,
   type SortOrder,
   type StatusFilter,
   type SubjectFilter
 } from "../components/history/index.js"
+import {
+  examToSheetRow,
+  SheetPreviewDialog,
+  SheetTable,
+  useSheetPreview,
+  useSheetTableHandlers
+} from "../components/sheet/index.js"
 import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
 import { api, ApiError, unwrapApiEither } from "../lib/api.js"
 
@@ -57,6 +63,7 @@ function HistoryPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const duplicate = useDuplicateExam()
+  const sheetPreview = useSheetPreview()
 
   const [exams, setExams] = useState<Array<Exam>>([])
   const [loading, setLoading] = useState(true)
@@ -165,6 +172,24 @@ function HistoryPage() {
   }, [safePage, page])
   const start = (safePage - 1) * pageSize
   const visibleExams = filtered.slice(start, start + pageSize)
+  const visibleRows = visibleExams.map((exam) => examToSheetRow(exam))
+
+  const sheetHandlers = useSheetTableHandlers({
+    onPreview: sheetPreview.openPreview,
+    onDuplicate: (row) => {
+      const exam = exams.find((e) => e.id === row.id)
+      if (exam) {
+        duplicate.openFor(exam)
+      }
+    },
+    onDelete: handleDelete,
+    onShare: (row) => {
+      const exam = exams.find((e) => e.id === row.id)
+      if (exam) {
+        void handleShare(exam)
+      }
+    }
+  })
 
   if (loading) {
     return <LoadingSpinner message="Memuat riwayat lembar ujian..." />
@@ -248,11 +273,10 @@ function HistoryPage() {
           ) :
           (
             <>
-              <HistoryTable
-                exams={visibleExams}
-                onDelete={handleDelete}
-                onDuplicate={duplicate.openFor}
-                onShare={handleShare}
+              <SheetTable
+                variant="history"
+                rows={visibleRows}
+                handlers={sheetHandlers}
               />
 
               <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
@@ -291,6 +315,13 @@ function HistoryPage() {
           isPending={duplicate.isPending}
         />
       )}
+
+      <SheetPreviewDialog
+        examId={sheetPreview.previewExamId}
+        {...(sheetPreview.previewTitle ? { title: sheetPreview.previewTitle } : {})}
+        open={sheetPreview.previewOpen}
+        onClose={sheetPreview.closePreview}
+      />
     </div>
   )
 }

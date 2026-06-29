@@ -104,6 +104,10 @@ export function fetchPublicExamWithQuestions(
       db.select().from(questions).where(eq(questions.examId, examRow.id)).orderBy(questions.number)
     )
 
-    return { ...toPublicExam(examRow), questions: questionRows.map((q) => rowToQuestion(q)) }
+    const acceptedOnly = questionRows
+      .map((q) => rowToQuestion(q))
+      .filter((q) => q.status === "accepted")
+
+    return { ...toPublicExam(examRow), questions: acceptedOnly }
   })
 }

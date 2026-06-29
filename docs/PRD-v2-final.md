@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v2
 
+> **Changelog 2026-06-29:** Unified `SheetTable` + modal-first Pratinjau across Dashboard, Riwayat, Bank Soal. See [RFC 2026-06-29-unified-sheet-table](../rfc/2026-06-29-unified-sheet-table-rfc.md).
+
 ## School Exam Generator — Ujian SD Kelas 5 & 6
 
 
@@ -173,6 +175,8 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 - Menampilkan nama dan avatar guru (dari Google)
 - Statistik ringkas: jumlah **lembar/ujian tersimpan**, draft vs final
 - Akses cepat: tombol/link ke **lembar terakhir** yang dibuat (jika ada)
+- **Riwayat terbaru** memakai tabel `SheetTable` yang sama dengan halaman Riwayat (kolom ringkas: tanpa jumlah soal)
+- Klik judul lembar Final di Riwayat terbaru → **Pratinjau modal** (daftar soal); cetak penuh lewat footer modal → halaman `/preview`
 
 #### US-3: Logout
 
@@ -291,6 +295,8 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
 
 > **Sebagai** guru, **saya ingin** mencetak **lembar soal** langsung dari browser **agar** proses cepat tanpa perlu software tambahan.
 
+**Pratinjau dua tingkat (2026-06-29):** Dari tabel Riwayat/Bank, **Pratinjau modal** menampilkan daftar soal read-only. Halaman `/preview` (Preview Lembar) dipakai untuk layout cetak lengkap: soal + LJ + kunci + pembahasan + export.
+
 **Acceptance Criteria:**
 
 - Tombol **"Cetak Semua"** → dialog print browser dengan semua halaman: soal + lembar jawaban + kunci jawaban
@@ -328,13 +334,48 @@ Alur **MVP**: Login → Dashboard → Generate lembar (AI + CP otomatis) → Rev
   - Status: Draft / Final
   - Jumlah soal
 - Aksi per ujian:
-  - **Cetak** (jika final) → buka preview + print
+  - **Pratinjau** (jika final) → modal daftar soal; **Buka halaman cetak** di modal → `/preview` (soal + LJ + kunci + export)
   - **Koreksi** (jika final) → buka tool koreksi cepat (US-19)
-  - **Edit** (jika draft) → buka alur penyuntingan
+  - **Edit** (jika draft) → buka alur penyuntingan (`/review`)
   - **Duplikat** → buat salinan sebagai draft baru
+  - **Bagikan** (jika final, halaman Riwayat) → salin link publik `/share/:slug`; re-share idempotent (slug + `publishedAt` tetap); link mengarah ke US-SHARE-1/2
   - **Hapus** → konfirmasi dialog → hapus
 - Sortir berdasarkan tanggal (terbaru di atas)
 - Filter berdasarkan status (Draft / Final / Semua) dan mapel
+
+#### US-SHARE-1: Lihat lembar publik tanpa login
+
+> **Sebagai** guru rekan sejawat, **saya ingin** membuka link `/share/:slug` tanpa login **agar** bisa melihat dan mencetak lembar ujian yang dibagikan.
+
+**Acceptance Criteria:**
+
+- Halaman load tanpa auth; metadata: judul, mapel, kelas, tanggal dibagikan, badge "Publik"
+- Soal MCQ menampilkan label **a. b. c. d.** + teks pilihan (KaTeX untuk Matematika)
+- Soal benar/salah menampilkan tabel Pernyataan / B / S dengan lingkaran kosong
+- Figure SVG tampil jika ada
+- Slug invalid / lembar tidak publik → pesan ramah + CTA ke halaman login (`/`)
+
+#### US-SHARE-2: Cetak paket lengkap dari link publik
+
+> **Sebagai** guru penerima link, **saya ingin** mencetak soal + lembar jawaban + kunci (+ pembahasan jika ada) **agar** output sama dengan pemilik lembar.
+
+**Acceptance Criteria:**
+
+- Sections: Soal (KOP + petunjuk + 2 kolom), Lembar Jawaban, Kunci Jawaban, Pembahasan (jika `discussionMd` ada)
+- Tombol cetak terpisah atau print scope seperti `/preview` (US-15)
+- `@media print`: sembunyikan toolbar; A4, margin 2cm, serif
+- Export PDF/DOCX: variant soal, kunci, pembahasan
+
+#### US-SHARE-3: Bagikan dari Riwayat (regression)
+
+> **Sebagai** guru pemilik lembar Final, **saya ingin** tombol Bagikan menyalin URL `/share/:slug` **agar** rekan bisa mengakses lembar.
+
+**Acceptance Criteria:**
+
+- Link dari US-17 **Bagikan** resolve ke halaman US-SHARE-1/2
+- Re-share tidak mengganti slug; `publishedAt` dipertahankan
+
+Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md).
 
 ---
 

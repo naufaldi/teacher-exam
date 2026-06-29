@@ -16,7 +16,6 @@ import type {
   GenerateExamInput,
   PaginatedBankSheetsResponse,
   PaginatedPublicBankSheetsResponse,
-  PublicBankSheet,
   PublicExamDetailResponse,
   RegenerateQuestionInput,
   SessionDetailResponse,
@@ -32,10 +31,10 @@ import type {
   UpdateClassInput,
   UpdateExamInput,
   UpdateProfileInput,
-  UseBankSheetInput,
-  UseBankSheetResponse,
   UpdateQuestionInput,
-  UpdateTemplateInput
+  UpdateTemplateInput,
+  UseBankSheetInput,
+  UseBankSheetResponse
 } from "@teacher-exam/shared"
 import {
   BankSheetSchema,
@@ -52,7 +51,6 @@ import {
   HealthResponseSchema,
   PaginatedBankSheetsResponseSchema,
   PaginatedPublicBankSheetsResponseSchema,
-  PublicBankSheetSchema,
   PublicExamWithQuestionsSchema,
   QuestionSchema,
   SessionDetailResponseSchema,

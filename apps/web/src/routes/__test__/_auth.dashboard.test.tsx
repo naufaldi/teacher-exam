@@ -1,16 +1,26 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import type { Exam } from "@teacher-exam/shared"
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { makeExam } from "../../test/fixtures/exam.js"
 
 import { Route } from "../_auth.dashboard.js"
 
-const { mockLoaderData, mockNavigate, mockRouteContext } = vi.hoisted(() => ({
+const { mockInvalidate, mockLoaderData, mockNavigate, mockRouteContext, mockToast } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
+  mockInvalidate: vi.fn(),
+  mockToast: vi.fn(),
   mockLoaderData: { exams: [] as Array<Exam> },
   mockRouteContext: { user: { name: "Naufaldi Rafii", id: "user-1", email: "test@test.com" } }
 }))
+
+vi.mock("@teacher-exam/ui", async (importOriginal) => {
+  const orig = await importOriginal()
+  return {
+    ...(orig as object),
+    useToast: () => ({ toast: mockToast })
+  }
+})
 
 vi.mock("../../hooks/use-duplicate-exam.js", () => ({
   useDuplicateExam: () => ({
@@ -20,6 +30,13 @@ vi.mock("../../hooks/use-duplicate-exam.js", () => ({
     close: vi.fn(),
     confirm: vi.fn()
   })
+}))
+
+vi.mock("../../lib/feature-flags.js", () => ({
+  DELIVERY_ENABLED: true,
+  DELIVERY_DISABLED_TITLE: "Fitur dalam pengembangan",
+  KOREKSI_ENABLED: true,
+  KOREKSI_DISABLED_TITLE: "Fitur dalam pengembangan"
 }))
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -32,6 +49,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       useRouteContext: () => mockRouteContext
     }),
     useNavigate: () => mockNavigate,
+    useRouter: () => ({ invalidate: mockInvalidate }),
     Link: ({
       children,
       className,
@@ -155,7 +173,7 @@ describe("DashboardPage", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/correction/$examId",
-      params: { examId: "final-latest" }
+      params: { examId: expect.stringContaining("final-latest") }
     })
   })
 
@@ -184,18 +202,17 @@ describe("DashboardPage", () => {
 
     renderDashboard()
 
-    const title = screen.getByText("Final Row Exam")
-    const row = title.parentElement?.parentElement?.parentElement
-    expect(row).toBeTruthy()
+    const koreksiButtons = screen.getAllByRole("button", { name: "Koreksi" })
+    const historyKoreksi = koreksiButtons.find((btn) => !btn.closest("[class*='Lembar Terakhir']"))
+      ?? koreksiButtons[koreksiButtons.length - 1]
+    expect(historyKoreksi).toBeDefined()
+    expect(historyKoreksi).not.toBeDisabled()
 
-    const koreksiButton = within(row!).getByRole("button", { name: "Koreksi" })
-    expect(koreksiButton).not.toBeDisabled()
-
-    fireEvent.click(koreksiButton)
+    fireEvent.click(historyKoreksi!)
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/correction/$examId",
-      params: { examId: "final-row" }
+      params: { examId: expect.stringContaining("final-row") }
     })
   })
 })

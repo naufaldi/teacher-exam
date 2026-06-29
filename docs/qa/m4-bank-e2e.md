@@ -15,10 +15,12 @@
 | Step | Action | Result |
 |------|--------|--------|
 | 1 | Open `/dashboard` (authenticated) | Dashboard loads, Guru Dev session active |
-| 2 | Navigate `/bank-soal` → Bank Saya tab | 20+ bank questions listed with filters/toolbar |
-| 3 | Select 5 questions → **Buat Ujian** | Builder dialog opens |
-| 4 | Fill metadata → **Buat ujian** | Redirect to `/preview?examId=…` |
-| 5 | Open `/bank-soal-publik` (anonymous) | Public bank page loads without login |
+| 2 | Navigate `/dashboard` (authenticated) | Dashboard loads; Riwayat terbaru uses unified `SheetTable` |
+| 3 | Navigate `/bank-soal` → Bank Saya tab | Lembar rows listed; Pratinjau opens modal |
+| 4 | Click Pratinjau on a row | Modal shows soal cards (not route navigation) |
+| 5 | **Pakai lembar** on a row | Redirect to `/preview?examId=…` (new copy) |
+| 6 | Navigate `/history` | Same table shell; final row Pratinjau → modal |
+| 7 | Open `/bank-soal-publik` (anonymous) | Public bank; Pratinjau modal without print footer |
 
 ## Screenshots
 

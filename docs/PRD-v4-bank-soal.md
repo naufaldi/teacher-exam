@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v4
 
+> **Changelog 2026-06-29:** Bank browse memakai `SheetTable` bersama Dashboard/Riwayat; Pratinjau modal + Pakai lembar → `/preview`. Lihat [RFC unified sheet table](../rfc/2026-06-29-unified-sheet-table-rfc.md).
+
 ## School Exam Generator — Bank Soal + Exam Builder
 
 | Field             | Value                                                                  |
@@ -51,7 +53,8 @@ Tambah dua fitur utama ke pipeline yang ada:
 
 **Browse Bank:**
 - Route `/bank-soal`
-- **1 baris = 1 lembar** (judul, mapel, tanggal, jumlah soal, visibilitas)
+- **1 baris = 1 lembar** — tabel `SheetTable` (UI sama dengan Riwayat/Dashboard)
+- **Pratinjau** → modal daftar soal; **Pakai lembar** → `/preview` (salinan baru)
 - Filter: mapel, kelas, topik, kesulitan, penulis (Bank Publik)
 - Search: judul lembar + teks soal di dalam lembar
 - Pagination per lembar
