@@ -57,4 +57,13 @@ describe("validateLatexText", () => {
       expect(result.reason).toContain("imes")
     }
   })
+
+  test("rejects bare rac{ outside delimiters", () => {
+    const result = validateLatexText("rac{3}{5}")
+
+    expect(result._tag).toBe("invalid")
+    if (result._tag === "invalid") {
+      expect(result.reason).toContain("rac{")
+    }
+  })
 })

@@ -34,6 +34,14 @@ describe("repairMatematikaLatexInText", () => {
     const input = "Hasil dari $124 \\times 36$ dan $\\frac{3}{4}$"
     expect(repairMatematikaLatexInText(input)).toBe(input)
   })
+
+  test("repairs bare rac{ outside math delimiters", () => {
+    expect(repairMatematikaLatexInText("rac{3}{5}")).toBe("$\\frac{3}{5}$")
+  })
+
+  test("repairs inline bare rac{ in plain text", () => {
+    expect(repairMatematikaLatexInText("sisa rac{2}{5} kue")).toBe("sisa $\\frac{2}{5}$ kue")
+  })
 })
 
 describe("detectBrokenMatematikaLatex", () => {
@@ -43,5 +51,9 @@ describe("detectBrokenMatematikaLatex", () => {
 
   test("returns empty for valid LaTeX", () => {
     expect(detectBrokenMatematikaLatex("Hasil dari $124 \\times 36$")).toEqual([])
+  })
+
+  test("flags bare rac{ outside math delimiters", () => {
+    expect(detectBrokenMatematikaLatex("rac{3}{5}")).toContain("rac{ → \\frac{")
   })
 })

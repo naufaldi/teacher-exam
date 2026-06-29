@@ -46,4 +46,12 @@ describe("MathText", () => {
     expect(container.querySelector(".katex")).not.toBeNull()
     expect(container.textContent).toMatch(/124\s*×\s*36/)
   })
+
+  it("renders bare corrupted fraction rac{3}{5}", () => {
+    const { container } = render(<MathText text="rac{3}{5}" />)
+
+    expect(container.querySelector(".katex")).not.toBeNull()
+    expect(container.textContent).not.toMatch(/(?<![\\f])rac\{/)
+    expect(container.textContent).not.toContain("$")
+  })
 })

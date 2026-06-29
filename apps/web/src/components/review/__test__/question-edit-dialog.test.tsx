@@ -268,4 +268,27 @@ describe("QuestionEditDialog — math preview", () => {
     const previewA = screen.getByTestId("edit-option-preview-a")
     expect(previewA.textContent).toContain("Three")
   })
+
+  it("renders bare rac{3}{5} in Matematika option preview", () => {
+    render(
+      <QuestionEditDialog
+        open
+        question={makeMcqQuestion("Ibu membeli kue. $\\frac{2}{5}$ bagian dimakan pagi.", {
+          a: "rac{1}{5}",
+          b: "rac{2}{5}",
+          c: "rac{3}{5}",
+          d: "rac{4}{5}"
+        })}
+        subject="matematika"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    )
+
+    for (const letter of ["a", "b", "c", "d"] as const) {
+      const preview = screen.getByTestId(`edit-option-preview-${letter}`)
+      expect(preview.textContent).not.toMatch(/(?<![\\f])rac\{/)
+      expect(preview.querySelector(".katex")).not.toBeNull()
+    }
+  })
 })
