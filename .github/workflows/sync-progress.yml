@@ -1,0 +1,35 @@
+name: Sync GitHub Progress
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        run: type gh || (sudo apt-get update && sudo apt-get install -y gh)
+
+      - name: Sync ISSUE_INDEX and ROADMAP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ARGS="--pr ${{ github.event.pull_request.number }}"
+          fi
+          node scripts/sync-github-progress.mjs $ARGS
+
+      - name: Commit doc updates
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: sync ISSUE_INDEX and ROADMAP from merged PR"

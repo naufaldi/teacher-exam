@@ -2,6 +2,12 @@
 
 <!-- What changed and why -->
 
+## Tracking
+
+- Closes #<!-- issue number -->
+- Milestone: <!-- M1–M6 or RFC-E1–E5 -->
+- [ ] `docs/ISSUE_INDEX.md` row exists or updated
+
 ## Checklist
 
 - [ ] `pnpm lint && pnpm effect:check && pnpm type-check && pnpm test`
