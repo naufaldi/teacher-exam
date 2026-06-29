@@ -1,8 +1,8 @@
 import type { CurriculumCatalogResponse } from "@teacher-exam/shared"
 import { describe, expect, it } from "vitest"
 import {
-  formatAcademicPeriod,
   firstReadySubjectGrade,
+  formatAcademicPeriod,
   generateCardDescription,
   heroCurriculumParagraph,
   readyGradeSpan,

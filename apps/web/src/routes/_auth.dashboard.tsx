@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
+import type { Grade } from "@teacher-exam/shared"
 import { Badge, Button, useToast } from "@teacher-exam/ui"
 import {
   ArrowRight,
@@ -12,7 +13,6 @@ import {
   PrinterIcon,
   Sparkles
 } from "lucide-react"
-import type { Grade } from "@teacher-exam/shared"
 import { useMemo } from "react"
 import { CurriculumTipsCard } from "../components/dashboard/curriculum-tips-card.js"
 import { DuplicateConfirmDialog } from "../components/dashboard/duplicate-confirm-dialog.js"
@@ -27,7 +27,6 @@ import {
 } from "../components/sheet/index.js"
 import { useDuplicateExam } from "../hooks/use-duplicate-exam.js"
 import { api, ApiError, unwrapApiEither } from "../lib/api.js"
-import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
 import {
   formatAcademicPeriod,
   formatGradeSpan,
@@ -37,6 +36,7 @@ import {
   readySubjectMetas,
   resolveTipsContext
 } from "../lib/dashboard-copy.js"
+import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
 import { DELIVERY_ENABLED, KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
 export const Route = createFileRoute("/_auth/dashboard")({
@@ -201,7 +201,7 @@ function DashboardError({ error }: { error: Error }) {
 
 function DashboardPage() {
   const { user } = Route.useRouteContext()
-  const { exams, catalog, tips } = Route.useLoaderData()
+  const { catalog, exams, tips } = Route.useLoaderData()
   const navigate = useNavigate()
   const router = useRouter()
   const { toast } = useToast()

@@ -6,100 +6,106 @@ import { makeExam } from "../../test/fixtures/exam.js"
 
 import { Route } from "../_auth.dashboard.js"
 
-const { mockInvalidate, mockLoaderData, mockNavigate, mockRouteContext, mockToast, MOCK_CATALOG, MOCK_BI_TIPS, MOCK_MTK_TIPS } =
-  vi.hoisted(() => {
-    const catalog: CurriculumCatalogResponse = [
-      {
-        key: "bahasa_indonesia",
-        label: "Bahasa Indonesia",
-        family: "bahasa",
-        optional: false,
-        grades: [
-          { grade: 5, phase: "C", availability: "ready" },
-          { grade: 6, phase: "C", availability: "ready" }
-        ]
-      },
-      {
-        key: "matematika",
-        label: "Matematika",
-        family: "matematika",
-        optional: false,
-        grades: [
-          { grade: 5, phase: "C", availability: "ready" },
-          { grade: 6, phase: "C", availability: "ready" }
-        ]
-      },
-      {
-        key: "pendidikan_pancasila",
-        label: "Pendidikan Pancasila",
-        family: "pancasila",
-        optional: false,
-        grades: [{ grade: 5, phase: "C", availability: "ready" }]
-      },
-      {
-        key: "ipas",
-        label: "IPAS",
-        family: "ipas",
-        optional: false,
-        grades: [{ grade: 5, phase: "C", availability: "ready" }]
-      },
-      {
-        key: "bahasa_inggris",
-        label: "Bahasa Inggris",
-        family: "bahasa",
-        optional: false,
-        grades: [{ grade: 5, phase: "C", availability: "ready" }]
-      }
-    ]
-
-    const biTips: CurriculumTipsResponse = {
-      subject: "bahasa_indonesia",
-      grade: 5,
-      phase: "C",
-      subjectLabel: "Bahasa Indonesia",
-      title: "Capaian Pembelajaran Bahasa Indonesia",
-      intro:
-        "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Bahasa Indonesia.",
-      elements: [
-        { label: "Menyimak.", description: "Menganalisis informasi dari teks lisan." },
-        { label: "Membaca.", description: "Memahami ide pokok teks." },
-        { label: "Berbicara.", description: "Menyampaikan gagasan secara logis." },
-        { label: "Menulis.", description: "Menulis teks kompleks." }
-      ],
-      footer: "CP identik untuk Kelas 5 dan 6 — tidak perlu input manual.",
-      source: "corpus"
-    }
-
-    const mtkTips: CurriculumTipsResponse = {
-      ...biTips,
-      subject: "matematika",
-      subjectLabel: "Matematika",
-      title: "Capaian Pembelajaran Matematika",
-      intro:
-        "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Matematika.",
-      elements: [
-        { label: "Bilangan.", description: "Memahami bilangan cacah dan operasi hitung." },
-        { label: "Aljabar.", description: "Mengenali pola dan kalimat matematika." },
-        { label: "Pengukuran.", description: "Menggunakan satuan baku." },
-        { label: "Analisis data.", description: "Membaca tabel dan diagram." }
+const {
+  MOCK_BI_TIPS,
+  MOCK_CATALOG,
+  MOCK_MTK_TIPS,
+  mockInvalidate,
+  mockLoaderData,
+  mockNavigate,
+  mockRouteContext,
+  mockToast
+} = vi.hoisted(() => {
+  const catalog: CurriculumCatalogResponse = [
+    {
+      key: "bahasa_indonesia",
+      label: "Bahasa Indonesia",
+      family: "bahasa",
+      optional: false,
+      grades: [
+        { grade: 5, phase: "C", availability: "ready" },
+        { grade: 6, phase: "C", availability: "ready" }
       ]
+    },
+    {
+      key: "matematika",
+      label: "Matematika",
+      family: "matematika",
+      optional: false,
+      grades: [
+        { grade: 5, phase: "C", availability: "ready" },
+        { grade: 6, phase: "C", availability: "ready" }
+      ]
+    },
+    {
+      key: "pendidikan_pancasila",
+      label: "Pendidikan Pancasila",
+      family: "pancasila",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
+    },
+    {
+      key: "ipas",
+      label: "IPAS",
+      family: "ipas",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
+    },
+    {
+      key: "bahasa_inggris",
+      label: "Bahasa Inggris",
+      family: "bahasa",
+      optional: false,
+      grades: [{ grade: 5, phase: "C", availability: "ready" }]
     }
+  ]
 
-    return {
-      mockNavigate: vi.fn(),
-      mockInvalidate: vi.fn(),
-      mockToast: vi.fn(),
-      mockLoaderData: {
-        exams: [] as Array<Exam>,
-        catalog,
-        tips: biTips
-      },
-      mockRouteContext: { user: { name: "Naufaldi Rafii", id: "user-1", email: "test@test.com" } },
-      MOCK_CATALOG: catalog,
-      MOCK_BI_TIPS: biTips,
-      MOCK_MTK_TIPS: mtkTips
-    }
-  })
+  const biTips: CurriculumTipsResponse = {
+    subject: "bahasa_indonesia",
+    grade: 5,
+    phase: "C",
+    subjectLabel: "Bahasa Indonesia",
+    title: "Capaian Pembelajaran Bahasa Indonesia",
+    intro: "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Bahasa Indonesia.",
+    elements: [
+      { label: "Menyimak.", description: "Menganalisis informasi dari teks lisan." },
+      { label: "Membaca.", description: "Memahami ide pokok teks." },
+      { label: "Berbicara.", description: "Menyampaikan gagasan secara logis." },
+      { label: "Menulis.", description: "Menulis teks kompleks." }
+    ],
+    footer: "CP identik untuk Kelas 5 dan 6 — tidak perlu input manual.",
+    source: "corpus"
+  }
+
+  const mtkTips: CurriculumTipsResponse = {
+    ...biTips,
+    subject: "matematika",
+    subjectLabel: "Matematika",
+    title: "Capaian Pembelajaran Matematika",
+    intro: "Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Matematika.",
+    elements: [
+      { label: "Bilangan.", description: "Memahami bilangan cacah dan operasi hitung." },
+      { label: "Aljabar.", description: "Mengenali pola dan kalimat matematika." },
+      { label: "Pengukuran.", description: "Menggunakan satuan baku." },
+      { label: "Analisis data.", description: "Membaca tabel dan diagram." }
+    ]
+  }
+
+  return {
+    mockNavigate: vi.fn(),
+    mockInvalidate: vi.fn(),
+    mockToast: vi.fn(),
+    mockLoaderData: {
+      exams: [] as Array<Exam>,
+      catalog,
+      tips: biTips
+    },
+    mockRouteContext: { user: { name: "Naufaldi Rafii", id: "user-1", email: "test@test.com" } },
+    MOCK_CATALOG: catalog,
+    MOCK_BI_TIPS: biTips,
+    MOCK_MTK_TIPS: mtkTips
+  }
+})
 
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
   const orig = await importOriginal()
