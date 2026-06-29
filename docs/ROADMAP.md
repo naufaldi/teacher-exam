@@ -53,7 +53,7 @@ Each milestone maps to a PRD:
 | 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ✅ Done (2026-06-23) |
 | 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
-| 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | 🔄 In progress |
+| 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar, 2026-06-29) |
 | 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
 

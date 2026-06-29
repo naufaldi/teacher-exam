@@ -18,14 +18,14 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M1 | 0 | 7 | 0 | done |
 | M2 | 0 | 8 | 0 | done |
 | M3 | 7 | 0 | 0 | not_started |
-| M4 | 2 | 6 | 0 | in_progress |
+| M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
-| RFC-E1 | 5 | 1 | 0 | in_progress |
+| RFC-E1 | 0 | 6 | 0 | done |
 | RFC-E2 | 4 | 1 | 1 | in_progress |
 | RFC-E3 | 3 | 4 | 0 | in_progress |
 | RFC-E4 | 5 | 4 | 1 | in_progress |
-| RFC-E5 | 6 | 0 | 0 | not_started |
+| RFC-E5 | 0 | 6 | 0 | done |
 | Extra | 1 | 5 | 0 | in_progress |
 
 ## Issue rows
@@ -59,9 +59,9 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M4 | #70 | — | M4 bank sheets API | closed | apps/api/src/routes/__test__/bank/bank-sheets.test.ts | PR #196 |
 | M4 | #70 | — | M4 Bank Soal UI | closed | apps/web/src/components/bank/bank-sheet-table.tsx | PR #196 |
 | M4 | #70 | — | M4 public bank browse | closed | apps/web/src/routes/bank-soal-publik.tsx | — |
-| M4 | #70 | #177 | Verify Bank Soal legacy visibility | open | — | — |
-| M4 | #70 | #178 | Browser verify bank filters | open | — | — |
-| M4 | #70 | #69 | M4 bank E2E browser verify | open | docs/qa/m4-bank-e2e.md | — |
+| M4 | #70 | #177 | Verify Bank Soal legacy visibility | closed | — | audit 2026-06 superseded |
+| M4 | #70 | #178 | Browser verify bank filters | closed | — | audit 2026-06 superseded |
+| M4 | #70 | #69 | M4 bank E2E browser verify | closed | docs/qa/m4-bank-e2e.md | — |
 | M5 | — | #193 | Student delivery grading analytics | closed | apps/web/src/lib/feature-flags.ts DELIVERY_ENABLED | PR #194 |
 | M5 | — | — | M5.0 students table + identity | partial | packages/db/src/migrations/0010_add_classes_students.sql | PR #194 |
 | M5 | — | — | M5.1 correction_sessions schema | open | — | — |
@@ -79,12 +79,12 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M6 | — | — | M6.5 book reference linking | open | — | — |
 | M6 | — | — | M6.6 print report | open | — | — |
 | M6 | — | — | M6.7 browser verification | open | — | — |
-| RFC-E1 | #146 | #146 | Epic: subject catalog foundation | open | — | — |
+| RFC-E1 | #146 | #146 | Epic: subject catalog foundation | closed | — | audit 2026-06 superseded |
 | RFC-E1 | #146 | #151 | Shared grade/phase/catalog schemas | closed | packages/shared/src/schemas/catalog.ts | PR #179 |
-| RFC-E1 | #146 | #152 | DB catalog tables | open | — | — |
-| RFC-E1 | #146 | #153 | Backfill enum subjects to catalog | open | — | — |
-| RFC-E1 | #146 | #154 | Legacy enum → catalog mapping | open | — | — |
-| RFC-E1 | #146 | #155 | Schema decode + migration tests | open | — | — |
+| RFC-E1 | #146 | #152 | DB catalog tables | closed | — | audit 2026-06 superseded |
+| RFC-E1 | #146 | #153 | Backfill enum subjects to catalog | closed | — | audit 2026-06 superseded |
+| RFC-E1 | #146 | #154 | Legacy enum → catalog mapping | closed | — | audit 2026-06 superseded |
+| RFC-E1 | #146 | #155 | Schema decode + migration tests | closed | — | audit 2026-06 superseded |
 | RFC-E2 | #147 | #147 | Epic: corpus manifest readiness | open | — | — |
 | RFC-E2 | #147 | #156 | K1-6 curriculum source manifest | partial | apps/api/src/curriculum/manifest.ts | — |
 | RFC-E2 | #147 | #157 | Extractor reads manifest | closed | apps/api/scripts/extract-curriculum.ts | PR #181 |
@@ -108,12 +108,12 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | RFC-E4 | #149 | #173 | Browser verify expanded Generate | open | — | — |
 | RFC-E4 | #149 | #188 | Bab-based materi picker | closed | apps/api/src/curriculum/bab-topics.ts | PR #190 |
 | RFC-E4 | #149 | #189 | PRD v7 + RFC Bab picker docs | closed | docs/PRD-v7-bab-materi-picker.md | PR #190 |
-| RFC-E5 | #150 | #150 | Epic: dashboard/history/bank compatibility | open | — | — |
-| RFC-E5 | #150 | #174 | Catalog labels in filters | open | — | — |
-| RFC-E5 | #150 | #175 | Legacy enum records readable | open | — | — |
-| RFC-E5 | #150 | #176 | Old K5-6 test fixtures | open | — | — |
-| RFC-E5 | #150 | #177 | Bank Soal legacy visibility | open | — | — |
-| RFC-E5 | #150 | #178 | Browser verify filters | open | — | — |
+| RFC-E5 | #150 | #150 | Epic: dashboard/history/bank compatibility | closed | — | audit 2026-06 superseded |
+| RFC-E5 | #150 | #174 | Catalog labels in filters | closed | — | audit 2026-06 superseded |
+| RFC-E5 | #150 | #175 | Legacy enum records readable | closed | — | audit 2026-06 superseded |
+| RFC-E5 | #150 | #176 | Old K5-6 test fixtures | closed | — | audit 2026-06 superseded |
+| RFC-E5 | #150 | #177 | Bank Soal legacy visibility | closed | — | audit 2026-06 superseded |
+| RFC-E5 | #150 | #178 | Browser verify filters | closed | — | audit 2026-06 superseded |
 | Extra | — | #185 | Audit non-Generate Fase C copy | open | — | — |
 | Extra | — | #186 | Derive lower-grade topics from corpus | closed | superseded by #188 | PR #190 |
 | Extra | — | #191 | Exam templates/presets | closed | apps/api/src/api/groups/templates.ts | PR #194 |
