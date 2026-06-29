@@ -7,8 +7,7 @@
  *   node scripts/sync-github-progress.mjs [--dry-run] [--pr N] [--verify]
  */
 import { execSync } from "node:child_process"
-import { access } from "node:fs/promises"
-import { readFile, writeFile } from "node:fs/promises"
+import { access, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
 const ROOT = new URL("..", import.meta.url).pathname
@@ -121,7 +120,6 @@ function rollupForMilestone(rows, milestoneKey) {
 }
 
 function rebuildOverviewTable(overview, issueRows) {
-  const milestones = overview.rows.map((r) => r.milestone)
   const newLines = [...overview.lines]
 
   for (const row of overview.rows) {
@@ -131,8 +129,7 @@ function rebuildOverviewTable(overview, issueRows) {
     const closed = mRows.filter((r) => r.status === "closed").length
     const partial = mRows.filter((r) => r.status === "partial").length
     const rollup = rollupForMilestone(issueRows, m)
-    newLines[row.lineIdx] =
-      `| ${m} | ${open} | ${closed} | ${partial} | ${rollup} |`
+    newLines[row.lineIdx] = `| ${m} | ${open} | ${closed} | ${partial} | ${rollup} |`
   }
   return newLines.join("\n")
 }
@@ -249,7 +246,6 @@ async function main() {
   }
 
   const issueParse = parseIssueRows(indexMd)
-  const overviewParse = parseOverviewRows(indexMd)
 
   const issueNumbers = issueParse.rows
     .map((r) => issueNumberFromCell(r.issue))
@@ -285,7 +281,8 @@ async function main() {
   }
 
   indexMd = rebuildIssueTable(issueParse, issueParse.rows)
-  indexMd = rebuildOverviewTable(overviewParse, issueParse.rows)
+  const updatedOverview = parseOverviewRows(indexMd)
+  indexMd = rebuildOverviewTable(updatedOverview, issueParse.rows)
 
   const rollupByMilestone = {}
   for (const m of ["M1", "M2", "M3", "M4", "M5", "M6"]) {
