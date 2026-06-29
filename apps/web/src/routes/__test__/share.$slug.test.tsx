@@ -1,14 +1,14 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import { brandExamId, type PublicExamDetailResponse } from "@teacher-exam/shared"
-import { Either } from "effect"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { Either } from "effect"
 import type { ComponentType } from "react"
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
-import { makeMcqSingle, makeTrueFalse } from "../../test/fixtures/exam.js"
-import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiClientError } from "../../lib/api-errors.js"
+import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
 import type * as ApiModule from "../../lib/api.js"
+import { makeMcqSingle, makeTrueFalse } from "../../test/fixtures/exam.js"
 
 import { Route } from "../share.$slug.js"
 

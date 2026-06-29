@@ -80,6 +80,7 @@ function BankToolbar({
   difficulty,
   grade,
   isFiltered,
+  itemLabel = "soal",
   matchCount,
   onAuthorChange,
   onDifficultyChange,
@@ -94,7 +95,6 @@ function BankToolbar({
   search,
   showAuthorFilter = false,
   showTypeFilter = true,
-  itemLabel = "soal",
   sort,
   subject,
   tab,
@@ -132,116 +132,116 @@ function BankToolbar({
           null}
 
         <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Cari teks soal..."
-            className={FILTER_SEARCH_CLASS}
-            aria-label="Cari teks soal"
-          />
-        </div>
-
-        <select
-          value={subject}
-          onChange={(e) => onSubjectChange(e.target.value as BankSubjectFilter)}
-          className={SELECT_CLASS}
-          style={{ backgroundImage: SELECT_CHEVRON }}
-          aria-label="Filter mata pelajaran"
-        >
-          {SUBJECT_FILTER_OPTIONS.map((opt) => (
-            <option key={opt.label} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={grade}
-          onChange={(e) => onGradeChange(e.target.value as BankGradeFilter)}
-          className={SELECT_CLASS}
-          style={{ backgroundImage: SELECT_CHEVRON }}
-          aria-label="Filter kelas"
-        >
-          {GRADE_OPTIONS.map((opt) => (
-            <option key={opt.label} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => onTopicChange(e.target.value)}
-          placeholder="Topik..."
-          className={`${SELECT_CLASS} min-w-[120px]`}
-          aria-label="Filter topik"
-        />
-
-        <select
-          value={difficulty}
-          onChange={(e) => onDifficultyChange(e.target.value as BankDifficultyFilter)}
-          className={SELECT_CLASS}
-          style={{ backgroundImage: SELECT_CHEVRON }}
-          aria-label="Filter tingkat kesulitan"
-        >
-          {DIFFICULTY_OPTIONS.map((opt) => (
-            <option key={opt.label} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {showTypeFilter ?
-          (
-            <select
-              value={type}
-              onChange={(e) => onTypeChange(e.target.value as BankTypeFilter)}
-              className={SELECT_CLASS}
-              style={{ backgroundImage: SELECT_CHEVRON }}
-              aria-label="Filter tipe soal"
-            >
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.label} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          ) :
-          null}
-
-        {showAuthorFilter ?
-          (
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => onAuthorChange(e.target.value)}
-              placeholder="Penulis..."
-              className={`${SELECT_CLASS} min-w-[120px]`}
-              aria-label="Filter penulis"
+          <div className="relative flex-1 min-w-[200px]">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
             />
-          ) :
-          null}
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Cari teks soal..."
+              className={FILTER_SEARCH_CLASS}
+              aria-label="Cari teks soal"
+            />
+          </div>
 
-        <select
-          value={sort}
-          onChange={(e) => onSortChange(e.target.value as BankSortFilter)}
-          className={SELECT_CLASS}
-          style={{ backgroundImage: SELECT_CHEVRON }}
-          aria-label="Urutkan"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          <select
+            value={subject}
+            onChange={(e) => onSubjectChange(e.target.value as BankSubjectFilter)}
+            className={SELECT_CLASS}
+            style={{ backgroundImage: SELECT_CHEVRON }}
+            aria-label="Filter mata pelajaran"
+          >
+            {SUBJECT_FILTER_OPTIONS.map((opt) => (
+              <option key={opt.label} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={grade}
+            onChange={(e) => onGradeChange(e.target.value as BankGradeFilter)}
+            className={SELECT_CLASS}
+            style={{ backgroundImage: SELECT_CHEVRON }}
+            aria-label="Filter kelas"
+          >
+            {GRADE_OPTIONS.map((opt) => (
+              <option key={opt.label} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => onTopicChange(e.target.value)}
+            placeholder="Topik..."
+            className={`${SELECT_CLASS} min-w-[120px]`}
+            aria-label="Filter topik"
+          />
+
+          <select
+            value={difficulty}
+            onChange={(e) => onDifficultyChange(e.target.value as BankDifficultyFilter)}
+            className={SELECT_CLASS}
+            style={{ backgroundImage: SELECT_CHEVRON }}
+            aria-label="Filter tingkat kesulitan"
+          >
+            {DIFFICULTY_OPTIONS.map((opt) => (
+              <option key={opt.label} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {showTypeFilter ?
+            (
+              <select
+                value={type}
+                onChange={(e) => onTypeChange(e.target.value as BankTypeFilter)}
+                className={SELECT_CLASS}
+                style={{ backgroundImage: SELECT_CHEVRON }}
+                aria-label="Filter tipe soal"
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            ) :
+            null}
+
+          {showAuthorFilter ?
+            (
+              <input
+                type="text"
+                value={author}
+                onChange={(e) => onAuthorChange(e.target.value)}
+                placeholder="Penulis..."
+                className={`${SELECT_CLASS} min-w-[120px]`}
+                aria-label="Filter penulis"
+              />
+            ) :
+            null}
+
+          <select
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value as BankSortFilter)}
+            className={SELECT_CLASS}
+            style={{ backgroundImage: SELECT_CHEVRON }}
+            aria-label="Urutkan"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

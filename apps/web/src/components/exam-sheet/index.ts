@@ -1,6 +1,4 @@
 export { acceptedQuestions, toExamSheetMetadata } from "./exam-metadata.js"
-export { kopLabelFor } from "./exam-type-labels.js"
-export type { ExamSheetContentProps, ExamSheetMetadata } from "./exam-sheet-types.js"
 export {
   ExamSheetBody,
   ExamSheetContent,
@@ -13,6 +11,8 @@ export {
   SoalSection,
   TrueFalseTable
 } from "./exam-sheet-sections.js"
+export type { ExamSheetContentProps, ExamSheetMetadata } from "./exam-sheet-types.js"
+export { kopLabelFor } from "./exam-type-labels.js"
+export { ExamSheetPrintStyles } from "./print-scope-styles.js"
 export { triggerPrint } from "./print-scope.js"
 export type { PrintScope } from "./print-scope.js"
-export { ExamSheetPrintStyles } from "./print-scope-styles.js"

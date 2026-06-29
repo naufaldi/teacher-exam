@@ -21,17 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@teacher-exam/ui"
-import {
-  CheckSquare,
-  Copy,
-  Eye,
-  Globe,
-  Link2,
-  Lock,
-  MoreHorizontal,
-  Pencil,
-  Trash2
-} from "lucide-react"
+import { CheckSquare, Copy, Eye, Globe, Link2, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { subjectMetaFor } from "../../lib/subjects.js"
 import {
@@ -484,9 +474,7 @@ function SheetTable({
               {columns.map((column) => (
                 <TableHead
                   key={column}
-                  className={`${HEAD_CLS} ${COLUMN_WIDTHS[column] ?? ""} ${
-                    column === "soal" ? "tabular-nums" : ""
-                  } ${
+                  className={`${HEAD_CLS} ${COLUMN_WIDTHS[column] ?? ""} ${column === "soal" ? "tabular-nums" : ""} ${
                     column === "status" || column === "visibility" ? "hidden lg:table-cell text-center" : ""
                   } ${column === "author" ? "hidden lg:table-cell" : ""} ${
                     column === "actions" ? "hidden lg:table-cell text-right" : ""
@@ -515,4 +503,4 @@ function SheetTable({
   )
 }
 
-export { SheetTable, formatShortDate }
+export { formatShortDate, SheetTable }

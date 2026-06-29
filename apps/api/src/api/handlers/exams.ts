@@ -5,7 +5,6 @@ import { formatExamTitle, SUBJECT_LABEL, UpdateExamInputSchema } from "@teacher-
 import type { ExamShareResponse, ExamSubject, ExamWithQuestions } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
-import { logDomainError } from "../../lib/effect-log"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
 import { rowToQuestion } from "../../lib/question-mapper"
@@ -75,8 +74,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         }
 
         const isOwner = examRow.userId === userId
-        const isPublicBankSheet =
-          examRow.isPublic &&
+        const isPublicBankSheet = examRow.isPublic &&
           examRow.status === "final" &&
           examRow.bankedAt !== null
 

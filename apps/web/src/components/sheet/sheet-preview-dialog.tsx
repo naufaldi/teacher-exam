@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router"
 import type { ExamWithQuestions } from "@teacher-exam/shared"
 import {
   Button,
@@ -8,10 +9,9 @@ import {
   DialogTitle,
   LoadingSpinner
 } from "@teacher-exam/ui"
-import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
-import { BankQuestionReadonlyBody } from "../bank/bank-question-readonly-body.js"
 import { api, unwrapApiEither } from "../../lib/api.js"
+import { BankQuestionReadonlyBody } from "../bank/bank-question-readonly-body.js"
 
 interface SheetPreviewDialogProps {
   examId: string | null
@@ -81,9 +81,11 @@ function SheetPreviewDialog({
           <p className="text-body-sm text-danger-700">{error}</p> :
           null}
         {!loading && !error && acceptedQuestions.length === 0 ?
-          <p className="text-body-sm text-text-tertiary py-8 text-center">
-            Belum ada soal diterima.
-          </p> :
+          (
+            <p className="text-body-sm text-text-tertiary py-8 text-center">
+              Belum ada soal diterima.
+            </p>
+          ) :
           null}
         {!loading && !error && acceptedQuestions.length > 0 ?
           (

@@ -9,7 +9,7 @@ type SheetTableRow = {
   title: string
   subject: ExamSubject
   grade: number
-  topics: readonly string[]
+  topics: ReadonlyArray<string>
   examType: string
   date: string
   questionCount: number | null

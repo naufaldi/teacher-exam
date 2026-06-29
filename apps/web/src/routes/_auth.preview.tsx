@@ -3,15 +3,10 @@ import type { ExamDetailResponse, ExamType } from "@teacher-exam/shared"
 import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
 import { useState } from "react"
-import {
-  ExamSheetBody,
-  ExamSheetPrintStyles,
-  kopLabelFor,
-  triggerPrint
-} from "../components/exam-sheet/index.js"
+import { PaperFrame } from "../components/exam-sheet/exam-sheet-sections.js"
+import { ExamSheetBody, ExamSheetPrintStyles, kopLabelFor, triggerPrint } from "../components/exam-sheet/index.js"
 import { ExportMenu } from "../components/export-menu.js"
 import { MarkdownMath } from "../components/markdown-math.js"
-import { PaperFrame } from "../components/exam-sheet/exam-sheet-sections.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
 import { subjectMetaFor } from "../lib/subjects.js"

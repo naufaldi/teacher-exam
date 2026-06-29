@@ -1,5 +1,11 @@
 import { KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../../lib/feature-flags.js"
-import type { SheetActionDef, SheetActionId, SheetColumnId, SheetTableRow, SheetTableVariant } from "./sheet-table.types.js"
+import type {
+  SheetActionDef,
+  SheetActionId,
+  SheetColumnId,
+  SheetTableRow,
+  SheetTableVariant
+} from "./sheet-table.types.js"
 
 function getSheetColumns(variant: SheetTableVariant): ReadonlyArray<SheetColumnId> {
   switch (variant) {

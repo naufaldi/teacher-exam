@@ -529,9 +529,7 @@ function DashboardPage() {
         </div>
 
         {recent.length > 0 ?
-          (
-            <SheetTable variant="dashboard-recent" rows={recentRows} handlers={sheetHandlers} />
-          ) :
+          <SheetTable variant="dashboard-recent" rows={recentRows} handlers={sheetHandlers} /> :
           (
             <div className="py-8 text-center text-text-tertiary text-body-sm border border-border-default rounded-md bg-bg-surface">
               Belum ada riwayat ujian.

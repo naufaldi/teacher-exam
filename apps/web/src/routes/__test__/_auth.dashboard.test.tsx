@@ -6,7 +6,7 @@ import { makeExam } from "../../test/fixtures/exam.js"
 
 import { Route } from "../_auth.dashboard.js"
 
-const { mockLoaderData, mockNavigate, mockRouteContext, mockInvalidate, mockToast } = vi.hoisted(() => ({
+const { mockInvalidate, mockLoaderData, mockNavigate, mockRouteContext, mockToast } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockInvalidate: vi.fn(),
   mockToast: vi.fn(),
@@ -15,9 +15,9 @@ const { mockLoaderData, mockNavigate, mockRouteContext, mockInvalidate, mockToas
 }))
 
 vi.mock("@teacher-exam/ui", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("@teacher-exam/ui")>()
+  const orig = await importOriginal()
   return {
-    ...orig,
+    ...(orig as object),
     useToast: () => ({ toast: mockToast })
   }
 })

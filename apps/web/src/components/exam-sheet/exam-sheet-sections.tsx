@@ -1,12 +1,12 @@
 import type { Question } from "@teacher-exam/shared"
 import type { ReactNode } from "react"
+import { pointsPerQuestion } from "../../lib/points.js"
+import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
 import { FigureSvg } from "../figure-svg.js"
 import { MarkdownMath } from "../markdown-math.js"
 import { MathText } from "../math-text.js"
-import { pointsPerQuestion } from "../../lib/points.js"
-import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
-import { kopLabelFor } from "./exam-type-labels.js"
 import type { ExamSheetMetadata } from "./exam-sheet-types.js"
+import { kopLabelFor } from "./exam-type-labels.js"
 
 function PaperFrame({ children }: { children: ReactNode }) {
   return (
@@ -215,9 +215,7 @@ function AnswerColumn({ questions }: { questions: Array<Question> }) {
         matchQuestion(q, {
           mcq_single: (x) => <McqBubbleRow key={q.id} number={x.number} />,
           mcq_multi: (x) => <McqBubbleRow key={q.id} number={x.number} />,
-          true_false: (x) => (
-            <TrueFalseBubbleRow key={q.id} number={x.number} statementCount={x.statements.length} />
-          )
+          true_false: (x) => <TrueFalseBubbleRow key={q.id} number={x.number} statementCount={x.statements.length} />
         })
       )}
     </div>

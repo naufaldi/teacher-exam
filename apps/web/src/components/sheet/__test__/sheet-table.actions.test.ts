@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { makeExam } from "../../../test/fixtures/exam.js"
-import { bankSheetToSheetRow, examToSheetRow } from "../sheet-table.adapters.js"
 import { getSheetActions, getSheetColumns, resolveTitleClickAction } from "../sheet-table.actions.js"
+import { bankSheetToSheetRow, examToSheetRow } from "../sheet-table.adapters.js"
 
 describe("getSheetColumns", () => {
   it("dashboard-recent omits soal column", () => {
