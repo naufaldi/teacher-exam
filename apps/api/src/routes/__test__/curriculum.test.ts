@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { TestCurriculumLayer } from "../../api/services/curriculum-service.js"
 import { buildHttpApiTestApp } from "./http-api-setup.js"
+
+const MD_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../curriculum/md")
+const MATEMATIKA_K5_CORPUS = readFileSync(join(MD_DIR, "matematika-kelas-5.md"), "utf8")
 
 const PPKN_K1_SNIPPET = `# Pendidikan Pancasila — Kelas 1
 
@@ -84,5 +90,41 @@ describe("GET /api/curriculum/bab-topics", () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual([])
+  })
+})
+
+describe("GET /api/curriculum/tips", () => {
+  it("returns corpus-parsed CP tips for Matematika Kelas 5", async () => {
+    const app = buildHttpApiTestApp({
+      curriculumLayer: TestCurriculumLayer(MATEMATIKA_K5_CORPUS)
+    })
+    const res = await app.request("/api/curriculum/tips?subject=matematika&grade=5")
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as {
+      subject: string
+      grade: number
+      subjectLabel: string
+      source: string
+      elements: Array<{ label: string; description: string }>
+    }
+
+    expect(body.subject).toBe("matematika")
+    expect(body.grade).toBe(5)
+    expect(body.subjectLabel).toBe("Matematika")
+    expect(body.source).toBe("corpus")
+    expect(body.elements).toHaveLength(4)
+  })
+
+  it("returns fallback tips when corpus layer provides empty CP", async () => {
+    const app = buildHttpApiTestApp({
+      curriculumLayer: TestCurriculumLayer("# Empty\n\n## Bab 1: Foo")
+    })
+    const res = await app.request("/api/curriculum/tips?subject=matematika&grade=5")
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as { source: string; elements: Array<{ label: string }> }
+    expect(body.source).toBe("fallback")
+    expect(body.elements.length).toBeGreaterThan(0)
   })
 })

@@ -54,3 +54,25 @@ export const CurriculumBabTopicsUrlParamsSchema = Schema.Struct({
   grade: Schema.NumberFromString.pipe(Schema.int(), Schema.between(1, 6))
 })
 export type CurriculumBabTopicsUrlParams = typeof CurriculumBabTopicsUrlParamsSchema.Type
+
+export const CurriculumTipsUrlParamsSchema = CurriculumBabTopicsUrlParamsSchema
+export type CurriculumTipsUrlParams = typeof CurriculumTipsUrlParamsSchema.Type
+
+export const CurriculumTipElementSchema = Schema.Struct({
+  label: Schema.NonEmptyString,
+  description: Schema.NonEmptyString
+})
+export type CurriculumTipElement = typeof CurriculumTipElementSchema.Type
+
+export const CurriculumTipsResponseSchema = Schema.Struct({
+  subject: ExamSubjectSchema,
+  grade: GradeSchema,
+  phase: PhaseSchema,
+  subjectLabel: Schema.NonEmptyString,
+  title: Schema.NonEmptyString,
+  intro: Schema.NonEmptyString,
+  elements: Schema.Array(CurriculumTipElementSchema).pipe(Schema.minItems(1), Schema.maxItems(4)),
+  footer: Schema.NonEmptyString,
+  source: Schema.Literal("corpus", "fallback")
+})
+export type CurriculumTipsResponse = typeof CurriculumTipsResponseSchema.Type

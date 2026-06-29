@@ -1,30 +1,23 @@
+import type { CurriculumTipsResponse } from "@teacher-exam/shared"
 import { CheckCircle } from "lucide-react"
 
-const CP_ELEMENTS = [
-  { label: "Menyimak.", desc: "Menganalisis informasi dari teks lisan/aural." },
-  { label: "Membaca & Memirsa.", desc: "Memahami ide pokok, kosakata, nilai sastra." },
-  { label: "Berbicara.", desc: "Menyampaikan gagasan secara logis & kritis." },
-  { label: "Menulis.", desc: "Menulis teks kompleks sesuai kaidah bahasa." }
-] as const
+interface CurriculumTipsCardProps {
+  tips: CurriculumTipsResponse
+}
 
-function CurriculumTipsCard() {
+function CurriculumTipsCard({ tips }: CurriculumTipsCardProps) {
   return (
     <div className="bg-bg-surface border border-border-default rounded-md p-6 flex flex-col overflow-hidden h-full">
       <span className="text-caption font-semibold tracking-wider uppercase text-secondary-700">
-        Capaian Pembelajaran · Fase C
+        Capaian Pembelajaran · Fase {tips.phase}
       </span>
-      <h3 className="text-h3 font-semibold text-text-primary mt-2 mb-2.5">
-        Empat elemen Bahasa Indonesia
-      </h3>
-      <p className="text-body-sm text-text-secondary leading-relaxed m-0">
-        Sistem memakai Capaian Pembelajaran berikut secara otomatis saat Anda memilih mapel Bahasa Indonesia. Topik di
-        form generate akan menyesuaikan.
-      </p>
+      <h3 className="text-h3 font-semibold text-text-primary mt-2 mb-2.5">{tips.title}</h3>
+      <p className="text-body-sm text-text-secondary leading-relaxed m-0">{tips.intro}</p>
 
       <ul className="mt-4 flex flex-col gap-2.5 list-none p-0 m-0">
-        {CP_ELEMENTS.map((cp, i) => (
+        {tips.elements.map((cp, i) => (
           <li
-            key={i}
+            key={`${cp.label}-${i}`}
             className="grid gap-2.5 items-start text-body-sm leading-snug"
             style={{ gridTemplateColumns: "24px 1fr" }}
           >
@@ -36,7 +29,7 @@ function CurriculumTipsCard() {
             </span>
             <span>
               <b className="font-semibold text-text-primary">{cp.label}</b>{" "}
-              <span className="text-text-secondary">{cp.desc}</span>
+              <span className="text-text-secondary">{cp.description}</span>
             </span>
           </li>
         ))}
@@ -44,7 +37,7 @@ function CurriculumTipsCard() {
 
       <div className="mt-auto pt-5 border-t border-dashed border-border-default flex items-center gap-1.5 text-caption text-text-tertiary">
         <CheckCircle size={14} className="text-secondary-700 shrink-0" />
-        CP identik untuk Kelas 5 dan 6 — tidak perlu input manual.
+        {tips.footer}
       </div>
     </div>
   )
