@@ -101,12 +101,12 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | RFC-E3 | #148 | #166 | API tests valid/unavailable K1-6 | open | apps/api/src/routes/__test__/curriculum.test.ts | — |
 | RFC-E4 | #149 | #149 | Epic: grade-aware Generate form | open | — | — |
 | RFC-E4 | #149 | #167 | Kelas 1-6 grade select | closed | apps/web/src/routes/_auth.generate.tsx | PR #187 |
-| RFC-E4 | #149 | #168 | Catalog-driven subject/topic options | partial | apps/web/src/routes/_auth.generate.tsx | PR #190 |
-| RFC-E4 | #149 | #169 | Reset subject/topic on grade change | open | — | — |
+| RFC-E4 | #149 | #168 | Catalog-driven subject/topic options | closed | apps/web/src/lib/curriculum-catalog.ts | — |
+| RFC-E4 | #149 | #169 | Reset subject/topic on grade change | closed | apps/web/src/routes/_auth.generate.tsx | — |
 | RFC-E4 | #149 | #170 | Phase-aware Generate copy | closed | apps/web/src/routes/_auth.generate.tsx | PR #187 |
-| RFC-E4 | #149 | #171 | Unavailable/optional subject states | open | — | — |
-| RFC-E4 | #149 | #172 | Generate form tests K1/K4/K6 | open | apps/web/src/routes/__test__/_auth.generate.test.tsx | — |
-| RFC-E4 | #149 | #173 | Browser verify expanded Generate | open | — | — |
+| RFC-E4 | #149 | #171 | Unavailable/optional subject states | closed | apps/web/src/lib/curriculum-catalog.ts | — |
+| RFC-E4 | #149 | #172 | Generate form tests K1/K4/K6 | closed | apps/web/src/routes/__test__/_auth.generate.test.tsx | — |
+| RFC-E4 | #149 | #173 | Browser verify expanded Generate | closed | docs/qa/rfc-e4-generate-browser.md | — |
 | RFC-E4 | #149 | #188 | Bab-based materi picker | closed | apps/api/src/curriculum/bab-topics.ts | PR #190 |
 | RFC-E4 | #149 | #189 | PRD v7 + RFC Bab picker docs | closed | docs/PRD-v7-bab-materi-picker.md | PR #190 |
 | RFC-E5 | #150 | #150 | Epic: dashboard/history/bank compatibility | closed | — | audit 2026-06 superseded |

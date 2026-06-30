@@ -28,6 +28,22 @@ const BI_K1_BAB_TOPICS = [
   { bab: 1, title: "Bunyi Apa?", label: "Bab 1: Bunyi Apa?" }
 ] as const
 
+const PPKN_K5_BAB_TOPICS = [
+  { bab: 1, title: "Pancasila", label: "Bab 1: Pancasila" }
+] as const
+
+const PPKN_K4_BAB_TOPICS = [
+  { bab: 1, title: "Nilai-Nilai Pancasila", label: "Bab 1: Nilai-Nilai Pancasila" }
+] as const
+
+const PPKN_K6_BAB_TOPICS = [
+  { bab: 1, title: "Pancasila dalam Kehidupan", label: "Bab 1: Pancasila dalam Kehidupan" }
+] as const
+
+const MATEMATIKA_K1_BAB_TOPICS = [
+  { bab: 1, title: "Bilangan", label: "Bab 1: Bilangan" }
+] as const
+
 const MATEMATIKA_K5_BAB_TOPICS = [
   { bab: 1, title: "Bilangan Cacah Sampai 100.000", label: "Bab 1: Bilangan Cacah Sampai 100.000" },
   { bab: 2, title: "Pecahan", label: "Bab 2: Pecahan" }
@@ -80,7 +96,7 @@ const READY_CURRICULUM_CATALOG: CurriculumCatalogResponse = [
     key: "bahasa_inggris",
     label: "Bahasa Inggris",
     family: "bahasa",
-    optional: false,
+    optional: true,
     grades: [
       { grade: 1, phase: "A", availability: "missing" },
       { grade: 2, phase: "A", availability: "missing" },
@@ -161,10 +177,19 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
       </SelectContext.Provider>
     ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    SelectItem: (
+      { children, disabled, value }: { children: React.ReactNode; value: string; disabled?: boolean }
+    ) => (
       <SelectContext.Consumer>
         {(onSelect) => (
-          <button type="button" data-value={value} onClick={() => onSelect(value)}>
+          <button
+            type="button"
+            data-value={value}
+            disabled={disabled}
+            onClick={() => {
+              if (!disabled) onSelect(value)
+            }}
+          >
             {children}
           </button>
         )}
@@ -266,7 +291,7 @@ describe("Jumlah Soal input", () => {
     expect(screen.getByText("Kelas 6 SD")).toBeInTheDocument()
   })
 
-  it("shows only ready subjects after choosing Kelas 1", async () => {
+  it("shows ready and unavailable subjects after choosing Kelas 1", async () => {
     mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
     renderGeneratePage()
     await act(async () => {
@@ -278,8 +303,8 @@ describe("Jumlah Soal input", () => {
     expect(screen.getByRole("button", { name: "Bahasa Indonesia" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Matematika" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "IPAS" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Bahasa Inggris" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "IPAS — Tidak tersedia" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Bahasa Inggris — Belum tersedia (Opsional)" })).toBeDisabled()
   })
 
   it("submits Bahasa Indonesia Kelas 1 with a selected Bab topic", async () => {
@@ -332,10 +357,10 @@ describe("Jumlah Soal input", () => {
     fireEvent.click(screen.getByText("Kelas 5 SD"))
 
     expect(screen.getByText("IPAS")).toBeInTheDocument()
-    expect(screen.getByText("Bahasa Inggris")).toBeInTheDocument()
+    expect(screen.getByText("Bahasa Inggris (Opsional)")).toBeInTheDocument()
   })
 
-  it("shows only ready subjects after choosing Kelas 5", async () => {
+  it("shows ready and stubbed subjects after choosing Kelas 5", async () => {
     mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
     renderGeneratePage()
     await act(async () => {
@@ -347,8 +372,8 @@ describe("Jumlah Soal input", () => {
     expect(screen.getByRole("button", { name: "Bahasa Indonesia" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "IPAS" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Bahasa Inggris" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Matematika" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Bahasa Inggris (Opsional)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Matematika — Sedang dipersiapkan" })).toBeDisabled()
   })
 
   it("defaults to 20 for default jenis (formatif)", () => {
@@ -513,6 +538,170 @@ describe("GeneratePage — Bab materi picker", () => {
 
     expect(screen.getByText("Bab 1: Bilangan Cacah Sampai 100.000")).toBeInTheDocument()
     expect(screen.getByText("Bab 2: Pecahan")).toBeInTheDocument()
+  })
+})
+
+describe("GeneratePage — subject availability (#171)", () => {
+  it("does not switch to a stubbed subject when its disabled option is clicked", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...PPKN_K5_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_k5"))
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Pendidikan Pancasila" }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Matematika — Sedang dipersiapkan" }))
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+    fireEvent.click(screen.getByText("Bab 1: Pancasila"))
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "pendidikan_pancasila",
+        grade: 5,
+        topics: ["Bab 1: Pancasila"]
+      })
+    )
+  })
+})
+
+describe("GeneratePage — grade change reset (#169)", () => {
+  it("clears topics when switching from Kelas 6 to Kelas 1 while keeping a valid subject", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...PPKN_K6_BAB_TOPICS])
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 6 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Pendidikan Pancasila" }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+    fireEvent.click(screen.getByText("Bab 1: Pancasila dalam Kehidupan"))
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    expect(screen.queryByLabelText("Hapus topik: Bab 1: Pancasila dalam Kehidupan")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
+  })
+
+  it("clears topics when switching from Kelas 1 to Kelas 4", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...MATEMATIKA_K1_BAB_TOPICS])
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 1 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Matematika" }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+    fireEvent.click(screen.getByText("Bab 1: Bilangan"))
+
+    fireEvent.click(screen.getByText("Kelas 4 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    expect(screen.queryByLabelText("Hapus topik: Bab 1: Bilangan")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "IPAS" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Bahasa Inggris (Opsional)" })).toBeInTheDocument()
+  })
+})
+
+describe("GeneratePage — Kelas 4 and Kelas 6 coverage (#172)", () => {
+  it("shows Fase B copy and ready Kelas 4 subjects", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 4 SD"))
+
+    expect(screen.getByText("Fase B (Kelas 3–4)")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "IPAS" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Bahasa Inggris (Opsional)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Bahasa Indonesia — Belum tersedia" })).toBeDisabled()
+  })
+
+  it("shows Fase C copy and stubbed Matematika on Kelas 6", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 6 SD"))
+
+    expect(screen.getByText("Fase C (Kelas 5–6)")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Matematika — Sedang dipersiapkan" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
+  })
+
+  it("submits a Kelas 4 generate request with a ready subject", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...PPKN_K4_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_k4"))
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 4 SD"))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Pendidikan Pancasila" }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+    fireEvent.click(screen.getByText("Bab 1: Nilai-Nilai Pancasila"))
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "pendidikan_pancasila",
+        grade: 4,
+        topics: ["Bab 1: Nilai-Nilai Pancasila"]
+      })
+    )
   })
 })
 
