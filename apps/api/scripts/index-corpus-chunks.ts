@@ -1,4 +1,3 @@
-import { NodeRuntime } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
 import { startDatabase } from "../src/api/services/bootstrap-db.js"
 import { DbClient } from "../src/api/services/db.js"
@@ -16,7 +15,7 @@ async function main() {
   }
 
   const result = await Effect.runPromise(
-    indexCurriculumMdDirectory(db, mdDir).pipe(Effect.provide(dbLayer))
+    indexCurriculumMdDirectory(mdDir).pipe(Effect.provide(dbLayer))
   )
 
   console.log(
@@ -24,4 +23,7 @@ async function main() {
   )
 }
 
-NodeRuntime.runMain(main())
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

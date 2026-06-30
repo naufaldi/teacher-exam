@@ -1,4 +1,3 @@
-import type { SqlClient } from "@effect/sql/SqlClient"
 import { documentChunks } from "@teacher-exam/db"
 import type { ExamSubject } from "@teacher-exam/shared"
 import { and, eq } from "drizzle-orm"
@@ -6,8 +5,9 @@ import { Effect } from "effect"
 import { readdir, readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { ApiDatabaseError } from "../../api/errors/http.js"
+import { ApiDatabaseError } from "../../api/errors/http.js"
 import { runDb } from "../../api/lib/db-effect.js"
+import { DbClient } from "../../api/services/db.js"
 import { SUBJECT_SLUG } from "../curriculum.js"
 import { chunkCorpusMarkdown } from "./chunk-text.js"
 import { embedText } from "./embed.js"
@@ -81,11 +81,11 @@ export function buildCorpusChunkRows(
 }
 
 export function indexCorpusMarkdownForTarget(
-  db: SqlClient,
   target: CurriculumMdTarget,
   markdown: string
-): Effect.Effect<number, ApiDatabaseError> {
+): Effect.Effect<number, ApiDatabaseError, DbClient> {
   return Effect.gen(function*() {
+    const db = yield* DbClient
     const rows = buildCorpusChunkRows(markdown, target.subject, target.grade)
     const docId = corpusDocId(target.subject, target.grade)
     yield* runDb(
@@ -100,33 +100,30 @@ export function indexCorpusMarkdownForTarget(
 }
 
 export function indexCurriculumMdDirectory(
-  db: SqlClient,
   mdDir: string
-): Effect.Effect<{ indexed: number; chunks: number }, ApiDatabaseError> {
+): Effect.Effect<{ indexed: number; chunks: number }, ApiDatabaseError, DbClient> {
   return Effect.gen(function*() {
     const targets = yield* Effect.tryPromise({
       try: () => listCurriculumMdTargets(mdDir),
-      catch: (cause) => ({ _tag: "SqlError" as const, cause })
-    }).pipe(
-      Effect.mapError((cause) => ({
-        _tag: "ApiDatabaseError" as const,
-        message: `Failed to list curriculum markdown: ${String(cause)}`
-      }))
-    )
+      catch: (cause) =>
+        new ApiDatabaseError({
+          error: `Failed to list curriculum markdown: ${String(cause)}`,
+          code: "DATABASE_ERROR"
+        })
+    })
 
     let indexed = 0
     let chunks = 0
     for (const target of targets) {
       const markdown = yield* Effect.tryPromise({
         try: () => readFile(target.path, "utf8"),
-        catch: (cause) => cause
-      }).pipe(
-        Effect.mapError((cause) => ({
-          _tag: "ApiDatabaseError" as const,
-          message: `Failed to read ${target.path}: ${String(cause)}`
-        }))
-      )
-      const inserted = yield* indexCorpusMarkdownForTarget(db, target, markdown)
+        catch: (cause) =>
+          new ApiDatabaseError({
+            error: `Failed to read ${target.path}: ${String(cause)}`,
+            code: "DATABASE_ERROR"
+          })
+      })
+      const inserted = yield* indexCorpusMarkdownForTarget(target, markdown)
       if (inserted > 0) {
         indexed += 1
         chunks += inserted
