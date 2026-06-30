@@ -141,6 +141,30 @@ describe("computeWeeklyActivity", () => {
     expect(result.days[4]?.count).toBe(1)
     expect(result.uniqueSheetCount).toBe(1)
   })
+
+  it("counts bankedAt when createdAt and updatedAt are outside the window", () => {
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      updatedAt: "2026-03-01T00:00:00.000Z",
+      bankedAt: "2026-04-23T02:00:00.000Z"
+    })
+    const result = computeWeeklyActivity([exam], NOW)
+    expect(result.days[5]?.count).toBe(1)
+    expect(result.uniqueSheetCount).toBe(1)
+  })
+
+  it("counts publishedAt when other timestamps are outside the window", () => {
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      updatedAt: "2026-03-01T00:00:00.000Z",
+      publishedAt: "2026-04-22T02:00:00.000Z"
+    })
+    const result = computeWeeklyActivity([exam], NOW)
+    expect(result.days[4]?.count).toBe(1)
+    expect(result.uniqueSheetCount).toBe(1)
+  })
 })
 
 describe("getRecentSheets", () => {

@@ -11,6 +11,8 @@ interface StatSummaryProps {
 }
 
 function StatSummary({ stats, weeklyActivity, weeklyUniqueSheetCount }: StatSummaryProps) {
+  const showWeeklyEmptyHint = stats.totalSheets > 0 && weeklyUniqueSheetCount === 0
+
   return (
     <div className="bg-bg-surface border border-border-default rounded-lg p-6 flex flex-col gap-3 h-full">
       <h3 className="text-caption font-semibold tracking-wider uppercase text-text-tertiary m-0">
@@ -39,7 +41,11 @@ function StatSummary({ stats, weeklyActivity, weeklyUniqueSheetCount }: StatSumm
       </div>
 
       <div className="border-t border-border-default pt-4 mt-auto">
-        <ActivityBarChart data={weeklyActivity} totalLabel={`${weeklyUniqueSheetCount} lembar`} />
+        <ActivityBarChart
+          data={weeklyActivity}
+          totalLabel={`${weeklyUniqueSheetCount} lembar`}
+          emptyHint={showWeeklyEmptyHint ? "Tidak ada lembar disentuh minggu ini." : undefined}
+        />
       </div>
     </div>
   )
