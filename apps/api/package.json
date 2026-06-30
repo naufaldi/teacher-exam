@@ -18,6 +18,7 @@
     "db:seed:dev": "node --env-file-if-exists=../../.env --import tsx/esm scripts/seed-dev-guru.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1076.0",
     "@effect/ai": "^0.35.0",
     "@effect/ai-anthropic": "^0.25.0",
     "@effect/ai-openai": "^0.39.2",

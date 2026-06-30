@@ -1,4 +1,3 @@
-import { NodeContext } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
 import type { PdfUploadValidationError } from "../../lib/pdf-upload-service"
 import { createPdfUpload, getPdfUploadDetail, listPdfUploads, softDeletePdfUpload } from "../../lib/pdf-upload-service"
@@ -7,14 +6,14 @@ import { createRateLimitChecker, PDF_UPLOAD_RATE_WINDOWS } from "../lib/rate-lim
 import { AuthService, AuthServiceLive } from "../services/auth-service"
 import { databaseRuntime, getSharedDatabaseLayer } from "../services/bootstrap-db"
 import type { ObjectStorageError } from "../services/object-storage"
-import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
+import { ObjectStorageLive } from "../services/object-storage-live"
 
 const pdfUploadRateLimit = createRateLimitChecker(PDF_UPLOAD_RATE_WINDOWS)
 
 function buildPdfUploadLayer() {
   return Layer.mergeAll(
     getSharedDatabaseLayer(),
-    FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer))
+    ObjectStorageLive
   )
 }
 
