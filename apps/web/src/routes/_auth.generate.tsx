@@ -776,7 +776,11 @@ function GeneratePage() {
                           setSelectedFile(file)
                           setUploadedPdfId(null)
                           setSelectedLibraryPdf(null)
-                          setFieldErrors((prev) => ({ ...prev, pdf: undefined }))
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.pdf
+                            return next
+                          })
                         }}
                         onFileRemove={() => {
                           setSelectedFile(null)
@@ -794,7 +798,11 @@ function GeneratePage() {
                           setSelectedLibraryPdf(item)
                           setSelectedFile(null)
                           setUploadedPdfId(item.id)
-                          setFieldErrors((prev) => ({ ...prev, pdf: undefined }))
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.pdf
+                            return next
+                          })
                         }}
                         onDelete={(id) => {
                           const item = libraryItems.find((entry) => entry.id === id)
@@ -836,7 +844,11 @@ function GeneratePage() {
                     value={freeTopic}
                     onChange={(e) => {
                       setFreeTopic(e.target.value)
-                      setFieldErrors((prev) => ({ ...prev, freeTopic: undefined }))
+                      setFieldErrors((prev) => {
+                        const next = { ...prev }
+                        delete next.freeTopic
+                        return next
+                      })
                     }}
                     placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
                     rows={3}

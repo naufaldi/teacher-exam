@@ -160,11 +160,11 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
   return {
     ...orig,
     Button: (
-      { children, onClick, type, disabled: _disabled, ...rest }: {
+      { children, disabled: _disabled, onClick, type, ...rest }: {
+        disabled?: boolean
         onClick?: () => void
         children: React.ReactNode
         type?: "button" | "submit" | "reset"
-        disabled?: boolean
         "aria-label"?: string
       }
     ) => <button type={type ?? "button"} onClick={onClick} {...rest}>{children}</button>,
