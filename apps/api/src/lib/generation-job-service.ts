@@ -1,11 +1,18 @@
 import { generationJobs } from "@teacher-exam/db"
 import type { GenerateStreamResponse, JobStatus } from "@teacher-exam/shared"
-import { and, desc, eq, inArray } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNotNull, lt } from "drizzle-orm"
 import { Effect } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
 import { DbClient } from "../api/services/db"
 import { fetchExamWithQuestions } from "../lib/exams-query"
+
+export const DEFAULT_STALE_RUNNING_JOB_MS = 30 * 60 * 1000
+
+function readReclaimCount(inputJson: Record<string, unknown> | null | undefined): number {
+  const value = inputJson?.["reclaimCount"]
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
 
 export function createGenerationJob(
   examId: string,
@@ -142,6 +149,51 @@ export function getGenerateStreamResponse(
   })
 }
 
+export function reclaimStaleRunningJobs(
+  staleAfterMs: number,
+  now: Date = new Date()
+): Effect.Effect<number, ApiDatabaseError, DbClient> {
+  return Effect.gen(function*() {
+    const db = yield* DbClient
+    const staleBefore = new Date(now.getTime() - staleAfterMs)
+    const rows = yield* runDb(
+      db
+        .select()
+        .from(generationJobs)
+        .where(
+          and(
+            eq(generationJobs.status, "running"),
+            isNotNull(generationJobs.startedAt),
+            lt(generationJobs.startedAt, staleBefore)
+          )
+        )
+    )
+
+    let reclaimed = 0
+    for (const job of rows) {
+      const inputJson = (job.inputJson ?? {}) as Record<string, unknown>
+      const reclaimCount = readReclaimCount(inputJson)
+      if (reclaimCount >= 1) {
+        yield* failGenerationJob(job.id, "Worker timeout after retry", job.questionsDone)
+      } else {
+        yield* runDb(
+          db
+            .update(generationJobs)
+            .set({
+              status: "queued",
+              startedAt: null,
+              inputJson: { ...inputJson, reclaimCount: reclaimCount + 1 }
+            })
+            .where(eq(generationJobs.id, job.id))
+        )
+      }
+      reclaimed += 1
+    }
+
+    return reclaimed
+  })
+}
+
 export function listQueuedGenerationJobs(
   limit = 2
 ): Effect.Effect<ReadonlyArray<{ id: string; examId: string }>, ApiDatabaseError, DbClient> {
@@ -152,7 +204,7 @@ export function listQueuedGenerationJobs(
         .select({ id: generationJobs.id, examId: generationJobs.examId })
         .from(generationJobs)
         .where(eq(generationJobs.status, "queued"))
-        .orderBy(desc(generationJobs.createdAt))
+        .orderBy(asc(generationJobs.createdAt))
         .limit(limit)
     )
     return rows
