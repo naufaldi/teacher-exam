@@ -8,19 +8,18 @@ interface BarData {
 
 interface ActivityBarChartProps {
   data: ReadonlyArray<BarData>
-  totalLabel?: ReactNode
   emptyHint?: ReactNode
+  totalLabel?: ReactNode
 }
 
-function ActivityBarChart({ data, totalLabel, emptyHint }: ActivityBarChartProps) {
+function ActivityBarChart({ data, emptyHint, totalLabel }: ActivityBarChartProps) {
   const max = Math.max(...data.map((d) => d.count), 1)
 
   return (
     <div>
       <div className="flex items-baseline justify-between text-caption text-text-tertiary mb-2.5">
         <span>
-          Aktivitas{" "}
-          <span className="font-semibold text-text-secondary">7 hari terakhir (lembar disentuh)</span>
+          Aktivitas <span className="font-semibold text-text-secondary">7 hari terakhir (lembar disentuh)</span>
         </span>
         {totalLabel ? <span>{totalLabel}</span> : null}
       </div>

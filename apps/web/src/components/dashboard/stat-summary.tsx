@@ -43,8 +43,8 @@ function StatSummary({ stats, weeklyActivity, weeklyUniqueSheetCount }: StatSumm
       <div className="border-t border-border-default pt-4 mt-auto">
         <ActivityBarChart
           data={weeklyActivity}
-          totalLabel={`${weeklyUniqueSheetCount} lembar`}
           emptyHint={showWeeklyEmptyHint ? "Tidak ada lembar disentuh minggu ini." : undefined}
+          totalLabel={`${weeklyUniqueSheetCount} lembar`}
         />
       </div>
     </div>
