@@ -3,8 +3,8 @@
  *
  *   R2_INTEGRATION=1 pnpm --filter @teacher-exam/api exec node --env-file-if-exists=../../.env --import tsx/esm scripts/r2-smoke.ts
  */
-import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
-import { readR2CredentialsFromEnv, createS3ClientForR2 } from "../src/api/services/object-storage-r2.js"
+import { HeadObjectCommand, PutObjectCommand, type S3Client } from "@aws-sdk/client-s3"
+import { createS3ClientForR2, readR2CredentialsFromEnv } from "../src/api/services/object-storage-r2.js"
 
 async function main(): Promise<void> {
   if (process.env["R2_INTEGRATION"] !== "1") {
