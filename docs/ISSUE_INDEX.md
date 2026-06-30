@@ -21,7 +21,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
-| M7 | 14 | 0 | 0 | not_started |
+| M7 | 12 | 3 | 0 | in_progress |
 | RFC-E1 | 0 | 6 | 0 | done |
 | RFC-E2 | 4 | 1 | 1 | in_progress |
 | RFC-E3 | 3 | 4 | 0 | in_progress |
@@ -128,12 +128,12 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M7 | #204 | #208 | M7.F3 pgvector RAG topic-focused | open | apps/api/src/lib/retrieval/ | PR #203 scaffold |
 | M7 | #204 | — | M7.F4 agentic search | open | apps/api/src/lib/retrieval/agentic-search.ts | PR #203 scaffold |
 | M7 | #204 | #210 | M7.F5 PDF images + streaming + durable jobs | open | apps/api/src/jobs/generation-worker.ts, apps/api/src/lib/generation-job-service.ts | PR #203 scaffold |
-| M7 | #204 | #205 | M7.F1–F5 PR #203 merge blockers | open | apps/api/src/api/lib/generate-response.ts | PR #203 |
-| M7 | #204 | #206 | M7 PR #203 browser verification | open | docs/qa/ | — |
+| M7 | #204 | #205 | M7.F1–F5 PR #203 merge blockers | closed | apps/api/src/api/lib/generate-response.ts | PR #203 |
+| M7 | #204 | #206 | M7 PR #203 browser verification | closed | docs/qa/ | — |
 | M7 | #204 | #209 | M7.F3 corpus chunk index script | open | apps/api/scripts/index-corpus-chunks.ts | — |
 | M7 | #204 | #211 | M7.F5 progressive generate-stream | open | apps/api/src/lib/generation-job-service.ts | — |
 | M7 | #204 | #212 | M7.F5 async generate hardening | open | apps/api/src/jobs/generation-worker.ts | — |
-| M7 | #204 | #213 | M7 hardening upload/ingest | open | apps/api/src/api/bridge/pdf-upload-route.ts | — |
+| M7 | #204 | #213 | M7 hardening upload/ingest | closed | apps/api/src/api/bridge/pdf-upload-route.ts | — |
 | M7 | #204 | #214 | M7 integration tests RFC §16 | open | apps/api/src/jobs/__test__/ | — |
 | M7 | #204 | #215 | M7 web UX generate polish | open | apps/web/src/routes/_auth.generate.tsx | — |
 
