@@ -4,10 +4,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it, type Mock, vi } from "vitest"
 import { makeQueryEffect } from "../../__test__/mock-db.js"
 import { type AppDb, DbClient } from "../../api/services/db.js"
-import {
-  listQueuedGenerationJobs,
-  reclaimStaleRunningJobs
-} from "../../lib/generation-job-service.js"
+import { listQueuedGenerationJobs, reclaimStaleRunningJobs } from "../../lib/generation-job-service.js"
 
 const testLayer = Layer.succeed(DbClient, db as AppDb)
 

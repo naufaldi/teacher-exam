@@ -9,7 +9,12 @@ import type { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
 import { executeGenerateExam, type GenerateExamResult } from "../lib/ai-generate"
-import { failGenerationJob, listQueuedGenerationJobs, markGenerationJobRunning, reclaimStaleRunningJobs } from "../lib/generation-job-service"
+import {
+  failGenerationJob,
+  listQueuedGenerationJobs,
+  markGenerationJobRunning,
+  reclaimStaleRunningJobs
+} from "../lib/generation-job-service"
 import type { AiService } from "../services/AiService"
 
 type StoredJobInput = GenerateExamInput & { userId?: string }
