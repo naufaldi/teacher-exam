@@ -640,9 +640,12 @@ function GeneratePage() {
 
   const compositionSum = composition.mcqSingle + composition.mcqMulti + composition.trueFalse
   const isCompositionValid = compositionSum === totalSoal
-  const isFormValid = Boolean(
-    kelas && mapel && topicsSatisfied && pdfSatisfied && kesulitan && !isGenerating && totalSoalError === null &&
+  const coreFormReady = Boolean(
+    kelas && mapel && kesulitan && !isGenerating && totalSoalError === null &&
       isCompositionValid && catalogStatus === "ready" && selectedSubjectReady
+  )
+  const isGenerateDisabled = Boolean(
+    !coreFormReady || (babRequired && effectiveTopiks.length === 0)
   )
 
   const topikSummary = effectiveTopiks.join(", ")
@@ -1336,7 +1339,7 @@ function GeneratePage() {
               <Button
                 size="lg"
                 className="w-full"
-                disabled={!isFormValid}
+                disabled={isGenerateDisabled}
                 onClick={handleGenerate}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
