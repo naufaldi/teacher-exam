@@ -297,7 +297,7 @@ function DashboardPage() {
         </div>
 
         {/* Stats card */}
-        <StatSummary stats={stats} weeklyActivity={weekly} />
+        <StatSummary stats={stats} weeklyActivity={weekly.days} weeklyUniqueSheetCount={weekly.uniqueSheetCount} />
       </section>
 
       {/* ── Section 2: Primary Actions ──────────────────────────────────── */}
