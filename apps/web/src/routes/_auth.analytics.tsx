@@ -14,6 +14,7 @@ import {
 import { Either, Schema } from "effect"
 import { ArrowLeft, BarChart3 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { ComingSoonPage } from "../components/coming-soon-page.js"
 import { ExportMenu } from "../components/export-menu.js"
 import { api } from "../lib/api.js"
 import { DELIVERY_ENABLED } from "../lib/feature-flags.js"
@@ -28,6 +29,16 @@ export const Route = createFileRoute("/_auth/analytics")({
 })
 
 function AnalyticsPage() {
+  return (
+    <ComingSoonPage
+      title="Analitik"
+      subtitle="Lihat performa siswa dan distribusi nilai per ujian."
+      icon={<BarChart3 size={24} className="text-text-tertiary" />}
+    />
+  )
+}
+
+function _AnalyticsPageImpl() {
   const examId = Route.useSearch({
     select: (s) => s["examId"] as string | undefined
   })

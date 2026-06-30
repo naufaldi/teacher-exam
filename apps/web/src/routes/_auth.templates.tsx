@@ -18,6 +18,7 @@ import {
 } from "@teacher-exam/ui"
 import { Copy, Plus, Sparkles, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { ComingSoonPage } from "../components/coming-soon-page.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 
 export const Route = createFileRoute("/_auth/templates")({
@@ -27,6 +28,16 @@ export const Route = createFileRoute("/_auth/templates")({
 type ApplyState = { templateId: string; name: string } | null
 
 function TemplatesPage() {
+  return (
+    <ComingSoonPage
+      title="Template"
+      subtitle="Simpan konfigurasi generate dan jalankan ulang dalam satu klik."
+      icon={<Sparkles size={24} className="text-text-tertiary" />}
+    />
+  )
+}
+
+function _TemplatesPageImpl() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [templates, setTemplates] = useState<ReadonlyArray<ExamTemplate>>([])
