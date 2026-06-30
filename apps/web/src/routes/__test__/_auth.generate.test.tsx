@@ -1,10 +1,10 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import type { CurriculumCatalogResponse } from "@teacher-exam/shared"
 import type * as UiModule from "@teacher-exam/ui"
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { mockApiFailOnce, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
+import { mockApiFailOnce, mockApiResolvedValue, mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
 import type * as ApiModule from "../../lib/api.js"
 import { api, ApiError } from "../../lib/api.js"
 import { makeExamWithQuestions } from "../../test/fixtures/exam.js"
@@ -160,12 +160,14 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
   return {
     ...orig,
     Button: (
-      { children, onClick, type }: {
+      { children, onClick, type, disabled: _disabled, ...rest }: {
         onClick?: () => void
         children: React.ReactNode
         type?: "button" | "submit" | "reset"
+        disabled?: boolean
+        "aria-label"?: string
       }
-    ) => <button type={type ?? "button"} onClick={onClick}>{children}</button>,
+    ) => <button type={type ?? "button"} onClick={onClick} {...rest}>{children}</button>,
     Select: (
       { children, onValueChange }: {
         children: React.ReactNode
@@ -203,6 +205,29 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
 const mockApi = api as unknown as {
   ai: { generate: ReturnType<typeof vi.fn> }
   curriculum: { catalog: ReturnType<typeof vi.fn>; babTopics: ReturnType<typeof vi.fn> }
+  pdfUploads: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> }
+}
+
+const READY_LIBRARY_PDF = {
+  id: "pdf_test_1",
+  status: "ready" as const,
+  filename: "sample-worksheet.pdf",
+  fileSize: 12_345,
+  createdAt: "2026-06-30T00:00:00.000Z",
+  readyAt: "2026-06-30T00:00:01.000Z"
+}
+
+async function selectPdfGuruKelas5() {
+  mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+  renderGeneratePage()
+  await act(async () => {
+    await vi.runOnlyPendingTimersAsync()
+  })
+  fireEvent.click(screen.getByText("PDF saya saja"))
+  fireEvent.click(screen.getByText("Kelas 5 SD"))
+  await act(async () => {
+    await vi.runOnlyPendingTimersAsync()
+  })
 }
 
 function renderGeneratePage() {
@@ -777,7 +802,7 @@ describe("Atur komposisi panel", () => {
 
   it("shows source mode selector with Buku Siswa default and hides PDF upload", () => {
     renderGeneratePage()
-    expect(screen.getByText("Buku Siswa")).toBeInTheDocument()
+    expect(screen.getAllByText("Buku Siswa").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
     expect(screen.queryByText(/Drag.*drop/i)).not.toBeInTheDocument()
   })
@@ -797,5 +822,79 @@ describe("Atur komposisi panel", () => {
     })
     fireEvent.click(screen.getByText("Buku Siswa"))
     expect(screen.queryByLabelText(/Topik bebas/i)).not.toBeInTheDocument()
+  })
+})
+
+describe("M7 UX polish (#215)", () => {
+  it("shows inline PDF error (EC-A1) when pdf_guru has no PDF on generate click", async () => {
+    await selectPdfGuruKelas5()
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Ekosistem lingkungan sekolah yang bagus" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    expect(screen.getByText(/Pilih atau upload PDF/i)).toBeInTheDocument()
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+  })
+
+  it("shows inline topik error (EC-A2) when pdf_guru free topic is too short", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), { target: { value: "pendek" } })
+    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    expect(screen.getByText(/Topik bebas wajib diisi/i)).toBeInTheDocument()
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+  })
+
+  it("shows library PDF filename in sidebar summary", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
+    const sidebar = screen.getByTestId("generate-sidebar-summary")
+    expect(within(sidebar).getByText("sample-worksheet.pdf")).toBeInTheDocument()
+    expect(within(sidebar).getByText("PDF saya saja")).toBeInTheDocument()
+  })
+
+  it("confirms before deleting a library PDF", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.remove, undefined)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    expect(screen.getByText("sample-worksheet.pdf")).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Hapus sample-worksheet.pdf"))
+    expect(screen.getByText(/Hapus PDF dari perpustakaan/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /Batal/i }))
+    expect(mockApi.pdfUploads.remove).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByLabelText("Hapus sample-worksheet.pdf"))
+    fireEvent.click(screen.getByRole("button", { name: /^Hapus$/i }))
+    expect(mockApi.pdfUploads.remove).toHaveBeenCalledWith("pdf_test_1")
   })
 })

@@ -14,6 +14,12 @@ import {
   Button,
   Card,
   CardContent,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   FileUpload,
   Input,
   Label,
@@ -68,6 +74,15 @@ const REVIEW_MODE_LABELS: Record<string, string> = {
   fast: "Cepat",
   slow: "Detail"
 }
+
+const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
+  default: "Buku Siswa",
+  pdf_guru: "PDF saya saja",
+  combine: "Buku Siswa + PDF saya"
+}
+
+const PDF_REQUIRED_MESSAGE = "Pilih atau upload PDF materi guru."
+const FREE_TOPIC_REQUIRED_MESSAGE = "Topik bebas wajib diisi (minimal 10 karakter)."
 
 // ── Jenis Lembar (PRD §8.6) ──────────────────────────────────────────────────
 
@@ -226,6 +241,9 @@ function GeneratePage() {
   const [error, setError] = useState<string | null>(null)
   const [generateErrorMessage, setGenerateErrorMessage] = useState<string | null>(null)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{ pdf?: string; freeTopic?: string }>({})
+  const [pendingDeleteId, setPendingDeleteId] = useState<PdfUploadId | null>(null)
+  const [pendingDeleteFilename, setPendingDeleteFilename] = useState<string>("")
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -432,6 +450,7 @@ function GeneratePage() {
 
   const handleSourceModeChange = useCallback((next: SourceMode) => {
     setSourceMode(next)
+    setFieldErrors({})
     if (next === "default") {
       setSelectedFile(null)
       setUploadedPdfId(null)
@@ -595,7 +614,21 @@ function GeneratePage() {
     uploadedPdfId
   ])
 
+  const selectedPdfLabel = selectedFile?.name ?? selectedLibraryPdf?.filename ?? null
+
   const handleGenerate = () => {
+    const nextErrors: { pdf?: string; freeTopic?: string } = {}
+    if (showPdfControls && !pdfSatisfied) {
+      nextErrors.pdf = PDF_REQUIRED_MESSAGE
+    }
+    if (sourceMode === "pdf_guru" && freeTopic.trim().length < 10) {
+      nextErrors.freeTopic = FREE_TOPIC_REQUIRED_MESSAGE
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      return
+    }
+    setFieldErrors({})
     runGenerate()
   }
 
@@ -740,6 +773,7 @@ function GeneratePage() {
                           setSelectedFile(file)
                           setUploadedPdfId(null)
                           setSelectedLibraryPdf(null)
+                          setFieldErrors((prev) => ({ ...prev, pdf: undefined }))
                         }}
                         onFileRemove={() => {
                           setSelectedFile(null)
@@ -757,15 +791,12 @@ function GeneratePage() {
                           setSelectedLibraryPdf(item)
                           setSelectedFile(null)
                           setUploadedPdfId(item.id)
+                          setFieldErrors((prev) => ({ ...prev, pdf: undefined }))
                         }}
                         onDelete={(id) => {
-                          void api.pdfUploads.remove(id).then(() => {
-                            setLibraryItems((items) => items.filter((item) => item.id !== id))
-                            if (selectedLibraryPdf?.id === id) {
-                              setSelectedLibraryPdf(null)
-                              setUploadedPdfId(null)
-                            }
-                          })
+                          const item = libraryItems.find((entry) => entry.id === id)
+                          setPendingDeleteId(id)
+                          setPendingDeleteFilename(item?.filename ?? "PDF")
                         }}
                       />
                     )}
@@ -782,6 +813,13 @@ function GeneratePage() {
                       </label>
                     ) :
                     null}
+                  {fieldErrors.pdf !== undefined ?
+                    (
+                      <p className="text-caption text-danger-fg" role="alert">
+                        {fieldErrors.pdf}
+                      </p>
+                    ) :
+                    null}
                 </div>
               ) :
               null}
@@ -793,11 +831,21 @@ function GeneratePage() {
                   <Textarea
                     id="free-topic"
                     value={freeTopic}
-                    onChange={(e) => setFreeTopic(e.target.value)}
+                    onChange={(e) => {
+                      setFreeTopic(e.target.value)
+                      setFieldErrors((prev) => ({ ...prev, freeTopic: undefined }))
+                    }}
                     placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
                     rows={3}
                   />
                   <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
+                  {fieldErrors.freeTopic !== undefined ?
+                    (
+                      <p className="text-caption text-danger-fg" role="alert">
+                        {fieldErrors.freeTopic}
+                      </p>
+                    ) :
+                    null}
                 </div>
               ) :
               null}
@@ -1307,7 +1355,7 @@ function GeneratePage() {
         className="hidden md:block animate-fade-up-stagger"
         style={{ "--index": 5 } as React.CSSProperties}
       >
-        <Card className="sticky top-[72px]">
+        <Card className="sticky top-[72px]" data-testid="generate-sidebar-summary">
           <CardContent className="p-6 space-y-4">
             {/* Header + completion indicator */}
             <div className="space-y-2">
@@ -1368,6 +1416,13 @@ function GeneratePage() {
               </div>
 
               <div className="flex justify-between items-center gap-2">
+                <span className="text-text-tertiary shrink-0">Sumber</span>
+                <span className="text-text-primary text-right">
+                  {SOURCE_MODE_LABELS[sourceMode]}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center gap-2">
                 <span className="text-text-tertiary shrink-0">Mode</span>
                 <span className="text-text-primary">
                   {REVIEW_MODE_LABELS[reviewMode] ?? reviewMode}
@@ -1395,11 +1450,11 @@ function GeneratePage() {
             </div>
 
             {/* File indicator */}
-            {selectedFile !== null ?
+            {selectedPdfLabel !== null ?
               (
                 <div className="flex items-center gap-2 text-body-sm pt-1 border-t border-border-default">
                   <FileText size={14} className="text-text-tertiary shrink-0" />
-                  <span className="text-text-secondary truncate">{selectedFile.name}</span>
+                  <span className="text-text-secondary truncate">{selectedPdfLabel}</span>
                 </div>
               ) :
               null}
@@ -1424,6 +1479,55 @@ function GeneratePage() {
         }}
         message={generateErrorMessage ?? undefined}
       />
+      <Dialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteId(null)
+            setPendingDeleteFilename("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus PDF dari perpustakaan?</DialogTitle>
+            <DialogDescription>
+              {pendingDeleteFilename} akan dihapus dari perpustakaan Anda. Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setPendingDeleteId(null)
+                setPendingDeleteFilename("")
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (pendingDeleteId === null) return
+                const id = pendingDeleteId
+                setPendingDeleteId(null)
+                setPendingDeleteFilename("")
+                void api.pdfUploads.remove(id).then(() => {
+                  setLibraryItems((items) => items.filter((item) => item.id !== id))
+                  if (selectedLibraryPdf?.id === id) {
+                    setSelectedLibraryPdf(null)
+                    setUploadedPdfId(null)
+                  }
+                })
+              }}
+            >
+              Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
