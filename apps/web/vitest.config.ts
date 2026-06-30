@@ -8,6 +8,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    css: false
+    css: false,
+    // Match .github/workflows/ci.yml — delivery/analytics/correction tests expect enabled UI
+    env: {
+      VITE_DELIVERY_ENABLED: "true"
+    }
   }
 })

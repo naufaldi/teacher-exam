@@ -37,7 +37,11 @@ import { PdfLibraryPicker } from "../components/generate/pdf-library-picker.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
-import { readySubjectsForGrade } from "../lib/curriculum-catalog.js"
+import {
+  formatSubjectGradeOptionLabel,
+  readySubjectsForGrade,
+  subjectOptionsForGrade
+} from "../lib/curriculum-catalog.js"
 import { parseGrade, phaseCopyForGrade, phaseLabelForGrade } from "../lib/phase-copy.js"
 import { subjectMetaFor } from "../lib/subjects.js"
 
@@ -291,6 +295,10 @@ function GeneratePage() {
     () => readySubjectsForGrade(curriculumCatalog, selectedGrade),
     [curriculumCatalog, selectedGrade]
   )
+  const subjectGradeOptions = useMemo(
+    () => subjectOptionsForGrade(curriculumCatalog, selectedGrade),
+    [curriculumCatalog, selectedGrade]
+  )
   const gradeOptions = useMemo(() => {
     if (catalogStatus !== "ready") return FALLBACK_GENERATE_GRADES
     const grades = Array.from(
@@ -298,7 +306,8 @@ function GeneratePage() {
     ).sort((a, b) => a - b)
     return grades.length > 0 ? grades : FALLBACK_GENERATE_GRADES
   }, [catalogStatus, curriculumCatalog])
-  const selectedSubjectReady = readySubjectOptions.some((subject) => subject.value === mapel)
+  const selectedSubjectOption = subjectGradeOptions.find((subject) => subject.value === mapel)
+  const selectedSubjectReady = selectedSubjectOption?.availability === "ready"
   const subjectMeta = subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
 
   useEffect(() => {
@@ -838,8 +847,10 @@ function GeneratePage() {
               <Label htmlFor="mapel">Mata Pelajaran</Label>
               <Select
                 value={mapel}
-                disabled={kelas === "" || catalogStatus !== "ready" || readySubjectOptions.length === 0}
+                disabled={kelas === "" || catalogStatus !== "ready" || subjectGradeOptions.length === 0}
                 onValueChange={(v) => {
+                  const nextSubject = subjectGradeOptions.find((subject) => subject.value === v)
+                  if (nextSubject?.availability !== "ready") return
                   setMapel(v as ExamSubject)
                   setTopiks([])
                   setCustomTopik("")
@@ -852,9 +863,13 @@ function GeneratePage() {
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {readySubjectOptions.map((subject) => (
-                    <SelectItem key={subject.value} value={subject.value}>
-                      {subject.label}
+                  {subjectGradeOptions.map((subject) => (
+                    <SelectItem
+                      key={subject.value}
+                      value={subject.value}
+                      disabled={subject.availability !== "ready"}
+                    >
+                      {formatSubjectGradeOptionLabel(subject)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -873,7 +888,19 @@ function GeneratePage() {
                 <p className="text-caption text-danger-600">Daftar materi siap generate gagal dimuat.</p> :
                 null}
               {kelas !== "" && catalogStatus === "ready" && readySubjectOptions.length === 0 ?
-                <p className="text-caption text-warning-fg">Belum ada materi PDF yang siap untuk kelas ini.</p> :
+                (
+                  <p className="text-caption text-warning-fg">
+                    Belum ada mata pelajaran siap generate untuk kelas ini. Pilihan di atas menunjukkan status
+                    ketersediaan.
+                  </p>
+                ) :
+                null}
+              {selectedSubjectOption?.optional === true && selectedSubjectReady ?
+                (
+                  <p className="text-caption text-text-tertiary">
+                    Mata pelajaran opsional — kebijakan sekolah dapat mempengaruhi penggunaan di kelas ini.
+                  </p>
+                ) :
                 null}
             </div>
 
