@@ -142,6 +142,19 @@ export function createMockDbModule() {
     },
     session: {},
     account: {},
-    verification: {}
+    verification: {},
+    pdfUploads: {
+      id: "pdf_uploads.id",
+      userId: "pdf_uploads.userId",
+      fileName: "pdf_uploads.fileName",
+      fileSize: "pdf_uploads.fileSize",
+      storageKey: "pdf_uploads.storageKey",
+      status: "pdf_uploads.status",
+      uploadedAt: "pdf_uploads.uploadedAt",
+      readyAt: "pdf_uploads.readyAt",
+      deletedAt: "pdf_uploads.deletedAt",
+      pageCount: "pdf_uploads.pageCount",
+      errorMessage: "pdf_uploads.errorMessage"
+    }
   }
 }

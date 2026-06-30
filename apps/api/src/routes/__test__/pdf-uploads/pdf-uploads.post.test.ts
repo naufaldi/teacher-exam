@@ -25,4 +25,14 @@ describe("validatePdfUploadFile", () => {
       expect(result.left.status).toBe(415)
     }
   })
+
+  it("rejects a .pdf filename when bytes are not a PDF magic header", async () => {
+    const file = new File([Buffer.from("not-a-real-pdf")], "fake.pdf", { type: "application/pdf" })
+    const result = await Effect.runPromise(Effect.either(validatePdfUploadFile(file)))
+    expect(result._tag).toBe("Left")
+    if (result._tag === "Left") {
+      expect(result.left.status).toBe(415)
+      expect(result.left.message).toMatch(/PDF/i)
+    }
+  })
 })
