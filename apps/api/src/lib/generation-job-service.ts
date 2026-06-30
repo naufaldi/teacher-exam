@@ -1,6 +1,6 @@
 import { generationJobs } from "@teacher-exam/db"
 import type { GenerateStreamResponse, JobStatus } from "@teacher-exam/shared"
-import { and, desc, eq, inArray } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, lt } from "drizzle-orm"
 import { Effect } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
@@ -142,6 +142,31 @@ export function getGenerateStreamResponse(
   })
 }
 
+export function reclaimStaleRunningJobs(
+  staleAfterMs: number
+): Effect.Effect<number, ApiDatabaseError, DbClient> {
+  return Effect.gen(function*() {
+    const db = yield* DbClient
+    const cutoff = new Date(Date.now() - staleAfterMs)
+    const staleRows = yield* runDb(
+      db
+        .select({ id: generationJobs.id })
+        .from(generationJobs)
+        .where(and(eq(generationJobs.status, "running"), lt(generationJobs.startedAt, cutoff)))
+    )
+    if (staleRows.length === 0) {
+      return 0
+    }
+    yield* runDb(
+      db
+        .update(generationJobs)
+        .set({ status: "queued", startedAt: null, error: null })
+        .where(inArray(generationJobs.id, staleRows.map((row) => row.id)))
+    )
+    return staleRows.length
+  })
+}
+
 export function listQueuedGenerationJobs(
   limit = 2
 ): Effect.Effect<ReadonlyArray<{ id: string; examId: string }>, ApiDatabaseError, DbClient> {
@@ -152,7 +177,7 @@ export function listQueuedGenerationJobs(
         .select({ id: generationJobs.id, examId: generationJobs.examId })
         .from(generationJobs)
         .where(eq(generationJobs.status, "queued"))
-        .orderBy(desc(generationJobs.createdAt))
+        .orderBy(asc(generationJobs.createdAt))
         .limit(limit)
     )
     return rows

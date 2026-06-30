@@ -9,7 +9,7 @@ import type { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
 import { executeGenerateExam, type GenerateExamResult } from "../lib/ai-generate"
-import { failGenerationJob, listQueuedGenerationJobs, markGenerationJobRunning } from "../lib/generation-job-service"
+import { failGenerationJob, listQueuedGenerationJobs, markGenerationJobRunning, reclaimStaleRunningJobs } from "../lib/generation-job-service"
 import type { AiService } from "../services/AiService"
 
 type StoredJobInput = GenerateExamInput & { userId?: string }
@@ -64,18 +64,26 @@ export function runGenerationJobById(
   })
 }
 
+const DEFAULT_STALE_RUNNING_MS = 15 * 60 * 1000
+
 export function processQueuedGenerationJobs(
   aiService: AiService,
   limit = 2
 ): Effect.Effect<number, ApiDatabaseError, DbClient | SqlClient | CurriculumService | ObjectStorage> {
   return Effect.gen(function*() {
+    yield* reclaimStaleRunningJobs(DEFAULT_STALE_RUNNING_MS)
     const queued = yield* listQueuedGenerationJobs(limit)
     let processed = 0
 
     for (const item of queued) {
-      yield* runGenerationJobById(item.id, item.examId, aiService).pipe(
-        Effect.catchAll(() => Effect.void)
-      )
+      const result = yield* Effect.either(runGenerationJobById(item.id, item.examId, aiService))
+      if (result._tag === "Left") {
+        yield* failGenerationJob(
+          item.id,
+          result.left instanceof Error ? result.left.message : "Generation worker failed",
+          0
+        )
+      }
       processed += 1
     }
     return processed
