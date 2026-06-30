@@ -1,8 +1,8 @@
 import { NodeRuntime } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
-import { indexCurriculumMdDirectory, defaultCurriculumMdDir } from "../src/lib/retrieval/index-corpus-chunks.js"
 import { startDatabase } from "../src/api/services/bootstrap-db.js"
 import { DbClient } from "../src/api/services/db.js"
+import { defaultCurriculumMdDir, indexCurriculumMdDirectory } from "../src/lib/retrieval/index-corpus-chunks.js"
 
 async function main() {
   const db = await startDatabase()

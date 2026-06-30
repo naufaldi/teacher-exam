@@ -1,12 +1,8 @@
-import { describe, expect, it } from "vitest"
 import { mkdtemp, writeFile } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import {
-  buildCorpusChunkRows,
-  listCurriculumMdTargets,
-  parseCurriculumMdFilename
-} from "../index-corpus-chunks.js"
+import { join } from "node:path"
+import { describe, expect, it } from "vitest"
+import { buildCorpusChunkRows, listCurriculumMdTargets, parseCurriculumMdFilename } from "../index-corpus-chunks.js"
 
 describe("index-corpus-chunks", () => {
   it("parseCurriculumMdFilename maps slug files to subject and grade", () => {
