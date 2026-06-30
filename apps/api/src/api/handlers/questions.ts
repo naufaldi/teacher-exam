@@ -170,6 +170,10 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
           )
         }
 
+        yield* runDb(
+          db.update(exams).set({ updatedAt: new Date() }).where(eq(exams.id, existingRows[0].examId))
+        )
+
         return rowToQuestion(updated)
       }))
     .handle("regenerateQuestion", ({ path, payload }) =>
@@ -303,5 +307,10 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
             new ApiDatabaseError({ error: "Question disappeared", code: "DATABASE_ERROR" })
           )
         }
+
+        yield* runDb(
+          db.update(exams).set({ updatedAt: new Date() }).where(eq(exams.id, question.examId))
+        )
+
         return rowToQuestion(updatedRow)
       })))

@@ -40,26 +40,27 @@ describe("computeStats", () => {
 describe("computeWeeklyActivity", () => {
   it("returns exactly 7 buckets for empty list", () => {
     const result = computeWeeklyActivity([], NOW)
-    expect(result).toHaveLength(7)
-    expect(result.every((b) => b.count === 0)).toBe(true)
+    expect(result.days).toHaveLength(7)
+    expect(result.days.every((b) => b.count === 0)).toBe(true)
+    expect(result.uniqueSheetCount).toBe(0)
   })
 
   it("last bucket (today) has variant secondary", () => {
     const result = computeWeeklyActivity([], NOW)
-    expect(result[6]?.variant).toBe("secondary")
+    expect(result.days[6]?.variant).toBe("secondary")
   })
 
   it("all other buckets have variant default", () => {
     const result = computeWeeklyActivity([], NOW)
     for (let i = 0; i < 6; i++) {
-      expect(result[i]?.variant).toBe("default")
+      expect(result.days[i]?.variant).toBe("default")
     }
   })
 
   it("buckets are labelled with Indonesian weekday abbreviations", () => {
     const result = computeWeeklyActivity([], NOW)
     const LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"]
-    for (const bucket of result) {
+    for (const bucket of result.days) {
       expect(LABELS).toContain(bucket.day)
     }
   })
@@ -69,22 +70,31 @@ describe("computeWeeklyActivity", () => {
     const exam = makeExam({ id: "1", createdAt: "2026-04-24T01:00:00.000Z" })
     const result = computeWeeklyActivity([exam], NOW)
     // The last bucket covers today (April 24 in UTC = same local day as NOW)
-    expect(result[6]?.count).toBe(1)
-    expect(result.slice(0, 6).every((b) => b.count === 0)).toBe(true)
+    expect(result.days[6]?.count).toBe(1)
+    expect(result.days.slice(0, 6).every((b) => b.count === 0)).toBe(true)
+    expect(result.uniqueSheetCount).toBe(1)
   })
 
-  it("ignores exams older than 7 days", () => {
-    const old = makeExam({ id: "1", createdAt: "2026-04-17T00:00:00.000Z" }) // 7 days before NOW
+  it("ignores exams older than 7 days with no recent touch", () => {
+    const old = makeExam({
+      id: "1",
+      createdAt: "2026-04-17T00:00:00.000Z",
+      updatedAt: "2026-04-17T00:00:00.000Z"
+    })
     const result = computeWeeklyActivity([old], NOW)
-    expect(result.every((b) => b.count === 0)).toBe(true)
+    expect(result.days.every((b) => b.count === 0)).toBe(true)
+    expect(result.uniqueSheetCount).toBe(0)
   })
 
   it("counts exams in the correct day bucket (6 days ago)", () => {
-    // 6 days before NOW (2026-04-24) = 2026-04-18
-    const exam = makeExam({ id: "1", createdAt: "2026-04-18T02:00:00.000Z" })
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-04-18T02:00:00.000Z",
+      updatedAt: "2026-04-18T02:00:00.000Z"
+    })
     const result = computeWeeklyActivity([exam], NOW)
-    expect(result[0]?.count).toBe(1)
-    expect(result.slice(1).every((b) => b.count === 0)).toBe(true)
+    expect(result.days[0]?.count).toBe(1)
+    expect(result.days.slice(1).every((b) => b.count === 0)).toBe(true)
   })
 
   it("accumulates multiple exams on the same day", () => {
@@ -94,7 +104,42 @@ describe("computeWeeklyActivity", () => {
       makeExam({ id: "3", createdAt: "2026-04-24T02:30:00.000Z" })
     ]
     const result = computeWeeklyActivity(exams, NOW)
-    expect(result[6]?.count).toBe(3)
+    expect(result.days[6]?.count).toBe(3)
+    expect(result.uniqueSheetCount).toBe(3)
+  })
+
+  it("counts a sheet touched yesterday even when created more than 7 days ago", () => {
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-03-25T00:00:00.000Z",
+      updatedAt: "2026-04-23T02:00:00.000Z"
+    })
+    const result = computeWeeklyActivity([exam], NOW)
+    expect(result.days[5]?.count).toBe(1)
+    expect(result.uniqueSheetCount).toBe(1)
+  })
+
+  it("counts create and touch on the same day only once per sheet", () => {
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-04-24T00:30:00.000Z",
+      updatedAt: "2026-04-24T02:30:00.000Z"
+    })
+    const result = computeWeeklyActivity([exam], NOW)
+    expect(result.days[6]?.count).toBe(1)
+    expect(result.uniqueSheetCount).toBe(1)
+  })
+
+  it("counts create and touch on different days but unique total is one sheet", () => {
+    const exam = makeExam({
+      id: "1",
+      createdAt: "2026-04-18T02:00:00.000Z",
+      updatedAt: "2026-04-22T02:00:00.000Z"
+    })
+    const result = computeWeeklyActivity([exam], NOW)
+    expect(result.days[0]?.count).toBe(1)
+    expect(result.days[4]?.count).toBe(1)
+    expect(result.uniqueSheetCount).toBe(1)
   })
 })
 
