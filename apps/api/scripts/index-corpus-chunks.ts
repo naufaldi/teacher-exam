@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect"
 import { readFile } from "node:fs/promises"
-import { CURRICULUM_MANIFEST } from "../src/curriculum/manifest.js"
 import { startDatabase } from "../src/api/services/bootstrap-db.js"
 import { DbClient } from "../src/api/services/db.js"
+import { CURRICULUM_MANIFEST } from "../src/curriculum/manifest.js"
 import { curriculumMdPath } from "../src/lib/curriculum.js"
 import { indexCorpusSubjectGrade, listReadyCorpusTargets } from "./lib/index-corpus-chunks.js"
 
