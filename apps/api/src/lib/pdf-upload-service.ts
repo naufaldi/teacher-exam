@@ -19,6 +19,16 @@ import { buildPdfStorageKey } from "./pdf-storage-keys"
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024
 
+function hasPdfMagicBytes(bytes: Buffer): boolean {
+  return (
+    bytes.length >= 4
+    && bytes[0] === 0x25
+    && bytes[1] === 0x50
+    && bytes[2] === 0x44
+    && bytes[3] === 0x46
+  )
+}
+
 export class PdfUploadValidationError extends Data.TaggedError("PdfUploadValidationError")<{
   status: 400 | 403 | 404 | 409 | 413 | 415
   message: string
@@ -40,6 +50,11 @@ export function validatePdfUploadFile(file: File): Effect.Effect<Buffer, PdfUplo
     if (bytes.length === 0) {
       return yield* Effect.fail(
         new PdfUploadValidationError({ status: 415, message: "File PDF kosong." })
+      )
+    }
+    if (!hasPdfMagicBytes(bytes)) {
+      return yield* Effect.fail(
+        new PdfUploadValidationError({ status: 415, message: "File bukan PDF yang valid." })
       )
     }
     return bytes
@@ -105,9 +120,10 @@ export function getPdfUploadDetail(
 export function softDeletePdfUpload(
   userId: string,
   pdfUploadId: string
-): Effect.Effect<void, PdfUploadValidationError | ApiDatabaseError, DbClient> {
+): Effect.Effect<void, PdfUploadValidationError | ObjectStorageError | ApiDatabaseError, DbClient | ObjectStorage> {
   return Effect.gen(function*() {
     const db = yield* DbClient
+    const storage = yield* ObjectStorage
     const rows = yield* runDb(
       db
         .select()
@@ -127,6 +143,7 @@ export function softDeletePdfUpload(
         .set({ deletedAt: new Date() })
         .where(eq(pdfUploads.id, pdfUploadId))
     )
+    yield* storage.deleteObject(row.storageKey)
   })
 }
 
