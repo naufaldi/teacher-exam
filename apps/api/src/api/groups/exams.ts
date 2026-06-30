@@ -1,7 +1,12 @@
 import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
 import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
 import * as HttpApiSchema from "@effect/platform/HttpApiSchema"
-import { ExamSchema, ExamShareResponseSchema, ExamWithQuestionsSchema } from "@teacher-exam/shared"
+import {
+  ExamSchema,
+  ExamShareResponseSchema,
+  ExamWithQuestionsSchema,
+  GenerateStreamResponseSchema
+} from "@teacher-exam/shared"
 import { Schema } from "effect"
 import {
   ApiDatabaseError,
@@ -70,6 +75,11 @@ export const ExamsGroup = HttpApiGroup.make("exams")
       .addError(ApiNotFound, { status: 404 })
       .addError(ApiExamNotFinal, { status: 400 })
       .addError(ApiDiscussionExists, { status: 409 })
+  )
+  .add(
+    HttpApiEndpoint.get("generateStream")`/exams/${idParam}/generate-stream`
+      .addSuccess(GenerateStreamResponseSchema)
+      .addError(ApiNotFound, { status: 404 })
   )
   .middleware(Authorization)
   .middleware(GlobalRateLimit)

@@ -264,18 +264,18 @@ _(Record issues here as they're discovered)_
 
 **Target:** TBD (may run parallel to M3 after F0 corpus v2)
 **Goal:** Three source modes, teacher PDF library on R2, RAG + agentic retrieval, optional PDF images, durable streaming generate
-**Status:** 📝 Draft — [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29](rfc/2026-06-29-generate-pdf-enhancement-rfc.md) (2026-06-29); no implementation yet
+**Status:** 🔄 In progress — F1–F5 implemented on branch `cursor/cloud-agent-1782726161423-c8rad` (PR #203); R2 prod storage deferred
 
 ### Phases (from PRD v8 / RFC)
 
 | Phase | Goal | Status |
 |-------|------|--------|
 | F0 | Corpus v2 richer text (operator track) | 🔄 Existing RFC-E2 work |
-| F1 | R2 upload + 3-mode schema + basic generate | ⬜ Not started |
-| F2 | Perpustakaan + async ingest | ⬜ Not started |
-| F3 | pgvector RAG topic-focused | ⬜ Not started |
-| F4 | Agentic search | ⬜ Not started |
-| F5 | PDF images + streaming + durable jobs | ⬜ Not started |
+| F1 | R2 upload + 3-mode schema + basic generate | ✅ Done (filesystem dev; PR #203) |
+| F2 | Perpustakaan + async ingest | ✅ Done (`ingest_jobs`, library picker, GET/DELETE pdf-uploads) |
+| F3 | pgvector RAG topic-focused | ✅ Done (`document_chunks`, `USE_RAG=1`; `real[]` embeddings, no pgvector) |
+| F4 | Agentic search | ✅ Done (max 3 steps, retrieval trace) |
+| F5 | PDF images + streaming + durable jobs | ✅ Done (`generation_jobs`, `VITE_ASYNC_GENERATE`, `includePdfImages`) |
 
 ### Decisions
 

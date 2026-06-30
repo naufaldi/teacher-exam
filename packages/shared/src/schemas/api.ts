@@ -30,6 +30,7 @@ export const GenerateExamInputSchema = Schema.Struct({
   freeTopic: Schema.optional(Schema.String),
   pdfUploadId: Schema.optional(PdfUploadIdSchema),
   includePdfImages: Schema.optional(Schema.Boolean),
+  asyncJob: Schema.optional(Schema.Boolean),
   exampleQuestions: Schema.optional(Schema.String),
   totalSoal: Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
   composition: Schema.optional(Schema.Struct({

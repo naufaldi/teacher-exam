@@ -15,8 +15,10 @@ import type {
   ExamTemplate,
   ExamWithQuestions,
   GenerateExamInput,
+  GenerateStreamResponse,
   PaginatedBankSheetsResponse,
   PaginatedPublicBankSheetsResponse,
+  PdfUploadListResponse,
   PdfUploadResponse,
   PublicExamDetailResponse,
   RegenerateQuestionInput,
@@ -51,9 +53,12 @@ import {
   ExamShareResponseSchema,
   ExamTemplateSchema,
   ExamWithQuestionsSchema,
+  GenerateJobStartedSchema,
+  GenerateStreamResponseSchema,
   HealthResponseSchema,
   PaginatedBankSheetsResponseSchema,
   PaginatedPublicBankSheetsResponseSchema,
+  PdfUploadListResponseSchema,
   PdfUploadResponseSchema,
   PublicExamWithQuestionsSchema,
   QuestionSchema,
@@ -93,6 +98,10 @@ export {
   UnauthorizedClientError,
   UnauthorizedError
 }
+
+export type GenerateApiResult =
+  | { readonly kind: "sync"; readonly exam: ExamWithQuestions }
+  | { readonly kind: "async"; readonly examId: string; readonly jobId: string }
 
 const API_BASE = import.meta.env["VITE_API_URL"] ?? "/api"
 
@@ -353,6 +362,15 @@ export const api = {
       }
       return decodeEither(ExamWithQuestionsSchema, raw.right)
     },
+    pollGenerateStream: async (
+      examId: string
+    ): Promise<Either.Either<GenerateStreamResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>(`/exams/${examId}/generate-stream`)
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<GenerateStreamResponse, ApiClientFailure>
+      }
+      return decodeEither(GenerateStreamResponseSchema, raw.right)
+    },
     generateDiscussion: (id: string) =>
       fetchDecoded(`/exams/${id}/discussion`, ExamWithQuestionsSchema, { method: "POST" }),
     export: (id: string, format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
@@ -433,18 +451,49 @@ export const api = {
     }
   },
   ai: {
-    generate: async (input: GenerateExamInput): Promise<Either.Either<ExamWithQuestions, ApiClientFailure>> => {
+    generate: async (
+      input: GenerateExamInput
+    ): Promise<Either.Either<GenerateApiResult, ApiClientFailure>> => {
       const raw = await apiFetchEither<unknown>("/ai/generate", {
         method: "POST",
         body: JSON.stringify(input)
       })
       if (Either.isLeft(raw)) {
-        return raw as Either.Either<ExamWithQuestions, ApiClientFailure>
+        return raw as Either.Either<GenerateApiResult, ApiClientFailure>
       }
-      return decodeEither(ExamWithQuestionsSchema, raw.right)
+      const body = raw.right
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        "jobId" in body &&
+        "examId" in body &&
+        !("questions" in body)
+      ) {
+        const started = decodeEither(GenerateJobStartedSchema, body)
+        if (Either.isLeft(started)) {
+          return started as unknown as Either.Either<GenerateApiResult, ApiClientFailure>
+        }
+        return Either.right({
+          kind: "async",
+          examId: started.right.examId,
+          jobId: started.right.jobId
+        })
+      }
+      const exam = decodeEither(ExamWithQuestionsSchema, body)
+      if (Either.isLeft(exam)) {
+        return exam as unknown as Either.Either<GenerateApiResult, ApiClientFailure>
+      }
+      return Either.right({ kind: "sync", exam: exam.right })
     }
   },
   pdfUploads: {
+    list: async (): Promise<Either.Either<PdfUploadListResponse, ApiClientFailure>> => {
+      const raw = await apiFetchEither<unknown>("/pdf-uploads")
+      if (Either.isLeft(raw)) {
+        return raw as Either.Either<PdfUploadListResponse, ApiClientFailure>
+      }
+      return decodeEither(PdfUploadListResponseSchema, raw.right)
+    },
     create: async (file: File): Promise<Either.Either<PdfUploadResponse, ApiClientFailure>> => {
       const form = new FormData()
       form.append("file", file)
@@ -456,7 +505,8 @@ export const api = {
         return raw as Either.Either<PdfUploadResponse, ApiClientFailure>
       }
       return decodeEither(PdfUploadResponseSchema, raw.right)
-    }
+    },
+    remove: (id: string) => apiFetchEither<void>(`/pdf-uploads/${id}`, { method: "DELETE" })
   },
   curriculum: {
     catalog: async (): Promise<Either.Either<CurriculumCatalogResponse, ApiClientFailure>> => {

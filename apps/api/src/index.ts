@@ -5,6 +5,7 @@ import { attachRateLimitHeaders } from "./api/lib/rate-limit-response"
 import { setAuthEffectRunner } from "./api/services/auth-service"
 import { databaseRuntime, disposeDatabase, startDatabase } from "./api/services/bootstrap-db"
 import { withHttpSpan } from "./api/telemetry"
+import { startBackgroundWorkers } from "./jobs/poll-workers"
 import { initAuth } from "./lib/auth"
 import { resolveApiPort } from "./lib/auth-origins"
 import { assertDevAuthNotEnabledInProduction } from "./lib/dev-auth"
@@ -61,6 +62,7 @@ async function main() {
     disposeHttpApi: dispose,
     onListen: () => {
       logInfo("listening", { port, url: `http://localhost:${port}`, pid: process.pid })
+      startBackgroundWorkers()
     }
   })
 

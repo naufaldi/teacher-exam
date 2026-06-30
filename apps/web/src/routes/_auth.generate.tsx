@@ -5,6 +5,7 @@ import type {
   ExamType,
   Grade,
   PdfUploadId,
+  PdfUploadSummary,
   SourceMode,
   TemplateApplyResponse
 } from "@teacher-exam/shared"
@@ -27,10 +28,12 @@ import {
   Separator,
   Textarea
 } from "@teacher-exam/ui"
+import { Either } from "effect"
 import { AlertTriangle, ArrowLeft, FileText, Lock, Sparkles, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GenerateErrorDialog } from "../components/generate/generate-error-dialog.js"
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
+import { PdfLibraryPicker } from "../components/generate/pdf-library-picker.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
@@ -186,6 +189,12 @@ function GeneratePage() {
   const [freeTopic, setFreeTopic] = useState<string>("")
   const [uploadedPdfId, setUploadedPdfId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [pdfSource, setPdfSource] = useState<"upload" | "library">("upload")
+  const [libraryItems, setLibraryItems] = useState<Array<PdfUploadSummary>>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [selectedLibraryPdf, setSelectedLibraryPdf] = useState<PdfUploadSummary | null>(null)
+  const [includePdfImages, setIncludePdfImages] = useState(false)
+  const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
   const [topiks, setTopiks] = useState<Array<string>>([])
@@ -216,6 +225,7 @@ function GeneratePage() {
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleJenisChange = useCallback((next: ExamType) => {
     setExamType(next)
@@ -232,6 +242,10 @@ function GeneratePage() {
     if (completionTimerRef.current !== null) {
       clearTimeout(completionTimerRef.current)
       completionTimerRef.current = null
+    }
+    if (pollTimerRef.current !== null) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
     }
   }, [])
 
@@ -354,7 +368,28 @@ function GeneratePage() {
     : sourceMode === "pdf_guru"
     ? freeTopic.trim().length >= 10
     : true
-  const pdfSatisfied = !showPdfControls || selectedFile !== null || uploadedPdfId !== null
+  const pdfSatisfied = !showPdfControls ||
+    selectedFile !== null ||
+    uploadedPdfId !== null ||
+    selectedLibraryPdf?.status === "ready"
+
+  useEffect(() => {
+    if (!showPdfControls || pdfSource !== "library") return
+    let cancelled = false
+    setLibraryLoading(true)
+    void api.pdfUploads.list().then((result) => {
+      if (cancelled) return
+      if (Either.isRight(result)) {
+        setLibraryItems([...result.right.items])
+      } else {
+        setLibraryItems([])
+      }
+      setLibraryLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showPdfControls, pdfSource])
 
   const filledCount = [
     kelas,
@@ -371,6 +406,9 @@ function GeneratePage() {
       setSelectedFile(null)
       setUploadedPdfId(null)
       setFreeTopic("")
+      setSelectedLibraryPdf(null)
+      setIncludePdfImages(false)
+      setPdfSource("upload")
     }
   }, [])
 
@@ -398,6 +436,32 @@ function GeneratePage() {
       setProgress(Math.min(eased * 100, 99))
     }, 120)
 
+    const pollGenerateStream = (examId: string) => {
+      const poll = () => {
+        void api.exams.pollGenerateStream(examId).then((streamResult) => {
+          if (!Either.isRight(streamResult)) return
+          const payload = streamResult.right
+          setStreamQuestionsCount(payload.questionsCount)
+          const ratio = payload.targetCount > 0 ? payload.questionsCount / payload.targetCount : 0
+          setProgress(Math.min(99, Math.max(5, ratio * 100)))
+          if (payload.done) {
+            clearTimers()
+            setProgress(100)
+            completionTimerRef.current = setTimeout(() => {
+              setIsGenerating(false)
+              void navigate({
+                to: "/review",
+                search: { examId, mode: reviewMode, from: "generate" }
+              })
+            }, 450)
+            return
+          }
+          pollTimerRef.current = setTimeout(poll, 1000)
+        })
+      }
+      poll()
+    }
+
     const startGenerate = (pdfUploadId?: string) => {
       void api.ai.generate({
         sourceMode,
@@ -409,22 +473,28 @@ function GeneratePage() {
         examType,
         totalSoal,
         composition,
+        asyncJob: import.meta.env["VITE_ASYNC_GENERATE"] === "true",
         classContext: fokusGuru.trim() !== "" ? fokusGuru.trim() : undefined,
         exampleQuestions: contohSoal.trim() !== "" ? contohSoal.trim() : undefined,
         ...(sourceMode === "pdf_guru" && freeTopic.trim() !== "" ? { freeTopic: freeTopic.trim() } : {}),
+        ...(showPdfControls && includePdfImages ? { includePdfImages: true } : {}),
         ...(pdfUploadId !== undefined ? { pdfUploadId: pdfUploadId as PdfUploadId } : {})
       }).then((result) => {
-        const exam = unwrapApiEither(result)
-        clearTimers()
-        setProgress(100)
-
-        completionTimerRef.current = setTimeout(() => {
-          setIsGenerating(false)
-          void navigate({
-            to: "/review",
-            search: { examId: exam.id, mode: reviewMode, from: "generate" }
-          })
-        }, 450)
+        const payload = unwrapApiEither(result)
+        if (payload.kind === "sync") {
+          clearTimers()
+          setProgress(100)
+          completionTimerRef.current = setTimeout(() => {
+            setIsGenerating(false)
+            void navigate({
+              to: "/review",
+              search: { examId: payload.exam.id, mode: reviewMode, from: "generate" }
+            })
+          }, 450)
+          return
+        }
+        setStreamQuestionsCount(0)
+        pollGenerateStream(payload.examId)
       }).catch((err: unknown) => {
         clearTimers()
         setIsGenerating(false)
@@ -461,6 +531,11 @@ function GeneratePage() {
       return
     }
 
+    if (showPdfControls && selectedLibraryPdf?.status === "ready") {
+      startGenerate(selectedLibraryPdf.id)
+      return
+    }
+
     if (showPdfControls && uploadedPdfId !== null) {
       startGenerate(uploadedPdfId)
       return
@@ -482,6 +557,7 @@ function GeneratePage() {
     reviewMode,
     selectedFile,
     showCustomInput,
+    selectedLibraryPdf,
     showPdfControls,
     sourceMode,
     topiks,
@@ -608,17 +684,75 @@ function GeneratePage() {
 
             {showPdfControls ?
               (
-                <FileUpload
-                  onFileSelect={(file) => {
-                    setSelectedFile(file)
-                    setUploadedPdfId(null)
-                  }}
-                  onFileRemove={() => {
-                    setSelectedFile(null)
-                    setUploadedPdfId(null)
-                  }}
-                  selectedFile={selectedFile}
-                />
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={pdfSource === "upload" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("upload")}
+                    >
+                      Upload baru
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={pdfSource === "library" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("library")}
+                    >
+                      Dari perpustakaan
+                    </Button>
+                  </div>
+                  {pdfSource === "upload" ?
+                    (
+                      <FileUpload
+                        onFileSelect={(file) => {
+                          setSelectedFile(file)
+                          setUploadedPdfId(null)
+                          setSelectedLibraryPdf(null)
+                        }}
+                        onFileRemove={() => {
+                          setSelectedFile(null)
+                          setUploadedPdfId(null)
+                        }}
+                        selectedFile={selectedFile}
+                      />
+                    ) :
+                    (
+                      <PdfLibraryPicker
+                        items={libraryItems}
+                        loading={libraryLoading}
+                        selectedId={selectedLibraryPdf?.id ?? null}
+                        onSelect={(item) => {
+                          setSelectedLibraryPdf(item)
+                          setSelectedFile(null)
+                          setUploadedPdfId(item.id)
+                        }}
+                        onDelete={(id) => {
+                          void api.pdfUploads.remove(id).then(() => {
+                            setLibraryItems((items) => items.filter((item) => item.id !== id))
+                            if (selectedLibraryPdf?.id === id) {
+                              setSelectedLibraryPdf(null)
+                              setUploadedPdfId(null)
+                            }
+                          })
+                        }}
+                      />
+                    )}
+                  {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
+                    (
+                      <label className="flex items-center gap-2 text-body-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-border-ui"
+                          checked={includePdfImages}
+                          onChange={(event) => setIncludePdfImages(event.target.checked)}
+                        />
+                        Sertakan gambar dari PDF (maks. ~30% soal)
+                      </label>
+                    ) :
+                    null}
+                </div>
               ) :
               null}
 
@@ -1231,6 +1365,7 @@ function GeneratePage() {
         phaseLabel={phaseLabel}
         progress={progress}
         totalSoal={totalSoal}
+        questionsCount={streamQuestionsCount}
       />
       <GenerateErrorDialog
         open={showErrorDialog}

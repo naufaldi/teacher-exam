@@ -31,6 +31,22 @@ export const PdfUploadSummarySchema = Schema.Struct({
 })
 export type PdfUploadSummary = typeof PdfUploadSummarySchema.Type
 
+export const PdfUploadListResponseSchema = Schema.Struct({
+  items: Schema.Array(PdfUploadSummarySchema)
+})
+export type PdfUploadListResponse = typeof PdfUploadListResponseSchema.Type
+
+export const PdfUploadDetailSchema = Schema.Struct({
+  id: PdfUploadIdSchema,
+  status: PdfUploadStatusSchema,
+  filename: Schema.String,
+  pageCount: Schema.optional(Schema.Int),
+  errorMessage: Schema.optional(Schema.String),
+  createdAt: Schema.String,
+  readyAt: Schema.optional(Schema.String)
+})
+export type PdfUploadDetail = typeof PdfUploadDetailSchema.Type
+
 export function validateGenerateExamInput(input: GenerateExamInput): string | null {
   const sourceMode = input.sourceMode ?? "default"
 

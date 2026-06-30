@@ -13,8 +13,7 @@ import type { FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from 
 import { Data, Effect, Either, Match, Schema } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
-import type { CurriculumReadError } from "../api/services/curriculum-service"
-import { CurriculumService } from "../api/services/curriculum-service"
+import { CurriculumReadError, CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
 import { isReadySibiPdfForGenerate } from "../curriculum/catalog.js"
@@ -24,12 +23,14 @@ import { logAiEvent } from "./ai-log"
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
 import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
 import { fetchExamWithQuestions } from "./exams-query"
+import { completeGenerationJob, createGenerationJob, updateGenerationJobProgress } from "./generation-job-service"
 import { type LatexValidationResult, validateGeneratedQuestionLatex } from "./latex-validator"
 import { normalizeGeneratedQuestionLatexFields } from "./normalize-matematika-latex.js"
 import { type ParsedItemFailure, parseGeneratedQuestions } from "./parse-generated-questions"
 import { loadReadyPdfUpload } from "./pdf-upload-service"
 import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
+import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
 
 const PLACEHOLDER_STUB_TEXT = "Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang."
 
@@ -158,6 +159,7 @@ async function generateWithSalvage(
     reviewMode: "fast" | "slow"
     examId: string
     createdAt: Date
+    includePdfImages?: boolean
   }
 ): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
   const maxAttempts = request.shouldValidateLatex ? 3 : 1
@@ -314,9 +316,11 @@ function decodeGeneratedFigure(raw: unknown): {
 
 export type GenerateExamResult =
   | { readonly _tag: "success"; readonly body: Record<string, unknown>; readonly status: 201 }
+  | { readonly _tag: "accepted"; readonly body: { examId: string; jobId: string }; readonly status: 202 }
   | { readonly _tag: "ai_error"; readonly message: string }
   | { readonly _tag: "database_error"; readonly message: string }
   | { readonly _tag: "validation_error"; readonly details: string }
+  | { readonly _tag: "insufficient_materi"; readonly details: string }
 
 export function generateExam(
   userId: string,
@@ -327,57 +331,93 @@ export function generateExam(
   AiGenerationError | ApiDatabaseError | CurriculumReadError,
   DbClient | SqlClient | CurriculumService | ObjectStorage
 > {
+  if (input.asyncJob === true) {
+    return startAsyncGenerateExam(userId, input)
+  }
+  return executeGenerateExam(userId, input, aiService)
+}
+
+function startAsyncGenerateExam(
+  userId: string,
+  input: GenerateExamInput
+): Effect.Effect<
+  GenerateExamResult,
+  ApiDatabaseError | CurriculumReadError,
+  DbClient | SqlClient | CurriculumService | ObjectStorage
+> {
   return Effect.gen(function*() {
-    const handlerT0 = Date.now()
+    const prepared = yield* prepareGenerateContext(userId, input)
+    if (prepared._tag === "err") {
+      return prepared.result
+    }
+
+    const { examId, now, promptTopics, title, totalSoal } = prepared
+    const db = yield* DbClient
     const sourceMode = input.sourceMode ?? "default"
-    const modeError = validateGenerateExamInput(input)
-    if (modeError !== null) {
-      return { _tag: "validation_error", details: modeError }
-    }
+    const effectivePdfUploadId = sourceMode === "default" ? undefined : input.pdfUploadId
 
-    const examType = normalizeExamType(input.examType ?? "formatif")
-    const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
-
-    if (sourceMode === "default" && !isReadySibiPdfForGenerate(input.subject, input.grade)) {
-      return {
-        _tag: "validation_error",
-        details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
-      }
-    }
-
-    const compositionResult = yield* Effect.either(
-      Effect.try({
-        try: () => resolveComposition(examType, totalSoal, input.composition),
-        catch: (err): CompositionValidationError =>
-          new CompositionValidationError({
-            message: err instanceof Error ? err.message : String(err)
-          })
+    yield* runDb(
+      db.insert(exams).values({
+        id: examId,
+        userId,
+        title,
+        subject: input.subject,
+        grade: input.grade,
+        difficulty: input.difficulty,
+        topics: [...promptTopics],
+        reviewMode: input.reviewMode,
+        status: "draft",
+        examType: prepared.examType,
+        classContext: input.classContext ?? null,
+        sourceMode,
+        pdfUploadId: effectivePdfUploadId ?? null,
+        freeTopic: input.freeTopic?.trim() ?? null,
+        createdAt: now,
+        updatedAt: now
       })
     )
-    if (Either.isLeft(compositionResult)) {
-      return { _tag: "validation_error", details: compositionResult.left.message }
-    }
-    const composition = compositionResult.right
 
-    let curriculumText = ""
-    if (sourceMode !== "pdf_guru") {
-      const curriculum = yield* CurriculumService
-      curriculumText = yield* curriculum.getText(input.subject, input.grade)
+    const jobId = yield* createGenerationJob(examId, totalSoal, { ...input, userId })
+    return {
+      _tag: "accepted",
+      status: 202,
+      body: { examId, jobId }
+    }
+  })
+}
+
+export function executeGenerateExam(
+  userId: string,
+  input: GenerateExamInput,
+  aiService: AiService,
+  opts?: { examId?: string; jobId?: string }
+): Effect.Effect<
+  GenerateExamResult,
+  AiGenerationError | ApiDatabaseError | CurriculumReadError,
+  DbClient | SqlClient | CurriculumService | ObjectStorage
+> {
+  return Effect.gen(function*() {
+    const handlerT0 = Date.now()
+    const prepared = yield* prepareGenerateContext(userId, input)
+    if (prepared._tag === "err") {
+      return prepared.result
     }
 
-    let pdfBytes: Buffer | undefined
-    const effectivePdfUploadId = sourceMode === "default" ? undefined : input.pdfUploadId
-    if (effectivePdfUploadId !== undefined) {
-      const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
-      if (Either.isLeft(loadResult)) {
-        return { _tag: "validation_error", details: loadResult.left.message }
-      }
-      pdfBytes = loadResult.right.bytes
-    }
+    const {
+      composition,
+      curriculumText,
+      effectivePdfUploadId,
+      examId,
+      examType,
+      now,
+      pdfBytes,
+      promptTopics,
+      sourceMode,
+      title,
+      totalSoal
+    } = prepared
 
-    const promptTopics = sourceMode === "pdf_guru"
-      ? (input.topics.length > 0 ? [...input.topics] : [input.freeTopic?.trim() ?? ""])
-      : [...input.topics]
+    const resolvedExamId = opts?.examId ?? examId
 
     const { system, user } = buildExamPrompt({
       examType,
@@ -385,7 +425,7 @@ export function generateExam(
       examSubject: input.subject,
       subjectLabel: SUBJECT_LABEL[input.subject],
       grade: input.grade,
-      topics: promptTopics,
+      topics: [...promptTopics],
       totalSoal,
       composition,
       curriculumText,
@@ -393,16 +433,6 @@ export function generateExam(
       classContext: input.classContext,
       exampleQuestions: input.exampleQuestions
     })
-
-    const title = formatExamTitle({
-      subjectLabel: SUBJECT_LABEL[input.subject],
-      grade: input.grade,
-      examType,
-      examDate: null,
-      topics: promptTopics
-    })
-    const examId = crypto.randomUUID()
-    const now = new Date()
 
     const generated = yield* Effect.tryPromise({
       try: () =>
@@ -413,8 +443,9 @@ export function generateExam(
           expectedCount: totalSoal,
           shouldValidateLatex: input.subject === "matematika",
           reviewMode: input.reviewMode,
-          examId,
-          createdAt: now
+          examId: resolvedExamId,
+          createdAt: now,
+          includePdfImages: input.includePdfImages === true
         }),
       catch: (cause) => new AiGenerationError({ cause })
     })
@@ -436,26 +467,28 @@ export function generateExam(
 
     const insertTransaction = sql.withTransaction(
       Effect.gen(function*() {
-        yield* runDb(
-          db.insert(exams).values({
-            id: examId,
-            userId,
-            title,
-            subject: input.subject,
-            grade: input.grade,
-            difficulty: input.difficulty,
-            topics: promptTopics,
-            reviewMode: input.reviewMode,
-            status: "draft",
-            examType,
-            classContext: input.classContext ?? null,
-            sourceMode,
-            pdfUploadId: effectivePdfUploadId ?? null,
-            freeTopic: input.freeTopic?.trim() ?? null,
-            createdAt: now,
-            updatedAt: now
-          })
-        )
+        if (opts?.examId === undefined) {
+          yield* runDb(
+            db.insert(exams).values({
+              id: resolvedExamId,
+              userId,
+              title,
+              subject: input.subject,
+              grade: input.grade,
+              difficulty: input.difficulty,
+              topics: [...promptTopics],
+              reviewMode: input.reviewMode,
+              status: "draft",
+              examType,
+              classContext: input.classContext ?? null,
+              sourceMode,
+              pdfUploadId: effectivePdfUploadId ?? null,
+              freeTopic: input.freeTopic?.trim() ?? null,
+              createdAt: now,
+              updatedAt: now
+            })
+          )
+        }
 
         yield* runDb(
           db.insert(questions).values(
@@ -498,14 +531,19 @@ export function generateExam(
       }
     }
 
-    const result = yield* fetchExamWithQuestions(examId)
+    if (opts?.jobId !== undefined) {
+      yield* updateGenerationJobProgress(opts.jobId, insertedQuestions.length)
+      yield* completeGenerationJob(opts.jobId, insertedQuestions.length)
+    }
+
+    const result = yield* fetchExamWithQuestions(resolvedExamId)
     if (!result) {
       return { _tag: "database_error", message: "Failed to retrieve generated exam" }
     }
 
     logAiEvent("api.ai.generate", "info", {
       path: "/api/ai/generate",
-      examId,
+      examId: resolvedExamId,
       questionCount: insertedQuestions.length,
       durationMs: Date.now() - handlerT0
     })
@@ -517,6 +555,151 @@ export function generateExam(
         ...result,
         ...(generationIncomplete ? { generationIncomplete: true, failedQuestionNumbers } : {})
       }
+    }
+  })
+}
+
+type PrepareOk = {
+  readonly _tag: "ok"
+  readonly examId: string
+  readonly title: string
+  readonly promptTopics: ReadonlyArray<string>
+  readonly totalSoal: number
+  readonly composition: { mcqSingle: number; mcqMulti: number; trueFalse: number }
+  readonly examType: ReturnType<typeof normalizeExamType>
+  readonly curriculumText: string
+  readonly pdfBytes: Buffer | undefined
+  readonly now: Date
+  readonly sourceMode: NonNullable<GenerateExamInput["sourceMode"]> | "default"
+  readonly effectivePdfUploadId: string | undefined
+}
+
+type PrepareResult =
+  | PrepareOk
+  | { readonly _tag: "err"; readonly result: GenerateExamResult }
+
+function prepareGenerateContext(
+  userId: string,
+  input: GenerateExamInput
+): Effect.Effect<
+  PrepareResult,
+  ApiDatabaseError | CurriculumReadError,
+  DbClient | SqlClient | CurriculumService | ObjectStorage
+> {
+  return Effect.gen(function*() {
+    const sourceMode = input.sourceMode ?? "default"
+    const modeError = validateGenerateExamInput(input)
+    if (modeError !== null) {
+      return { _tag: "err", result: { _tag: "validation_error", details: modeError } }
+    }
+
+    const examType = normalizeExamType(input.examType ?? "formatif")
+    const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
+
+    if (sourceMode === "default" && !isReadySibiPdfForGenerate(input.subject, input.grade)) {
+      return {
+        _tag: "err",
+        result: {
+          _tag: "validation_error",
+          details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
+        }
+      }
+    }
+
+    const compositionResult = yield* Effect.either(
+      Effect.try({
+        try: () => resolveComposition(examType, totalSoal, input.composition),
+        catch: (err): CompositionValidationError =>
+          new CompositionValidationError({
+            message: err instanceof Error ? err.message : String(err)
+          })
+      })
+    )
+    if (Either.isLeft(compositionResult)) {
+      return { _tag: "err", result: { _tag: "validation_error", details: compositionResult.left.message } }
+    }
+    const composition = compositionResult.right
+
+    const promptTopics = sourceMode === "pdf_guru"
+      ? (input.topics.length > 0 ? [...input.topics] : [input.freeTopic?.trim() ?? ""])
+      : [...input.topics]
+
+    const effectivePdfUploadId = sourceMode === "default" ? undefined : input.pdfUploadId
+    const useRag = process.env["USE_RAG"] === "1"
+
+    let curriculumText: string
+    if (!useRag && sourceMode !== "pdf_guru") {
+      const curriculum = yield* CurriculumService
+      curriculumText = yield* curriculum.getText(input.subject, input.grade)
+    } else {
+      const retrievalResult = yield* Effect.either(
+        resolveRetrievalContext({
+          sourceMode,
+          subject: input.subject,
+          grade: input.grade,
+          topics: [...promptTopics],
+          freeTopic: input.freeTopic,
+          pdfUploadId: effectivePdfUploadId
+        })
+      )
+      if (Either.isRight(retrievalResult)) {
+        curriculumText = retrievalResult.right.curriculumText
+      } else if (retrievalResult.left instanceof InsufficientMateriError) {
+        return {
+          _tag: "err",
+          result: { _tag: "insufficient_materi", details: retrievalResult.left.message }
+        }
+      } else if (retrievalResult.left instanceof CurriculumReadError) {
+        return yield* Effect.fail(retrievalResult.left)
+      } else if (sourceMode !== "pdf_guru") {
+        const curriculum = yield* CurriculumService
+        curriculumText = yield* curriculum.getText(input.subject, input.grade)
+      } else {
+        return {
+          _tag: "err",
+          result: { _tag: "database_error", message: "Retrieval failed" }
+        }
+      }
+    }
+
+    let pdfBytes: Buffer | undefined
+    if (effectivePdfUploadId !== undefined && input.includePdfImages === true) {
+      const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
+      if (Either.isLeft(loadResult)) {
+        return { _tag: "err", result: { _tag: "validation_error", details: loadResult.left.message } }
+      }
+      pdfBytes = loadResult.right.bytes
+    } else if (effectivePdfUploadId !== undefined && sourceMode !== "default") {
+      const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
+      if (Either.isLeft(loadResult)) {
+        return { _tag: "err", result: { _tag: "validation_error", details: loadResult.left.message } }
+      }
+      if (sourceMode === "pdf_guru" && curriculumText.length < 100) {
+        pdfBytes = loadResult.right.bytes
+      }
+    }
+
+    const title = formatExamTitle({
+      subjectLabel: SUBJECT_LABEL[input.subject],
+      grade: input.grade,
+      examType,
+      examDate: null,
+      topics: [...promptTopics]
+    })
+
+    return {
+      _tag: "ok",
+      examId: crypto.randomUUID(),
+      title,
+      promptTopics,
+      totalSoal,
+      composition,
+      examType,
+      curriculumText,
+      pdfBytes,
+      now: new Date(),
+      sourceMode,
+      effectivePdfUploadId
     }
   })
 }
