@@ -55,31 +55,37 @@ export function PdfLibraryPicker({
           : "Siap"
 
         return (
-          <li key={item.id}>
+          <li
+            key={item.id}
+            className={[
+              "flex items-center gap-2 rounded-sm border px-3 py-2 text-sm transition-colors",
+              isSelected ? "border-accent-primary bg-kertas-100" : "border-border-ui",
+              !isReady ? "opacity-60" : ""
+            ].join(" ")}
+          >
             <button
               type="button"
               disabled={!isReady}
               onClick={() => onSelect(item)}
               className={[
-                "w-full flex items-center gap-3 rounded-sm border px-3 py-2 text-left text-sm transition-colors",
-                isSelected ? "border-accent-primary bg-kertas-100" : "border-border-ui hover:bg-kertas-50",
-                !isReady ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                "flex flex-1 min-w-0 items-center gap-3 text-left",
+                !isReady ? "cursor-not-allowed" : "cursor-pointer hover:opacity-90"
               ].join(" ")}
             >
               <FileText className="h-4 w-4 shrink-0 text-text-tertiary" />
               <span className="flex-1 truncate font-medium text-text-primary">{item.filename}</span>
               <Badge variant={isReady ? "default" : "secondary"}>{statusLabel}</Badge>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={(event) => handleDelete(event, item.id)}
-                aria-label={`Hapus ${item.filename}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={(event) => handleDelete(event, item.id)}
+              aria-label={`Hapus ${item.filename}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </li>
         )
       })}

@@ -376,20 +376,41 @@ function GeneratePage() {
   useEffect(() => {
     if (!showPdfControls || pdfSource !== "library") return
     let cancelled = false
-    setLibraryLoading(true)
-    void api.pdfUploads.list().then((result) => {
-      if (cancelled) return
-      if (Either.isRight(result)) {
-        setLibraryItems([...result.right.items])
-      } else {
-        setLibraryItems([])
-      }
-      setLibraryLoading(false)
-    })
+
+    const loadLibrary = () => {
+      setLibraryLoading(true)
+      void api.pdfUploads.list().then((result) => {
+        if (cancelled) return
+        if (Either.isRight(result)) {
+          setLibraryItems([...result.right.items])
+        } else {
+          setLibraryItems([])
+        }
+        setLibraryLoading(false)
+      })
+    }
+
+    loadLibrary()
     return () => {
       cancelled = true
     }
   }, [showPdfControls, pdfSource])
+
+  const libraryHasPending = libraryItems.some(
+    (item) => item.status === "processing" || item.status === "uploaded"
+  )
+
+  useEffect(() => {
+    if (!showPdfControls || pdfSource !== "library" || !libraryHasPending) return
+    const handle = setInterval(() => {
+      void api.pdfUploads.list().then((result) => {
+        if (Either.isRight(result)) {
+          setLibraryItems([...result.right.items])
+        }
+      })
+    }, 2000)
+    return () => clearInterval(handle)
+  }, [libraryHasPending, pdfSource, showPdfControls])
 
   const filledCount = [
     kelas,
