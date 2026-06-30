@@ -21,7 +21,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
-| M7 | 6 | 0 | 0 | not_started |
+| M7 | 14 | 0 | 0 | not_started |
 | RFC-E1 | 0 | 6 | 0 | done |
 | RFC-E2 | 4 | 1 | 1 | in_progress |
 | RFC-E3 | 3 | 4 | 0 | in_progress |
@@ -121,18 +121,27 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | Extra | — | #192 | Real PDF/DOCX export | closed | apps/api/src/api/services/export-service.ts | PR #194 |
 | Extra | — | #193 | Student delivery + analytics | closed | apps/web/src/routes/_auth.analytics.tsx | PR #194 |
 | Extra | — | #183 | Codex security remediation | closed | docs/security/2026-06-24-codex-security-remediation.md | PR #184 |
-| M7 | — | — | M7 PRD v8 + RFC generate PDF enhancement docs | open | docs/PRD-v8-generate-pdf-enhancement.md | — |
-| M7 | — | — | M7.F0 corpus v2 richer text | open | apps/api/src/curriculum/md/ | — |
-| M7 | — | — | M7.F1 R2 upload + 3-mode schema + basic generate | open | apps/api/src/lib/pdf-upload-service.ts, apps/web/src/routes/_auth.generate.tsx | PR #203 |
-| M7 | — | — | M7.F2 perpustakaan PDF + async ingest | open | apps/api/src/jobs/ingest-worker.ts, apps/web/src/components/generate/pdf-library-picker.tsx | PR #203 |
-| M7 | — | — | M7.F3 pgvector RAG topic-focused | open | apps/api/src/lib/retrieval/ | PR #203 |
-| M7 | — | — | M7.F4 agentic search | open | apps/api/src/lib/retrieval/agentic-search.ts | PR #203 |
-| M7 | — | — | M7.F5 PDF images + streaming + durable jobs | open | apps/api/src/jobs/generation-worker.ts, apps/api/src/lib/generation-job-service.ts | PR #203 |
+| M7 | #204 | — | M7 PRD v8 + RFC generate PDF enhancement docs | open | docs/PRD-v8-generate-pdf-enhancement.md | PR #203 |
+| M7 | #204 | #216 | M7.F0 corpus v2 richer text | open | apps/api/src/curriculum/md/ | — |
+| M7 | #204 | #207 | M7.F1 R2 upload + 3-mode schema + basic generate | open | apps/api/src/lib/pdf-upload-service.ts | PR #203 scaffold |
+| M7 | #204 | — | M7.F2 perpustakaan PDF + async ingest | open | apps/api/src/jobs/ingest-worker.ts, apps/web/src/components/generate/pdf-library-picker.tsx | PR #203 scaffold |
+| M7 | #204 | #208 | M7.F3 pgvector RAG topic-focused | open | apps/api/src/lib/retrieval/ | PR #203 scaffold |
+| M7 | #204 | — | M7.F4 agentic search | open | apps/api/src/lib/retrieval/agentic-search.ts | PR #203 scaffold |
+| M7 | #204 | #210 | M7.F5 PDF images + streaming + durable jobs | open | apps/api/src/jobs/generation-worker.ts, apps/api/src/lib/generation-job-service.ts | PR #203 scaffold |
+| M7 | #204 | #205 | M7.F1–F5 PR #203 merge blockers | open | apps/api/src/api/lib/generate-response.ts | PR #203 |
+| M7 | #204 | #206 | M7 PR #203 browser verification | open | docs/qa/ | — |
+| M7 | #204 | #209 | M7.F3 corpus chunk index script | open | apps/api/scripts/index-corpus-chunks.ts | — |
+| M7 | #204 | #211 | M7.F5 progressive generate-stream | open | apps/api/src/lib/generation-job-service.ts | — |
+| M7 | #204 | #212 | M7.F5 async generate hardening | open | apps/api/src/jobs/generation-worker.ts | — |
+| M7 | #204 | #213 | M7 hardening upload/ingest | open | apps/api/src/api/bridge/pdf-upload-route.ts | — |
+| M7 | #204 | #214 | M7 integration tests RFC §16 | open | apps/api/src/jobs/__test__/ | — |
+| M7 | #204 | #215 | M7 web UX generate polish | open | apps/web/src/routes/_auth.generate.tsx | — |
 
 ## Related PRs (recent)
 
 | PR | Closes | Milestone impact |
 |----|--------|------------------|
+| #203 | #204 (docs epic) | M7 PDF v8 dev scaffold; follow-ups #205–#216 |
 | #197 | — | SheetTable + public share (D-3) |
 | #196 | #70 | M4 per-lembar Bank Soal |
 | #195 | #192 prod PDF | Extra export |

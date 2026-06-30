@@ -1,3 +1,4 @@
+import type { SqlClient } from "@effect/sql/SqlClient"
 import { pdfUploads } from "@teacher-exam/db"
 import {
   type PdfUploadDetail,
@@ -135,7 +136,7 @@ export function createPdfUpload(
 ): Effect.Effect<
   PdfUploadResponse,
   PdfUploadValidationError | ObjectStorageError | ApiDatabaseError,
-  DbClient | ObjectStorage
+  DbClient | ObjectStorage | SqlClient
 > {
   return Effect.gen(function*() {
     const bytes = yield* validatePdfUploadFile(file)

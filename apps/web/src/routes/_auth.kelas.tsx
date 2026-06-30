@@ -20,7 +20,6 @@ import {
 } from "@teacher-exam/ui"
 import { Plus, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
-import { ComingSoonPage } from "../components/coming-soon-page.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 
 export const Route = createFileRoute("/_auth/kelas")({
@@ -47,16 +46,6 @@ function parseImport(text: string): Array<StudentDraft> {
 }
 
 function KelasPage() {
-  return (
-    <ComingSoonPage
-      title="Kelas"
-      subtitle="Kelola kelas dan daftar siswa untuk pengiriman ujian."
-      icon={<Users size={24} className="text-text-tertiary" />}
-    />
-  )
-}
-
-function _KelasPageImpl() {
   const { toast } = useToast()
   const [classes, setClasses] = useState<ReadonlyArray<ClassEntity>>([])
   const [loading, setLoading] = useState(true)

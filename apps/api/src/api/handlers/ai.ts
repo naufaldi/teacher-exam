@@ -2,7 +2,13 @@ import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { Effect, Match } from "effect"
 import { generateExam } from "../../lib/ai-generate"
 import { TeacherExamApi } from "../definition"
-import { ApiAiGenerationError, ApiDatabaseError, ApiValidationError400, ApiValidationError422 } from "../errors/http"
+import {
+  ApiAiGenerationError,
+  ApiConflict,
+  ApiDatabaseError,
+  ApiValidationError400,
+  ApiValidationError422
+} from "../errors/http"
 import { CurrentUser } from "../middleware/auth"
 import { AiClient } from "../services/ai"
 
@@ -36,6 +42,12 @@ export const AiLive = HttpApiBuilder.group(
               new ApiValidationError400({
                 error: "Validation failed",
                 details: validation.details
+              })
+            )),
+          Match.tag("conflict_error", (conflict) =>
+            Effect.fail(
+              new ApiConflict({
+                error: conflict.details
               })
             )),
           Match.tag("insufficient_materi", (validation) =>

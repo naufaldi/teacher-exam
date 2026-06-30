@@ -1,6 +1,7 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { Effect, ManagedRuntime } from "effect"
 import { createBridgeServer } from "./api/bridge/create-bridge-server"
+import { adjustGenerateResponseStatus } from "./api/lib/generate-response"
 import { attachRateLimitHeaders } from "./api/lib/rate-limit-response"
 import { setAuthEffectRunner } from "./api/services/auth-service"
 import { databaseRuntime, disposeDatabase, startDatabase } from "./api/services/bootstrap-db"
@@ -57,7 +58,8 @@ async function main() {
           Effect.promise(() => handler(request))
         )
       )
-      return attachRateLimitHeaders(response)
+      const withRateLimit = await attachRateLimitHeaders(response)
+      return adjustGenerateResponseStatus(request, withRateLimit)
     },
     disposeHttpApi: dispose,
     onListen: () => {

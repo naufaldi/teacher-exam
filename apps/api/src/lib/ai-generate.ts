@@ -320,7 +320,17 @@ export type GenerateExamResult =
   | { readonly _tag: "ai_error"; readonly message: string }
   | { readonly _tag: "database_error"; readonly message: string }
   | { readonly _tag: "validation_error"; readonly details: string }
+  | { readonly _tag: "conflict_error"; readonly details: string }
   | { readonly _tag: "insufficient_materi"; readonly details: string }
+
+export function pdfUploadLoadFailureToResult(
+  err: { readonly status: number; readonly message: string }
+): GenerateExamResult {
+  if (err.status === 409) {
+    return { _tag: "conflict_error", details: err.message }
+  }
+  return { _tag: "validation_error", details: err.message }
+}
 
 export function generateExam(
   userId: string,
@@ -666,13 +676,25 @@ function prepareGenerateContext(
     if (effectivePdfUploadId !== undefined && input.includePdfImages === true) {
       const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
       if (Either.isLeft(loadResult)) {
-        return { _tag: "err", result: { _tag: "validation_error", details: loadResult.left.message } }
+        if (loadResult.left._tag === "PdfUploadValidationError") {
+          return { _tag: "err", result: pdfUploadLoadFailureToResult(loadResult.left) }
+        }
+        return {
+          _tag: "err",
+          result: { _tag: "database_error", message: "Gagal memuat PDF." }
+        }
       }
       pdfBytes = loadResult.right.bytes
     } else if (effectivePdfUploadId !== undefined && sourceMode !== "default") {
       const loadResult = yield* Effect.either(loadReadyPdfUpload(userId, effectivePdfUploadId))
       if (Either.isLeft(loadResult)) {
-        return { _tag: "err", result: { _tag: "validation_error", details: loadResult.left.message } }
+        if (loadResult.left._tag === "PdfUploadValidationError") {
+          return { _tag: "err", result: pdfUploadLoadFailureToResult(loadResult.left) }
+        }
+        return {
+          _tag: "err",
+          result: { _tag: "database_error", message: "Gagal memuat PDF." }
+        }
       }
       if (sourceMode === "pdf_guru" && curriculumText.length < 100) {
         pdfBytes = loadResult.right.bytes

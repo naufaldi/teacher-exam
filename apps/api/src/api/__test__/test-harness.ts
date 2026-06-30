@@ -21,6 +21,7 @@ import { QuestionsLive } from "../handlers/questions"
 import { ResultsLive } from "../handlers/results"
 import { PublicSessionsLive, SessionsLive } from "../handlers/sessions"
 import { TemplatesLive } from "../handlers/templates"
+import { adjustGenerateResponseStatus } from "../lib/generate-response"
 import { attachRateLimitHeaders } from "../lib/rate-limit-response"
 import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
 import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
@@ -176,8 +177,12 @@ export function buildTestHandler(opts: Parameters<typeof createHttpApiTestLayer>
   const { dispose, handler } = HttpApiBuilder.toWebHandler(createHttpApiTestLayer(opts))
 
   return {
-    request: async (path: string, init?: RequestInit) =>
-      attachRateLimitHeaders(await handler(new Request(`http://localhost${path}`, init))),
+    request: async (path: string, init?: RequestInit) => {
+      const request = new Request(`http://localhost${path}`, init)
+      const response = await handler(request)
+      const withRateLimit = await attachRateLimitHeaders(response)
+      return adjustGenerateResponseStatus(request, withRateLimit)
+    },
     dispose
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildHttpApiTestApp } from "../http-api-setup"
+import { buildHttpApiTestApp } from "../http-api-setup.js"
 
 const generateBody = {
   subject: "ipas",

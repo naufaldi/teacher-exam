@@ -1,9 +1,10 @@
 import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
 import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
-import { GenerateExamInputSchema } from "@teacher-exam/shared"
+import { GenerateExamInputSchema, GenerateJobStartedSchema } from "@teacher-exam/shared"
 import { Schema } from "effect"
 import {
   ApiAiGenerationError,
+  ApiConflict,
   ApiDatabaseError,
   ApiInvalidJsonBody400,
   ApiUnauthorizedSimple,
@@ -18,9 +19,11 @@ export const AiGroup = HttpApiGroup.make("ai")
     HttpApiEndpoint.post("generateExam", "/ai/generate")
       .setPayload(GenerateExamInputSchema)
       .addSuccess(Schema.Unknown, { status: 201 })
+      .addSuccess(GenerateJobStartedSchema, { status: 202 })
       .addError(ApiUnauthorizedSimple, { status: 401 })
       .addError(ApiInvalidJsonBody400, { status: 400 })
       .addError(ApiValidationError400, { status: 400 })
+      .addError(ApiConflict, { status: 409 })
       .addError(ApiValidationError422, { status: 422 })
       .addError(ApiAiGenerationError, { status: 502 })
       .addError(ApiDatabaseError, { status: 500 })

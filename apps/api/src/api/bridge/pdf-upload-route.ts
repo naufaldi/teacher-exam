@@ -2,11 +2,14 @@ import { NodeContext } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
 import type { PdfUploadValidationError } from "../../lib/pdf-upload-service"
 import { createPdfUpload, getPdfUploadDetail, listPdfUploads, softDeletePdfUpload } from "../../lib/pdf-upload-service"
+import { createRateLimitChecker, PDF_UPLOAD_RATE_WINDOWS } from "../lib/rate-limit-core"
 import type { ApiDatabaseError } from "../errors/http"
-import { AuthService } from "../services/auth-service"
+import { AuthService, AuthServiceLive } from "../services/auth-service"
 import { databaseRuntime, getSharedDatabaseLayer } from "../services/bootstrap-db"
 import type { ObjectStorageError } from "../services/object-storage"
 import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
+
+const pdfUploadRateLimit = createRateLimitChecker(PDF_UPLOAD_RATE_WINDOWS)
 
 function buildPdfUploadLayer() {
   return Layer.mergeAll(
@@ -16,7 +19,6 @@ function buildPdfUploadLayer() {
 }
 
 async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  const { AuthServiceLive } = await import("../services/auth-service.js")
   const headers = new Headers(request.headers)
   const program = Effect.gen(function*() {
     const auth = yield* AuthService
@@ -25,6 +27,24 @@ async function getUserIdFromRequest(request: Request): Promise<string | null> {
   }).pipe(Effect.provide(AuthServiceLive))
 
   return databaseRuntime.runPromise(program)
+}
+
+function checkPdfUploadRateLimit(userId: string): Response | null {
+  const result = pdfUploadRateLimit.check(userId)
+  if (!result.allowed) {
+    return Response.json(
+      {
+        error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
+        code: "RATE_LIMITED",
+        retryAfterSec: result.retryAfterSec
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(result.retryAfterSec) }
+      }
+    )
+  }
+  return null
 }
 
 function mapPdfUploadError(left: PdfUploadValidationError | ObjectStorageError | ApiDatabaseError): Response {
@@ -43,6 +63,11 @@ export async function handlePdfUploadGetList(request: Request): Promise<Response
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const rateLimited = checkPdfUploadRateLimit(userId)
+  if (rateLimited !== null) {
+    return rateLimited
+  }
+
   const result = await databaseRuntime.runPromise(
     listPdfUploads(userId).pipe(Effect.either, Effect.provide(buildPdfUploadLayer()))
   )
@@ -56,6 +81,11 @@ export async function handlePdfUploadGetDetail(request: Request, pdfUploadId: st
   const userId = await getUserIdFromRequest(request)
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const rateLimited = checkPdfUploadRateLimit(userId)
+  if (rateLimited !== null) {
+    return rateLimited
   }
 
   const result = await databaseRuntime.runPromise(
@@ -73,6 +103,11 @@ export async function handlePdfUploadDelete(request: Request, pdfUploadId: strin
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const rateLimited = checkPdfUploadRateLimit(userId)
+  if (rateLimited !== null) {
+    return rateLimited
+  }
+
   const result = await databaseRuntime.runPromise(
     softDeletePdfUpload(userId, pdfUploadId).pipe(Effect.either, Effect.provide(buildPdfUploadLayer()))
   )
@@ -86,6 +121,11 @@ export async function handlePdfUploadPost(request: Request): Promise<Response> {
   const userId = await getUserIdFromRequest(request)
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const rateLimited = checkPdfUploadRateLimit(userId)
+  if (rateLimited !== null) {
+    return rateLimited
   }
 
   let formData: FormData

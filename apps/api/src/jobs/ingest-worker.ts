@@ -1,3 +1,4 @@
+import { SqlClient } from "@effect/sql/SqlClient"
 import { documentChunks, ingestJobs, pdfUploads } from "@teacher-exam/db"
 import { and, eq, inArray } from "drizzle-orm"
 import { Data, Effect } from "effect"
@@ -31,48 +32,41 @@ export function enqueueIngestJob(
   })
 }
 
-async function markIngestFailed(
+function markIngestFailed(
   pdfUploadId: string,
   jobId: string | undefined,
   message: string
-): Promise<void> {
-  const { databaseRuntime, getSharedDatabaseLayer } = await import("../api/services/bootstrap-db.js")
-  const { NodeContext } = await import("@effect/platform-node")
-  const { Layer } = await import("effect")
-  const { FilesystemObjectStorageLive } = await import("../api/services/object-storage-filesystem.js")
-
-  const layer = Layer.mergeAll(
-    getSharedDatabaseLayer(),
-    FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer))
-  )
-
-  await databaseRuntime.runPromise(
-    Effect.gen(function*() {
-      const db = yield* DbClient
-      const finishedAt = new Date()
+): Effect.Effect<void, ApiDatabaseError, DbClient> {
+  return Effect.gen(function*() {
+    const db = yield* DbClient
+    const finishedAt = new Date()
+    yield* runDb(
+      db
+        .update(pdfUploads)
+        .set({ status: "failed", errorMessage: message })
+        .where(eq(pdfUploads.id, pdfUploadId))
+    )
+    if (jobId !== undefined) {
       yield* runDb(
         db
-          .update(pdfUploads)
-          .set({ status: "failed", errorMessage: message })
-          .where(eq(pdfUploads.id, pdfUploadId))
+          .update(ingestJobs)
+          .set({ status: "failed", error: message, finishedAt })
+          .where(eq(ingestJobs.id, jobId))
       )
-      if (jobId !== undefined) {
-        yield* runDb(
-          db
-            .update(ingestJobs)
-            .set({ status: "failed", error: message, finishedAt })
-            .where(eq(ingestJobs.id, jobId))
-        )
-      }
-    }).pipe(Effect.provide(layer))
-  )
+    }
+  })
 }
 
 export function runIngestJob(
   pdfUploadId: string
-): Effect.Effect<void, IngestJobError | ApiDatabaseError | ObjectStorageError, DbClient | ObjectStorage> {
+): Effect.Effect<
+  void,
+  IngestJobError | ApiDatabaseError | ObjectStorageError,
+  DbClient | ObjectStorage | SqlClient
+> {
   return Effect.gen(function*() {
     const db = yield* DbClient
+    const sql = yield* SqlClient
     const storage = yield* ObjectStorage
 
     const rows = yield* runDb(
@@ -111,57 +105,70 @@ export function runIngestJob(
     })
 
     if (extractResult.text.trim().length < 20) {
-      yield* Effect.sync(() => {
-        void markIngestFailed(pdfUploadId, jobId, "Tidak dapat mengekstrak teks dari PDF.")
-      })
+      yield* markIngestFailed(pdfUploadId, jobId, "Tidak dapat mengekstrak teks dari PDF.")
       return yield* Effect.fail(new IngestJobError({ message: "Empty PDF text" }))
     }
 
     const chunks = chunkText(extractResult.text, { pageCount: extractResult.pageCount })
-    yield* runDb(db.delete(documentChunks).where(eq(documentChunks.docId, pdfUploadId)))
-
-    if (chunks.length > 0) {
-      yield* runDb(
-        db.insert(documentChunks).values(
-          chunks.map((chunk) => ({
-            docId: pdfUploadId,
-            source: "teacher_pdf" as const,
-            content: chunk.content,
-            metadata: chunk.metadata,
-            embedding: [...embedText(chunk.content)]
-          }))
-        )
-      )
-    }
-
     const readyAt = new Date()
-    yield* runDb(
-      db
-        .update(pdfUploads)
-        .set({
-          status: "ready",
-          readyAt,
-          pageCount: extractResult.pageCount,
-          extractedText: extractResult.text.slice(0, 100_000),
-          errorMessage: null
-        })
-        .where(eq(pdfUploads.id, pdfUploadId))
-    )
 
-    if (jobId !== undefined) {
-      yield* runDb(
-        db
-          .update(ingestJobs)
-          .set({ status: "completed", finishedAt: readyAt })
-          .where(eq(ingestJobs.id, jobId))
+    yield* sql.withTransaction(
+      Effect.gen(function*() {
+        yield* runDb(db.delete(documentChunks).where(eq(documentChunks.docId, pdfUploadId)))
+
+        if (chunks.length > 0) {
+          yield* runDb(
+            db.insert(documentChunks).values(
+              chunks.map((chunk) => ({
+                docId: pdfUploadId,
+                source: "teacher_pdf" as const,
+                content: chunk.content,
+                metadata: chunk.metadata,
+                embedding: [...embedText(chunk.content)]
+              }))
+            )
+          )
+        }
+
+        yield* runDb(
+          db
+            .update(pdfUploads)
+            .set({
+              status: "ready",
+              readyAt,
+              pageCount: extractResult.pageCount,
+              extractedText: extractResult.text.slice(0, 100_000),
+              errorMessage: null
+            })
+            .where(eq(pdfUploads.id, pdfUploadId))
+        )
+
+        if (jobId !== undefined) {
+          yield* runDb(
+            db
+              .update(ingestJobs)
+              .set({ status: "completed", finishedAt: readyAt })
+              .where(eq(ingestJobs.id, jobId))
+          )
+        }
+      })
+    ).pipe(
+      Effect.mapError((cause) =>
+        new IngestJobError({
+          message: cause instanceof Error ? cause.message : "Gagal menyimpan hasil ingest."
+        })
       )
-    }
+    )
   })
 }
 
 export function processQueuedIngestJobs(
   limit = 3
-): Effect.Effect<number, IngestJobError | ApiDatabaseError | ObjectStorageError, DbClient | ObjectStorage> {
+): Effect.Effect<
+  number,
+  IngestJobError | ApiDatabaseError | ObjectStorageError,
+  DbClient | ObjectStorage | SqlClient
+> {
   return Effect.gen(function*() {
     const db = yield* DbClient
     const queued = yield* runDb(
@@ -177,13 +184,8 @@ export function processQueuedIngestJobs(
     for (const job of queued) {
       const result = yield* Effect.either(runIngestJob(job.pdfUploadId))
       if (result._tag === "Left") {
-        yield* Effect.sync(() => {
-          void markIngestFailed(
-            job.pdfUploadId,
-            job.id,
-            result.left instanceof IngestJobError ? result.left.message : "Ingest failed"
-          )
-        })
+        const message = result.left instanceof IngestJobError ? result.left.message : "Ingest failed"
+        yield* markIngestFailed(job.pdfUploadId, job.id, message)
       }
       processed += 1
     }
