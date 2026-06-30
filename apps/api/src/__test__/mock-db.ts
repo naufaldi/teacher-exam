@@ -155,6 +155,15 @@ export function createMockDbModule() {
       deletedAt: "pdf_uploads.deletedAt",
       pageCount: "pdf_uploads.pageCount",
       errorMessage: "pdf_uploads.errorMessage"
+    },
+    documentChunks: {
+      id: "document_chunks.id",
+      docId: "document_chunks.doc_id",
+      source: "document_chunks.source",
+      content: "document_chunks.content",
+      metadata: "document_chunks.metadata",
+      embedding: "document_chunks.embedding",
+      createdAt: "document_chunks.created_at"
     }
   }
 }

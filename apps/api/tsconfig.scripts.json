@@ -24,5 +24,6 @@
       }
     ]
   },
-  "include": ["scripts"]
+  "include": ["scripts"],
+  "exclude": ["scripts/**/__test__/**"]
 }
