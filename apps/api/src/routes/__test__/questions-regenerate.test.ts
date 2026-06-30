@@ -151,7 +151,7 @@ describe("POST /api/questions/:id/regenerate", () => {
     expect(body["status"]).toBe("pending")
     expect(body["validationStatus"]).toBeNull()
     expect(fakeAi.validateCurriculum).not.toHaveBeenCalled()
-    expect((db.update as Mock).mock.calls).toHaveLength(1)
+    expect((db.update as Mock).mock.calls).toHaveLength(2)
   })
 
   it("includes Matematika LaTeX rules in regenerate prompt for matematika exams", async () => {
