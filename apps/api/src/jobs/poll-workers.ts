@@ -2,7 +2,7 @@ import { NodeContext } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
 import { getSharedDatabaseLayer } from "../api/services/bootstrap-db"
 import { CurriculumServiceLive } from "../api/services/curriculum-service"
-import { FilesystemObjectStorageLive } from "../api/services/object-storage-filesystem"
+import { ObjectStorageLive } from "../api/services/object-storage-live"
 import { processQueuedGenerationJobs } from "../jobs/generation-worker"
 import { processQueuedIngestJobs } from "../jobs/ingest-worker"
 import { createDefaultAiService } from "../services/AiService"
@@ -14,7 +14,7 @@ export function startBackgroundWorkers(): () => void {
   const layer = Layer.mergeAll(
     getSharedDatabaseLayer(),
     CurriculumServiceLive,
-    FilesystemObjectStorageLive
+    ObjectStorageLive
   ).pipe(Layer.provide(NodeContext.layer))
 
   const tick = () => {
