@@ -2,6 +2,7 @@ import { Schema } from "effect"
 import { SubjectCatalogItemSchema } from "./catalog.js"
 import { PdfUploadIdSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
+import { SourceModeSchema } from "./pdf-upload.js"
 import {
   AnswerSchema,
   ExamDifficultySchema,
@@ -15,6 +16,7 @@ import {
 // ── Exam API ───────────────────────────────────────────────
 
 export const GenerateExamInputSchema = Schema.Struct({
+  sourceMode: Schema.optional(SourceModeSchema),
   subject: ExamSubjectSchema,
   grade: GradeSchema,
   difficulty: ExamDifficultySchema,
@@ -25,7 +27,10 @@ export const GenerateExamInputSchema = Schema.Struct({
   reviewMode: ReviewModeSchema,
   examType: Schema.optional(ExamTypeSchema),
   classContext: Schema.optional(Schema.String),
+  freeTopic: Schema.optional(Schema.String),
   pdfUploadId: Schema.optional(PdfUploadIdSchema),
+  includePdfImages: Schema.optional(Schema.Boolean),
+  asyncJob: Schema.optional(Schema.Boolean),
   exampleQuestions: Schema.optional(Schema.String),
   totalSoal: Schema.optional(Schema.Int.pipe(Schema.between(5, 50))),
   composition: Schema.optional(Schema.Struct({

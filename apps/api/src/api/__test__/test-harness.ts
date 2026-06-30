@@ -1,3 +1,4 @@
+import { NodeContext } from "@effect/platform-node"
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import * as HttpServer from "@effect/platform/HttpServer"
 import { db } from "@teacher-exam/db"
@@ -20,6 +21,7 @@ import { QuestionsLive } from "../handlers/questions"
 import { ResultsLive } from "../handlers/results"
 import { PublicSessionsLive, SessionsLive } from "../handlers/sessions"
 import { TemplatesLive } from "../handlers/templates"
+import { adjustGenerateResponseStatus } from "../lib/generate-response"
 import { attachRateLimitHeaders } from "../lib/rate-limit-response"
 import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
 import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
@@ -39,6 +41,7 @@ import { type CurriculumService, TestCurriculumLayer } from "../services/curricu
 import type { ExportService } from "../services/export-service"
 import { ExportServiceLive } from "../services/export-service"
 import { GradingServiceLive } from "../services/grading-service"
+import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
 import { SessionServiceLive } from "../services/session-service"
 import { TemplateServiceLive } from "../services/template-service"
 import { createTestDbLayer, TestSqlLayer } from "../services/test-db"
@@ -162,6 +165,7 @@ export function createHttpApiTestLayer(opts: {
     SessionServiceLive.pipe(Layer.provide(TestDbLayer)),
     GradingServiceLive.pipe(Layer.provide(TestDbLayer)),
     AnalyticsServiceLive.pipe(Layer.provide(TestDbLayer)),
+    FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer)),
     opts.exportServiceLayer ?? ExportServiceLive,
     opts.curriculumLayer ?? TestCurriculumLayer(),
     opts.authLayer ?? AuthServiceLive,
@@ -173,8 +177,12 @@ export function buildTestHandler(opts: Parameters<typeof createHttpApiTestLayer>
   const { dispose, handler } = HttpApiBuilder.toWebHandler(createHttpApiTestLayer(opts))
 
   return {
-    request: async (path: string, init?: RequestInit) =>
-      attachRateLimitHeaders(await handler(new Request(`http://localhost${path}`, init))),
+    request: async (path: string, init?: RequestInit) => {
+      const request = new Request(`http://localhost${path}`, init)
+      const response = await handler(request)
+      const withRateLimit = await attachRateLimitHeaders(response)
+      return adjustGenerateResponseStatus(request, withRateLimit)
+    },
     dispose
   }
 }

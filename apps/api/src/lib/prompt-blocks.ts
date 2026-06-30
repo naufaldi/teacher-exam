@@ -46,7 +46,21 @@ export function corpusBlock(curriculumText: string): string {
   ].join("\n")
 }
 
-export function authorityOrderBlock(): string {
+export function authorityOrderBlock(sourceMode: "default" | "pdf_guru" | "combine" = "default"): string {
+  if (sourceMode === "pdf_guru") {
+    return [
+      "Authority order:",
+      "  1. PDF materi guru terlampir = sumber utama soal.",
+      "  2. Parameter topik bebas guru menentukan fokus materi."
+    ].join("\n")
+  }
+  if (sourceMode === "combine") {
+    return [
+      "Authority order:",
+      "  1. Korpus Buku Siswa di bawah = baseline kurikulum (otoritatif untuk CP, daftar bab, sub-konsep).",
+      "  2. PDF materi guru terlampir = konteks tambahan — bukan pengganti korpus."
+    ].join("\n")
+  }
   return [
     "Authority order:",
     "  1. Korpus Buku Siswa di bawah = baseline kurikulum (otoritatif untuk CP, daftar bab, sub-konsep, teks bacaan, dan kosakata).",

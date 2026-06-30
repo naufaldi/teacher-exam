@@ -56,7 +56,7 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
   }
 })
 
-vi.mock("../lib/feature-flags.js", async (importOriginal) => {
+vi.mock("../../lib/feature-flags.js", async (importOriginal) => {
   const orig = await importOriginal<{ DELIVERY_ENABLED: boolean }>()
   return { ...orig, DELIVERY_ENABLED: true }
 })

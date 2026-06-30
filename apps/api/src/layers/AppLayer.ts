@@ -33,6 +33,7 @@ import { ClassServiceLive } from "../api/services/class-service"
 import { CurriculumServiceLive } from "../api/services/curriculum-service"
 import { ExportServiceLive } from "../api/services/export-service"
 import { GradingServiceLive } from "../api/services/grading-service"
+import { FilesystemObjectStorageLive } from "../api/services/object-storage-filesystem"
 import { SessionServiceLive } from "../api/services/session-service"
 import { TemplateServiceLive } from "../api/services/template-service"
 import { createTelemetryLayer } from "../api/telemetry"
@@ -67,6 +68,7 @@ const MiddlewareLive = Layer.mergeAll(
 
 const SupportingLive = Layer.mergeAll(
   CurriculumServiceLive,
+  FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer)),
   createTelemetryLayer()
 )
 

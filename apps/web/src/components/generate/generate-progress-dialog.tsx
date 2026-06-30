@@ -33,6 +33,7 @@ export interface GenerateProgressDialogProps {
   phaseLabel?: string
   progress: number
   totalSoal: number
+  questionsCount?: number | null
 }
 
 /**
@@ -43,6 +44,7 @@ export function GenerateProgressDialog({
   open,
   phaseLabel = "Fase C",
   progress,
+  questionsCount = null,
   totalSoal
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
@@ -66,10 +68,11 @@ export function GenerateProgressDialog({
   }, [open, tips.length])
 
   // Counter starts ramping when step 2 begins and caps at the requested total.
-  const soalCount = Math.max(
+  const estimatedCount = Math.max(
     0,
     Math.min(totalSoal, Math.floor(((progress - 20) / 70) * totalSoal))
   )
+  const soalCount = questionsCount !== null ? questionsCount : estimatedCount
 
   const activeStepIndex = STEPS.reduce(
     (acc, step) => (progress >= step.threshold ? step.id : acc),

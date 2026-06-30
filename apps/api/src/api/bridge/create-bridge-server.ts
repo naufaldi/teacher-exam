@@ -4,6 +4,12 @@ import { logError } from "../../lib/server-log"
 import { applyAuthCors, authPreflightResponse } from "../auth-cors"
 import { isAuthPath, isHttpApiPath } from "./migrated-routes"
 import { nodeRequestToWebRequest, writeWebResponse } from "./node-http"
+import {
+  handlePdfUploadDelete,
+  handlePdfUploadGetDetail,
+  handlePdfUploadGetList,
+  handlePdfUploadPost
+} from "./pdf-upload-route"
 
 export type BridgeServer = {
   readonly server: ReturnType<typeof createServer>
@@ -62,6 +68,36 @@ async function handleRequest(
     const authResponse = await opts.authHandler(webReq)
     await writeWebResponse(res, applyAuthCors(webReq, authResponse))
     return
+  }
+
+  if (pathname === "/api/pdf-uploads" && req.method === "GET") {
+    const webReq = await nodeRequestToWebRequest(req)
+    const response = await handlePdfUploadGetList(webReq)
+    await writeWebResponse(res, response)
+    return
+  }
+
+  if (pathname === "/api/pdf-uploads" && req.method === "POST") {
+    const webReq = await nodeRequestToWebRequest(req)
+    const response = await handlePdfUploadPost(webReq)
+    await writeWebResponse(res, response)
+    return
+  }
+
+  const pdfUploadDetailMatch = /^\/api\/pdf-uploads\/([^/]+)$/.exec(pathname)
+  if (pdfUploadDetailMatch) {
+    const webReq = await nodeRequestToWebRequest(req)
+    const pdfUploadId = pdfUploadDetailMatch[1] ?? ""
+    if (req.method === "GET") {
+      const response = await handlePdfUploadGetDetail(webReq, pdfUploadId)
+      await writeWebResponse(res, response)
+      return
+    }
+    if (req.method === "DELETE") {
+      const response = await handlePdfUploadDelete(webReq, pdfUploadId)
+      await writeWebResponse(res, response)
+      return
+    }
   }
 
   if (isHttpApiPath(pathname)) {

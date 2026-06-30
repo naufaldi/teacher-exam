@@ -139,7 +139,7 @@ describe("AuthLayout", () => {
     expect(screen.getByText("BS")).toBeInTheDocument()
   })
 
-  it("renders all primary navigation links", () => {
+  it("renders all primary navigation links including wip pages", () => {
     render(<AuthLayout />)
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
@@ -153,10 +153,16 @@ describe("AuthLayout", () => {
       "href",
       "/bank-soal"
     )
+    expect(screen.getByRole("link", { name: "Template" })).toHaveAttribute(
+      "href",
+      "/templates"
+    )
     expect(screen.getByRole("link", { name: "Generate" })).toHaveAttribute(
       "href",
       "/generate"
     )
+    expect(screen.getByRole("link", { name: "Kelas" })).toHaveAttribute("href", "/kelas")
+    expect(screen.getByRole("link", { name: "Analitik" })).toHaveAttribute("href", "/analytics")
   })
 
   it("links help button to notasi matematika guide in a new tab", () => {

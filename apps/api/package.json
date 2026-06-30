@@ -41,7 +41,8 @@
     "katex": "^0.16.45",
     "pdf-lib": "^1.17.1",
     "pg": "^8.21.0",
-    "playwright": "^1.49.0"
+    "playwright": "^1.49.0",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

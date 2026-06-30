@@ -4,6 +4,9 @@ import type {
   ExamSubject,
   ExamType,
   Grade,
+  PdfUploadId,
+  PdfUploadSummary,
+  SourceMode,
   TemplateApplyResponse
 } from "@teacher-exam/shared"
 import {
@@ -25,10 +28,12 @@ import {
   Separator,
   Textarea
 } from "@teacher-exam/ui"
+import { Either } from "effect"
 import { AlertTriangle, ArrowLeft, FileText, Lock, Sparkles, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GenerateErrorDialog } from "../components/generate/generate-error-dialog.js"
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
+import { PdfLibraryPicker } from "../components/generate/pdf-library-picker.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
@@ -180,7 +185,16 @@ function GeneratePage() {
   const { simulate } = Route.useSearch()
 
   // Form state
+  const [sourceMode, setSourceMode] = useState<SourceMode>("default")
+  const [freeTopic, setFreeTopic] = useState<string>("")
+  const [uploadedPdfId, setUploadedPdfId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [pdfSource, setPdfSource] = useState<"upload" | "library">("upload")
+  const [libraryItems, setLibraryItems] = useState<Array<PdfUploadSummary>>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [selectedLibraryPdf, setSelectedLibraryPdf] = useState<PdfUploadSummary | null>(null)
+  const [includePdfImages, setIncludePdfImages] = useState(false)
+  const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
   const [topiks, setTopiks] = useState<Array<string>>([])
@@ -211,6 +225,7 @@ function GeneratePage() {
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleJenisChange = useCallback((next: ExamType) => {
     setExamType(next)
@@ -227,6 +242,10 @@ function GeneratePage() {
     if (completionTimerRef.current !== null) {
       clearTimeout(completionTimerRef.current)
       completionTimerRef.current = null
+    }
+    if (pollTimerRef.current !== null) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
     }
   }, [])
 
@@ -342,13 +361,86 @@ function GeneratePage() {
     ? [...topiks, customTopik.trim()]
     : topiks
 
-  // Sidebar completion count (5 required fields with examType)
-  const filledCount = [kelas, mapel, effectiveTopiks.length > 0 ? "ok" : "", kesulitan, examType].filter(Boolean).length
+  const showPdfControls = sourceMode === "pdf_guru" || sourceMode === "combine"
+  const babRequired = sourceMode === "default" || sourceMode === "combine"
+  const topicsSatisfied = babRequired
+    ? effectiveTopiks.length > 0
+    : sourceMode === "pdf_guru"
+    ? freeTopic.trim().length >= 10
+    : true
+  const pdfSatisfied = !showPdfControls ||
+    selectedFile !== null ||
+    uploadedPdfId !== null ||
+    selectedLibraryPdf?.status === "ready"
+
+  useEffect(() => {
+    if (!showPdfControls || pdfSource !== "library") return
+    let cancelled = false
+
+    const loadLibrary = () => {
+      setLibraryLoading(true)
+      void api.pdfUploads.list().then((result) => {
+        if (cancelled) return
+        if (Either.isRight(result)) {
+          setLibraryItems([...result.right.items])
+        } else {
+          setLibraryItems([])
+        }
+        setLibraryLoading(false)
+      })
+    }
+
+    loadLibrary()
+    return () => {
+      cancelled = true
+    }
+  }, [showPdfControls, pdfSource])
+
+  const libraryHasPending = libraryItems.some(
+    (item) => item.status === "processing" || item.status === "uploaded"
+  )
+
+  useEffect(() => {
+    if (!showPdfControls || pdfSource !== "library" || !libraryHasPending) return
+    const handle = setInterval(() => {
+      void api.pdfUploads.list().then((result) => {
+        if (Either.isRight(result)) {
+          setLibraryItems([...result.right.items])
+        }
+      })
+    }, 2000)
+    return () => clearInterval(handle)
+  }, [libraryHasPending, pdfSource, showPdfControls])
+
+  const filledCount = [
+    kelas,
+    mapel,
+    topicsSatisfied ? "ok" : "",
+    kesulitan,
+    examType,
+    ...(showPdfControls && pdfSatisfied ? ["pdf"] : [])
+  ].filter(Boolean).length
+
+  const handleSourceModeChange = useCallback((next: SourceMode) => {
+    setSourceMode(next)
+    if (next === "default") {
+      setSelectedFile(null)
+      setUploadedPdfId(null)
+      setFreeTopic("")
+      setSelectedLibraryPdf(null)
+      setIncludePdfImages(false)
+      setPdfSource("upload")
+    }
+  }, [])
 
   const runGenerate = useCallback(() => {
     const topics: Array<string> = showCustomInput && customTopik.trim() !== ""
       ? [...topiks, customTopik.trim()]
       : topiks
+
+    const submitTopics = sourceMode === "pdf_guru"
+      ? (topics.length > 0 ? topics : [freeTopic.trim()])
+      : topics
 
     setError(null)
     setGenerateErrorMessage(null)
@@ -361,51 +453,116 @@ function GeneratePage() {
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startedAt
       const ratio = Math.min(1, elapsed / GENERATE_DURATION_MS)
-      // Ease-out so the early steps tick fast and the final 10% lingers a touch
       const eased = 1 - Math.pow(1 - ratio, 1.6)
       setProgress(Math.min(eased * 100, 99))
     }, 120)
 
-    void api.ai.generate({
-      subject: mapel,
-      grade: Number(kelas) as Grade,
-      difficulty: kesulitan as "mudah" | "sedang" | "sulit" | "campuran",
-      topics,
-      reviewMode,
-      examType,
-      totalSoal,
-      composition,
-      classContext: fokusGuru.trim() !== "" ? fokusGuru.trim() : undefined,
-      exampleQuestions: contohSoal.trim() !== "" ? contohSoal.trim() : undefined
-    }).then((result) => {
-      const exam = unwrapApiEither(result)
-      clearTimers()
-      setProgress(100)
-
-      completionTimerRef.current = setTimeout(() => {
-        setIsGenerating(false)
-        void navigate({
-          to: "/review",
-          search: { examId: exam.id, mode: reviewMode, from: "generate" }
+    const pollGenerateStream = (examId: string) => {
+      const poll = () => {
+        void api.exams.pollGenerateStream(examId).then((streamResult) => {
+          if (!Either.isRight(streamResult)) return
+          const payload = streamResult.right
+          setStreamQuestionsCount(payload.questionsCount)
+          const ratio = payload.targetCount > 0 ? payload.questionsCount / payload.targetCount : 0
+          setProgress(Math.min(99, Math.max(5, ratio * 100)))
+          if (payload.done) {
+            clearTimers()
+            setProgress(100)
+            completionTimerRef.current = setTimeout(() => {
+              setIsGenerating(false)
+              void navigate({
+                to: "/review",
+                search: { examId, mode: reviewMode, from: "generate" }
+              })
+            }, 450)
+            return
+          }
+          pollTimerRef.current = setTimeout(poll, 1000)
         })
-      }, 450)
-    }).catch((err: unknown) => {
-      clearTimers()
-      setIsGenerating(false)
-      setProgress(0)
-
-      if (err instanceof RateLimitedError) {
-        const message = `Terlalu banyak permintaan. Coba lagi dalam ${err.retryAfterSec} detik.`
-        setError(message)
-        setGenerateErrorMessage(message)
-        setShowErrorDialog(true)
-      } else if (err instanceof ApiError) {
-        setGenerateErrorMessage(err.message)
-        setShowErrorDialog(true)
-      } else {
-        setShowErrorDialog(true)
       }
-    })
+      poll()
+    }
+
+    const startGenerate = (pdfUploadId?: string) => {
+      void api.ai.generate({
+        sourceMode,
+        subject: mapel,
+        grade: Number(kelas) as Grade,
+        difficulty: kesulitan as "mudah" | "sedang" | "sulit" | "campuran",
+        topics: submitTopics,
+        reviewMode,
+        examType,
+        totalSoal,
+        composition,
+        asyncJob: import.meta.env["VITE_ASYNC_GENERATE"] === "true",
+        classContext: fokusGuru.trim() !== "" ? fokusGuru.trim() : undefined,
+        exampleQuestions: contohSoal.trim() !== "" ? contohSoal.trim() : undefined,
+        ...(sourceMode === "pdf_guru" && freeTopic.trim() !== "" ? { freeTopic: freeTopic.trim() } : {}),
+        ...(showPdfControls && includePdfImages ? { includePdfImages: true } : {}),
+        ...(pdfUploadId !== undefined ? { pdfUploadId: pdfUploadId as PdfUploadId } : {})
+      }).then((result) => {
+        const payload = unwrapApiEither(result)
+        if (payload.kind === "sync") {
+          clearTimers()
+          setProgress(100)
+          completionTimerRef.current = setTimeout(() => {
+            setIsGenerating(false)
+            void navigate({
+              to: "/review",
+              search: { examId: payload.exam.id, mode: reviewMode, from: "generate" }
+            })
+          }, 450)
+          return
+        }
+        setStreamQuestionsCount(0)
+        pollGenerateStream(payload.examId)
+      }).catch((err: unknown) => {
+        clearTimers()
+        setIsGenerating(false)
+        setProgress(0)
+
+        if (err instanceof RateLimitedError) {
+          const message = `Terlalu banyak permintaan. Coba lagi dalam ${err.retryAfterSec} detik.`
+          setError(message)
+          setGenerateErrorMessage(message)
+          setShowErrorDialog(true)
+        } else if (err instanceof ApiError) {
+          setGenerateErrorMessage(err.message)
+          setShowErrorDialog(true)
+        } else {
+          setShowErrorDialog(true)
+        }
+      })
+    }
+
+    if (showPdfControls && selectedFile !== null) {
+      void api.pdfUploads.create(selectedFile).then((uploadResult) => {
+        const upload = unwrapApiEither(uploadResult)
+        setUploadedPdfId(upload.id)
+        startGenerate(upload.id)
+      }).catch((err: unknown) => {
+        clearTimers()
+        setIsGenerating(false)
+        setProgress(0)
+        if (err instanceof ApiError) {
+          setGenerateErrorMessage(err.message)
+        }
+        setShowErrorDialog(true)
+      })
+      return
+    }
+
+    if (showPdfControls && selectedLibraryPdf?.status === "ready") {
+      startGenerate(selectedLibraryPdf.id)
+      return
+    }
+
+    if (showPdfControls && uploadedPdfId !== null) {
+      startGenerate(uploadedPdfId)
+      return
+    }
+
+    startGenerate()
   }, [
     clearTimers,
     composition,
@@ -413,14 +570,20 @@ function GeneratePage() {
     customTopik,
     examType,
     fokusGuru,
+    freeTopic,
     kelas,
     kesulitan,
     mapel,
     navigate,
     reviewMode,
+    selectedFile,
     showCustomInput,
+    selectedLibraryPdf,
+    showPdfControls,
+    sourceMode,
     topiks,
-    totalSoal
+    totalSoal,
+    uploadedPdfId
   ])
 
   const handleGenerate = () => {
@@ -436,7 +599,7 @@ function GeneratePage() {
   const compositionSum = composition.mcqSingle + composition.mcqMulti + composition.trueFalse
   const isCompositionValid = compositionSum === totalSoal
   const isFormValid = Boolean(
-    kelas && mapel && effectiveTopiks.length > 0 && kesulitan && !isGenerating && totalSoalError === null &&
+    kelas && mapel && topicsSatisfied && pdfSatisfied && kesulitan && !isGenerating && totalSoalError === null &&
       isCompositionValid && catalogStatus === "ready" && selectedSubjectReady
   )
 
@@ -507,12 +670,128 @@ function GeneratePage() {
           >
             <SectionHeader label="Materi Ujian" />
 
-            {/* File upload */}
-            <FileUpload
-              onFileSelect={(file) => setSelectedFile(file)}
-              onFileRemove={() => setSelectedFile(null)}
-              selectedFile={selectedFile}
-            />
+            <div className="space-y-2">
+              <Label>Sumber materi</Label>
+              <RadioGroup
+                value={sourceMode}
+                onValueChange={(value) => handleSourceModeChange(value as SourceMode)}
+                className="grid gap-2"
+              >
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="default" id="source-default" />
+                  <span className="text-body-sm">Buku Siswa</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="pdf_guru" id="source-pdf-guru" />
+                  <span className="text-body-sm">PDF saya saja</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="combine" id="source-combine" />
+                  <span className="text-body-sm">Buku Siswa + PDF saya</span>
+                </label>
+              </RadioGroup>
+            </div>
+
+            {sourceMode === "pdf_guru" ?
+              (
+                <div className="flex items-start gap-2 rounded-md border border-warning-200 bg-warning-50 px-3 py-2 text-body-sm text-warning-800">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <p>
+                    Soal mungkin di luar Capaian Pembelajaran resmi. Gunakan Periksa kurikulum setelah generate.
+                  </p>
+                </div>
+              ) :
+              null}
+
+            {showPdfControls ?
+              (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={pdfSource === "upload" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("upload")}
+                    >
+                      Upload baru
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={pdfSource === "library" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("library")}
+                    >
+                      Dari perpustakaan
+                    </Button>
+                  </div>
+                  {pdfSource === "upload" ?
+                    (
+                      <FileUpload
+                        onFileSelect={(file) => {
+                          setSelectedFile(file)
+                          setUploadedPdfId(null)
+                          setSelectedLibraryPdf(null)
+                        }}
+                        onFileRemove={() => {
+                          setSelectedFile(null)
+                          setUploadedPdfId(null)
+                        }}
+                        selectedFile={selectedFile}
+                      />
+                    ) :
+                    (
+                      <PdfLibraryPicker
+                        items={libraryItems}
+                        loading={libraryLoading}
+                        selectedId={selectedLibraryPdf?.id ?? null}
+                        onSelect={(item) => {
+                          setSelectedLibraryPdf(item)
+                          setSelectedFile(null)
+                          setUploadedPdfId(item.id)
+                        }}
+                        onDelete={(id) => {
+                          void api.pdfUploads.remove(id).then(() => {
+                            setLibraryItems((items) => items.filter((item) => item.id !== id))
+                            if (selectedLibraryPdf?.id === id) {
+                              setSelectedLibraryPdf(null)
+                              setUploadedPdfId(null)
+                            }
+                          })
+                        }}
+                      />
+                    )}
+                  {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
+                    (
+                      <label className="flex items-center gap-2 text-body-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-border-ui"
+                          checked={includePdfImages}
+                          onChange={(event) => setIncludePdfImages(event.target.checked)}
+                        />
+                        Sertakan gambar dari PDF (maks. ~30% soal)
+                      </label>
+                    ) :
+                    null}
+                </div>
+              ) :
+              null}
+
+            {sourceMode === "pdf_guru" ?
+              (
+                <div className="space-y-1.5">
+                  <Label htmlFor="free-topic">Topik bebas</Label>
+                  <Textarea
+                    id="free-topic"
+                    value={freeTopic}
+                    onChange={(e) => setFreeTopic(e.target.value)}
+                    placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
+                    rows={3}
+                  />
+                  <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
+                </div>
+              ) :
+              null}
 
             {/* Kelas */}
             <div className="space-y-1.5">
@@ -599,61 +878,81 @@ function GeneratePage() {
             </div>
 
             {/* Materi */}
-            <div className="space-y-2">
-              <Label>Materi</Label>
-              <div className={kelas === "" ? "pointer-events-none opacity-60" : undefined}>
-                <TopicMultiSelect
-                  options={babTopicOptions}
-                  selected={topiks}
-                  onChange={setTopiks}
-                  onCustom={() => setShowCustomInput(true)}
-                  maxItems={8}
-                  placeholder={kelas === "" ?
-                    "Pilih kelas dulu" :
-                    babTopicsStatus === "loading" ?
-                    "Memuat daftar Bab..." :
-                    "Pilih 1–8 materi Bab..."}
-                />
-              </div>
-              {kelas === "" ?
-                <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat materi Bab.</p> :
-                null}
-              {kelas !== "" && babTopicsStatus === "loading" ?
-                <p className="text-caption text-text-tertiary">Memuat daftar Bab...</p> :
-                null}
-              {kelas !== "" && babTopicsStatus === "error" ?
-                <p className="text-caption text-danger-600">Daftar materi Bab gagal dimuat.</p> :
-                null}
-              {kelas !== "" && babTopicsStatus === "ready" && babTopicOptions.length === 0 ?
-                <p className="text-caption text-warning-fg">Materi belum tersedia untuk kelas ini.</p> :
-                null}
-              {showCustomInput ?
-                (
-                  <div className="flex gap-2 mt-2 items-center">
-                    <Input
-                      placeholder="Ketik topik kustom..."
-                      value={customTopik}
-                      onChange={(e) => setCustomTopik(e.target.value)}
-                      className="flex-1"
-                    />
-                    <button
-                      type="button"
-                      className="text-text-tertiary hover:text-danger-600 p-1"
-                      onClick={() => {
-                        setShowCustomInput(false)
-                        setCustomTopik("")
-                      }}
-                      aria-label="Batalkan topik kustom"
-                    >
-                      <X size={14} />
-                    </button>
+            {(babRequired || sourceMode === "pdf_guru") ?
+              (
+                <div className="space-y-2">
+                  <Label>{sourceMode === "pdf_guru" ? "Bab (opsional)" : "Materi"}</Label>
+                  <div className={kelas === "" ? "pointer-events-none opacity-60" : undefined}>
+                    {sourceMode === "pdf_guru" ?
+                      (
+                        <TopicMultiSelect
+                          options={babTopicOptions}
+                          selected={topiks}
+                          onChange={setTopiks}
+                          maxItems={8}
+                          placeholder={kelas === "" ?
+                            "Pilih kelas dulu" :
+                            babTopicsStatus === "loading" ?
+                            "Memuat daftar Bab..." :
+                            "Pilih Bab sebagai petunjuk (opsional)..."}
+                        />
+                      ) :
+                      (
+                        <TopicMultiSelect
+                          options={babTopicOptions}
+                          selected={topiks}
+                          onChange={setTopiks}
+                          onCustom={() => setShowCustomInput(true)}
+                          maxItems={8}
+                          placeholder={kelas === "" ?
+                            "Pilih kelas dulu" :
+                            babTopicsStatus === "loading" ?
+                            "Memuat daftar Bab..." :
+                            "Pilih 1–8 materi Bab..."}
+                        />
+                      )}
                   </div>
-                ) :
-                null}
-              {effectiveTopiks.length === 0 ?
-                <p className="text-caption text-text-tertiary">Pilih minimal 1 materi.</p> :
-                null}
-            </div>
+                  {kelas === "" ?
+                    <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat materi Bab.</p> :
+                    null}
+                  {kelas !== "" && babTopicsStatus === "loading" ?
+                    <p className="text-caption text-text-tertiary">Memuat daftar Bab...</p> :
+                    null}
+                  {kelas !== "" && babTopicsStatus === "error" ?
+                    <p className="text-caption text-danger-600">Daftar materi Bab gagal dimuat.</p> :
+                    null}
+                  {kelas !== "" && babTopicsStatus === "ready" && babTopicOptions.length === 0 ?
+                    <p className="text-caption text-warning-fg">Materi belum tersedia untuk kelas ini.</p> :
+                    null}
+                  {showCustomInput && sourceMode !== "pdf_guru" ?
+                    (
+                      <div className="flex gap-2 mt-2 items-center">
+                        <Input
+                          placeholder="Ketik topik kustom..."
+                          value={customTopik}
+                          onChange={(e) => setCustomTopik(e.target.value)}
+                          className="flex-1"
+                        />
+                        <button
+                          type="button"
+                          className="text-text-tertiary hover:text-danger-600 p-1"
+                          onClick={() => {
+                            setShowCustomInput(false)
+                            setCustomTopik("")
+                          }}
+                          aria-label="Batalkan topik kustom"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) :
+                    null}
+                  {babRequired && effectiveTopiks.length === 0 ?
+                    <p className="text-caption text-text-tertiary">Pilih minimal 1 materi.</p> :
+                    null}
+                </div>
+              ) :
+              null}
           </section>
 
           {/* Section B: Pengaturan Soal */}
@@ -1087,6 +1386,7 @@ function GeneratePage() {
         phaseLabel={phaseLabel}
         progress={progress}
         totalSoal={totalSoal}
+        questionsCount={streamQuestionsCount}
       />
       <GenerateErrorDialog
         open={showErrorDialog}

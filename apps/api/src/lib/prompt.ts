@@ -28,6 +28,7 @@ export interface BuildPromptInput {
   totalSoal: number
   /** Full markdown curriculum corpus sent as the system-message baseline. */
   curriculumText: string
+  sourceMode?: "default" | "pdf_guru" | "combine"
   classContext?: string | undefined
   exampleQuestions?: string | undefined
   composition?: Composition | undefined
@@ -135,6 +136,18 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
 
   const comp = input.composition ?? { mcqSingle: input.totalSoal, mcqMulti: 0, trueFalse: 0 }
 
+  const sourceMode = input.sourceMode ?? "default"
+  const includeCorpus = sourceMode !== "pdf_guru"
+  const corpusSections = includeCorpus && input.curriculumText.trim() !== ""
+    ? [groundingBlock(), authorityOrderBlock(sourceMode), corpusBlock(input.curriculumText)]
+    : sourceMode === "pdf_guru"
+    ? [
+      "# Grounding",
+      "- PDF materi guru terlampir adalah sumber utama soal.",
+      "- Jangan mengutip Capaian Pembelajaran resmi yang tidak ada di PDF.",
+      authorityOrderBlock(sourceMode)
+    ]
+    : [groundingBlock(), authorityOrderBlock(sourceMode)]
   const system = joinPromptSections([
     roleBlock(
       `Anda adalah generator soal ulangan SD untuk Kurikulum Merdeka ${phaseRoleCopyForGrade(input.grade)}.`
@@ -150,9 +163,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
       "Semua nilai string memakai tanda kutip ganda valid JSON."
     ]),
     structuredJsonOutputBlock(),
-    groundingBlock(),
-    authorityOrderBlock(),
-    corpusBlock(input.curriculumText),
+    ...corpusSections,
     profile.promptPreamble,
     "",
     ...bahasaInggrisRules,
@@ -209,10 +220,16 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     params["contoh_soal"] = input.exampleQuestions.trim()
   }
 
+  const pdfAttachmentLine = sourceMode === "pdf_guru"
+    ? "Gunakan PDF materi guru terlampir sebagai sumber utama soal."
+    : sourceMode === "combine"
+    ? "Jika ada PDF materi guru terlampir, gunakan sebagai konteks tambahan; korpus Buku Siswa tetap otoritatif."
+    : "Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk konteks lokal/terkini."
+
   const user = [
     compositionSentence,
     topicsInstruction,
-    "Jika ada PDF materi guru terlampir di pesan ini, gunakan sebagai sumber tambahan untuk konteks lokal/terkini.",
+    pdfAttachmentLine,
     "",
     JSON.stringify(params, null, 2)
   ].join("\n")

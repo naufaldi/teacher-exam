@@ -6,6 +6,7 @@ import type { ExamShareResponse, ExamSubject, ExamWithQuestions } from "@teacher
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
+import { getGenerateStreamResponse } from "../../lib/generation-job-service"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
 import { rowToQuestion } from "../../lib/question-mapper"
 import { validateExamCurriculum } from "../../lib/validate-exam-curriculum"
@@ -503,4 +504,16 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
               return JSON.stringify(updated ?? { error: "Failed to retrieve updated exam" })
             }).pipe(Effect.provideService(DbClient, db))
         )
+      }))
+    .handle("generateStream", ({ path }: { path: { id: string } }) =>
+      Effect.gen(function*() {
+        const { userId } = yield* CurrentUser
+        const { id } = path
+        const payload = yield* getGenerateStreamResponse(userId, id)
+        if (!payload) {
+          return yield* Effect.fail(
+            new ApiNotFound({ error: "Exam not found", code: "NOT_FOUND" })
+          )
+        }
+        return payload
       })))

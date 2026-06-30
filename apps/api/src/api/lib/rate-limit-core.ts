@@ -70,3 +70,8 @@ export const AI_GENERATE_RATE_WINDOWS: ReadonlyArray<RateWindow> = [
   { windowMs: 60_000, max: 5 },
   { windowMs: 24 * 60 * 60_000, max: 30 }
 ]
+
+export const PDF_UPLOAD_RATE_WINDOWS: ReadonlyArray<RateWindow> = [
+  { windowMs: 60_000, max: 10 },
+  { windowMs: 24 * 60 * 60_000, max: 50 }
+]

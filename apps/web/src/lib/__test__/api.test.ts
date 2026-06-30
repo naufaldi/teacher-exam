@@ -169,9 +169,12 @@ describe("api.ai.generate", () => {
     }
 
     const result = unwrapApiEither(await api.ai.generate(input))
-    expect(result.id).toBe("exam_1")
-    expect(result.title).toBe("Bahasa Indonesia · Kelas 6 · Teks Narasi")
-    expect(result.questions).toHaveLength(20)
+    expect(result.kind).toBe("sync")
+    if (result.kind === "sync") {
+      expect(result.exam.id).toBe("exam_1")
+      expect(result.exam.title).toBe("Bahasa Indonesia · Kelas 6 · Teks Narasi")
+      expect(result.exam.questions).toHaveLength(20)
+    }
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/ai/generate",
