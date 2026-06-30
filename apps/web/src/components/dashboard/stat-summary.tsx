@@ -7,11 +7,10 @@ interface StatSummaryProps {
     draftCount: number
   }
   weeklyActivity: ReadonlyArray<{ day: string; count: number; variant?: "default" | "secondary" }>
+  weeklyUniqueSheetCount: number
 }
 
-function StatSummary({ stats, weeklyActivity }: StatSummaryProps) {
-  const totalWeekly = weeklyActivity.reduce((sum, d) => sum + d.count, 0)
-
+function StatSummary({ stats, weeklyActivity, weeklyUniqueSheetCount }: StatSummaryProps) {
   return (
     <div className="bg-bg-surface border border-border-default rounded-lg p-6 flex flex-col gap-3 h-full">
       <h3 className="text-caption font-semibold tracking-wider uppercase text-text-tertiary m-0">
@@ -40,7 +39,7 @@ function StatSummary({ stats, weeklyActivity }: StatSummaryProps) {
       </div>
 
       <div className="border-t border-border-default pt-4 mt-auto">
-        <ActivityBarChart data={weeklyActivity} totalLabel={`${totalWeekly} lembar`} />
+        <ActivityBarChart data={weeklyActivity} totalLabel={`${weeklyUniqueSheetCount} lembar`} />
       </div>
     </div>
   )
