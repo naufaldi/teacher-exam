@@ -1,17 +1,17 @@
 import { SqlClient } from "@effect/sql/SqlClient"
 import { db } from "@teacher-exam/db"
+import { Effect, Layer } from "effect"
 import { File } from "node:buffer"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { Effect, Layer } from "effect"
 import { describe, expect, it, type Mock, vi } from "vitest"
 import { makeQueryEffect } from "../../__test__/mock-db.js"
 import { type AppDb, DbClient } from "../../api/services/db.js"
 import { ObjectStorage } from "../../api/services/object-storage.js"
-import * as ingestWorker from "../ingest-worker.js"
-import { enqueueIngestJob, runIngestJob } from "../ingest-worker.js"
 import { createPdfUpload, loadReadyPdfUpload } from "../../lib/pdf-upload-service.js"
+import * as ingestWorker from "../ingest-worker.js"
+import { runIngestJob } from "../ingest-worker.js"
 
 const fixturePath = join(
   fileURLToPath(new URL("../../__test__/fixtures/sample-worksheet.pdf", import.meta.url))
@@ -94,7 +94,6 @@ describe("library reuse", () => {
       Effect.succeed(`job-${id}`)
     )
     vi.spyOn(ingestWorker, "runIngestJob").mockImplementation(() => Effect.void)
-
     ;(db.select as Mock).mockReturnValue(makeQueryEffect([readyUploadRow]))
     ;(db.insert as Mock).mockReturnValue(makeQueryEffect(undefined))
     ;(db.update as Mock).mockReturnValue(makeQueryEffect(undefined))
