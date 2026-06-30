@@ -12,6 +12,7 @@
     "curriculum:download-books": "node --import tsx/esm scripts/curriculum-download-books.ts",
     "curriculum:list": "node --import tsx/esm scripts/curriculum-list.ts",
     "curriculum:stats": "node --import tsx/esm scripts/curriculum-stats.ts",
+    "index-corpus": "node --env-file-if-exists=../../.env --import tsx/esm scripts/index-corpus-chunks.ts",
     "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts",
     "qa:phase1": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-phase1-sampling.ts",
     "qa:live-ai": "node --env-file-if-exists=../../.env --import tsx/esm scripts/ai-provider-smoke.ts",
