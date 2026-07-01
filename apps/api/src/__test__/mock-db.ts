@@ -173,6 +173,18 @@ export function createMockDbModule() {
       content: "document_chunks.content",
       metadata: "document_chunks.metadata",
       embedding: "document_chunks.embedding"
+    },
+    generationJobs: {
+      id: "generation_jobs.id",
+      examId: "generation_jobs.exam_id",
+      status: "generation_jobs.status",
+      questionsTarget: "generation_jobs.questions_target",
+      questionsDone: "generation_jobs.questions_done",
+      inputJson: "generation_jobs.input_json",
+      error: "generation_jobs.error",
+      startedAt: "generation_jobs.started_at",
+      finishedAt: "generation_jobs.finished_at",
+      createdAt: "generation_jobs.created_at"
     }
   }
 }
