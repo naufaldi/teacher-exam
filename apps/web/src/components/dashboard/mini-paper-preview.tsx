@@ -1,6 +1,5 @@
 import type { Exam } from "@teacher-exam/shared"
 import { resolveExamSubjectLabel } from "@teacher-exam/shared"
-import { subjectMetaFor } from "../../lib/subjects"
 
 interface MiniPaperPreviewProps {
   exam: Exam

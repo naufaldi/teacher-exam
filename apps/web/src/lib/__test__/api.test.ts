@@ -134,6 +134,7 @@ const VALID_PUBLIC_EXAM_WITH_QUESTIONS = {
   id: "exam_public_1",
   title: "Bahasa Indonesia · Kelas 6 · Teks Narasi",
   subject: "bahasa_indonesia",
+  subjectLabel: null,
   grade: 6,
   difficulty: "sedang",
   topics: ["Teks Narasi"],

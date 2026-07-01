@@ -74,6 +74,7 @@ describe("PreviewPage — multi-subject labels", () => {
     // is what we are about to remove from production code)
     examDraftStore.setConfig({
       subject: "ipas",
+      subjectLabel: "IPAS",
       grade: 5,
       topic: "Ekosistem",
       examType: "formatif"
@@ -89,6 +90,7 @@ describe("PreviewPage — multi-subject labels", () => {
   it("renders \"Bahasa Inggris\" label when draft subject is bahasa_inggris", () => {
     examDraftStore.setConfig({
       subject: "bahasa_inggris",
+      subjectLabel: "Bahasa Inggris",
       grade: 6,
       topic: "Reading Comprehension",
       examType: "formatif"

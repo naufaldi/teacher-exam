@@ -1,3 +1,4 @@
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -21,7 +22,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@teacher-exam/ui"
-import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { CheckSquare, Copy, Eye, Globe, Link2, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { subjectMetaFor } from "../../lib/subjects.js"
@@ -264,7 +264,9 @@ function SheetTableRowView({
           <TableCell key={column} className="px-5 py-3.5 align-middle">
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subjMeta?.dotClass ?? "text-text-secondary"}`}
+                className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${
+                  subjMeta?.dotClass ?? "text-text-secondary"
+                }`}
                 style={{ fontFamily: "var(--font-serif)" }}
               >
                 {subjShort}

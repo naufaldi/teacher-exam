@@ -1,9 +1,5 @@
 import { exams, questions } from "@teacher-exam/db"
-import {
-  ExamIdSchema,
-  normalizeExamType,
-  UserIdSchema
-} from "@teacher-exam/shared"
+import { ExamIdSchema, normalizeExamType, UserIdSchema } from "@teacher-exam/shared"
 import type { Exam, ExamWithQuestions, PublicExam, PublicExamWithQuestions } from "@teacher-exam/shared"
 import { eq } from "drizzle-orm"
 import type { InferSelectModel } from "drizzle-orm"

@@ -2,13 +2,18 @@ import { db } from "@teacher-exam/db"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
 
+import type { AiService, GeneratedQuestion } from "../../../services/AiService.js"
+import { makeChain, makeQuestionRow } from "../helpers.js"
+import { buildHttpApiTestApp } from "../http-api-setup.js"
+
 const { mockBuildExamPrompt, mockResolveRetrievalContext } = vi.hoisted(() => ({
   mockBuildExamPrompt: vi.fn(() => ({ system: "mock system", user: "mock user" })),
   mockResolveRetrievalContext: vi.fn(() =>
     Effect.succeed({
       curriculumText: "mock pdf excerpt ".repeat(20),
       retrievalTrace: ["mock"]
-    }))
+    })
+  )
 }))
 
 vi.mock("drizzle-orm", async () => {
@@ -25,7 +30,8 @@ vi.mock("../../../lib/pdf-upload-service.js", () => ({
     Effect.succeed({
       bytes: Buffer.from("fake-pdf"),
       filename: "worksheet.pdf"
-    }))
+    })
+  )
 }))
 
 vi.mock("../../../lib/retrieval/retrieval-service.js", () => ({
@@ -35,10 +41,6 @@ vi.mock("../../../lib/retrieval/retrieval-service.js", () => ({
   },
   resolveRetrievalContext: mockResolveRetrievalContext
 }))
-
-import { makeChain, makeQuestionRow } from "../helpers.js"
-import { buildHttpApiTestApp } from "../http-api-setup.js"
-import type { AiService, GeneratedQuestion } from "../../../services/AiService.js"
 
 function makeFakeQuestion(n: number): GeneratedQuestion {
   return {

@@ -1,4 +1,4 @@
-import { SUBJECT_LABEL, type ExamSubject } from "./schemas/primitives.js"
+import { type ExamSubject, SUBJECT_LABEL } from "./schemas/primitives.js"
 
 export function resolveExamSubjectLabel(exam: {
   subject: ExamSubject | null

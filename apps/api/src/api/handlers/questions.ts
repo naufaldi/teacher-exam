@@ -1,7 +1,6 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { exams, questions } from "@teacher-exam/db"
 import {
-  type ExamSubject,
   type McqMultiQuestion,
   type McqSingleQuestion,
   RegenerateQuestionInputSchema,

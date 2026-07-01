@@ -1,7 +1,6 @@
 import { Schema } from "effect"
 import { ClassIdSchema } from "./classes.js"
 import { ExamIdSchema } from "./entities.js"
-import { ExamSubjectSchema } from "./primitives.js"
 
 // ── Branded IDs ────────────────────────────────────────────
 export const SessionIdSchema = Schema.String.pipe(Schema.brand("SessionId"))
