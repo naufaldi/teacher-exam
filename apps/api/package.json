@@ -15,7 +15,8 @@
     "qa:samples": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-generate-samples.ts",
     "qa:phase1": "node --env-file-if-exists=../../.env --import tsx/esm scripts/qa-phase1-sampling.ts",
     "qa:live-ai": "node --env-file-if-exists=../../.env --import tsx/esm scripts/ai-provider-smoke.ts",
-    "db:seed:dev": "node --env-file-if-exists=../../.env --import tsx/esm scripts/seed-dev-guru.ts"
+    "db:seed:dev": "node --env-file-if-exists=../../.env --import tsx/esm scripts/seed-dev-guru.ts",
+    "index-corpus": "node --env-file-if-exists=../../.env --import tsx/esm scripts/index-corpus-chunks.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1076.0",

@@ -172,7 +172,8 @@ export function createMockDbModule() {
       source: "document_chunks.source",
       content: "document_chunks.content",
       metadata: "document_chunks.metadata",
-      embedding: "document_chunks.embedding"
+      embedding: "document_chunks.embedding",
+      createdAt: "document_chunks.created_at"
     },
     generationJobs: {
       id: "generation_jobs.id",
