@@ -18,6 +18,7 @@ const makeExamRow = (overrides: Record<string, unknown> = {}) => ({
   userId: "test-user-id",
   title: "Test Exam",
   subject: "bahasa_indonesia",
+  subjectLabel: null,
   grade: 5,
   difficulty: "mudah",
   topics: ["topic-a"],
