@@ -1,5 +1,5 @@
-import type { BankSheet, ExamSubject } from "@teacher-exam/shared"
-import { SUBJECT_LABEL } from "@teacher-exam/shared"
+import type { BankSheet } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 
 interface BankStatsSummaryProps {
   items: ReadonlyArray<BankSheet>
@@ -8,14 +8,16 @@ interface BankStatsSummaryProps {
 function BankStatsSummary({ items }: BankStatsSummaryProps) {
   if (items.length === 0) return null
 
-  const totals = new Map<ExamSubject, number>()
+  const totals = new Map<string, number>()
   for (const item of items) {
-    totals.set(item.subject, (totals.get(item.subject) ?? 0) + 1)
+    const label = resolveExamSubjectLabel({
+      subject: item.subject,
+      subjectLabel: item.subjectLabel
+    })
+    totals.set(label, (totals.get(label) ?? 0) + 1)
   }
 
-  const parts = [...totals.entries()].map(
-    ([subject, count]) => `${count} ${SUBJECT_LABEL[subject] ?? subject}`
-  )
+  const parts = [...totals.entries()].map(([label, count]) => `${count} ${label}`)
 
   return (
     <div className="rounded-md border border-border-default bg-kertas-50 px-4 py-3">

@@ -1,4 +1,5 @@
 import { exams, examSessions, questions, sessionStudents } from "@teacher-exam/db"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import type {
   CreateSessionInput,
   ExamSession,
@@ -236,7 +237,7 @@ export const SessionServiceLive = Layer.effect(
         return {
           sessionCode: sessionRow.sessionCode,
           title: exam.title,
-          subject: exam.subject,
+          subject: resolveExamSubjectLabel(exam),
           grade: exam.grade,
           durationMinutes: sessionRow.durationMinutes,
           opensAt: sessionRow.opensAt instanceof Date

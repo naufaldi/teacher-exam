@@ -50,6 +50,7 @@ const sampleSheetResponse: PaginatedBankSheetsResponse = {
       userId: "user-1" as BankSheet["userId"],
       title: "IPAS / Kelas 5 / formatif",
       subject: "ipas",
+      subjectLabel: null,
       grade: 5,
       topics: ["Energi"],
       difficulty: "sedang",

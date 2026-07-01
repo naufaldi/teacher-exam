@@ -49,20 +49,29 @@ describe("validateGenerateExamInput", () => {
     expect(validateGenerateExamInput(input)).toBeNull()
   })
 
+  const pdfGuruBase = {
+    grade: 5,
+    difficulty: "sedang",
+    topics: ["Ekosistem"],
+    reviewMode: "fast"
+  } as const
+
   it("rejects pdf_guru without pdfUploadId", () => {
     const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
-      ...base,
+      ...pdfGuruBase,
       sourceMode: "pdf_guru",
-      freeTopic: "Ekosistem dan pencemaran"
+      freeTopic: "Ekosistem dan pencemaran",
+      subjectLabel: "Seni Budaya"
     })
     expect(validateGenerateExamInput(input)).toMatch(/PDF/i)
   })
 
   it("rejects pdf_guru without freeTopic", () => {
     const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
-      ...base,
+      ...pdfGuruBase,
       sourceMode: "pdf_guru",
-      pdfUploadId: pdfId
+      pdfUploadId: pdfId,
+      subjectLabel: "Seni Budaya"
     })
     expect(validateGenerateExamInput(input)).toMatch(/topik/i)
   })
@@ -75,14 +84,51 @@ describe("validateGenerateExamInput", () => {
     expect(validateGenerateExamInput(input)).toMatch(/PDF/i)
   })
 
-  it("accepts pdf_guru with pdf and freeTopic", () => {
+  it("accepts pdf_guru with pdf, freeTopic, and subjectLabel", () => {
     const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
-      ...base,
+      grade: 5,
+      difficulty: "sedang",
+      topics: ["Ekosistem"],
+      reviewMode: "fast",
+      sourceMode: "pdf_guru",
+      pdfUploadId: pdfId,
+      freeTopic: "Ekosistem dan pencemaran lingkungan",
+      subjectLabel: "Seni Budaya"
+    })
+    expect(validateGenerateExamInput(input)).toBeNull()
+  })
+
+  it("rejects pdf_guru without subjectLabel", () => {
+    const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
+      grade: 5,
+      difficulty: "sedang",
+      topics: ["Ekosistem"],
+      reviewMode: "fast",
       sourceMode: "pdf_guru",
       pdfUploadId: pdfId,
       freeTopic: "Ekosistem dan pencemaran lingkungan"
     })
-    expect(validateGenerateExamInput(input)).toBeNull()
+    expect(validateGenerateExamInput(input)).toMatch(/mata pelajaran/i)
+  })
+
+  it("rejects pdf_guru with enum subject", () => {
+    const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
+      ...base,
+      sourceMode: "pdf_guru",
+      pdfUploadId: pdfId,
+      freeTopic: "Ekosistem dan pencemaran lingkungan",
+      subjectLabel: "Seni Budaya"
+    })
+    expect(validateGenerateExamInput(input)).toMatch(/mata pelajaran/i)
+  })
+
+  it("rejects default mode with subjectLabel", () => {
+    const input = Schema.decodeUnknownSync(GenerateExamInputSchema)({
+      ...base,
+      sourceMode: "default",
+      subjectLabel: "Seni Budaya"
+    })
+    expect(validateGenerateExamInput(input)).toMatch(/mata pelajaran/i)
   })
 })
 

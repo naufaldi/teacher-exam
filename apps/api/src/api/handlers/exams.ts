@@ -1,8 +1,8 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { SqlClient } from "@effect/sql/SqlClient"
 import { exams, questions } from "@teacher-exam/db"
-import { formatExamTitle, SUBJECT_LABEL, UpdateExamInputSchema } from "@teacher-exam/shared"
-import type { ExamShareResponse, ExamSubject, ExamWithQuestions } from "@teacher-exam/shared"
+import { formatExamTitle, resolveExamSubjectLabel, UpdateExamInputSchema } from "@teacher-exam/shared"
+import type { ExamShareResponse, ExamWithQuestions } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
@@ -223,7 +223,10 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
         const newExamId = crypto.randomUUID()
 
         const newTitle = formatExamTitle({
-          subjectLabel: SUBJECT_LABEL[examRow.subject as ExamSubject] ?? examRow.subject,
+          subjectLabel: resolveExamSubjectLabel({
+            subject: examRow.subject,
+            subjectLabel: examRow.subjectLabel
+          }),
           grade: examRow.grade,
           examType: examRow.examType ?? "",
           examDate: examRow.examDate ?? null,
@@ -238,6 +241,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
                 userId: examRow.userId,
                 title: newTitle,
                 subject: examRow.subject,
+                subjectLabel: examRow.subjectLabel,
                 grade: examRow.grade,
                 difficulty: examRow.difficulty,
                 topics: (examRow.topics as Array<string>) ?? [],
@@ -483,7 +487,10 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
 
         const { system, user } = buildPembahasanPrompt({
           exam: {
-            subject: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,
+            subject: resolveExamSubjectLabel({
+              subject: exam.subject,
+              subjectLabel: exam.subjectLabel
+            }),
             grade: exam.grade,
             examType: exam.examType ?? "formatif"
           },

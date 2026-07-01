@@ -211,6 +211,7 @@ const VALID_EXAM = {
   userId: "user-1",
   title: "Test Exam",
   subject: "bahasa_indonesia",
+  subjectLabel: null,
   grade: 6,
   difficulty: "campuran",
   topics: ["Teks Narasi", "Puisi"],

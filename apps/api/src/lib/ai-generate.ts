@@ -9,7 +9,7 @@ import {
   SUBJECT_LABEL,
   validateGenerateExamInput
 } from "@teacher-exam/shared"
-import type { FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
+import type { ExamSubject, FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
 import { Data, Effect, Either, Match, Schema } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
@@ -33,6 +33,29 @@ import { questionToRow } from "./question-mapper"
 import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
 
 const PLACEHOLDER_STUB_TEXT = "Soal belum berhasil dibuat — gunakan Regenerate untuk membuat ulang."
+
+function resolveInputSubjectLabel(input: GenerateExamInput): string {
+  const custom = input.subjectLabel?.trim()
+  if (custom) return custom
+  if (input.subject) return SUBJECT_LABEL[input.subject]
+  return "Mata Pelajaran"
+}
+
+function examSubjectInsertFields(
+  sourceMode: NonNullable<GenerateExamInput["sourceMode"]> | "default",
+  input: GenerateExamInput
+): { subject: ExamSubject | null; subjectLabel: string | null } {
+  if (sourceMode === "pdf_guru") {
+    return {
+      subject: null,
+      subjectLabel: input.subjectLabel?.trim() ?? null
+    }
+  }
+  return {
+    subject: input.subject ?? null,
+    subjectLabel: null
+  }
+}
 
 class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
   message: string
@@ -366,12 +389,14 @@ function startAsyncGenerateExam(
     const sourceMode = input.sourceMode ?? "default"
     const effectivePdfUploadId = sourceMode === "default" ? undefined : input.pdfUploadId
 
+    const subjectFields = examSubjectInsertFields(sourceMode, input)
+
     yield* runDb(
       db.insert(exams).values({
         id: examId,
         userId,
         title,
-        subject: input.subject,
+        ...subjectFields,
         grade: input.grade,
         difficulty: input.difficulty,
         topics: [...promptTopics],
@@ -432,8 +457,8 @@ export function executeGenerateExam(
     const { system, user } = buildExamPrompt({
       examType,
       difficulty: input.difficulty,
-      examSubject: input.subject,
-      subjectLabel: SUBJECT_LABEL[input.subject],
+      ...(input.subject !== undefined ? { examSubject: input.subject } : {}),
+      subjectLabel: resolveInputSubjectLabel(input),
       grade: input.grade,
       topics: [...promptTopics],
       totalSoal,
@@ -451,7 +476,7 @@ export function executeGenerateExam(
           user,
           ...(pdfBytes !== undefined ? { pdfBytes } : {}),
           expectedCount: totalSoal,
-          shouldValidateLatex: input.subject === "matematika",
+          shouldValidateLatex: input.subject === "matematika" && sourceMode !== "pdf_guru",
           reviewMode: input.reviewMode,
           examId: resolvedExamId,
           createdAt: now,
@@ -478,12 +503,13 @@ export function executeGenerateExam(
     const insertTransaction = sql.withTransaction(
       Effect.gen(function*() {
         if (opts?.examId === undefined) {
+          const subjectFields = examSubjectInsertFields(sourceMode, input)
           yield* runDb(
             db.insert(exams).values({
               id: resolvedExamId,
               userId,
               title,
-              subject: input.subject,
+              ...subjectFields,
               grade: input.grade,
               difficulty: input.difficulty,
               topics: [...promptTopics],
@@ -606,12 +632,14 @@ function prepareGenerateContext(
     const examType = normalizeExamType(input.examType ?? "formatif")
     const totalSoal = input.totalSoal ?? EXAM_TYPE_PROFILE[examType].defaultTotalSoal
 
-    if (sourceMode === "default" && !isReadySibiPdfForGenerate(input.subject, input.grade)) {
-      return {
-        _tag: "err",
-        result: {
-          _tag: "validation_error",
-          details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
+    if (sourceMode === "default") {
+      if (input.subject === undefined || !isReadySibiPdfForGenerate(input.subject, input.grade)) {
+        return {
+          _tag: "err",
+          result: {
+            _tag: "validation_error",
+            details: "Materi kurikulum untuk mata pelajaran dan kelas ini belum siap dari PDF Buku Siswa."
+          }
         }
       }
     }
@@ -640,12 +668,12 @@ function prepareGenerateContext(
     let curriculumText: string
     if (!useRag && sourceMode !== "pdf_guru") {
       const curriculum = yield* CurriculumService
-      curriculumText = yield* curriculum.getText(input.subject, input.grade)
+      curriculumText = yield* curriculum.getText(input.subject!, input.grade)
     } else {
       const retrievalResult = yield* Effect.either(
         resolveRetrievalContext({
           sourceMode,
-          subject: input.subject,
+          subject: input.subject ?? "",
           grade: input.grade,
           topics: [...promptTopics],
           freeTopic: input.freeTopic,
@@ -663,7 +691,7 @@ function prepareGenerateContext(
         return yield* Effect.fail(retrievalResult.left)
       } else if (sourceMode !== "pdf_guru") {
         const curriculum = yield* CurriculumService
-        curriculumText = yield* curriculum.getText(input.subject, input.grade)
+        curriculumText = yield* curriculum.getText(input.subject!, input.grade)
       } else {
         return {
           _tag: "err",
@@ -702,7 +730,7 @@ function prepareGenerateContext(
     }
 
     const title = formatExamTitle({
-      subjectLabel: SUBJECT_LABEL[input.subject],
+      subjectLabel: resolveInputSubjectLabel(input),
       grade: input.grade,
       examType,
       examDate: null,

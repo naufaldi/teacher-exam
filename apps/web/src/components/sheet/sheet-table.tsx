@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@teacher-exam/ui"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { CheckSquare, Copy, Eye, Globe, Link2, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { subjectMetaFor } from "../../lib/subjects.js"
@@ -142,7 +143,12 @@ function SheetTableRowView({
   variant
 }: SheetTableRowViewProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const subj = subjectMetaFor(row.subject)
+  const subjMeta = row.subject ? subjectMetaFor(row.subject) : null
+  const subjLabel = resolveExamSubjectLabel({
+    subject: row.subject,
+    subjectLabel: row.subjectLabel
+  })
+  const subjShort = subjMeta?.short ?? (subjLabel.length > 4 ? `${subjLabel.slice(0, 4)}…` : subjLabel)
   const columns = getSheetColumns(variant)
   const actions = getSheetActions(variant, row, { readOnly })
   const isFinal = row.status === "final" || row.source === "bank"
@@ -258,10 +264,10 @@ function SheetTableRowView({
           <TableCell key={column} className="px-5 py-3.5 align-middle">
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subj.dotClass}`}
+                className={`w-8 h-10 border border-kertas-300 rounded-xs bg-bg-surface flex items-center justify-center font-bold text-body-sm shrink-0 ${subjMeta?.dotClass ?? "text-text-secondary"}`}
                 style={{ fontFamily: "var(--font-serif)" }}
               >
-                {subj.short}
+                {subjShort}
               </div>
               <div className="min-w-0">
                 <Tooltip>
@@ -302,7 +308,7 @@ function SheetTableRowView({
             key={column}
             className="px-5 py-3.5 align-middle text-body-sm text-text-secondary truncate"
           >
-            {subj.label} · K{row.grade}
+            {subjLabel} · K{row.grade}
           </TableCell>
         )
       case "date":

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
 import type { ExamDetailResponse, ExamType } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
 import { useState } from "react"
@@ -9,7 +10,6 @@ import { ExportMenu } from "../components/export-menu.js"
 import { MarkdownMath } from "../components/markdown-math.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
-import { subjectMetaFor } from "../lib/subjects.js"
 
 export const Route = createFileRoute("/_auth/preview")({
   component: PreviewPage,
@@ -25,6 +25,10 @@ export const Route = createFileRoute("/_auth/preview")({
     examDraftStore.setReviewMode(exam.reviewMode as "fast" | "slow")
     examDraftStore.setConfig({
       subject: exam.subject,
+      subjectLabel: resolveExamSubjectLabel({
+        subject: exam.subject,
+        subjectLabel: exam.subjectLabel
+      }),
       grade: exam.grade,
       topic: exam.topics.join(", "),
       examType: exam.examType as ExamType,
@@ -47,8 +51,7 @@ function PreviewPage() {
   const exam = Route.useLoaderData()
   const [tab, setTab] = useState<"soal" | "lj" | "kunci" | "semua" | "pembahasan">("semua")
 
-  const { grade, metadata, questions, subject } = draft
-  const subjectLabel = subjectMetaFor(subject).label
+  const { grade, metadata, questions, subjectLabel } = draft
   const topicsLabel = exam?.topics?.join(" · ") ?? ""
 
   return (

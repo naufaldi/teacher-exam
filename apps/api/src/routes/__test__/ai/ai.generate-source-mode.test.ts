@@ -16,9 +16,13 @@ describe("POST /api/ai/generate source modes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...generateBody,
+        grade: 5,
+        difficulty: "sedang",
+        topics: ["Ekosistem"],
+        reviewMode: "fast",
         sourceMode: "pdf_guru",
-        freeTopic: "Ekosistem dan pencemaran lingkungan"
+        freeTopic: "Ekosistem dan pencemaran lingkungan",
+        subjectLabel: "Seni Budaya"
       })
     })
     expect(res.status).toBe(400)

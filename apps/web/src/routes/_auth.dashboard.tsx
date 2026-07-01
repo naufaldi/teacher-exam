@@ -46,7 +46,9 @@ export const Route = createFileRoute("/_auth/dashboard")({
     const lastExam = getRecentSheets(exams, 1)[0] ?? null
     const tipsContext = resolveTipsContext(
       catalog,
-      lastExam ? { subject: lastExam.subject, grade: lastExam.grade as Grade } : null
+      lastExam?.subject
+        ? { subject: lastExam.subject, grade: lastExam.grade as Grade }
+        : null
     )
     const tips = unwrapApiEither(await api.curriculum.tips(tipsContext))
     return { exams, catalog, tips }

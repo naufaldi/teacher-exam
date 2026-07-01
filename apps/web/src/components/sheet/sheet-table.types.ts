@@ -7,7 +7,8 @@ type SheetTableRowSource = "exam" | "bank"
 type SheetTableRow = {
   id: string
   title: string
-  subject: ExamSubject
+  subject: ExamSubject | null
+  subjectLabel: string | null
   grade: number
   topics: ReadonlyArray<string>
   examType: string

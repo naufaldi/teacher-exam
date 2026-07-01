@@ -17,7 +17,8 @@ import {
 
 export const GenerateExamInputSchema = Schema.Struct({
   sourceMode: Schema.optional(SourceModeSchema),
-  subject: ExamSubjectSchema,
+  subject: Schema.optional(ExamSubjectSchema),
+  subjectLabel: Schema.optional(Schema.NonEmptyString),
   grade: GradeSchema,
   difficulty: ExamDifficultySchema,
   topics: Schema.Array(Schema.NonEmptyString).pipe(

@@ -11,7 +11,7 @@ import type {
   UseBankSheetInput,
   UseBankSheetResponse
 } from "@teacher-exam/shared"
-import { ExamIdSchema, formatExamTitle, normalizeExamType, SUBJECT_LABEL, UserIdSchema } from "@teacher-exam/shared"
+import { ExamIdSchema, formatExamTitle, normalizeExamType, resolveExamSubjectLabel, UserIdSchema } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, isNotNull, ne, or, sql } from "drizzle-orm"
 import { Context, Data, Effect, Layer, Schema } from "effect"
 import type { ApiDatabaseError } from "../errors/http"
@@ -108,6 +108,7 @@ function toBankSheet(
     userId: Schema.decodeSync(UserIdSchema)(row.userId),
     title: row.title,
     subject: row.subject,
+    subjectLabel: row.subjectLabel,
     grade: row.grade,
     difficulty: row.difficulty,
     topics: row.topics as Array<string>,
@@ -129,6 +130,7 @@ function toPublicBankSheet(
     id: Schema.decodeSync(ExamIdSchema)(row.id),
     title: row.title,
     subject: row.subject,
+    subjectLabel: row.subjectLabel,
     grade: row.grade,
     difficulty: row.difficulty,
     topics: row.topics as Array<string>,
@@ -395,7 +397,10 @@ export const BankServiceLive = Layer.effect(
         const now = new Date()
         const newExamId = crypto.randomUUID()
         const newTitle = formatExamTitle({
-          subjectLabel: SUBJECT_LABEL[sourceExam.subject as ExamSubject] ?? sourceExam.subject,
+          subjectLabel: resolveExamSubjectLabel({
+            subject: sourceExam.subject,
+            subjectLabel: sourceExam.subjectLabel
+          }),
           grade: sourceExam.grade,
           examType: sourceExam.examType ?? "",
           examDate: sourceExam.examDate ?? null,
@@ -408,6 +413,7 @@ export const BankServiceLive = Layer.effect(
             userId,
             title: newTitle,
             subject: sourceExam.subject,
+            subjectLabel: sourceExam.subjectLabel,
             grade: sourceExam.grade,
             difficulty: sourceExam.difficulty,
             topics: (sourceExam.topics as Array<string>) ?? [],

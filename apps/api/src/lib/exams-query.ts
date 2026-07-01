@@ -1,5 +1,9 @@
 import { exams, questions } from "@teacher-exam/db"
-import { ExamIdSchema, normalizeExamType, UserIdSchema } from "@teacher-exam/shared"
+import {
+  ExamIdSchema,
+  normalizeExamType,
+  UserIdSchema
+} from "@teacher-exam/shared"
 import type { Exam, ExamWithQuestions, PublicExam, PublicExamWithQuestions } from "@teacher-exam/shared"
 import { eq } from "drizzle-orm"
 import type { InferSelectModel } from "drizzle-orm"
@@ -16,7 +20,8 @@ export function toExam(row: ExamRow): Exam {
     id: Schema.decodeSync(ExamIdSchema)(row.id),
     userId: Schema.decodeSync(UserIdSchema)(row.userId),
     title: row.title,
-    subject: row.subject,
+    subject: row.subject ?? null,
+    subjectLabel: row.subjectLabel ?? null,
     grade: row.grade,
     difficulty: row.difficulty,
     topics: row.topics as Array<string>,
@@ -41,7 +46,8 @@ export function toPublicExam(row: ExamRow): PublicExam {
   return {
     id: Schema.decodeSync(ExamIdSchema)(row.id),
     title: row.title,
-    subject: row.subject,
+    subject: row.subject ?? null,
+    subjectLabel: row.subjectLabel ?? null,
     grade: row.grade,
     difficulty: row.difficulty,
     topics: row.topics as Array<string>,

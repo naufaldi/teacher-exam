@@ -2,7 +2,7 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   type PublicExamWithQuestions,
-  SUBJECT_LABEL
+  resolveExamSubjectLabel
 } from "@teacher-exam/shared"
 import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun } from "docx"
 import { Match } from "effect"
@@ -22,7 +22,7 @@ function kopLabelFor(examType: string): string {
 }
 
 function subjectLabel(exam: ExportExam): string {
-  return SUBJECT_LABEL[exam.subject] ?? exam.subject
+  return resolveExamSubjectLabel(exam)
 }
 
 function plainText(text: string): string {

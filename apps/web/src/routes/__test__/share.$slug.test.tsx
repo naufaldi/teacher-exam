@@ -58,6 +58,7 @@ function makePublicExam(overrides: Partial<PublicExamDetailResponse> = {}): Publ
     id: brandExamId("public-exam-1"),
     title: "Lembar Publik Bahasa Indonesia",
     subject: "bahasa_indonesia",
+    subjectLabel: null,
     grade: 6,
     difficulty: "sedang",
     topics: ["Teks Narasi"],

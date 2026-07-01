@@ -144,7 +144,7 @@ export type SessionQuestion = typeof SessionQuestionSchema.Type
 export const SessionDetailResponseSchema = Schema.Struct({
   sessionCode: Schema.NonEmptyString,
   title: Schema.String,
-  subject: ExamSubjectSchema,
+  subject: Schema.String,
   grade: Schema.Int,
   durationMinutes: Schema.NullOr(Schema.Int),
   opensAt: Schema.String,

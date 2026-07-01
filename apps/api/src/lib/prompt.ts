@@ -20,7 +20,7 @@ import {
 export interface BuildPromptInput {
   examType: ExamType
   difficulty: ExamDifficulty
-  examSubject: ExamSubject
+  examSubject?: ExamSubject | undefined
   subjectLabel: string
   grade: number
   /** One or more topics for the paper. AI distributes questions evenly across them when multiple are given. */
@@ -37,7 +37,7 @@ export interface BuildPromptInput {
 export interface BuildRegeneratePromptInput {
   grade: number
   subjectLabel: string
-  examSubject: ExamSubject
+  examSubject?: ExamSubject | undefined
   topic: string
   difficulty: string
   siblingTexts: ReadonlyArray<string>

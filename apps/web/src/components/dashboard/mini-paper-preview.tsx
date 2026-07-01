@@ -1,4 +1,5 @@
 import type { Exam } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { subjectMetaFor } from "../../lib/subjects"
 
 interface MiniPaperPreviewProps {
@@ -26,7 +27,11 @@ const QUESTION_SKELETONS = [
 ] as const
 
 function MiniPaperPreview({ exam }: MiniPaperPreviewProps) {
-  const subjectShort = subjectMetaFor(exam.subject).short
+  const label = resolveExamSubjectLabel({
+    subject: exam.subject,
+    subjectLabel: exam.subjectLabel
+  })
+  const subjectShort = label.length > 10 ? `${label.slice(0, 10)}…` : label
   const topicsDisplay = formatTopicsDisplay(exam.topics)
 
   return (

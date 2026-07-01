@@ -1,3 +1,4 @@
+export * from "./subject-label.js"
 export * from "./exam-title.js"
 export * from "./format-math-fallback.js"
 export * from "./parse-math-text.js"
