@@ -1,5 +1,5 @@
 import type { Exam } from "@teacher-exam/shared"
-import { formatExamTitle, SUBJECT_LABEL } from "@teacher-exam/shared"
+import { formatExamTitle, resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -26,7 +26,10 @@ export function DuplicateConfirmDialog({
   onOpenChange,
   open
 }: DuplicateConfirmDialogProps) {
-  const subjectLabel = SUBJECT_LABEL[exam.subject] ?? exam.subject
+  const subjectLabel = resolveExamSubjectLabel({
+    subject: exam.subject,
+    subjectLabel: exam.subjectLabel
+  })
   const derivedTitle = formatExamTitle({
     subjectLabel,
     grade: exam.grade,

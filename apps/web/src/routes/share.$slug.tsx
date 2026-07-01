@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { SUBJECT_LABEL } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import type { PublicExamDetailResponse } from "@teacher-exam/shared"
 import { Badge, Button, EmptyState, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { Either, Match } from "effect"
@@ -78,7 +78,7 @@ function PublicSharePage() {
   const { slug } = Route.useParams()
   const [tab, setTab] = useState<"semua" | "soal" | "lj" | "kunci" | "pembahasan">("semua")
 
-  const subjectLabel = SUBJECT_LABEL[exam.subject] ?? exam.subject
+  const subjectLabel = resolveExamSubjectLabel(exam)
   const publishedDate = new Date(exam.publishedAt).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "long",

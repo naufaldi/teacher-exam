@@ -50,6 +50,25 @@ export type PdfUploadDetail = typeof PdfUploadDetailSchema.Type
 export function validateGenerateExamInput(input: GenerateExamInput): string | null {
   const sourceMode = input.sourceMode ?? "default"
 
+  if (sourceMode === "default" || sourceMode === "combine") {
+    if (input.subject === undefined) {
+      return "Pilih mata pelajaran."
+    }
+    if (input.subjectLabel !== undefined) {
+      return "Mata pelajaran bebas hanya untuk mode PDF saya saja."
+    }
+  }
+
+  if (sourceMode === "pdf_guru") {
+    if (input.subject !== undefined) {
+      return "Mode PDF saya saja memakai nama mata pelajaran bebas, bukan pilihan kurikulum."
+    }
+    const label = input.subjectLabel?.trim() ?? ""
+    if (label.length < 2) {
+      return "Mata pelajaran wajib diisi (minimal 2 karakter)."
+    }
+  }
+
   if (sourceMode === "default") {
     return null
   }

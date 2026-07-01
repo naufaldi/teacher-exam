@@ -2,7 +2,7 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   type PublicExamWithQuestions,
-  SUBJECT_LABEL
+  resolveExamSubjectLabel
 } from "@teacher-exam/shared"
 import { Match } from "effect"
 import { renderFigureSvg } from "./export-figure.js"
@@ -31,7 +31,7 @@ function escapeHtml(value: string): string {
 }
 
 function subjectLabel(exam: ExportExam): string {
-  return SUBJECT_LABEL[exam.subject] ?? exam.subject
+  return resolveExamSubjectLabel(exam)
 }
 
 function examTypeOf(exam: ExportExam): string {

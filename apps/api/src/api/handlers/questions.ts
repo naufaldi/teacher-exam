@@ -1,11 +1,10 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { exams, questions } from "@teacher-exam/db"
 import {
-  type ExamSubject,
   type McqMultiQuestion,
   type McqSingleQuestion,
   RegenerateQuestionInputSchema,
-  SUBJECT_LABEL,
+  resolveExamSubjectLabel,
   type TrueFalseQuestion,
   UpdateQuestionInputSchema
 } from "@teacher-exam/shared"
@@ -222,18 +221,24 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         )
 
         const siblingTexts = siblingRows.map((r) => r.text)
-        const isMatematika = exam.subject === "matematika"
+        const examSubjectLabel = resolveExamSubjectLabel({
+          subject: exam.subject,
+          subjectLabel: exam.subjectLabel
+        })
+        const isMatematika = exam.subject === "matematika" || examSubjectLabel === "Matematika"
         const curriculum = yield* CurriculumService
-        const curriculumText = yield* curriculum.getText(exam.subject, exam.grade).pipe(
-          Effect.mapError(
-            () => new ApiDatabaseError({ error: "Curriculum lookup failed", code: "DATABASE_ERROR" })
+        const curriculumText = exam.subject
+          ? yield* curriculum.getText(exam.subject, exam.grade).pipe(
+            Effect.mapError(
+              () => new ApiDatabaseError({ error: "Curriculum lookup failed", code: "DATABASE_ERROR" })
+            )
           )
-        )
+          : (exam.freeTopic ?? "")
         const { system, user } = buildRegeneratePrompt({
           grade: exam.grade,
-          subjectLabel: SUBJECT_LABEL[exam.subject as ExamSubject] ?? exam.subject,
-          examSubject: exam.subject,
-          topic: question.topic ?? exam.topics[0] ?? exam.subject,
+          subjectLabel: examSubjectLabel,
+          ...(exam.subject !== null ? { examSubject: exam.subject } : {}),
+          topic: question.topic ?? exam.topics[0] ?? examSubjectLabel,
           difficulty: question.difficulty ?? exam.difficulty,
           siblingTexts,
           hint,

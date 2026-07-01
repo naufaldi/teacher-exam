@@ -12,10 +12,12 @@ import type {
   ExamAnalyticsResponse,
   ExamDetailResponse,
   ExamShareResponse,
+  ExamSubject,
   ExamTemplate,
   ExamWithQuestions,
   GenerateExamInput,
   GenerateStreamResponse,
+  Grade,
   PaginatedBankSheetsResponse,
   PaginatedPublicBankSheetsResponse,
   PdfUploadListResponse,
@@ -517,8 +519,8 @@ export const api = {
       return decodeEither(CurriculumCatalogResponseSchema, raw.right)
     },
     babTopics: async (
-      subject: GenerateExamInput["subject"],
-      grade: GenerateExamInput["grade"]
+      subject: ExamSubject,
+      grade: Grade
     ): Promise<Either.Either<CurriculumBabTopicsResponse, ApiClientFailure>> => {
       const params = new URLSearchParams({ subject, grade: String(grade) })
       const raw = await apiFetchEither<unknown>(`/curriculum/bab-topics?${params.toString()}`)
@@ -528,8 +530,8 @@ export const api = {
       return decodeEither(CurriculumBabTopicsResponseSchema, raw.right)
     },
     tips: async (input: {
-      subject: GenerateExamInput["subject"]
-      grade: GenerateExamInput["grade"]
+      subject: ExamSubject
+      grade: Grade
     }): Promise<Either.Either<CurriculumTipsResponse, ApiClientFailure>> => {
       const params = new URLSearchParams({
         subject: input.subject,

@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -62,6 +63,10 @@ export const Route = createFileRoute("/_auth/review")({
     examDraftStore.setReviewMode(exam.reviewMode as "fast" | "slow")
     examDraftStore.setConfig({
       subject: exam.subject,
+      subjectLabel: resolveExamSubjectLabel({
+        subject: exam.subject,
+        subjectLabel: exam.subjectLabel
+      }),
       grade: exam.grade,
       topic: exam.topics.join(", "),
       examType: exam.examType as ExamType,
@@ -1212,7 +1217,7 @@ function ReviewPage() {
             <QuestionEditDialog
               open
               question={editingQuestion}
-              subject={exam.subject}
+              subject={exam.subject ?? undefined}
               onClose={() => setEditingId(null)}
               onSave={(updated) => {
                 void handleEditSave(updated)

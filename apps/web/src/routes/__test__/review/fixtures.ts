@@ -40,6 +40,7 @@ export function makeExamWithMixedTypes(id = "exam_mixed"): ExamWithQuestions {
     userId: brandUserId("user_1"),
     title: "Mixed Types Exam",
     subject: "bahasa_indonesia" as const,
+    subjectLabel: null,
     grade: 6,
     difficulty: "sedang" as const,
     topics: ["Teks"],

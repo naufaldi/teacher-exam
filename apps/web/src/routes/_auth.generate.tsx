@@ -216,6 +216,7 @@ function GeneratePage() {
   const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
+  const [customMapel, setCustomMapel] = useState<string>("")
   const [topiks, setTopiks] = useState<Array<string>>([])
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customTopik, setCustomTopik] = useState<string>("")
@@ -241,7 +242,7 @@ function GeneratePage() {
   const [error, setError] = useState<string | null>(null)
   const [generateErrorMessage, setGenerateErrorMessage] = useState<string | null>(null)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<{ pdf?: string; freeTopic?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ pdf?: string; freeTopic?: string; mapel?: string }>({})
   const [pendingDeleteId, setPendingDeleteId] = useState<PdfUploadId | null>(null)
   const [pendingDeleteFilename, setPendingDeleteFilename] = useState<string>("")
 
@@ -326,7 +327,15 @@ function GeneratePage() {
   }, [catalogStatus, curriculumCatalog])
   const selectedSubjectOption = subjectGradeOptions.find((subject) => subject.value === mapel)
   const selectedSubjectReady = selectedSubjectOption?.availability === "ready"
-  const subjectMeta = subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
+  const isPdfGuruMode = sourceMode === "pdf_guru"
+  const displaySubjectMeta = isPdfGuruMode
+    ? {
+      label: customMapel.trim() || "Mata Pelajaran",
+      short: customMapel.trim() || "—",
+      badgeVariant: "secondary" as const
+    }
+    : subjectMetaFor(selectedSubjectReady ? mapel : readySubjectOptions[0]?.value ?? mapel)
+  const subjectMeta = displaySubjectMeta
 
   useEffect(() => {
     let cancelled = false
@@ -455,9 +464,16 @@ function GeneratePage() {
       setSelectedFile(null)
       setUploadedPdfId(null)
       setFreeTopic("")
+      setCustomMapel("")
       setSelectedLibraryPdf(null)
       setIncludePdfImages(false)
       setPdfSource("upload")
+    } else if (next !== "pdf_guru") {
+      setCustomMapel("")
+    } else {
+      setTopiks([])
+      setCustomTopik("")
+      setShowCustomInput(false)
     }
   }, [])
 
@@ -514,7 +530,9 @@ function GeneratePage() {
     const startGenerate = (pdfUploadId?: string) => {
       void api.ai.generate({
         sourceMode,
-        subject: mapel,
+        ...(sourceMode === "pdf_guru"
+          ? { subjectLabel: customMapel.trim() }
+          : { subject: mapel }),
         grade: Number(kelas) as Grade,
         difficulty: kesulitan as "mudah" | "sedang" | "sulit" | "campuran",
         topics: submitTopics,
@@ -597,6 +615,7 @@ function GeneratePage() {
     contohSoal,
     customTopik,
     examType,
+    customMapel,
     fokusGuru,
     freeTopic,
     kelas,
@@ -617,12 +636,15 @@ function GeneratePage() {
   const selectedPdfLabel = selectedFile?.name ?? selectedLibraryPdf?.filename ?? null
 
   const handleGenerate = () => {
-    const nextErrors: { pdf?: string; freeTopic?: string } = {}
+    const nextErrors: { pdf?: string; freeTopic?: string; mapel?: string } = {}
     if (showPdfControls && !pdfSatisfied) {
       nextErrors.pdf = PDF_REQUIRED_MESSAGE
     }
     if (sourceMode === "pdf_guru" && freeTopic.trim().length < 10) {
       nextErrors.freeTopic = FREE_TOPIC_REQUIRED_MESSAGE
+    }
+    if (sourceMode === "pdf_guru" && customMapel.trim().length < 2) {
+      nextErrors.mapel = "Mata pelajaran wajib diisi (minimal 2 karakter)."
     }
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
@@ -640,15 +662,22 @@ function GeneratePage() {
 
   const compositionSum = composition.mcqSingle + composition.mcqMulti + composition.trueFalse
   const isCompositionValid = compositionSum === totalSoal
+  const mapelSatisfied = sourceMode === "pdf_guru"
+    ? customMapel.trim().length >= 2
+    : Boolean(mapel && selectedSubjectReady)
   const coreFormReady = Boolean(
-    kelas && mapel && kesulitan && !isGenerating && totalSoalError === null &&
-      isCompositionValid && catalogStatus === "ready" && selectedSubjectReady
+    kelas && mapelSatisfied && kesulitan && !isGenerating && totalSoalError === null &&
+      isCompositionValid &&
+      (sourceMode === "pdf_guru" || (catalogStatus === "ready" && selectedSubjectReady))
   )
   const isGenerateDisabled = Boolean(
     !coreFormReady || (babRequired && effectiveTopiks.length === 0)
   )
 
   const topikSummary = effectiveTopiks.join(", ")
+  const sidebarMateriLabel = sourceMode === "pdf_guru"
+    ? (effectiveTopiks.length > 0 ? topikSummary : freeTopic.trim() || "—")
+    : (effectiveTopiks.length > 0 ? topikSummary : "—")
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] gap-8">
@@ -908,99 +937,104 @@ function GeneratePage() {
             {/* Mata Pelajaran */}
             <div className="space-y-1.5">
               <Label htmlFor="mapel">Mata Pelajaran</Label>
-              <Select
-                value={mapel}
-                disabled={kelas === "" || catalogStatus !== "ready" || subjectGradeOptions.length === 0}
-                onValueChange={(v) => {
-                  const nextSubject = subjectGradeOptions.find((subject) => subject.value === v)
-                  if (nextSubject?.availability !== "ready") return
-                  setMapel(v as ExamSubject)
-                  setTopiks([])
-                  setCustomTopik("")
-                  setShowCustomInput(false)
-                }}
-              >
-                <SelectTrigger id="mapel">
-                  <SelectValue
-                    placeholder={kelas === "" ? "Pilih kelas dulu" : "Pilih mata pelajaran"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjectGradeOptions.map((subject) => (
-                    <SelectItem
-                      key={subject.value}
-                      value={subject.value}
-                      disabled={subject.availability !== "ready"}
+              {sourceMode === "pdf_guru" ?
+                (
+                  <>
+                    <Input
+                      id="mapel"
+                      value={customMapel}
+                      onChange={(event) => setCustomMapel(event.target.value)}
+                      placeholder="Contoh: Seni Budaya, PJOK, Matematika"
+                    />
+                    <p className="text-caption text-text-tertiary">
+                      Nama bebas sesuai materi PDF Anda — tidak terikat daftar mapel Buku Siswa.
+                    </p>
+                    {fieldErrors.mapel ?
+                      <p className="text-caption text-danger-600">{fieldErrors.mapel}</p> :
+                      null}
+                  </>
+                ) :
+                (
+                  <>
+                    <Select
+                      value={mapel}
+                      disabled={kelas === "" || catalogStatus !== "ready" || subjectGradeOptions.length === 0}
+                      onValueChange={(v) => {
+                        const nextSubject = subjectGradeOptions.find((subject) => subject.value === v)
+                        if (nextSubject?.availability !== "ready") return
+                        setMapel(v as ExamSubject)
+                        setTopiks([])
+                        setCustomTopik("")
+                        setShowCustomInput(false)
+                      }}
                     >
-                      {formatSubjectGradeOptionLabel(subject)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {kelas === "" ?
-                (
-                  <p className="text-caption text-text-tertiary">
-                    Pilih kelas dulu untuk melihat mata pelajaran siap generate.
-                  </p>
-                ) :
-                null}
-              {kelas !== "" && catalogStatus === "loading" ?
-                <p className="text-caption text-text-tertiary">Memuat daftar materi siap generate...</p> :
-                null}
-              {kelas !== "" && catalogStatus === "error" ?
-                <p className="text-caption text-danger-600">Daftar materi siap generate gagal dimuat.</p> :
-                null}
-              {kelas !== "" && catalogStatus === "ready" && readySubjectOptions.length === 0 ?
-                (
-                  <p className="text-caption text-warning-fg">
-                    Belum ada mata pelajaran siap generate untuk kelas ini. Pilihan di atas menunjukkan status
-                    ketersediaan.
-                  </p>
-                ) :
-                null}
-              {selectedSubjectOption?.optional === true && selectedSubjectReady ?
-                (
-                  <p className="text-caption text-text-tertiary">
-                    Mata pelajaran opsional — kebijakan sekolah dapat mempengaruhi penggunaan di kelas ini.
-                  </p>
-                ) :
-                null}
+                      <SelectTrigger id="mapel">
+                        <SelectValue
+                          placeholder={kelas === "" ? "Pilih kelas dulu" : "Pilih mata pelajaran"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjectGradeOptions.map((subject) => (
+                          <SelectItem
+                            key={subject.value}
+                            value={subject.value}
+                            disabled={subject.availability !== "ready"}
+                          >
+                            {formatSubjectGradeOptionLabel(subject)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {kelas === "" ?
+                      (
+                        <p className="text-caption text-text-tertiary">
+                          Pilih kelas dulu untuk melihat mata pelajaran siap generate.
+                        </p>
+                      ) :
+                      null}
+                    {kelas !== "" && catalogStatus === "loading" ?
+                      <p className="text-caption text-text-tertiary">Memuat daftar materi siap generate...</p> :
+                      null}
+                    {kelas !== "" && catalogStatus === "error" ?
+                      <p className="text-caption text-danger-600">Daftar materi siap generate gagal dimuat.</p> :
+                      null}
+                    {kelas !== "" && catalogStatus === "ready" && readySubjectOptions.length === 0 ?
+                      (
+                        <p className="text-caption text-warning-fg">
+                          Belum ada mata pelajaran siap generate untuk kelas ini. Pilihan di atas menunjukkan status
+                          ketersediaan.
+                        </p>
+                      ) :
+                      null}
+                    {selectedSubjectOption?.optional === true && selectedSubjectReady ?
+                      (
+                        <p className="text-caption text-text-tertiary">
+                          Mata pelajaran opsional — kebijakan sekolah dapat mempengaruhi penggunaan di kelas ini.
+                        </p>
+                      ) :
+                      null}
+                  </>
+                )}
             </div>
 
             {/* Materi */}
-            {(babRequired || sourceMode === "pdf_guru") ?
+            {babRequired ?
               (
                 <div className="space-y-2">
-                  <Label>{sourceMode === "pdf_guru" ? "Bab (opsional)" : "Materi"}</Label>
+                  <Label>Materi</Label>
                   <div className={kelas === "" ? "pointer-events-none opacity-60" : undefined}>
-                    {sourceMode === "pdf_guru" ?
-                      (
-                        <TopicMultiSelect
-                          options={babTopicOptions}
-                          selected={topiks}
-                          onChange={setTopiks}
-                          maxItems={8}
-                          placeholder={kelas === "" ?
-                            "Pilih kelas dulu" :
-                            babTopicsStatus === "loading" ?
-                            "Memuat daftar Bab..." :
-                            "Pilih Bab sebagai petunjuk (opsional)..."}
-                        />
-                      ) :
-                      (
-                        <TopicMultiSelect
-                          options={babTopicOptions}
-                          selected={topiks}
-                          onChange={setTopiks}
-                          onCustom={() => setShowCustomInput(true)}
-                          maxItems={8}
-                          placeholder={kelas === "" ?
-                            "Pilih kelas dulu" :
-                            babTopicsStatus === "loading" ?
-                            "Memuat daftar Bab..." :
-                            "Pilih 1–8 materi Bab..."}
-                        />
-                      )}
+                    <TopicMultiSelect
+                      options={babTopicOptions}
+                      selected={topiks}
+                      onChange={setTopiks}
+                      onCustom={() => setShowCustomInput(true)}
+                      maxItems={8}
+                      placeholder={kelas === "" ?
+                        "Pilih kelas dulu" :
+                        babTopicsStatus === "loading" ?
+                        "Memuat daftar Bab..." :
+                        "Pilih 1–8 materi Bab..."}
+                    />
                   </div>
                   {kelas === "" ?
                     <p className="text-caption text-text-tertiary">Pilih kelas dulu untuk melihat materi Bab.</p> :
@@ -1014,7 +1048,7 @@ function GeneratePage() {
                   {kelas !== "" && babTopicsStatus === "ready" && babTopicOptions.length === 0 ?
                     <p className="text-caption text-warning-fg">Materi belum tersedia untuk kelas ini.</p> :
                     null}
-                  {showCustomInput && sourceMode !== "pdf_guru" ?
+                  {showCustomInput ?
                     (
                       <div className="flex gap-2 mt-2 items-center">
                         <Input
@@ -1400,7 +1434,7 @@ function GeneratePage() {
                 <span className="text-text-tertiary shrink-0">Mata Pelajaran</span>
                 <span className="text-right">
                   <Badge variant={subjectMeta.badgeVariant} className="text-caption">
-                    {subjectMeta.short}
+                    {sourceMode === "pdf_guru" ? (customMapel.trim() || "—") : subjectMeta.short}
                   </Badge>
                 </span>
               </div>
@@ -1415,11 +1449,9 @@ function GeneratePage() {
               <div className="flex justify-between items-start gap-2">
                 <span className="text-text-tertiary shrink-0">Materi</span>
                 <span className="text-text-primary max-w-[160px] text-right">
-                  {effectiveTopiks.length > 0
-                    ? topikSummary.length > 50
-                      ? topikSummary.slice(0, 50) + "…"
-                      : topikSummary
-                    : "—"}
+                  {sidebarMateriLabel.length > 50
+                    ? sidebarMateriLabel.slice(0, 50) + "…"
+                    : sidebarMateriLabel}
                 </span>
               </div>
 

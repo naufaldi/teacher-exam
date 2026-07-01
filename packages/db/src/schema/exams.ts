@@ -8,7 +8,8 @@ export const exams = pgTable("exams", {
   userId: text("user_id").notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  subject: examSubjectEnum("subject").notNull(),
+  subject: examSubjectEnum("subject"),
+  subjectLabel: text("subject_label"),
   grade: integer("grade").notNull(),
   difficulty: examDifficultyEnum("difficulty").notNull(),
   topics: jsonb("topics").$type<Array<string>>().notNull().default([]),

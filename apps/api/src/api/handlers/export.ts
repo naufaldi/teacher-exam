@@ -1,6 +1,6 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse"
-import { type ExportFormat, type ExportVariant, SUBJECT_LABEL } from "@teacher-exam/shared"
+import { type ExportFormat, type ExportVariant, resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { Effect } from "effect"
 import { fetchExamWithQuestions, fetchPublicExamWithQuestions } from "../../lib/exams-query"
 import { TeacherExamApi } from "../definition"
@@ -114,7 +114,7 @@ export const PublicExportsLive = HttpApiBuilder.group(
             })
           )
 
-        const title = `${SUBJECT_LABEL[exam.subject] ?? exam.subject} · Kelas ${exam.grade}`
+        const title = `${resolveExamSubjectLabel(exam)} · Kelas ${exam.grade}`
         return HttpServerResponse.fromWeb(buildBinaryResponse(bytes, format, title))
       }))
 )

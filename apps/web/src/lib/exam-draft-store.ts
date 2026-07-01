@@ -20,7 +20,8 @@ export interface ExamDraft {
   questions: Array<Question>
   metadata: ExamDraftMetadata
   reviewMode: "fast" | "slow"
-  subject: ExamSubject
+  subject: ExamSubject | null
+  subjectLabel: string
   grade: number
   topic: string
   /** Optional teacher-provided steering context (PRD §8.7). */
@@ -42,6 +43,7 @@ function makeInitialDraft(): ExamDraft {
     },
     reviewMode: "fast",
     subject: "bahasa_indonesia",
+    subjectLabel: "Bahasa Indonesia",
     grade: 6,
     topic: "",
     classContext: "",
@@ -123,7 +125,7 @@ export const examDraftStore = {
 
   setConfig(
     patch: Partial<
-      Pick<ExamDraft, "subject" | "grade" | "topic" | "classContext"> & {
+      Pick<ExamDraft, "subject" | "subjectLabel" | "grade" | "topic" | "classContext"> & {
         examType: ExamType
       }
     >

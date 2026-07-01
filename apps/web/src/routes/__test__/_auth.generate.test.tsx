@@ -812,6 +812,47 @@ describe("Atur komposisi panel", () => {
     fireEvent.click(screen.getByText("PDF saya saja"))
     expect(screen.getByText(/Periksa kurikulum/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Topik bebas/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/Seni Budaya/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Pilih 1–8 materi Bab/i)).not.toBeInTheDocument()
+  })
+
+  it("pdf_guru uses free-text mapel without catalog-ready enum gate", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, [])
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
+      target: { value: "PJOK" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Gerak dasar dan permainan bola kecil" }
+    })
+    const generateButton = screen.getByRole("button", { name: /generate lembar/i })
+    expect(generateButton).not.toBeDisabled()
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-1"))
+    fireEvent.click(generateButton)
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceMode: "pdf_guru",
+        subjectLabel: "PJOK",
+        freeTopic: "Gerak dasar dan permainan bola kecil"
+      })
+    )
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.not.objectContaining({ subject: expect.anything() })
+    )
   })
 
   it("clears pdf_guru fields when switching back to default", () => {

@@ -66,6 +66,7 @@ function makeExamRow(overrides: Record<string, unknown> = {}) {
     userId: "test-user-id",
     title: "Bahasa Indonesia · Kelas 6 · Teks Narasi",
     subject: "bahasa_indonesia",
+    subjectLabel: null,
     grade: 6,
     difficulty: "sedang",
     topics: ["Teks Narasi"],

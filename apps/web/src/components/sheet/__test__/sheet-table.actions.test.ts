@@ -37,6 +37,7 @@ describe("getSheetActions", () => {
     userId: makeExam().userId,
     title: "Bank",
     subject: "matematika",
+    subjectLabel: null,
     grade: 5,
     difficulty: "sedang",
     topics: ["A"],

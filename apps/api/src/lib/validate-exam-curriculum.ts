@@ -1,5 +1,6 @@
 import { exams, questions } from "@teacher-exam/db"
-import type { ExamSubject, ExamWithQuestions } from "@teacher-exam/shared"
+import { resolveExamSubjectLabel } from "@teacher-exam/shared"
+import type { ExamWithQuestions } from "@teacher-exam/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
@@ -41,15 +42,17 @@ export function validateExamCurriculum(
     }
 
     const curriculum = yield* CurriculumService
-    const curriculumText = yield* curriculum.getText(
-      examRow.subject as ExamSubject,
-      examRow.grade
-    )
+    const curriculumText = examRow.subject
+      ? yield* curriculum.getText(examRow.subject, examRow.grade)
+      : (examRow.freeTopic ?? "")
 
     const validationUpdates = yield* validateQuestionBatch({
       aiService,
       exam: {
-        subject: examRow.subject,
+        subject: resolveExamSubjectLabel({
+          subject: examRow.subject,
+          subjectLabel: examRow.subjectLabel
+        }),
         grade: examRow.grade,
         examType: examRow.examType ?? "formatif"
       },
