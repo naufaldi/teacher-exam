@@ -154,7 +154,25 @@ export function createMockDbModule() {
       readyAt: "pdf_uploads.readyAt",
       deletedAt: "pdf_uploads.deletedAt",
       pageCount: "pdf_uploads.pageCount",
-      errorMessage: "pdf_uploads.errorMessage"
+      errorMessage: "pdf_uploads.errorMessage",
+      extractedText: "pdf_uploads.extracted_text"
+    },
+    ingestJobs: {
+      id: "ingest_jobs.id",
+      pdfUploadId: "ingest_jobs.pdf_upload_id",
+      status: "ingest_jobs.status",
+      createdAt: "ingest_jobs.created_at",
+      startedAt: "ingest_jobs.started_at",
+      finishedAt: "ingest_jobs.finished_at",
+      error: "ingest_jobs.error"
+    },
+    documentChunks: {
+      id: "document_chunks.id",
+      docId: "document_chunks.doc_id",
+      source: "document_chunks.source",
+      content: "document_chunks.content",
+      metadata: "document_chunks.metadata",
+      embedding: "document_chunks.embedding"
     }
   }
 }
