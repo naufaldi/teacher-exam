@@ -9,7 +9,13 @@ import type { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
 import { executeGenerateExam, type GenerateExamResult } from "../lib/ai-generate"
-import { failGenerationJob, listQueuedGenerationJobs, markGenerationJobRunning } from "../lib/generation-job-service"
+import {
+  DEFAULT_STALE_RUNNING_JOB_MS,
+  failGenerationJob,
+  listQueuedGenerationJobs,
+  markGenerationJobRunning,
+  reclaimStaleRunningJobs
+} from "../lib/generation-job-service"
 import type { AiService } from "../services/AiService"
 
 type StoredJobInput = GenerateExamInput & { userId?: string }
@@ -69,6 +75,7 @@ export function processQueuedGenerationJobs(
   limit = 2
 ): Effect.Effect<number, ApiDatabaseError, DbClient | SqlClient | CurriculumService | ObjectStorage> {
   return Effect.gen(function*() {
+    yield* reclaimStaleRunningJobs(DEFAULT_STALE_RUNNING_JOB_MS)
     const queued = yield* listQueuedGenerationJobs(limit)
     let processed = 0
 

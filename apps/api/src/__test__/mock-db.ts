@@ -154,7 +154,17 @@ export function createMockDbModule() {
       readyAt: "pdf_uploads.readyAt",
       deletedAt: "pdf_uploads.deletedAt",
       pageCount: "pdf_uploads.pageCount",
-      errorMessage: "pdf_uploads.errorMessage"
+      errorMessage: "pdf_uploads.errorMessage",
+      extractedText: "pdf_uploads.extracted_text"
+    },
+    ingestJobs: {
+      id: "ingest_jobs.id",
+      pdfUploadId: "ingest_jobs.pdf_upload_id",
+      status: "ingest_jobs.status",
+      createdAt: "ingest_jobs.created_at",
+      startedAt: "ingest_jobs.started_at",
+      finishedAt: "ingest_jobs.finished_at",
+      error: "ingest_jobs.error"
     },
     documentChunks: {
       id: "document_chunks.id",
@@ -164,6 +174,18 @@ export function createMockDbModule() {
       metadata: "document_chunks.metadata",
       embedding: "document_chunks.embedding",
       createdAt: "document_chunks.created_at"
+    },
+    generationJobs: {
+      id: "generation_jobs.id",
+      examId: "generation_jobs.exam_id",
+      status: "generation_jobs.status",
+      questionsTarget: "generation_jobs.questions_target",
+      questionsDone: "generation_jobs.questions_done",
+      inputJson: "generation_jobs.input_json",
+      error: "generation_jobs.error",
+      startedAt: "generation_jobs.started_at",
+      finishedAt: "generation_jobs.finished_at",
+      createdAt: "generation_jobs.created_at"
     }
   }
 }

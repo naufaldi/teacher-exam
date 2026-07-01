@@ -69,6 +69,10 @@ export function validateExamCurriculum(
       )
     }
 
+    yield* runDb(
+      db.update(exams).set({ updatedAt: new Date() }).where(eq(exams.id, examId))
+    )
+
     logAiEvent("api.exams.validate-curriculum", "info", {
       examId,
       questionCount: questionsForCurriculum.length,
