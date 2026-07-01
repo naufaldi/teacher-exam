@@ -31,7 +31,9 @@ export function toExam(row: ExamRow): Exam {
     classContext: row.classContext ?? null,
     discussionMd: row.discussionMd ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt)
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+    bankedAt: row.bankedAt instanceof Date ? row.bankedAt.toISOString() : row.bankedAt ?? null,
+    publishedAt: row.publishedAt instanceof Date ? row.publishedAt.toISOString() : row.publishedAt ?? null
   }
 }
 

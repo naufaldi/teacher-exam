@@ -74,6 +74,42 @@ describe("POST /api/exams/:id/validate-curriculum", () => {
     expect(body.questions[1]?.validationStatus).toBe("valid")
   })
 
+  it("bumps parent exam updatedAt when curriculum validation runs", async () => {
+    const examRow = makeExamRow()
+    const questionRows = [makeQuestionRow({ examId: "exam-1", number: 1, validationStatus: null })]
+    const validatedRows = [{
+      ...questionRows[0]!,
+      validationStatus: "valid",
+      validationReason: "Sesuai CP."
+    }]
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      if (selectCount === 2) return makeChain(questionRows)
+      if (selectCount === 3) return makeChain([examRow])
+      return makeChain(validatedRows)
+    })
+
+    const capturedUpdates: Array<Record<string, unknown>> = []
+    ;(db.update as Mock).mockImplementation(() => {
+      const chain = makeChain(validatedRows) as ReturnType<typeof makeChain> & { set: Mock }
+      const originalSet = chain.set
+      chain.set = vi.fn((value: Record<string, unknown>) => {
+        capturedUpdates.push(value)
+        return originalSet(value)
+      }) as unknown as Mock
+      return chain
+    })
+
+    const app = buildTestApp({ aiService: fakeAiService })
+    const res = await app.request("/api/exams/exam-1/validate-curriculum", { method: "POST" })
+
+    expect(res.status).toBe(200)
+    expect(capturedUpdates.some((update) => update["updatedAt"] instanceof Date)).toBe(true)
+  })
+
   it("returns 500 when curriculum lookup fails", async () => {
     const examRow = makeExamRow()
     const questionRows = [makeQuestionRow({ examId: "exam-1", number: 1 })]

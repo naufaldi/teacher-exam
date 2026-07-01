@@ -24,9 +24,17 @@ function localDateKey(d: Date): string {
 }
 
 function examActiveOnDay(exam: Exam, dayKey: string): boolean {
-  const createdKey = localDateKey(new Date(exam.createdAt))
-  const updatedKey = localDateKey(new Date(exam.updatedAt))
-  return createdKey === dayKey || updatedKey === dayKey
+  const dateKeys = [
+    localDateKey(new Date(exam.createdAt)),
+    localDateKey(new Date(exam.updatedAt))
+  ]
+  if (exam.bankedAt) {
+    dateKeys.push(localDateKey(new Date(exam.bankedAt)))
+  }
+  if (exam.publishedAt) {
+    dateKeys.push(localDateKey(new Date(exam.publishedAt)))
+  }
+  return dateKeys.some((key) => key === dayKey)
 }
 
 // Compute { totalSheets, finalCount, draftCount } in a single pass (Vercel js-combine-iterations).
