@@ -17,6 +17,13 @@ import { Either } from "effect"
 import { ArrowLeft, Printer, Users } from "lucide-react"
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react"
 import { api, unwrapApiEither } from "../lib/api.js"
+import {
+  calcScore,
+  correctionReducer,
+  dispatchSelectAnswer,
+  makeInitialState,
+  type StudentResult
+} from "../lib/correction-state.js"
 import { DELIVERY_ENABLED } from "../lib/feature-flags.js"
 import { matchQuestion } from "../lib/question-render.js"
 
@@ -24,123 +31,6 @@ export const Route = createFileRoute("/_auth/correction/$examId")({
   loader: async ({ params }) => unwrapApiEither(await api.exams.get(params.examId)),
   component: CorrectionPage
 })
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type StudentResult = {
-  studentNumber: number
-  name: string
-  answers: Array<Answer | null>
-  correct: number
-  wrong: number
-  score: number
-}
-
-type CorrectionState = {
-  answerKey: Array<Answer>
-  currentAnswers: Array<Answer | null>
-  studentName: string
-  studentNumber: number
-  activeIndex: number
-  rekapList: Array<StudentResult>
-}
-
-type CorrectionAction =
-  | { type: "SET_ANSWER"; questionIndex: number; answer: Answer }
-  | { type: "SET_STUDENT_NAME"; name: string }
-  | { type: "SET_ACTIVE_INDEX"; index: number }
-  | { type: "NEXT_STUDENT" }
-  | { type: "RESET" }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function calcScore(
-  answers: Array<Answer | null>,
-  answerKey: Array<Answer>
-): { correct: number; wrong: number; score: number } {
-  let correct = 0
-  let wrong = 0
-  for (let i = 0; i < answers.length; i++) {
-    const ans = answers[i]
-    if (ans == null) continue
-    const key = answerKey[i]
-    if (key == null) continue
-    if (ans === key) {
-      correct++
-    } else {
-      wrong++
-    }
-  }
-  return { correct, wrong, score: correct * 5 }
-}
-
-function makeInitialState(answerKey: Array<Answer>): CorrectionState {
-  return {
-    answerKey,
-    currentAnswers: Array<Answer | null>(answerKey.length).fill(null),
-    studentName: "",
-    studentNumber: 1,
-    activeIndex: 0,
-    rekapList: []
-  }
-}
-
-function correctionReducer(state: CorrectionState, action: CorrectionAction): CorrectionState {
-  switch (action.type) {
-    case "SET_ANSWER": {
-      const next = [...state.currentAnswers]
-      next[action.questionIndex] = action.answer
-      return { ...state, currentAnswers: next }
-    }
-    case "SET_STUDENT_NAME":
-      return { ...state, studentName: action.name }
-    case "SET_ACTIVE_INDEX":
-      return { ...state, activeIndex: action.index }
-    case "NEXT_STUDENT": {
-      const { correct, score, wrong } = calcScore(state.currentAnswers, state.answerKey)
-      const result: StudentResult = {
-        studentNumber: state.studentNumber,
-        name: state.studentName.trim() || `Murid ${state.studentNumber}`,
-        answers: [...state.currentAnswers],
-        correct,
-        wrong,
-        score
-      }
-      return {
-        ...state,
-        currentAnswers: Array<Answer | null>(state.answerKey.length).fill(null),
-        studentName: "",
-        studentNumber: state.studentNumber + 1,
-        activeIndex: 0,
-        rekapList: [...state.rekapList, result]
-      }
-    }
-    case "RESET":
-      return {
-        ...state,
-        currentAnswers: Array<Answer | null>(state.answerKey.length).fill(null),
-        studentName: "",
-        activeIndex: 0
-      }
-    default:
-      return state
-  }
-}
-
-// ── Shared dispatch helper ────────────────────────────────────────────────────
-
-function dispatchSelectAnswer(
-  dispatch: React.Dispatch<CorrectionAction>,
-  questionIndex: number,
-  answer: Answer,
-  activeIndex: number,
-  totalQuestions: number
-) {
-  dispatch({ type: "SET_ANSWER", questionIndex, answer })
-  if (activeIndex < totalQuestions - 1) {
-    dispatch({ type: "SET_ACTIVE_INDEX", index: activeIndex + 1 })
-  }
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 

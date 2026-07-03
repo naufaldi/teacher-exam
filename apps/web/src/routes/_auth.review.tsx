@@ -37,11 +37,14 @@ import { TolakRegenerateDialog } from "../components/review/tolak-regenerate-dia
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
 import { matchQuestion } from "../lib/question-render.js"
-
-const ACADEMIC_YEARS = Array.from({ length: 11 }, (_, i) => {
-  const start = new Date().getFullYear() - 5 + i
-  return `${start}/${start + 1}`
-})
+import { ACADEMIC_YEARS, type QuestionStatus, STATUS_BORDER } from "../lib/review-config.js"
+import {
+  countAccepted,
+  countGenerationFailed,
+  countReviewFlagged,
+  hasCurriculumValidation as computeHasCurriculumValidation,
+  selectVisibleQuestions
+} from "../lib/review-selectors.js"
 
 export const Route = createFileRoute("/_auth/review")({
   component: ReviewPage,
@@ -88,14 +91,6 @@ export const Route = createFileRoute("/_auth/review")({
     return exam
   }
 })
-
-type QuestionStatus = "pending" | "accepted" | "rejected"
-
-const STATUS_BORDER: Record<QuestionStatus, string> = {
-  accepted: "border-l-success-solid opacity-75",
-  rejected: "border-l-danger-solid",
-  pending: "border-l-border-default"
-}
 
 function ReviewPage() {
   const { examId, from, mode } = Route.useSearch()
@@ -222,26 +217,23 @@ function ReviewPage() {
 
   const questions = draft.questions
   const hasCurriculumValidation = useMemo(
-    () => questions.some((q) => q.validationStatus !== null && q.validationStatus !== undefined),
+    () => computeHasCurriculumValidation(questions),
     [questions]
   )
   const reviewFlaggedCount = useMemo(
-    () => questions.filter((q) => needsCurriculumReview(q.validationStatus)).length,
+    () => countReviewFlagged(questions),
     [questions]
   )
   const visibleQuestions = useMemo(
-    () =>
-      reviewOnlyFilter
-        ? questions.filter((q) => needsCurriculumReview(q.validationStatus))
-        : questions,
+    () => selectVisibleQuestions(questions, reviewOnlyFilter),
     [questions, reviewOnlyFilter]
   )
   const generationFailedCount = useMemo(
-    () => questions.filter((q) => q.generationFailed === true).length,
+    () => countGenerationFailed(questions),
     [questions]
   )
   const acceptedCount = useMemo(
-    () => Object.values(questionStatuses).filter((s) => s === "accepted").length,
+    () => countAccepted(questionStatuses),
     [questionStatuses]
   )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)

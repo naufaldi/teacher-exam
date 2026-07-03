@@ -5,6 +5,7 @@ import { formatExamTitle, resolveExamSubjectLabel, UpdateExamInputSchema } from 
 import type { ExamShareResponse, ExamWithQuestions } from "@teacher-exam/shared"
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+import { buildExamUpdateData, mapDuplicatedQuestionRows } from "../../lib/exams-mutations"
 import { fetchExamWithQuestions, toExam } from "../../lib/exams-query"
 import { getGenerateStreamResponse } from "../../lib/generation-job-service"
 import { buildPembahasanPrompt } from "../../lib/pembahasan-prompt"
@@ -128,17 +129,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
           )
         }
 
-        const updateData: Record<string, unknown> = { updatedAt: new Date() }
-        if (input.title !== undefined) updateData["title"] = input.title
-        if (input.schoolName !== undefined) updateData["schoolName"] = input.schoolName
-        if (input.academicYear !== undefined) updateData["academicYear"] = input.academicYear
-        if (input.examType !== undefined) updateData["examType"] = input.examType
-        if (input.examDate !== undefined) updateData["examDate"] = input.examDate
-        if (input.durationMinutes !== undefined) updateData["durationMinutes"] = input.durationMinutes
-        if (input.instructions !== undefined) updateData["instructions"] = input.instructions
-        if (input.classContext !== undefined) updateData["classContext"] = input.classContext
-        if (input.status !== undefined) updateData["status"] = input.status
-        if (input.reviewMode !== undefined) updateData["reviewMode"] = input.reviewMode
+        const updateData: Record<string, unknown> = { updatedAt: new Date(), ...buildExamUpdateData(input) }
 
         yield* runDb(
           db.update(exams).set(updateData).where(and(eq(exams.id, id), eq(exams.userId, userId)))
@@ -263,25 +254,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
             if (sourceQuestions.length > 0) {
               yield* runDb(
                 db.insert(questions).values(
-                  sourceQuestions.map((q) => ({
-                    id: crypto.randomUUID(),
-                    examId: newExamId,
-                    number: q.number,
-                    text: q.text,
-                    type: q.type,
-                    optionA: q.optionA,
-                    optionB: q.optionB,
-                    optionC: q.optionC,
-                    optionD: q.optionD,
-                    correctAnswer: q.correctAnswer,
-                    payload: q.payload,
-                    topic: q.topic,
-                    difficulty: q.difficulty,
-                    status: q.status,
-                    validationStatus: q.validationStatus,
-                    validationReason: q.validationReason,
-                    createdAt: now
-                  }))
+                  mapDuplicatedQuestionRows(sourceQuestions, newExamId, now)
                 )
               )
             }
