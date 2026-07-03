@@ -37,9 +37,11 @@ import {
 import { Either } from "effect"
 import { AlertTriangle, ArrowLeft, FileText, Lock, Sparkles, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { FokusGuruChips } from "../components/generate/fokus-guru-chips.js"
 import { GenerateErrorDialog } from "../components/generate/generate-error-dialog.js"
 import { GenerateProgressDialog } from "../components/generate/generate-progress-dialog.js"
 import { PdfLibraryPicker } from "../components/generate/pdf-library-picker.js"
+import { SectionHeader } from "../components/generate/section-header.js"
 import { TopicMultiSelect } from "../components/generate/topic-multi-select.js"
 import { api, ApiError, RateLimitedError, unwrapApiEither } from "../lib/api.js"
 import { fetchBabTopicLabels } from "../lib/curriculum-bab-topics.js"
@@ -48,6 +50,22 @@ import {
   readySubjectsForGrade,
   subjectOptionsForGrade
 } from "../lib/curriculum-catalog.js"
+import {
+  type Composition,
+  DEFAULT_COMPOSITION_BY_JENIS,
+  DEFAULT_TOTAL_SOAL,
+  EXAM_TYPE_LABEL_MAP,
+  EXAM_TYPE_OPTIONS,
+  FALLBACK_GENERATE_GRADES,
+  FOKUS_GURU_MAX,
+  FREE_TOPIC_REQUIRED_MESSAGE,
+  GENERATE_DURATION_MS,
+  KESULITAN_LABELS,
+  PDF_REQUIRED_MESSAGE,
+  rescaleComposition,
+  REVIEW_MODE_LABELS,
+  SOURCE_MODE_LABELS
+} from "../lib/generate-exam-config.js"
 import { parseGrade, phaseCopyForGrade, phaseLabelForGrade } from "../lib/phase-copy.js"
 import { subjectMetaFor } from "../lib/subjects.js"
 
@@ -60,142 +78,6 @@ export const Route = createFileRoute("/_auth/generate")({
     return result
   }
 })
-
-// ── Display label maps ────────────────────────────────────────────────────────
-
-const KESULITAN_LABELS: Record<string, string> = {
-  mudah: "Mudah",
-  sedang: "Sedang",
-  sulit: "Sulit",
-  campuran: "Campuran"
-}
-
-const REVIEW_MODE_LABELS: Record<string, string> = {
-  fast: "Cepat",
-  slow: "Detail"
-}
-
-const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
-  default: "Buku Siswa",
-  pdf_guru: "PDF saya saja",
-  combine: "Buku Siswa + PDF saya"
-}
-
-const PDF_REQUIRED_MESSAGE = "Pilih atau upload PDF materi guru."
-const FREE_TOPIC_REQUIRED_MESSAGE = "Topik bebas wajib diisi (minimal 10 karakter)."
-
-// ── Jenis Lembar (PRD §8.6) ──────────────────────────────────────────────────
-
-interface ExamTypeOption {
-  value: ExamType
-  label: string
-  sublabel: string
-}
-
-const EXAM_TYPE_OPTIONS: ReadonlyArray<ExamTypeOption> = [
-  { value: "latihan", label: "Latihan Soal", sublabel: "Asesmen mandiri / drill" },
-  { value: "formatif", label: "Ulangan Harian", sublabel: "Asesmen Formatif" },
-  { value: "sts", label: "UTS", sublabel: "Sumatif Tengah Semester" },
-  { value: "sas", label: "UAS", sublabel: "Sumatif Akhir Semester" },
-  { value: "tka", label: "TKA", sublabel: "Tes Kemampuan Akademik" }
-] as const
-
-const EXAM_TYPE_LABEL_MAP: Record<ExamType, string> = Object.fromEntries(
-  EXAM_TYPE_OPTIONS.map((o) => [o.value, o.label])
-) as Record<ExamType, string>
-
-const FOKUS_GURU_MAX = 500
-const FALLBACK_GENERATE_GRADES: ReadonlyArray<Grade> = [1, 2, 3, 4, 5, 6]
-
-// ── Default total soal per jenis (PRD §8.x) ───────────────────────────────────
-
-const DEFAULT_TOTAL_SOAL: Record<string, number> = {
-  latihan: 20,
-  formatif: 20,
-  sts: 25,
-  sas: 25,
-  tka: 25
-}
-
-// ── Default composition per jenis (Task 5 profile defaults) ──────────────────
-
-type Composition = { mcqSingle: number; mcqMulti: number; trueFalse: number }
-
-const DEFAULT_COMPOSITION_BY_JENIS = {
-  latihan: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
-  formatif: { mcqSingle: 20, mcqMulti: 0, trueFalse: 0 },
-  sts: { mcqSingle: 18, mcqMulti: 4, trueFalse: 3 },
-  sas: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 },
-  tka: { mcqSingle: 15, mcqMulti: 5, trueFalse: 5 }
-} as const satisfies Record<ExamType, Composition>
-
-function rescaleComposition(profileComp: Composition, oldTotal: number, newTotal: number): Composition {
-  const mcqSingle = Math.round(profileComp.mcqSingle / oldTotal * newTotal)
-  const mcqMulti = Math.round(profileComp.mcqMulti / oldTotal * newTotal)
-  const trueFalse = Math.max(0, newTotal - mcqSingle - mcqMulti)
-  return { mcqSingle, mcqMulti, trueFalse }
-}
-
-// Budget for the elapsed-time animation. Real Claude calls run 25–60s;
-// 45s keeps the bar crawling through ~P75 without freezing early.
-const GENERATE_DURATION_MS = 45000
-
-// ── Fokus Guru chip suggestions (PRD §8.7) ───────────────────────────────────
-
-interface FokusGuruChipsProps {
-  topik: string
-  onAppend: (snippet: string) => void
-}
-
-function FokusGuruChips({ onAppend, topik }: FokusGuruChipsProps) {
-  const focusOnTopik = topik.trim() !== ""
-  const chips: ReadonlyArray<{ label: string; snippet: string; disabled: boolean }> = [
-    {
-      label: focusOnTopik ? `Fokus pada: ${topik}` : "Fokus pada: (pilih topik)",
-      snippet: focusOnTopik ? `Fokus pada: ${topik}.` : "",
-      disabled: !focusOnTopik
-    },
-    { label: "Kesalahan umum: …", snippet: "Kesalahan umum: ", disabled: false },
-    { label: "Buat soal kontekstual tentang …", snippet: "Buat soal kontekstual tentang ", disabled: false },
-    { label: "Hubungkan dengan: …", snippet: "Hubungkan dengan: ", disabled: false }
-  ]
-
-  return (
-    <div className="flex flex-wrap gap-1.5 pt-1">
-      {chips.map((chip) => (
-        <button
-          key={chip.label}
-          type="button"
-          disabled={chip.disabled}
-          onClick={() => onAppend(chip.snippet)}
-          className={[
-            "inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-caption",
-            "border transition-all duration-[120ms]",
-            chip.disabled
-              ? "border-border-default bg-bg-muted text-text-tertiary cursor-not-allowed opacity-60"
-              : "border-border-ui bg-bg-surface text-text-secondary hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 active:scale-[0.97]"
-          ].join(" ")}
-          aria-label={`Tambahkan template: ${chip.label}`}
-        >
-          + {chip.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-// ── Section header helper ─────────────────────────────────────────────────────
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-5">
-      <span className="text-caption font-semibold tracking-wider uppercase text-text-tertiary whitespace-nowrap">
-        {label}
-      </span>
-      <Separator className="flex-1" />
-    </div>
-  )
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 

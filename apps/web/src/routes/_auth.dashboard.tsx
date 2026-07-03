@@ -36,6 +36,7 @@ import {
   readySubjectMetas,
   resolveTipsContext
 } from "../lib/dashboard-copy.js"
+import { formatDate, formatTodayLong, getGreetingTime } from "../lib/dashboard-format.js"
 import { computeStats, computeWeeklyActivity, getRecentSheets } from "../lib/dashboard-selectors.js"
 import { DELIVERY_ENABLED, KOREKSI_DISABLED_TITLE, KOREKSI_ENABLED } from "../lib/feature-flags.js"
 
@@ -57,33 +58,6 @@ export const Route = createFileRoute("/_auth/dashboard")({
   errorComponent: DashboardError,
   component: DashboardPage
 })
-
-// ── Module-level helpers (hoisted to avoid recreation on each render) ─────────
-
-function getGreetingTime(): string {
-  const h = new Date().getHours()
-  if (h < 11) return "pagi"
-  if (h < 15) return "siang"
-  if (h < 18) return "sore"
-  return "malam"
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  })
-}
-
-function formatTodayLong(): string {
-  return new Date().toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  })
-}
 
 // ── Action card data (static, hoisted) ───────────────────────────────────────
 
