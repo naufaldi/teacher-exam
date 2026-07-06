@@ -16,6 +16,12 @@ function makeClassRow(overrides: Record<string, unknown> = {}) {
     name: "Kelas 5A",
     grade: 5,
     subject: "ipas",
+    schoolName: null,
+    academicYear: null,
+    defaultExamType: null,
+    defaultExamDate: null,
+    defaultDurationMinutes: null,
+    defaultInstructions: null,
     createdAt: new Date(NOW),
     updatedAt: new Date(NOW),
     ...overrides
@@ -105,6 +111,47 @@ describe("POST /api/classes", () => {
     expect(body["name"]).toBe("Kelas baru")
   })
 
+  it("creates a class with worksheet defaults", async () => {
+    const row = makeClassRow({
+      id: "cls-template",
+      name: "Kelas 5A",
+      subject: "matematika",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif",
+      defaultExamDate: "2026-05-14",
+      defaultDurationMinutes: 60,
+      defaultInstructions: "Kerjakan dengan teliti."
+    })
+    ;(db.insert as Mock).mockReturnValue({
+      values: vi.fn(() => ({
+        returning: vi.fn(() => makeChain([row]))
+      }))
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/classes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Kelas 5A",
+        grade: 5,
+        subject: "matematika",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif",
+        defaultExamDate: "2026-05-14",
+        defaultDurationMinutes: 60,
+        defaultInstructions: "Kerjakan dengan teliti."
+      })
+    })
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body["schoolName"]).toBe("SDN Jakarta")
+    expect(body["defaultDurationMinutes"]).toBe(60)
+    expect(body["defaultInstructions"]).toBe("Kerjakan dengan teliti.")
+  })
+
   it("returns 400 when name is missing", async () => {
     const app = buildTestApp()
     const res = await app.request("/api/classes", {
@@ -151,6 +198,45 @@ describe("PATCH /api/classes/:id", () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as Record<string, unknown>
     expect(body["name"]).toBe("baru")
+  })
+
+  it("updates worksheet defaults for an owned class", async () => {
+    const row = makeClassRow({ name: "Kelas 5A" })
+    const updated = makeClassRow({
+      name: "Kelas 5A",
+      schoolName: "SDN Baru",
+      academicYear: "2026/2027",
+      defaultExamType: "sas",
+      defaultExamDate: "2026-12-10",
+      defaultDurationMinutes: 120,
+      defaultInstructions: "Dahulukan soal mudah."
+    })
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([row])
+      return makeChain([updated])
+    })
+    ;(db.update as Mock).mockReturnValue(makeChain(undefined))
+
+    const app = buildTestApp()
+    const res = await app.request("/api/classes/cls-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        schoolName: "SDN Baru",
+        academicYear: "2026/2027",
+        defaultExamType: "sas",
+        defaultExamDate: "2026-12-10",
+        defaultDurationMinutes: 120,
+        defaultInstructions: "Dahulukan soal mudah."
+      })
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body["schoolName"]).toBe("SDN Baru")
+    expect(body["defaultExamType"]).toBe("sas")
+    expect(body["defaultInstructions"]).toBe("Dahulukan soal mudah.")
   })
 
   it("returns 404 when class not owned by user", async () => {

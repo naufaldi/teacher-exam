@@ -12,6 +12,12 @@ export const classes = pgTable(
     name: text("name").notNull(),
     grade: integer("grade"),
     subject: examSubjectEnum("subject"),
+    schoolName: text("school_name"),
+    academicYear: text("academic_year"),
+    defaultExamType: text("default_exam_type"),
+    defaultExamDate: text("default_exam_date"),
+    defaultDurationMinutes: integer("default_duration_minutes"),
+    defaultInstructions: text("default_instructions"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
