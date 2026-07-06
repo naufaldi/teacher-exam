@@ -29,6 +29,9 @@ const { apiMocks, getSearchParams, mockNavigate, mockToast, reviewTestCtx, setSe
       examsPatch: vi.fn(),
       examsFinalize: vi.fn(),
       examsValidateCurriculum: vi.fn(),
+      classesList: vi.fn(),
+      classesCreate: vi.fn(),
+      classesUpdate: vi.fn(),
       questionsPatch: vi.fn(),
       questionsRegenerate: vi.fn()
     },
@@ -70,6 +73,12 @@ vi.mock("../../../lib/api.js", async (importOriginal) => {
         finalize: apiMocks.examsFinalize,
         validateCurriculum: apiMocks.examsValidateCurriculum
       },
+      classes: {
+        ...orig.api.classes,
+        list: apiMocks.classesList,
+        create: apiMocks.classesCreate,
+        update: apiMocks.classesUpdate
+      },
       questions: {
         ...orig.api.questions,
         patch: apiMocks.questionsPatch,
@@ -96,6 +105,9 @@ type RouteOptions = {
 export const mockExamsGet = apiMocks.examsGet
 export const mockExamsPatch = apiMocks.examsPatch
 export const mockExamsFinalize = apiMocks.examsFinalize
+export const mockClassesList = apiMocks.classesList
+export const mockClassesCreate = apiMocks.classesCreate
+export const mockClassesUpdate = apiMocks.classesUpdate
 export const mockQuestionsPatch = apiMocks.questionsPatch
 export const mockQuestionsRegenerate = apiMocks.questionsRegenerate
 export const mockExamsValidateCurriculum = apiMocks.examsValidateCurriculum

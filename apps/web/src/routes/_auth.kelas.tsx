@@ -15,12 +15,16 @@ import {
   Label,
   LoadingSpinner,
   PageHeader,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
   useToast
 } from "@teacher-exam/ui"
 import { Plus, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
-import { ComingSoonPage } from "../components/coming-soon-page.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 
 export const Route = createFileRoute("/_auth/kelas")({
@@ -28,6 +32,75 @@ export const Route = createFileRoute("/_auth/kelas")({
 })
 
 type StudentDraft = { name: string; identifier?: string }
+
+type ClassTemplateForm = {
+  name: string
+  schoolName: string
+  academicYear: string
+  defaultExamType: "latihan" | "formatif" | "sts" | "sas" | "tka"
+  defaultExamDate: string
+  defaultDurationMinutes: string
+  defaultInstructions: string
+}
+
+const EXAM_TYPE_OPTIONS: ReadonlyArray<{
+  value: ClassTemplateForm["defaultExamType"]
+  label: string
+}> = [
+  { value: "latihan", label: "Latihan Soal" },
+  { value: "formatif", label: "Ulangan Harian" },
+  { value: "sts", label: "UTS · Sumatif Tengah Semester" },
+  { value: "sas", label: "UAS · Sumatif Akhir Semester" },
+  { value: "tka", label: "TKA" }
+]
+
+function makeEmptyForm(): ClassTemplateForm {
+  return {
+    name: "",
+    schoolName: "",
+    academicYear: "",
+    defaultExamType: "formatif",
+    defaultExamDate: "",
+    defaultDurationMinutes: "",
+    defaultInstructions: ""
+  }
+}
+
+function formFromClass(cls: ClassEntity): ClassTemplateForm {
+  return {
+    name: cls.name,
+    schoolName: cls.schoolName ?? "",
+    academicYear: cls.academicYear ?? "",
+    defaultExamType: cls.defaultExamType ?? "formatif",
+    defaultExamDate: cls.defaultExamDate ?? "",
+    defaultDurationMinutes: cls.defaultDurationMinutes !== null ? String(cls.defaultDurationMinutes) : "",
+    defaultInstructions: cls.defaultInstructions ?? ""
+  }
+}
+
+function parseDuration(raw: string): number | undefined {
+  const trimmed = raw.trim()
+  if (trimmed.length === 0) return undefined
+  const n = parseInt(trimmed, 10)
+  return Number.isNaN(n) ? undefined : n
+}
+
+function buildClassPayload(form: ClassTemplateForm): Parameters<typeof api.classes.create>[0] {
+  const schoolName = form.schoolName.trim()
+  const academicYear = form.academicYear.trim()
+  const defaultExamDate = form.defaultExamDate.trim()
+  const defaultDurationMinutes = parseDuration(form.defaultDurationMinutes)
+  const defaultInstructions = form.defaultInstructions.trim()
+  return {
+    name: form.name.trim(),
+    defaultExamType: form.defaultExamType,
+    ...(schoolName.length > 0 ? { schoolName } : {}),
+    ...(academicYear.length > 0 ? { academicYear } : {}),
+    ...(defaultExamDate.length > 0 ? { defaultExamDate } : {}),
+    ...(defaultDurationMinutes !== undefined ? { defaultDurationMinutes } : {}),
+    ...(defaultInstructions.length > 0 ? { defaultInstructions } : {})
+  }
+}
 
 function parseImport(text: string): Array<StudentDraft> {
   return text
@@ -47,27 +120,23 @@ function parseImport(text: string): Array<StudentDraft> {
 }
 
 function KelasPage() {
-  return (
-    <ComingSoonPage
-      title="Kelas"
-      subtitle="Kelola kelas dan daftar siswa untuk pengiriman ujian."
-      icon={<Users size={24} className="text-text-tertiary" />}
-    />
-  )
+  return <KelasPageImpl />
 }
 
-function _KelasPageImpl() {
+function KelasPageImpl() {
   const { toast } = useToast()
   const [classes, setClasses] = useState<ReadonlyArray<ClassEntity>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [newName, setNewName] = useState("")
+  const [createForm, setCreateForm] = useState<ClassTemplateForm>(() => makeEmptyForm())
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<ClassTemplateForm>(() => makeEmptyForm())
   const [students, setStudents] = useState<ReadonlyArray<StudentEntity>>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [importText, setImportText] = useState("")
   const [importing, setImporting] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
   const [pendingDeleteStudent, setPendingDeleteStudent] = useState<StudentEntity | null>(null)
   const [deletingStudent, setDeletingStudent] = useState(false)
   const [pendingDeleteClass, setPendingDeleteClass] = useState<ClassEntity | null>(null)
@@ -91,12 +160,12 @@ function _KelasPageImpl() {
 
   async function handleCreateClass(event: React.FormEvent) {
     event.preventDefault()
-    const name = newName.trim()
+    const name = createForm.name.trim()
     if (name.length === 0) return
     try {
-      const created = unwrapApiEither(await api.classes.create({ name }))
+      const created = unwrapApiEither(await api.classes.create(buildClassPayload(createForm)))
       setClasses((prev) => [created, ...prev])
-      setNewName("")
+      setCreateForm(makeEmptyForm())
       toast({ variant: "success", title: "Kelas ditambahkan" })
     } catch (err: unknown) {
       toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal menambah kelas" })
@@ -118,8 +187,24 @@ function _KelasPageImpl() {
 
   function selectClass(cls: ClassEntity) {
     setSelectedId(cls.id)
+    setEditForm(formFromClass(cls))
     setImportText("")
     void loadStudents(cls.id)
+  }
+
+  async function handleSaveTemplate() {
+    if (!selectedId) return
+    setSavingTemplate(true)
+    try {
+      const updated = unwrapApiEither(await api.classes.update(selectedId, buildClassPayload(editForm)))
+      setClasses((prev) => prev.map((cls) => cls.id === updated.id ? updated : cls))
+      setEditForm(formFromClass(updated))
+      toast({ variant: "success", title: "Template kelas disimpan" })
+    } catch (err: unknown) {
+      toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal menyimpan template" })
+    } finally {
+      setSavingTemplate(false)
+    }
   }
 
   async function handleImport() {
@@ -216,10 +301,80 @@ function _KelasPageImpl() {
               <Label htmlFor="class-name">Nama kelas</Label>
               <Input
                 id="class-name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                value={createForm.name}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="mis. Kelas 5A"
                 autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-school">Nama Sekolah</Label>
+              <Input
+                id="class-school"
+                value={createForm.schoolName}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                placeholder="SD Negeri ..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="class-year">Tahun Pelajaran</Label>
+                <Input
+                  id="class-year"
+                  value={createForm.academicYear}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, academicYear: e.target.value }))}
+                  placeholder="2025/2026"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="class-duration">Durasi Default</Label>
+                <Input
+                  id="class-duration"
+                  value={createForm.defaultDurationMinutes}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, defaultDurationMinutes: e.target.value }))}
+                  placeholder="60"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-exam-type">Jenis Ujian Default</Label>
+              <Select
+                value={createForm.defaultExamType}
+                onValueChange={(value) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    defaultExamType: value as ClassTemplateForm["defaultExamType"]
+                  }))}
+              >
+                <SelectTrigger id="class-exam-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXAM_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-exam-date">Tanggal Ujian Default</Label>
+              <Input
+                id="class-exam-date"
+                type="date"
+                value={createForm.defaultExamDate}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, defaultExamDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-instructions">Petunjuk Default</Label>
+              <Textarea
+                id="class-instructions"
+                value={createForm.defaultInstructions}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, defaultInstructions: e.target.value }))}
+                rows={3}
               />
             </div>
             <Button type="submit" size="sm" className="w-full">
@@ -259,7 +414,7 @@ function _KelasPageImpl() {
                       <div className="min-w-0">
                         <p className="font-medium text-text-primary truncate">{cls.name}</p>
                         <p className="text-body-sm text-text-tertiary">
-                          {cls.grade ? `Kelas ${cls.grade}` : "—"}
+                          {cls.schoolName ?? (cls.grade ? `Kelas ${cls.grade}` : "Belum ada template")}
                         </p>
                       </div>
                       <button
@@ -291,6 +446,100 @@ function _KelasPageImpl() {
             ) :
             (
               <div className="space-y-5">
+                <div className="rounded-lg border border-border-default bg-bg-surface p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h2 className="font-semibold text-text-primary">Template Lembar Ujian</h2>
+                      <p className="text-body-sm text-text-tertiary">
+                        Simpan identitas sekolah dan default lembar untuk kelas ini.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => void handleSaveTemplate()}
+                      disabled={savingTemplate || editForm.name.trim().length === 0}
+                    >
+                      {savingTemplate ? "Menyimpan..." : "Simpan template"}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-class-name">Nama kelas template</Label>
+                      <Input
+                        id="edit-class-name"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-school-name">Nama sekolah template</Label>
+                      <Input
+                        id="edit-school-name"
+                        value={editForm.schoolName}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-academic-year">Tahun pelajaran default</Label>
+                      <Input
+                        id="edit-academic-year"
+                        value={editForm.academicYear}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, academicYear: e.target.value }))}
+                        placeholder="2025/2026"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-duration">Durasi default</Label>
+                      <Input
+                        id="edit-duration"
+                        value={editForm.defaultDurationMinutes}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, defaultDurationMinutes: e.target.value }))}
+                        inputMode="numeric"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-exam-type">Jenis ujian default</Label>
+                      <Select
+                        value={editForm.defaultExamType}
+                        onValueChange={(value) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            defaultExamType: value as ClassTemplateForm["defaultExamType"]
+                          }))}
+                      >
+                        <SelectTrigger id="edit-exam-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EXAM_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-exam-date">Tanggal ujian default</Label>
+                      <Input
+                        id="edit-exam-date"
+                        type="date"
+                        value={editForm.defaultExamDate}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, defaultExamDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-instructions">Petunjuk default template</Label>
+                    <Textarea
+                      id="edit-instructions"
+                      value={editForm.defaultInstructions}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, defaultInstructions: e.target.value }))}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
                 <div className="rounded-lg border border-border-default bg-bg-surface p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>

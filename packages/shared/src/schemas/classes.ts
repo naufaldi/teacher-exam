@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { UserIdSchema } from "./entities.js"
-import { ExamSubjectSchema, GradeSchema } from "./primitives.js"
+import { ExamSubjectSchema, ExamTypeSchema, GradeSchema } from "./primitives.js"
 // ── Branded IDs ────────────────────────────────────────────
 export const ClassIdSchema = Schema.String.pipe(Schema.brand("ClassId"))
 export type ClassId = typeof ClassIdSchema.Type
@@ -15,6 +15,12 @@ export const ClassSchema = Schema.Struct({
   name: Schema.NonEmptyString,
   grade: Schema.optional(GradeSchema),
   subject: Schema.optional(ExamSubjectSchema),
+  schoolName: Schema.NullOr(Schema.String),
+  academicYear: Schema.NullOr(Schema.String),
+  defaultExamType: Schema.NullOr(ExamTypeSchema),
+  defaultExamDate: Schema.NullOr(Schema.String),
+  defaultDurationMinutes: Schema.NullOr(Schema.Int),
+  defaultInstructions: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   updatedAt: Schema.String
 })
@@ -41,14 +47,26 @@ export type ClassWithStudents = typeof ClassWithStudentsSchema.Type
 export const CreateClassInputSchema = Schema.Struct({
   name: Schema.NonEmptyString,
   grade: Schema.optional(GradeSchema),
-  subject: Schema.optional(ExamSubjectSchema)
+  subject: Schema.optional(ExamSubjectSchema),
+  schoolName: Schema.optional(Schema.String),
+  academicYear: Schema.optional(Schema.String),
+  defaultExamType: Schema.optional(ExamTypeSchema),
+  defaultExamDate: Schema.optional(Schema.String),
+  defaultDurationMinutes: Schema.optional(Schema.Int),
+  defaultInstructions: Schema.optional(Schema.String)
 })
 export type CreateClassInput = typeof CreateClassInputSchema.Type
 
 export const UpdateClassInputSchema = Schema.Struct({
   name: Schema.optional(Schema.NonEmptyString),
   grade: Schema.optional(GradeSchema),
-  subject: Schema.optional(ExamSubjectSchema)
+  subject: Schema.optional(ExamSubjectSchema),
+  schoolName: Schema.optional(Schema.String),
+  academicYear: Schema.optional(Schema.String),
+  defaultExamType: Schema.optional(ExamTypeSchema),
+  defaultExamDate: Schema.optional(Schema.String),
+  defaultDurationMinutes: Schema.optional(Schema.Int),
+  defaultInstructions: Schema.optional(Schema.String)
 })
 export type UpdateClassInput = typeof UpdateClassInputSchema.Type
 

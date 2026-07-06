@@ -75,6 +75,12 @@ function toClass(row: ClassRow): ClassEntity {
     name: row.name,
     ...(row.grade !== null ? { grade: row.grade as ClassEntity["grade"] } : {}),
     ...(row.subject !== null ? { subject: row.subject as ClassEntity["subject"] } : {}),
+    schoolName: row.schoolName,
+    academicYear: row.academicYear,
+    defaultExamType: row.defaultExamType as ClassEntity["defaultExamType"],
+    defaultExamDate: row.defaultExamDate,
+    defaultDurationMinutes: row.defaultDurationMinutes,
+    defaultInstructions: row.defaultInstructions,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString()
   }
@@ -180,6 +186,12 @@ export const ClassServiceLive = Layer.effect(
               name: input.name,
               grade: input.grade ?? null,
               subject: input.subject ?? null,
+              schoolName: input.schoolName ?? null,
+              academicYear: input.academicYear ?? null,
+              defaultExamType: input.defaultExamType ?? null,
+              defaultExamDate: input.defaultExamDate ?? null,
+              defaultDurationMinutes: input.defaultDurationMinutes ?? null,
+              defaultInstructions: input.defaultInstructions ?? null,
               createdAt: now,
               updatedAt: now
             })
@@ -203,6 +215,14 @@ export const ClassServiceLive = Layer.effect(
         if (input.name !== undefined) set.name = input.name
         if (input.grade !== undefined) set.grade = input.grade
         if (input.subject !== undefined) set.subject = input.subject
+        if (input.schoolName !== undefined) set.schoolName = input.schoolName
+        if (input.academicYear !== undefined) set.academicYear = input.academicYear
+        if (input.defaultExamType !== undefined) set.defaultExamType = input.defaultExamType
+        if (input.defaultExamDate !== undefined) set.defaultExamDate = input.defaultExamDate
+        if (input.defaultDurationMinutes !== undefined) {
+          set.defaultDurationMinutes = input.defaultDurationMinutes
+        }
+        if (input.defaultInstructions !== undefined) set.defaultInstructions = input.defaultInstructions
         yield* runDb(db.update(classes).set(set).where(eq(classes.id, row.id)))
         const updated = yield* runDb(
           db.select().from(classes).where(eq(classes.id, row.id)).limit(1)

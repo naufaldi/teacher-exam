@@ -19,6 +19,15 @@ describe("classes table schema", () => {
   test("updatedAt is notNull", () => {
     expect((classes.updatedAt as { notNull: boolean }).notNull).toBe(true)
   })
+
+  test("sheet default columns are nullable", () => {
+    expect((classes.schoolName as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.academicYear as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.defaultExamType as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.defaultExamDate as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.defaultDurationMinutes as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.defaultInstructions as { notNull: boolean }).notNull).toBe(false)
+  })
 })
 
 describe("students table schema", () => {
@@ -63,5 +72,21 @@ describe("classes + students migration", () => {
   test("adds foreign key constraints", () => {
     expect(sql).toContain("classes_user_id_user_id_fk")
     expect(sql).toContain("students_class_id_classes_id_fk")
+  })
+})
+
+describe("class sheet defaults migration", () => {
+  const sql = readFileSync(
+    join(process.cwd(), "src/migrations/0019_add_class_sheet_defaults.sql"),
+    "utf8"
+  )
+
+  test("adds reusable worksheet metadata columns", () => {
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"school_name\" text")
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"academic_year\" text")
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_exam_type\" text")
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_exam_date\" text")
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_duration_minutes\" integer")
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_instructions\" text")
   })
 })

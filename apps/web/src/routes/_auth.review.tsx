@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import type { ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
+import type { ClassEntity, CreateClassInput, ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
 import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
@@ -7,6 +7,12 @@ import {
   Card,
   CardContent,
   DatePicker,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   PageHeader,
@@ -45,6 +51,46 @@ import {
   hasCurriculumValidation as computeHasCurriculumValidation,
   selectVisibleQuestions
 } from "../lib/review-selectors.js"
+
+function buildMetadataPatchFromClassTemplate(cls: ClassEntity): Partial<UpdateExamInput> {
+  return {
+    ...(cls.schoolName ? { schoolName: cls.schoolName } : {}),
+    ...(cls.academicYear ? { academicYear: cls.academicYear } : {}),
+    ...(cls.defaultExamType ? { examType: cls.defaultExamType } : {}),
+    ...(cls.defaultExamDate ? { examDate: cls.defaultExamDate } : {}),
+    ...(cls.defaultDurationMinutes !== null ? { durationMinutes: cls.defaultDurationMinutes } : {}),
+    ...(cls.defaultInstructions ? { instructions: cls.defaultInstructions } : {})
+  }
+}
+
+function buildClassTemplatePayload(
+  name: string,
+  metadata: {
+    academicYear: string
+    durationMinutes: number
+    examDate: string
+    examType: ExamType
+    instructions: string
+    schoolName: string
+  },
+  exam: { grade: number; subject: CreateClassInput["subject"] | null }
+): CreateClassInput {
+  const schoolName = metadata.schoolName.trim()
+  const academicYear = metadata.academicYear.trim()
+  const examDate = metadata.examDate.trim()
+  const instructions = metadata.instructions.trim()
+  return {
+    name,
+    grade: exam.grade as CreateClassInput["grade"],
+    defaultExamType: metadata.examType,
+    ...(exam.subject !== null && exam.subject !== undefined ? { subject: exam.subject } : {}),
+    ...(schoolName.length > 0 ? { schoolName } : {}),
+    ...(academicYear.length > 0 ? { academicYear } : {}),
+    ...(examDate.length > 0 ? { defaultExamDate: examDate } : {}),
+    ...(metadata.durationMinutes > 0 ? { defaultDurationMinutes: metadata.durationMinutes } : {}),
+    ...(instructions.length > 0 ? { defaultInstructions: instructions } : {})
+  }
+}
 
 export const Route = createFileRoute("/_auth/review")({
   component: ReviewPage,
@@ -98,11 +144,33 @@ function ReviewPage() {
   const navigate = useNavigate()
   const draft = useExamDraft()
   const { toast } = useToast()
+  const [classTemplates, setClassTemplates] = useState<ReadonlyArray<ClassEntity>>([])
+  const [selectedClassTemplateId, setSelectedClassTemplateId] = useState("manual")
+  const [applyingClassTemplate, setApplyingClassTemplate] = useState(false)
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState("")
+  const [savingClassTemplate, setSavingClassTemplate] = useState(false)
 
   // Sync URL `mode` into the shared draft once on mount / mode change
   useEffect(() => {
     examDraftStore.setReviewMode(mode)
   }, [mode])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadClassTemplates() {
+      try {
+        const list = unwrapApiEither(await api.classes.list())
+        if (!cancelled) setClassTemplates(list as ReadonlyArray<ClassEntity>)
+      } catch {
+        if (!cancelled) setClassTemplates([])
+      }
+    }
+    void loadClassTemplates()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Per-question accept/reject state — fast mode always starts accepted; slow mode seeds from server
   const [questionStatuses, setQuestionStatuses] = useState<Record<string, QuestionStatus>>(() =>
@@ -214,6 +282,104 @@ function ReviewPage() {
       })
     }
   }, [examId, toast])
+
+  const handleClassTemplateSelect = async (value: string) => {
+    setSelectedClassTemplateId(value)
+    if (value === "manual") return
+    const cls = classTemplates.find((item) => item.id === value)
+    if (!cls || !examId) return
+
+    const patch = buildMetadataPatchFromClassTemplate(cls)
+    if (Object.keys(patch).length === 0) return
+
+    examDraftStore.setMetadata({
+      ...(patch.schoolName !== undefined ? { schoolName: patch.schoolName } : {}),
+      ...(patch.academicYear !== undefined ? { academicYear: patch.academicYear } : {}),
+      ...(patch.examType !== undefined ? { examType: patch.examType } : {}),
+      ...(patch.examDate !== undefined ? { examDate: patch.examDate } : {}),
+      ...(patch.durationMinutes !== undefined ? { durationMinutes: patch.durationMinutes } : {}),
+      ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {})
+    })
+
+    setApplyingClassTemplate(true)
+    try {
+      unwrapApiEither(await api.exams.patch(examId, patch))
+      toast({ variant: "success", title: "Template kelas diterapkan" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Gagal menerapkan template",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setApplyingClassTemplate(false)
+    }
+  }
+
+  const buildCurrentTemplatePayload = (name: string): CreateClassInput =>
+    buildClassTemplatePayload(
+      name,
+      {
+        academicYear,
+        durationMinutes,
+        examDate,
+        examType,
+        instructions,
+        schoolName
+      },
+      { grade: exam.grade, subject: exam.subject }
+    )
+
+  const openSaveTemplateDialog = () => {
+    if (selectedClassTemplateId !== "manual") {
+      void handleUpdateSelectedTemplate()
+      return
+    }
+    setNewTemplateName(schoolName || "Template lembar ujian")
+    setSaveTemplateDialogOpen(true)
+  }
+
+  const handleCreateTemplateFromMetadata = async () => {
+    const name = newTemplateName.trim()
+    if (name.length === 0) return
+    setSavingClassTemplate(true)
+    try {
+      const created = unwrapApiEither(await api.classes.create(buildCurrentTemplatePayload(name)))
+      setClassTemplates((prev) => [created, ...prev])
+      setSelectedClassTemplateId(created.id)
+      setSaveTemplateDialogOpen(false)
+      toast({ variant: "success", title: "Template kelas disimpan" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Gagal menyimpan template",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setSavingClassTemplate(false)
+    }
+  }
+
+  async function handleUpdateSelectedTemplate() {
+    const selected = classTemplates.find((cls) => cls.id === selectedClassTemplateId)
+    if (!selected) return
+    setSavingClassTemplate(true)
+    try {
+      const updated = unwrapApiEither(
+        await api.classes.update(selected.id, buildCurrentTemplatePayload(selected.name))
+      )
+      setClassTemplates((prev) => prev.map((cls) => cls.id === updated.id ? updated : cls))
+      toast({ variant: "success", title: "Template kelas diperbarui" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Gagal memperbarui template",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setSavingClassTemplate(false)
+    }
+  }
 
   const questions = draft.questions
   const hasCurriculumValidation = useMemo(
@@ -1085,7 +1251,47 @@ function ReviewPage() {
         )}
 
         <div className="mt-8 space-y-5">
-          <h3 className="text-h3 font-semibold text-text-primary">Detail Lembar Ujian</h3>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h3 className="text-h3 font-semibold text-text-primary">Detail Lembar Ujian</h3>
+              <p className="text-body-sm text-text-tertiary mt-1">
+                Pilih template kelas atau isi manual untuk lembar ini.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(220px,320px)_auto] gap-3 md:min-w-[460px]">
+              <div className="space-y-1.5">
+                <Label htmlFor="class-template">Template Kelas</Label>
+                <Select
+                  value={selectedClassTemplateId}
+                  onValueChange={(value) => {
+                    void handleClassTemplateSelect(value)
+                  }}
+                  disabled={applyingClassTemplate}
+                >
+                  <SelectTrigger id="class-template">
+                    <SelectValue placeholder="Pilih template kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Tanpa template</SelectItem>
+                    {classTemplates.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name}
+                        {cls.schoolName ? ` · ${cls.schoolName}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="secondary"
+                className="self-end"
+                onClick={openSaveTemplateDialog}
+                disabled={savingClassTemplate}
+              >
+                {savingClassTemplate ? "Menyimpan..." : "Simpan sebagai template"}
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <Label htmlFor="sekolah">Nama Sekolah</Label>
@@ -1246,6 +1452,42 @@ function ReviewPage() {
             void handleRetryAllFailed()
           }}
         />
+        <Dialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Simpan sebagai template</DialogTitle>
+              <DialogDescription>
+                Beri nama template agar mudah dipilih lagi di Detail Lembar Ujian.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-template-name">Nama template</Label>
+              <Input
+                id="new-template-name"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setSaveTemplateDialogOpen(false)}
+                disabled={savingClassTemplate}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={() => {
+                  void handleCreateTemplateFromMetadata()
+                }}
+                disabled={savingClassTemplate || newTemplateName.trim().length === 0}
+              >
+                {savingClassTemplate ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   )
