@@ -56,10 +56,7 @@ function buildMetadataPatchFromClassTemplate(cls: ClassEntity): Partial<UpdateEx
   return {
     ...(cls.schoolName ? { schoolName: cls.schoolName } : {}),
     ...(cls.academicYear ? { academicYear: cls.academicYear } : {}),
-    ...(cls.defaultExamType ? { examType: cls.defaultExamType } : {}),
-    ...(cls.defaultExamDate ? { examDate: cls.defaultExamDate } : {}),
-    ...(cls.defaultDurationMinutes !== null ? { durationMinutes: cls.defaultDurationMinutes } : {}),
-    ...(cls.defaultInstructions ? { instructions: cls.defaultInstructions } : {})
+    ...(cls.defaultExamType ? { examType: cls.defaultExamType } : {})
   }
 }
 
@@ -67,28 +64,17 @@ function buildClassTemplatePayload(
   name: string,
   metadata: {
     academicYear: string
-    durationMinutes: number
-    examDate: string
     examType: ExamType
-    instructions: string
     schoolName: string
-  },
-  exam: { grade: number; subject: CreateClassInput["subject"] | null }
+  }
 ): CreateClassInput {
   const schoolName = metadata.schoolName.trim()
   const academicYear = metadata.academicYear.trim()
-  const examDate = metadata.examDate.trim()
-  const instructions = metadata.instructions.trim()
   return {
     name,
-    grade: exam.grade as CreateClassInput["grade"],
     defaultExamType: metadata.examType,
-    ...(exam.subject !== null && exam.subject !== undefined ? { subject: exam.subject } : {}),
     ...(schoolName.length > 0 ? { schoolName } : {}),
-    ...(academicYear.length > 0 ? { academicYear } : {}),
-    ...(examDate.length > 0 ? { defaultExamDate: examDate } : {}),
-    ...(metadata.durationMinutes > 0 ? { defaultDurationMinutes: metadata.durationMinutes } : {}),
-    ...(instructions.length > 0 ? { defaultInstructions: instructions } : {})
+    ...(academicYear.length > 0 ? { academicYear } : {})
   }
 }
 
@@ -295,10 +281,7 @@ function ReviewPage() {
     examDraftStore.setMetadata({
       ...(patch.schoolName !== undefined ? { schoolName: patch.schoolName } : {}),
       ...(patch.academicYear !== undefined ? { academicYear: patch.academicYear } : {}),
-      ...(patch.examType !== undefined ? { examType: patch.examType } : {}),
-      ...(patch.examDate !== undefined ? { examDate: patch.examDate } : {}),
-      ...(patch.durationMinutes !== undefined ? { durationMinutes: patch.durationMinutes } : {}),
-      ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {})
+      ...(patch.examType !== undefined ? { examType: patch.examType } : {})
     })
 
     setApplyingClassTemplate(true)
@@ -321,13 +304,9 @@ function ReviewPage() {
       name,
       {
         academicYear,
-        durationMinutes,
-        examDate,
         examType,
-        instructions,
         schoolName
-      },
-      { grade: exam.grade, subject: exam.subject }
+      }
     )
 
   const openSaveTemplateDialog = () => {
@@ -1457,7 +1436,7 @@ function ReviewPage() {
             <DialogHeader>
               <DialogTitle>Simpan sebagai template</DialogTitle>
               <DialogDescription>
-                Beri nama template agar mudah dipilih lagi di Detail Lembar Ujian.
+                Simpan nama kelas, sekolah, jenis ujian, dan tahun ajaran untuk Detail Lembar Ujian.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-1.5">

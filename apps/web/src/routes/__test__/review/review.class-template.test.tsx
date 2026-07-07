@@ -35,7 +35,7 @@ function makeClassTemplate(overrides: Partial<ClassEntity> = {}): ClassEntity {
   }
 }
 
-test("choosing a class template applies metadata and patches exam", async () => {
+test("choosing a class template applies only class identity metadata and patches exam", async () => {
   mockApiResolvedValueOnce(mockClassesList, [makeClassTemplate()])
   const patchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
 
@@ -52,15 +52,43 @@ test("choosing a class template applies metadata and patches exam", async () => 
   await waitFor(() => {
     expect(patchSpy).toHaveBeenCalledWith(
       "E",
-      expect.objectContaining({
+      {
         schoolName: "SDN Jakarta",
         academicYear: "2025/2026",
-        examType: "formatif",
-        examDate: "2026-05-14",
-        durationMinutes: 60,
-        instructions: "Kerjakan dengan teliti."
-      })
+        examType: "formatif"
+      }
     )
+  })
+})
+
+test("choosing a class template does not overwrite manual duration date or instructions", async () => {
+  mockApiResolvedValueOnce(mockClassesList, [makeClassTemplate({
+    defaultExamDate: "2026-05-14",
+    defaultDurationMinutes: 120,
+    defaultInstructions: "Template instructions should not apply."
+  })])
+  const patchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
+
+  setReviewSearch({ mode: "fast", examId: "E" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithCompleteMetadata("E"))
+  await getLoader()({ deps: { examId: "E" } })
+  renderReviewPage()
+
+  fireEvent.change(screen.getByLabelText(/durasi/i), { target: { value: "75" } })
+  fireEvent.change(screen.getByLabelText(/petunjuk pengerjaan/i), {
+    target: { value: "Manual instruction." }
+  })
+  fireEvent.click(await screen.findByRole("combobox", { name: /template kelas/i }))
+  fireEvent.click(screen.getByText(/kelas 5a/i))
+
+  expect(screen.getByLabelText(/durasi/i)).toHaveValue("75")
+  expect(screen.getByLabelText(/petunjuk pengerjaan/i)).toHaveValue("Manual instruction.")
+  await waitFor(() => {
+    expect(patchSpy).toHaveBeenCalledWith("E", {
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      examType: "formatif"
+    })
   })
 })
 
@@ -107,13 +135,12 @@ test("saving current metadata as a new template asks for a name and creates a cl
   await user.click(screen.getByRole("button", { name: /^simpan$/i }))
 
   await waitFor(() => {
-    expect(mockClassesCreate).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockClassesCreate).toHaveBeenCalledWith({
       name: "Kelas 5A SD Negeri 1",
       schoolName: "SD Negeri 1",
       academicYear: "2025/2026",
-      defaultExamType: "formatif",
-      defaultDurationMinutes: 60
-    }))
+      defaultExamType: "formatif"
+    })
   })
 })
 
@@ -144,10 +171,12 @@ test("saving current metadata updates the selected class template", async () => 
   await waitFor(() => {
     expect(mockClassesUpdate).toHaveBeenCalledWith(
       "cls-1",
-      expect.objectContaining({
+      {
+        name: "Kelas 5A",
         schoolName: "SDN Jakarta",
-        defaultDurationMinutes: 60
-      })
+        academicYear: "2025/2026",
+        defaultExamType: "formatif"
+      }
     )
   })
 })
