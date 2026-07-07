@@ -101,7 +101,21 @@ describe("Kelas route", () => {
     expect(screen.queryByText(/segera hadir/i)).not.toBeInTheDocument()
   })
 
-  it("creates a class with worksheet defaults", async () => {
+  it("only shows class identity fields for the class template", async () => {
+    mockApiResolvedValueOnce(apiMocks.classesList, [])
+
+    renderRoute()
+
+    expect(await screen.findByLabelText(/nama kelas/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/nama sekolah/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/tahun pelajaran/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/jenis ujian/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/durasi default/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/tanggal ujian default/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/petunjuk default/i)).not.toBeInTheDocument()
+  })
+
+  it("creates a class with class identity fields only", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(apiMocks.classesList, [])
     mockApiResolvedValueOnce(apiMocks.classesCreate, baseClass)
@@ -110,26 +124,26 @@ describe("Kelas route", () => {
 
     await user.type(await screen.findByLabelText(/nama kelas/i), "Kelas 5A")
     await user.type(screen.getByLabelText(/nama sekolah/i), "SDN Jakarta")
-    await user.type(screen.getByLabelText(/durasi default/i), "60")
+    await user.type(screen.getByLabelText(/tahun pelajaran/i), "2025/2026")
     await user.click(screen.getByRole("button", { name: /tambah kelas/i }))
 
     await waitFor(() => {
-      expect(apiMocks.classesCreate).toHaveBeenCalledWith(expect.objectContaining({
+      expect(apiMocks.classesCreate).toHaveBeenCalledWith({
         name: "Kelas 5A",
         schoolName: "SDN Jakarta",
-        defaultDurationMinutes: 60
-      }))
+        academicYear: "2025/2026",
+        defaultExamType: "formatif"
+      })
     })
   })
 
-  it("updates worksheet defaults for a selected class", async () => {
+  it("updates class identity fields and keeps student management on selected class detail", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
     mockApiResolvedValueOnce(apiMocks.studentsList, [])
     mockApiResolvedValueOnce(apiMocks.classesUpdate, {
       ...baseClass,
-      schoolName: "SDN Baru",
-      defaultInstructions: "Dahulukan soal mudah."
+      schoolName: "SDN Baru"
     })
 
     renderRoute()
@@ -138,18 +152,19 @@ describe("Kelas route", () => {
     const schoolInput = await screen.findByLabelText(/nama sekolah template/i)
     await user.clear(schoolInput)
     await user.type(schoolInput, "SDN Baru")
-    const instructionInput = screen.getByLabelText(/petunjuk default template/i)
-    await user.clear(instructionInput)
-    await user.type(instructionInput, "Dahulukan soal mudah.")
+    expect(screen.getByLabelText(/impor siswa/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/petunjuk default template/i)).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: /simpan template/i }))
 
     await waitFor(() => {
       expect(apiMocks.classesUpdate).toHaveBeenCalledWith(
         "cls-1",
-        expect.objectContaining({
+        {
+          name: "Kelas 5A",
           schoolName: "SDN Baru",
-          defaultInstructions: "Dahulukan soal mudah."
-        })
+          academicYear: "2025/2026",
+          defaultExamType: "formatif"
+        }
       )
     })
   })
