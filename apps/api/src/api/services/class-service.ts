@@ -186,9 +186,9 @@ export const ClassServiceLive = Layer.effect(
               name: input.name,
               grade: input.grade ?? null,
               subject: input.subject ?? null,
-              schoolName: input.schoolName ?? null,
-              academicYear: input.academicYear ?? null,
-              defaultExamType: input.defaultExamType ?? null,
+              schoolName: input.schoolName,
+              academicYear: input.academicYear,
+              defaultExamType: input.defaultExamType,
               defaultExamDate: input.defaultExamDate ?? null,
               defaultDurationMinutes: input.defaultDurationMinutes ?? null,
               defaultInstructions: input.defaultInstructions ?? null,
@@ -211,13 +211,15 @@ export const ClassServiceLive = Layer.effect(
     ): Effect.Effect<ClassEntity, ClassNotFoundError | ApiDatabaseError> =>
       Effect.gen(function*() {
         const row = yield* fetchOwned(userId, id)
-        const set: Record<string, unknown> = { updatedAt: new Date() }
-        if (input.name !== undefined) set.name = input.name
+        const set: Record<string, unknown> = {
+          updatedAt: new Date(),
+          name: input.name,
+          schoolName: input.schoolName,
+          academicYear: input.academicYear,
+          defaultExamType: input.defaultExamType
+        }
         if (input.grade !== undefined) set.grade = input.grade
         if (input.subject !== undefined) set.subject = input.subject
-        if (input.schoolName !== undefined) set.schoolName = input.schoolName
-        if (input.academicYear !== undefined) set.academicYear = input.academicYear
-        if (input.defaultExamType !== undefined) set.defaultExamType = input.defaultExamType
         if (input.defaultExamDate !== undefined) set.defaultExamDate = input.defaultExamDate
         if (input.defaultDurationMinutes !== undefined) {
           set.defaultDurationMinutes = input.defaultDurationMinutes

@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router"
-import type { ClassEntity, StudentEntity } from "@teacher-exam/shared"
+import type { ClassEntity, CreateClassInput } from "@teacher-exam/shared"
+import {
+  CreateClassInputSchema,
+  isCompleteClassTemplate
+} from "@teacher-exam/shared"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +24,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
   useToast
 } from "@teacher-exam/ui"
+import { Either, Schema } from "effect"
 import { Plus, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { api, unwrapApiEither } from "../lib/api.js"
@@ -31,13 +35,18 @@ export const Route = createFileRoute("/_auth/kelas")({
   component: KelasPage
 })
 
-type StudentDraft = { name: string; identifier?: string }
-
 type ClassTemplateForm = {
   name: string
   schoolName: string
   academicYear: string
-  defaultExamType: "latihan" | "formatif" | "sts" | "sas" | "tka"
+  defaultExamType: CreateClassInput["defaultExamType"]
+}
+
+type TemplateFieldErrors = {
+  name?: string
+  schoolName?: string
+  academicYear?: string
+  defaultExamType?: string
 }
 
 const EXAM_TYPE_OPTIONS: ReadonlyArray<{
@@ -69,32 +78,84 @@ function formFromClass(cls: ClassEntity): ClassTemplateForm {
   }
 }
 
-function buildClassPayload(form: ClassTemplateForm): Parameters<typeof api.classes.create>[0] {
-  const schoolName = form.schoolName.trim()
-  const academicYear = form.academicYear.trim()
-  return {
-    name: form.name.trim(),
-    defaultExamType: form.defaultExamType,
-    ...(schoolName.length > 0 ? { schoolName } : {}),
-    ...(academicYear.length > 0 ? { academicYear } : {})
+function parseErrorMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string" &&
+    (error as { message: string }).message.length > 0
+  ) {
+    return (error as { message: string }).message
   }
+  return fallback
 }
 
-function parseImport(text: string): Array<StudentDraft> {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [name, identifier] = line.split(/[,;\t]/).map((part) => part.trim())
-      const trimmedName = (name ?? "").trim()
-      if (trimmedName.length === 0) return null
-      const trimmedId = (identifier ?? "").trim()
-      return trimmedId.length > 0
-        ? { name: trimmedName, identifier: trimmedId }
-        : { name: trimmedName }
-    })
-    .filter((draft): draft is StudentDraft => draft !== null)
+function firstIssueMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "issue" in error &&
+    typeof (error as { issue: unknown }).issue === "object" &&
+    (error as { issue: unknown }).issue !== null
+  ) {
+    const issue = (error as { issue: { message?: unknown } }).issue
+    if (typeof issue.message === "string" && issue.message.length > 0) {
+      return issue.message
+    }
+  }
+  return parseErrorMessage(error, fallback)
+}
+
+function validateTemplateForm(
+  form: ClassTemplateForm
+): Either.Either<CreateClassInput, TemplateFieldErrors> {
+  const payload = {
+    name: form.name,
+    schoolName: form.schoolName,
+    academicYear: form.academicYear,
+    defaultExamType: form.defaultExamType
+  }
+  const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)(payload)
+  if (Either.isRight(decoded)) {
+    return Either.right(decoded.right)
+  }
+
+  const errors: TemplateFieldErrors = {}
+  const nameResult = Schema.decodeUnknownEither(CreateClassInputSchema.fields.name)(form.name)
+  if (Either.isLeft(nameResult)) {
+    errors.name = firstIssueMessage(nameResult.left, "Wajib diisi")
+  }
+  const schoolResult = Schema.decodeUnknownEither(CreateClassInputSchema.fields.schoolName)(
+    form.schoolName
+  )
+  if (Either.isLeft(schoolResult)) {
+    errors.schoolName = firstIssueMessage(schoolResult.left, "Wajib diisi")
+  }
+  const yearResult = Schema.decodeUnknownEither(CreateClassInputSchema.fields.academicYear)(
+    form.academicYear
+  )
+  if (Either.isLeft(yearResult)) {
+    errors.academicYear = firstIssueMessage(
+      yearResult.left,
+      "Tahun pelajaran harus berformat YYYY/YYYY"
+    )
+  }
+  const examTypeResult = Schema.decodeUnknownEither(CreateClassInputSchema.fields.defaultExamType)(
+    form.defaultExamType
+  )
+  if (Either.isLeft(examTypeResult)) {
+    errors.defaultExamType = firstIssueMessage(examTypeResult.left, "Wajib diisi")
+  }
+  if (
+    errors.name === undefined &&
+    errors.schoolName === undefined &&
+    errors.academicYear === undefined &&
+    errors.defaultExamType === undefined
+  ) {
+    errors.name = "Wajib diisi"
+  }
+  return Either.left(errors)
 }
 
 function KelasPage() {
@@ -107,16 +168,12 @@ function KelasPageImpl() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createForm, setCreateForm] = useState<ClassTemplateForm>(() => makeEmptyForm())
+  const [createErrors, setCreateErrors] = useState<TemplateFieldErrors>({})
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<ClassTemplateForm>(() => makeEmptyForm())
-  const [students, setStudents] = useState<ReadonlyArray<StudentEntity>>([])
-  const [studentsLoading, setStudentsLoading] = useState(false)
-  const [importText, setImportText] = useState("")
-  const [importing, setImporting] = useState(false)
+  const [editErrors, setEditErrors] = useState<TemplateFieldErrors>({})
   const [savingTemplate, setSavingTemplate] = useState(false)
-  const [pendingDeleteStudent, setPendingDeleteStudent] = useState<StudentEntity | null>(null)
-  const [deletingStudent, setDeletingStudent] = useState(false)
   const [pendingDeleteClass, setPendingDeleteClass] = useState<ClassEntity | null>(null)
   const [deletingClass, setDeletingClass] = useState(false)
 
@@ -138,10 +195,15 @@ function KelasPageImpl() {
 
   async function handleCreateClass(event: React.FormEvent) {
     event.preventDefault()
-    const name = createForm.name.trim()
-    if (name.length === 0) return
+    const validated = validateTemplateForm(createForm)
+    if (Either.isLeft(validated)) {
+      setCreateErrors(validated.left)
+      toast({ variant: "error", title: "Lengkapi template kelas" })
+      return
+    }
+    setCreateErrors({})
     try {
-      const created = unwrapApiEither(await api.classes.create(buildClassPayload(createForm)))
+      const created = unwrapApiEither(await api.classes.create(validated.right))
       setClasses((prev) => [created, ...prev])
       setCreateForm(makeEmptyForm())
       toast({ variant: "success", title: "Kelas ditambahkan" })
@@ -150,31 +212,24 @@ function KelasPageImpl() {
     }
   }
 
-  async function loadStudents(classId: string) {
-    setStudentsLoading(true)
-    try {
-      const list = unwrapApiEither(await api.classes.students.list(classId))
-      setStudents(list)
-    } catch (err: unknown) {
-      toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal memuat siswa" })
-      setStudents([])
-    } finally {
-      setStudentsLoading(false)
-    }
-  }
-
   function selectClass(cls: ClassEntity) {
     setSelectedId(cls.id)
     setEditForm(formFromClass(cls))
-    setImportText("")
-    void loadStudents(cls.id)
+    setEditErrors({})
   }
 
   async function handleSaveTemplate() {
     if (!selectedId) return
+    const validated = validateTemplateForm(editForm)
+    if (Either.isLeft(validated)) {
+      setEditErrors(validated.left)
+      toast({ variant: "error", title: "Lengkapi template kelas" })
+      return
+    }
+    setEditErrors({})
     setSavingTemplate(true)
     try {
-      const updated = unwrapApiEither(await api.classes.update(selectedId, buildClassPayload(editForm)))
+      const updated = unwrapApiEither(await api.classes.update(selectedId, validated.right))
       setClasses((prev) => prev.map((cls) => cls.id === updated.id ? updated : cls))
       setEditForm(formFromClass(updated))
       toast({ variant: "success", title: "Template kelas disimpan" })
@@ -182,43 +237,6 @@ function KelasPageImpl() {
       toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal menyimpan template" })
     } finally {
       setSavingTemplate(false)
-    }
-  }
-
-  async function handleImport() {
-    if (!selectedId) return
-    const drafts = parseImport(importText)
-    if (drafts.length === 0) {
-      toast({ variant: "error", title: "Tidak ada baris valid untuk diimpor" })
-      return
-    }
-    setImporting(true)
-    try {
-      const inserted = unwrapApiEither(
-        await api.classes.students.bulkCreate(selectedId, { students: drafts })
-      )
-      setStudents((prev) => [...prev, ...inserted])
-      setImportText("")
-      toast({ variant: "success", title: `${inserted.length} siswa diimpor` })
-    } catch (err: unknown) {
-      toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal mengimpor siswa" })
-    } finally {
-      setImporting(false)
-    }
-  }
-
-  async function confirmDeleteStudent() {
-    if (!pendingDeleteStudent || !selectedId) return
-    setDeletingStudent(true)
-    try {
-      unwrapApiEither(await api.classes.students.remove(selectedId, pendingDeleteStudent.id))
-      setStudents((prev) => prev.filter((s) => s.id !== pendingDeleteStudent.id))
-      setPendingDeleteStudent(null)
-      toast({ variant: "success", title: "Siswa dihapus" })
-    } catch (err: unknown) {
-      toast({ variant: "error", title: err instanceof Error ? err.message : "Gagal menghapus siswa" })
-    } finally {
-      setDeletingStudent(false)
     }
   }
 
@@ -230,7 +248,8 @@ function KelasPageImpl() {
       setClasses((prev) => prev.filter((c) => c.id !== pendingDeleteClass.id))
       if (selectedId === pendingDeleteClass.id) {
         setSelectedId(null)
-        setStudents([])
+        setEditForm(makeEmptyForm())
+        setEditErrors({})
       }
       setPendingDeleteClass(null)
       toast({ variant: "success", title: "Kelas dihapus" })
@@ -261,12 +280,13 @@ function KelasPageImpl() {
   }
 
   const selected = classes.find((c) => c.id === selectedId) ?? null
+  const selectedIncomplete = selected !== null && !isCompleteClassTemplate(selected)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Kelas"
-        subtitle="Kelola kelas dan daftar siswa untuk pengiriman ujian."
+        subtitle="Kelola template identitas kelas untuk Detail Lembar Ujian."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
@@ -274,6 +294,7 @@ function KelasPageImpl() {
           <form
             onSubmit={handleCreateClass}
             className="rounded-lg border border-border-default bg-bg-surface p-4 space-y-3"
+            noValidate
           >
             <div className="space-y-1.5">
               <Label htmlFor="class-name">Nama kelas</Label>
@@ -283,7 +304,16 @@ function KelasPageImpl() {
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="mis. Kelas 5A"
                 autoComplete="off"
+                aria-invalid={createErrors.name !== undefined}
+                aria-describedby={createErrors.name !== undefined ? "class-name-error" : undefined}
               />
+              {createErrors.name !== undefined ?
+                (
+                  <p id="class-name-error" className="text-caption text-danger-600" role="alert">
+                    {createErrors.name}
+                  </p>
+                ) :
+                null}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="class-school">Nama Sekolah</Label>
@@ -292,7 +322,18 @@ function KelasPageImpl() {
                 value={createForm.schoolName}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, schoolName: e.target.value }))}
                 placeholder="SD Negeri ..."
+                aria-invalid={createErrors.schoolName !== undefined}
+                aria-describedby={createErrors.schoolName !== undefined
+                  ? "class-school-error"
+                  : undefined}
               />
+              {createErrors.schoolName !== undefined ?
+                (
+                  <p id="class-school-error" className="text-caption text-danger-600" role="alert">
+                    {createErrors.schoolName}
+                  </p>
+                ) :
+                null}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -302,7 +343,18 @@ function KelasPageImpl() {
                   value={createForm.academicYear}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, academicYear: e.target.value }))}
                   placeholder="2025/2026"
+                  aria-invalid={createErrors.academicYear !== undefined}
+                  aria-describedby={createErrors.academicYear !== undefined
+                    ? "class-year-error"
+                    : undefined}
                 />
+                {createErrors.academicYear !== undefined ?
+                  (
+                    <p id="class-year-error" className="text-caption text-danger-600" role="alert">
+                      {createErrors.academicYear}
+                    </p>
+                  ) :
+                  null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="class-exam-type">Jenis Ujian</Label>
@@ -314,7 +366,10 @@ function KelasPageImpl() {
                       defaultExamType: value as ClassTemplateForm["defaultExamType"]
                     }))}
                 >
-                  <SelectTrigger id="class-exam-type">
+                  <SelectTrigger
+                    id="class-exam-type"
+                    aria-invalid={createErrors.defaultExamType !== undefined}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,6 +380,13 @@ function KelasPageImpl() {
                     ))}
                   </SelectContent>
                 </Select>
+                {createErrors.defaultExamType !== undefined ?
+                  (
+                    <p className="text-caption text-danger-600" role="alert">
+                      {createErrors.defaultExamType}
+                    </p>
+                  ) :
+                  null}
               </div>
             </div>
             <Button type="submit" size="sm" className="w-full">
@@ -338,7 +400,7 @@ function KelasPageImpl() {
               <EmptyState
                 icon={<Users size={28} />}
                 title="Belum ada kelas"
-                description="Buat kelas pertama Anda untuk mulai mengelola siswa."
+                description="Buat template kelas pertama untuk mengisi Detail Lembar Ujian lebih cepat."
               />
             ) :
             (
@@ -391,7 +453,7 @@ function KelasPageImpl() {
               <EmptyState
                 icon={<Users size={28} />}
                 title="Pilih kelas"
-                description="Pilih kelas di samping untuk melihat dan mengelola siswa."
+                description="Pilih kelas di samping untuk mengedit template lembar ujian."
               />
             ) :
             (
@@ -407,11 +469,23 @@ function KelasPageImpl() {
                     <Button
                       size="sm"
                       onClick={() => void handleSaveTemplate()}
-                      disabled={savingTemplate || editForm.name.trim().length === 0}
+                      disabled={savingTemplate}
                     >
                       {savingTemplate ? "Menyimpan..." : "Simpan template"}
                     </Button>
                   </div>
+                  {selectedIncomplete ?
+                    (
+                      <div
+                        className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2"
+                        role="status"
+                      >
+                        <p className="text-body-sm text-warning-fg font-medium">
+                          Lengkapi template sebelum dipakai di Review
+                        </p>
+                      </div>
+                    ) :
+                    null}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-class-name">Nama kelas template</Label>
@@ -419,24 +493,71 @@ function KelasPageImpl() {
                         id="edit-class-name"
                         value={editForm.name}
                         onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                        aria-invalid={editErrors.name !== undefined}
+                        aria-describedby={editErrors.name !== undefined
+                          ? "edit-class-name-error"
+                          : undefined}
                       />
+                      {editErrors.name !== undefined ?
+                        (
+                          <p
+                            id="edit-class-name-error"
+                            className="text-caption text-danger-600"
+                            role="alert"
+                          >
+                            {editErrors.name}
+                          </p>
+                        ) :
+                        null}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-school-name">Nama sekolah template</Label>
                       <Input
                         id="edit-school-name"
                         value={editForm.schoolName}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                        aria-invalid={editErrors.schoolName !== undefined}
+                        aria-describedby={editErrors.schoolName !== undefined
+                          ? "edit-school-name-error"
+                          : undefined}
                       />
+                      {editErrors.schoolName !== undefined ?
+                        (
+                          <p
+                            id="edit-school-name-error"
+                            className="text-caption text-danger-600"
+                            role="alert"
+                          >
+                            {editErrors.schoolName}
+                          </p>
+                        ) :
+                        null}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-academic-year">Tahun pelajaran default</Label>
                       <Input
                         id="edit-academic-year"
                         value={editForm.academicYear}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, academicYear: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({ ...prev, academicYear: e.target.value }))}
                         placeholder="2025/2026"
+                        aria-invalid={editErrors.academicYear !== undefined}
+                        aria-describedby={editErrors.academicYear !== undefined
+                          ? "edit-academic-year-error"
+                          : undefined}
                       />
+                      {editErrors.academicYear !== undefined ?
+                        (
+                          <p
+                            id="edit-academic-year-error"
+                            className="text-caption text-danger-600"
+                            role="alert"
+                          >
+                            {editErrors.academicYear}
+                          </p>
+                        ) :
+                        null}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-exam-type">Jenis ujian template</Label>
@@ -448,7 +569,10 @@ function KelasPageImpl() {
                             defaultExamType: value as ClassTemplateForm["defaultExamType"]
                           }))}
                       >
-                        <SelectTrigger id="edit-exam-type">
+                        <SelectTrigger
+                          id="edit-exam-type"
+                          aria-invalid={editErrors.defaultExamType !== undefined}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -459,111 +583,26 @@ function KelasPageImpl() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {editErrors.defaultExamType !== undefined ?
+                        (
+                          <p className="text-caption text-danger-600" role="alert">
+                            {editErrors.defaultExamType}
+                          </p>
+                        ) :
+                        null}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border-default bg-bg-surface p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h2 className="font-semibold text-text-primary">{selected.name}</h2>
-                      <p className="text-body-sm text-text-tertiary">
-                        {students.length} siswa
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="import-students">Impor siswa (satu baris per siswa: Nama,identifier)</Label>
-                    <Textarea
-                      id="import-students"
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                      placeholder={"Budi,001\nSiti\nAndi,003"}
-                      rows={5}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => void handleImport()}
-                    disabled={importing || importText.trim().length === 0}
-                  >
-                    <Plus size={14} />
-                    Impor
-                  </Button>
-                </div>
-
-                <div className="rounded-lg border border-border-default bg-bg-surface">
-                  {studentsLoading ?
-                    (
-                      <div className="flex justify-center py-10">
-                        <LoadingSpinner />
-                      </div>
-                    ) :
-                    students.length === 0 ?
-                    (
-                      <div className="py-10 text-center">
-                        <p className="text-body-sm text-text-tertiary">
-                          Belum ada siswa di kelas ini. Impor di atas.
-                        </p>
-                      </div>
-                    ) :
-                    (
-                      <ul className="divide-y divide-border-default">
-                        {students.map((student) => (
-                          <li
-                            key={student.id}
-                            className="flex items-center justify-between gap-2 p-3"
-                          >
-                            <div className="min-w-0">
-                              <p className="font-medium text-text-primary truncate">{student.name}</p>
-                              <p className="text-body-sm text-text-tertiary">
-                                {student.identifier ?? "—"}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              aria-label={`Hapus siswa ${student.name}`}
-                              className="text-text-tertiary hover:text-danger-600 p-1"
-                              onClick={() => setPendingDeleteStudent(student)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                </div>
+                <EmptyState
+                  icon={<Users size={28} />}
+                  title="Segera hadir"
+                  description="Pengelolaan daftar siswa untuk kelas ini sedang dalam pengembangan."
+                />
               </div>
             )}
         </div>
       </div>
-
-      <AlertDialog
-        open={pendingDeleteStudent !== null}
-        onOpenChange={(open) => !open && setPendingDeleteStudent(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus siswa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Siswa "{pendingDeleteStudent?.name}" akan dihapus dari kelas ini.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingStudent}>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                void confirmDeleteStudent()
-              }}
-              disabled={deletingStudent}
-              className="bg-danger-600 text-white hover:bg-danger-700"
-            >
-              {deletingStudent ? "Menghapus…" : "Ya, hapus"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog
         open={pendingDeleteClass !== null}
@@ -573,7 +612,7 @@ function KelasPageImpl() {
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus kelas?</AlertDialogTitle>
             <AlertDialogDescription>
-              Kelas "{pendingDeleteClass?.name}" dan seluruh siswanya akan dihapus permanen.
+              Kelas "{pendingDeleteClass?.name}" akan dihapus permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

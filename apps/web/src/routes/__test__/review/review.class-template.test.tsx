@@ -61,6 +61,28 @@ test("choosing a class template applies only class identity metadata and patches
   })
 })
 
+test("incomplete class templates are hidden from the template select", async () => {
+  mockApiResolvedValueOnce(mockClassesList, [
+    makeClassTemplate({ id: "cls-complete" as ClassEntity["id"], name: "Kelas Lengkap" }),
+    makeClassTemplate({
+      id: "cls-incomplete" as ClassEntity["id"],
+      name: "Kelas Belum Lengkap",
+      schoolName: null,
+      academicYear: null
+    })
+  ])
+
+  setReviewSearch({ mode: "fast", examId: "E" })
+  mockApiResolvedValueOnce(mockExamsGet, makeExamWithQuestions("E"))
+  await getLoader()({ deps: { examId: "E" } })
+  renderReviewPage()
+
+  fireEvent.click(await screen.findByRole("combobox", { name: /template kelas/i }))
+  expect(screen.getByRole("option", { name: /kelas lengkap/i })).toBeInTheDocument()
+  expect(screen.queryByRole("option", { name: /kelas belum lengkap/i })).not.toBeInTheDocument()
+  expect(screen.getByRole("option", { name: /^tanpa template$/i })).toBeInTheDocument()
+})
+
 test("choosing a class template does not overwrite manual duration date or instructions", async () => {
   mockApiResolvedValueOnce(mockClassesList, [makeClassTemplate({
     defaultExamDate: "2026-05-14",

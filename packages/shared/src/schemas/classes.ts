@@ -1,12 +1,21 @@
-import { Schema } from "effect"
+import { Either, Schema } from "effect"
 import { UserIdSchema } from "./entities.js"
-import { ExamSubjectSchema, ExamTypeSchema, GradeSchema } from "./primitives.js"
+import { AcademicYearSchema, ExamSubjectSchema, ExamTypeSchema, GradeSchema } from "./primitives.js"
 // ── Branded IDs ────────────────────────────────────────────
 export const ClassIdSchema = Schema.String.pipe(Schema.brand("ClassId"))
 export type ClassId = typeof ClassIdSchema.Type
 
 export const StudentIdSchema = Schema.String.pipe(Schema.brand("StudentId"))
 export type StudentId = typeof StudentIdSchema.Type
+
+const NonEmptyTrimmedString = Schema.String.pipe(
+  Schema.transform(Schema.String, {
+    decode: (value) => value.trim(),
+    encode: (value) => value,
+    strict: true
+  }),
+  Schema.nonEmptyString({ message: () => "Wajib diisi" })
+)
 
 // ── Class entity ───────────────────────────────────────────
 export const ClassSchema = Schema.Struct({
@@ -45,12 +54,12 @@ export type ClassWithStudents = typeof ClassWithStudentsSchema.Type
 
 // ── API input schemas ──────────────────────────────────────
 export const CreateClassInputSchema = Schema.Struct({
-  name: Schema.NonEmptyString,
+  name: NonEmptyTrimmedString,
+  schoolName: NonEmptyTrimmedString,
+  academicYear: AcademicYearSchema,
+  defaultExamType: ExamTypeSchema,
   grade: Schema.optional(GradeSchema),
   subject: Schema.optional(ExamSubjectSchema),
-  schoolName: Schema.optional(Schema.String),
-  academicYear: Schema.optional(Schema.String),
-  defaultExamType: Schema.optional(ExamTypeSchema),
   defaultExamDate: Schema.optional(Schema.String),
   defaultDurationMinutes: Schema.optional(Schema.Int),
   defaultInstructions: Schema.optional(Schema.String)
@@ -58,12 +67,12 @@ export const CreateClassInputSchema = Schema.Struct({
 export type CreateClassInput = typeof CreateClassInputSchema.Type
 
 export const UpdateClassInputSchema = Schema.Struct({
-  name: Schema.optional(Schema.NonEmptyString),
+  name: NonEmptyTrimmedString,
+  schoolName: NonEmptyTrimmedString,
+  academicYear: AcademicYearSchema,
+  defaultExamType: ExamTypeSchema,
   grade: Schema.optional(GradeSchema),
   subject: Schema.optional(ExamSubjectSchema),
-  schoolName: Schema.optional(Schema.String),
-  academicYear: Schema.optional(Schema.String),
-  defaultExamType: Schema.optional(ExamTypeSchema),
   defaultExamDate: Schema.optional(Schema.String),
   defaultDurationMinutes: Schema.optional(Schema.Int),
   defaultInstructions: Schema.optional(Schema.String)
@@ -89,3 +98,13 @@ export const ListClassesUrlParamsSchema = Schema.Struct({
   withStudents: Schema.optional(Schema.BooleanFromString)
 })
 export type ListClassesUrlParams = typeof ListClassesUrlParamsSchema.Type
+
+export function isCompleteClassTemplate(cls: ClassEntity): boolean {
+  const name = cls.name.trim()
+  const schoolName = (cls.schoolName ?? "").trim()
+  const academicYear = (cls.academicYear ?? "").trim()
+  if (name.length === 0 || schoolName.length === 0 || cls.defaultExamType === null) {
+    return false
+  }
+  return Either.isRight(Schema.decodeUnknownEither(AcademicYearSchema)(academicYear))
+}

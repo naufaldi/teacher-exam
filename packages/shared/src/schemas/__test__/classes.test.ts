@@ -5,9 +5,11 @@ import {
   ClassSchema,
   CreateClassInputSchema,
   CreateStudentInputSchema,
+  isCompleteClassTemplate,
   StudentSchema,
   UpdateClassInputSchema
 } from "../../schemas/classes.js"
+import { AcademicYearSchema } from "../../schemas/primitives.js"
 
 describe("classes schemas", () => {
   it("decodes ClassSchema with grade, subject, and timestamps", () => {
@@ -114,16 +116,52 @@ describe("classes schemas", () => {
     expect(Either.isRight(decoded)).toBe(true)
   })
 
-  it("decodes CreateClassInputSchema with name and optional fields", () => {
+  it("accepts AcademicYearSchema for consecutive years", () => {
+    const decoded = Schema.decodeUnknownEither(AcademicYearSchema)("2025/2026")
+    expect(Either.isRight(decoded)).toBe(true)
+  })
+
+  it("rejects AcademicYearSchema when years are not consecutive", () => {
+    const decoded = Schema.decodeUnknownEither(AcademicYearSchema)("2025/2027")
+    expect(Either.isLeft(decoded)).toBe(true)
+  })
+
+  it("rejects AcademicYearSchema with wrong separators or short years", () => {
+    expect(Either.isLeft(Schema.decodeUnknownEither(AcademicYearSchema)("2025-2026"))).toBe(true)
+    expect(Either.isLeft(Schema.decodeUnknownEither(AcademicYearSchema)("2025/26"))).toBe(true)
+    expect(Either.isLeft(Schema.decodeUnknownEither(AcademicYearSchema)("abcd/efgh"))).toBe(true)
+  })
+
+  it("rejects CreateClassInputSchema when template identity fields are missing", () => {
     const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
       name: "Kelas 6B",
       grade: 6,
       subject: "matematika"
     })
-    expect(Either.isRight(decoded)).toBe(true)
+    expect(Either.isLeft(decoded)).toBe(true)
   })
 
-  it("decodes CreateClassInputSchema with worksheet defaults", () => {
+  it("rejects CreateClassInputSchema with whitespace-only school or year", () => {
+    const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
+      name: "Kelas 5A",
+      schoolName: "   ",
+      academicYear: "  ",
+      defaultExamType: "formatif"
+    })
+    expect(Either.isLeft(decoded)).toBe(true)
+  })
+
+  it("rejects CreateClassInputSchema with invalid academic year", () => {
+    const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
+      name: "Kelas 5A",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2027",
+      defaultExamType: "formatif"
+    })
+    expect(Either.isLeft(decoded)).toBe(true)
+  })
+
+  it("decodes CreateClassInputSchema with required template identity fields", () => {
     const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
       name: "Kelas 5A",
       schoolName: "SDN Jakarta",
@@ -140,20 +178,24 @@ describe("classes schemas", () => {
   it("rejects CreateClassInputSchema with invalid grade", () => {
     const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
       name: "Kelas 9",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif",
       grade: 9
     })
     expect(Either.isLeft(decoded)).toBe(true)
   })
 
-  it("decodes UpdateClassInputSchema with only name", () => {
+  it("rejects UpdateClassInputSchema when template identity fields are missing", () => {
     const decoded = Schema.decodeUnknownEither(UpdateClassInputSchema)({
       name: "Nama baru"
     })
-    expect(Either.isRight(decoded)).toBe(true)
+    expect(Either.isLeft(decoded)).toBe(true)
   })
 
-  it("decodes UpdateClassInputSchema with worksheet defaults", () => {
+  it("decodes UpdateClassInputSchema with required template identity fields", () => {
     const decoded = Schema.decodeUnknownEither(UpdateClassInputSchema)({
+      name: "Kelas 5A",
       schoolName: "SDN Baru",
       academicYear: "2026/2027",
       defaultExamType: "sas",
@@ -162,6 +204,60 @@ describe("classes schemas", () => {
       defaultInstructions: "Dahulukan soal mudah."
     })
     expect(Either.isRight(decoded)).toBe(true)
+  })
+
+  it("isCompleteClassTemplate is false for legacy null school or year", () => {
+    expect(
+      isCompleteClassTemplate({
+        id: "cls-1" as never,
+        userId: "user-1" as never,
+        name: "Kelas 5A",
+        schoolName: null,
+        academicYear: null,
+        defaultExamType: "formatif",
+        defaultExamDate: null,
+        defaultDurationMinutes: null,
+        defaultInstructions: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      })
+    ).toBe(false)
+  })
+
+  it("isCompleteClassTemplate is false for non-consecutive academic year", () => {
+    expect(
+      isCompleteClassTemplate({
+        id: "cls-1" as never,
+        userId: "user-1" as never,
+        name: "Kelas 5A",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2027",
+        defaultExamType: "formatif",
+        defaultExamDate: null,
+        defaultDurationMinutes: null,
+        defaultInstructions: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      })
+    ).toBe(false)
+  })
+
+  it("isCompleteClassTemplate is true for complete template identity", () => {
+    expect(
+      isCompleteClassTemplate({
+        id: "cls-1" as never,
+        userId: "user-1" as never,
+        name: "Kelas 5A",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif",
+        defaultExamDate: null,
+        defaultDurationMinutes: null,
+        defaultInstructions: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      })
+    ).toBe(true)
   })
 
   it("decodes CreateStudentInputSchema with name and optional identifier", () => {

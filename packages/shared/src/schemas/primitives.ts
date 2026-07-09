@@ -54,6 +54,33 @@ export const ExamTypeSchema = Schema.Literal(
 export type ExamType = typeof ExamTypeSchema.Type
 
 /**
+ * Tahun pelajaran Indonesia: `YYYY/YYYY` where the second year is first + 1.
+ */
+export const AcademicYearSchema = Schema.String.pipe(
+  Schema.transform(Schema.String, {
+    decode: (value) => value.trim(),
+    encode: (value) => value,
+    strict: true
+  }),
+  Schema.nonEmptyString({ message: () => "Wajib diisi" }),
+  Schema.pattern(/^\d{4}\/\d{4}$/, {
+    message: () => "Tahun pelajaran harus berformat YYYY/YYYY"
+  }),
+  Schema.filter(
+    (value) => {
+      const [startRaw, endRaw] = value.split("/")
+      const start = Number(startRaw)
+      const end = Number(endRaw)
+      return Number.isInteger(start) && Number.isInteger(end) && end === start + 1
+    },
+    {
+      message: () => "Tahun pelajaran harus berurutan, mis. 2025/2026"
+    }
+  )
+)
+export type AcademicYear = typeof AcademicYearSchema.Type
+
+/**
  * Cognitive level (Bloom). Optional on AI response in MVP — fully validated
  * post-generation in polish phase.
  */

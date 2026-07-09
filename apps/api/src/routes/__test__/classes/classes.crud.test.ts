@@ -93,7 +93,13 @@ describe("POST /api/classes", () => {
   })
 
   it("creates a class and returns 201", async () => {
-    const row = makeClassRow({ id: "cls-new", name: "Kelas baru" })
+    const row = makeClassRow({
+      id: "cls-new",
+      name: "Kelas baru",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif"
+    })
     ;(db.insert as Mock).mockReturnValue({
       values: vi.fn(() => ({
         returning: vi.fn(() => makeChain([row]))
@@ -104,7 +110,14 @@ describe("POST /api/classes", () => {
     const res = await app.request("/api/classes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Kelas baru", grade: 5, subject: "ipas" })
+      body: JSON.stringify({
+        name: "Kelas baru",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif",
+        grade: 5,
+        subject: "ipas"
+      })
     })
     expect(res.status).toBe(201)
     const body = (await res.json()) as Record<string, unknown>
@@ -167,7 +180,23 @@ describe("POST /api/classes", () => {
     const res = await app.request("/api/classes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Kelas", grade: 9 })
+      body: JSON.stringify({
+        name: "Kelas",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif",
+        grade: 9
+      })
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 400 when template identity fields are missing", async () => {
+    const app = buildTestApp()
+    const res = await app.request("/api/classes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Kelas", grade: 5 })
     })
     expect(res.status).toBe(400)
   })
@@ -179,8 +208,18 @@ describe("PATCH /api/classes/:id", () => {
   })
 
   it("renames an owned class", async () => {
-    const row = makeClassRow({ name: "lama" })
-    const updated = makeClassRow({ name: "baru" })
+    const row = makeClassRow({
+      name: "lama",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif"
+    })
+    const updated = makeClassRow({
+      name: "baru",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif"
+    })
     let selectCount = 0
     ;(db.select as Mock).mockImplementation(() => {
       selectCount++
@@ -193,7 +232,12 @@ describe("PATCH /api/classes/:id", () => {
     const res = await app.request("/api/classes/cls-1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "baru" })
+      body: JSON.stringify({
+        name: "baru",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif"
+      })
     })
     expect(res.status).toBe(200)
     const body = (await res.json()) as Record<string, unknown>
@@ -224,6 +268,7 @@ describe("PATCH /api/classes/:id", () => {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        name: "Kelas 5A",
         schoolName: "SDN Baru",
         academicYear: "2026/2027",
         defaultExamType: "sas",
@@ -246,7 +291,12 @@ describe("PATCH /api/classes/:id", () => {
     const res = await app.request("/api/classes/missing", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "x" })
+      body: JSON.stringify({
+        name: "x",
+        schoolName: "SDN Jakarta",
+        academicYear: "2025/2026",
+        defaultExamType: "formatif"
+      })
     })
     expect(res.status).toBe(404)
   })

@@ -135,12 +135,86 @@ describe("Kelas route", () => {
         defaultExamType: "formatif"
       })
     })
+    expect(await screen.findByText(/kelas ditambahkan/i)).toBeInTheDocument()
   })
 
-  it("updates class identity fields and keeps student management on selected class detail", async () => {
+  it("shows inline errors and toast when create is submitted empty", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [])
+
+    renderRoute()
+
+    await user.click(await screen.findByRole("button", { name: /tambah kelas/i }))
+
+    expect(apiMocks.classesCreate).not.toHaveBeenCalled()
+    expect(await screen.findByText(/lengkapi template kelas/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/wajib diisi/i).length).toBeGreaterThan(0)
+  })
+
+  it("shows tahun pelajaran format error on create", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [])
+
+    renderRoute()
+
+    await user.type(await screen.findByLabelText(/nama kelas/i), "Kelas 5A")
+    await user.type(screen.getByLabelText(/nama sekolah/i), "SDN Jakarta")
+    await user.type(screen.getByLabelText(/tahun pelajaran/i), "2025/2027")
+    await user.click(screen.getByRole("button", { name: /tambah kelas/i }))
+
+    expect(apiMocks.classesCreate).not.toHaveBeenCalled()
+    expect(await screen.findByText(/tahun pelajaran harus berurutan/i)).toBeInTheDocument()
+  })
+
+  it("shows incomplete banner for legacy class missing school or year", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [{
+      ...baseClass,
+      schoolName: null,
+      academicYear: null
+    }])
+
+    renderRoute()
+
+    await user.click(await screen.findByText("Kelas 5A"))
+    expect(
+      await screen.findByText(/lengkapi template sebelum dipakai di review/i)
+    ).toBeInTheDocument()
+  })
+
+  it("does not show incomplete banner for complete class", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
-    mockApiResolvedValueOnce(apiMocks.studentsList, [])
+
+    renderRoute()
+
+    await user.click(await screen.findByText("Kelas 5A"))
+    expect(await screen.findByLabelText(/nama sekolah template/i)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/lengkapi template sebelum dipakai di review/i)
+    ).not.toBeInTheDocument()
+  })
+
+  it("blocks save template when edit form is incomplete", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [{
+      ...baseClass,
+      schoolName: null,
+      academicYear: null
+    }])
+
+    renderRoute()
+
+    await user.click(await screen.findByText("Kelas 5A"))
+    await user.click(await screen.findByRole("button", { name: /simpan template/i }))
+
+    expect(apiMocks.classesUpdate).not.toHaveBeenCalled()
+    expect(await screen.findByText(/lengkapi template kelas/i)).toBeInTheDocument()
+  })
+
+  it("updates class identity fields on selected class detail", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
     mockApiResolvedValueOnce(apiMocks.classesUpdate, {
       ...baseClass,
       schoolName: "SDN Baru"
@@ -152,7 +226,6 @@ describe("Kelas route", () => {
     const schoolInput = await screen.findByLabelText(/nama sekolah template/i)
     await user.clear(schoolInput)
     await user.type(schoolInput, "SDN Baru")
-    expect(screen.getByLabelText(/impor siswa/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/petunjuk default template/i)).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: /simpan template/i }))
 
@@ -167,5 +240,18 @@ describe("Kelas route", () => {
         }
       )
     })
+    expect(await screen.findByText(/template kelas disimpan/i)).toBeInTheDocument()
+  })
+
+  it("shows siswa coming soon and does not fetch students on select", async () => {
+    const user = userEvent.setup()
+    mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
+
+    renderRoute()
+
+    await user.click(await screen.findByText("Kelas 5A"))
+    expect(await screen.findByRole("heading", { level: 3, name: /segera hadir/i })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/impor siswa/i)).not.toBeInTheDocument()
+    expect(apiMocks.studentsList).not.toHaveBeenCalled()
   })
 })

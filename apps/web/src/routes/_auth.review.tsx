@@ -1,6 +1,10 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { ClassEntity, CreateClassInput, ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
-import { resolveExamSubjectLabel } from "@teacher-exam/shared"
+import {
+  CreateClassInputSchema,
+  isCompleteClassTemplate,
+  resolveExamSubjectLabel
+} from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -25,7 +29,7 @@ import {
   TooltipProvider,
   useToast
 } from "@teacher-exam/ui"
-import { Match } from "effect"
+import { Either, Match, Schema } from "effect"
 import { CheckCircle2, ChevronRight, Pencil, RefreshCw, Undo2, XCircle } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FigureSvg } from "../components/figure-svg.js"
@@ -67,15 +71,17 @@ function buildClassTemplatePayload(
     examType: ExamType
     schoolName: string
   }
-): CreateClassInput {
-  const schoolName = metadata.schoolName.trim()
-  const academicYear = metadata.academicYear.trim()
-  return {
-    name,
-    defaultExamType: metadata.examType,
-    ...(schoolName.length > 0 ? { schoolName } : {}),
-    ...(academicYear.length > 0 ? { academicYear } : {})
+): Either.Either<CreateClassInput, string> {
+  const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
+    name: name.trim(),
+    schoolName: metadata.schoolName.trim(),
+    academicYear: metadata.academicYear.trim(),
+    defaultExamType: metadata.examType
+  })
+  if (Either.isLeft(decoded)) {
+    return Either.left("Lengkapi nama sekolah, tahun pelajaran, dan jenis ujian sebelum menyimpan template.")
   }
+  return Either.right(decoded.right)
 }
 
 export const Route = createFileRoute("/_auth/review")({
@@ -299,7 +305,7 @@ function ReviewPage() {
     }
   }
 
-  const buildCurrentTemplatePayload = (name: string): CreateClassInput =>
+  const buildCurrentTemplatePayload = (name: string) =>
     buildClassTemplatePayload(
       name,
       {
@@ -309,9 +315,23 @@ function ReviewPage() {
       }
     )
 
+  const completeClassTemplates = useMemo(
+    () => classTemplates.filter((cls) => isCompleteClassTemplate(cls)),
+    [classTemplates]
+  )
+
   const openSaveTemplateDialog = () => {
     if (selectedClassTemplateId !== "manual") {
       void handleUpdateSelectedTemplate()
+      return
+    }
+    const payload = buildCurrentTemplatePayload(schoolName || "Template lembar ujian")
+    if (Either.isLeft(payload)) {
+      toast({
+        variant: "error",
+        title: "Lengkapi template kelas",
+        description: payload.left
+      })
       return
     }
     setNewTemplateName(schoolName || "Template lembar ujian")
@@ -321,9 +341,18 @@ function ReviewPage() {
   const handleCreateTemplateFromMetadata = async () => {
     const name = newTemplateName.trim()
     if (name.length === 0) return
+    const payload = buildCurrentTemplatePayload(name)
+    if (Either.isLeft(payload)) {
+      toast({
+        variant: "error",
+        title: "Lengkapi template kelas",
+        description: payload.left
+      })
+      return
+    }
     setSavingClassTemplate(true)
     try {
-      const created = unwrapApiEither(await api.classes.create(buildCurrentTemplatePayload(name)))
+      const created = unwrapApiEither(await api.classes.create(payload.right))
       setClassTemplates((prev) => [created, ...prev])
       setSelectedClassTemplateId(created.id)
       setSaveTemplateDialogOpen(false)
@@ -342,11 +371,18 @@ function ReviewPage() {
   async function handleUpdateSelectedTemplate() {
     const selected = classTemplates.find((cls) => cls.id === selectedClassTemplateId)
     if (!selected) return
+    const payload = buildCurrentTemplatePayload(selected.name)
+    if (Either.isLeft(payload)) {
+      toast({
+        variant: "error",
+        title: "Lengkapi template kelas",
+        description: payload.left
+      })
+      return
+    }
     setSavingClassTemplate(true)
     try {
-      const updated = unwrapApiEither(
-        await api.classes.update(selected.id, buildCurrentTemplatePayload(selected.name))
-      )
+      const updated = unwrapApiEither(await api.classes.update(selected.id, payload.right))
       setClassTemplates((prev) => prev.map((cls) => cls.id === updated.id ? updated : cls))
       toast({ variant: "success", title: "Template kelas diperbarui" })
     } catch (err) {
@@ -803,6 +839,13 @@ function ReviewPage() {
             />
             {hasCurriculumValidation ? "Periksa ulang kurikulum" : "Periksa kurikulum"}
           </Button>
+          {exam.subject === null && (exam.subjectLabel?.trim().length ?? 0) > 0 ?
+            (
+              <p className="text-caption text-text-tertiary max-w-md">
+                Mode PDF: pemeriksaan mengacu topik/PDF yang diunggah, bukan klaim Capaian Pembelajaran Buku Siswa.
+              </p>
+            ) :
+            null}
           <label className="inline-flex items-center gap-2 text-body-sm text-text-secondary cursor-pointer">
             <input
               type="checkbox"
@@ -1252,7 +1295,7 @@ function ReviewPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="manual">Tanpa template</SelectItem>
-                    {classTemplates.map((cls) => (
+                    {completeClassTemplates.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id}>
                         {cls.name}
                         {cls.schoolName ? ` · ${cls.schoolName}` : ""}
