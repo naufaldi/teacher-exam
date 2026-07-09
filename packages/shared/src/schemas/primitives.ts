@@ -53,6 +53,9 @@ export const ExamTypeSchema = Schema.Literal(
 )
 export type ExamType = typeof ExamTypeSchema.Type
 
+export const SemesterSchema = Schema.Literal("ganjil", "genap")
+export type Semester = typeof SemesterSchema.Type
+
 /**
  * Tahun pelajaran Indonesia: `YYYY/YYYY` where the second year is first + 1.
  */

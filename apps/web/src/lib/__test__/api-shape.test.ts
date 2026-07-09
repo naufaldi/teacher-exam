@@ -29,6 +29,7 @@ describe("api composed shape", () => {
     expect(typeof api.exams.streamDiscussion).toBe("function")
     expect(typeof api.ai.generate).toBe("function")
     expect(typeof api.pdfUploads.create).toBe("function")
+    expect(typeof api.pdfUploads.get).toBe("function")
     expect(typeof api.curriculum.catalog).toBe("function")
     expect(typeof api.questions.regenerate).toBe("function")
     expect(typeof api.me.update).toBe("function")

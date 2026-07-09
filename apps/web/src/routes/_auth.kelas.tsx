@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import type { ClassEntity, CreateClassInput } from "@teacher-exam/shared"
+import type { ClassEntity, CreateClassInput, Semester } from "@teacher-exam/shared"
 import {
   CreateClassInputSchema,
   isCompleteClassTemplate
@@ -24,6 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
   useToast
 } from "@teacher-exam/ui"
 import { Either, Schema } from "effect"
@@ -39,8 +40,17 @@ type ClassTemplateForm = {
   name: string
   schoolName: string
   academicYear: string
+  semester: Semester | ""
   defaultExamType: CreateClassInput["defaultExamType"]
+  defaultExamDate: string
+  defaultDurationMinutes: string
+  defaultInstructions: string
 }
+
+const SEMESTER_OPTIONS: ReadonlyArray<{ value: Semester; label: string }> = [
+  { value: "ganjil", label: "Ganjil" },
+  { value: "genap", label: "Genap" }
+]
 
 type TemplateFieldErrors = {
   name?: string
@@ -65,7 +75,11 @@ function makeEmptyForm(): ClassTemplateForm {
     name: "",
     schoolName: "",
     academicYear: "",
-    defaultExamType: "formatif"
+    semester: "",
+    defaultExamType: "formatif",
+    defaultExamDate: "",
+    defaultDurationMinutes: "",
+    defaultInstructions: ""
   }
 }
 
@@ -74,8 +88,42 @@ function formFromClass(cls: ClassEntity): ClassTemplateForm {
     name: cls.name,
     schoolName: cls.schoolName ?? "",
     academicYear: cls.academicYear ?? "",
-    defaultExamType: cls.defaultExamType ?? "formatif"
+    semester: cls.semester ?? "",
+    defaultExamType: cls.defaultExamType ?? "formatif",
+    defaultExamDate: cls.defaultExamDate ?? "",
+    defaultDurationMinutes: cls.defaultDurationMinutes !== null
+      ? String(cls.defaultDurationMinutes)
+      : "",
+    defaultInstructions: cls.defaultInstructions ?? ""
   }
+}
+
+function buildClassPayload(form: ClassTemplateForm): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    name: form.name,
+    schoolName: form.schoolName,
+    academicYear: form.academicYear,
+    defaultExamType: form.defaultExamType
+  }
+  if (form.semester === "ganjil" || form.semester === "genap") {
+    payload["semester"] = form.semester
+  }
+  const examDate = form.defaultExamDate.trim()
+  if (examDate.length > 0) {
+    payload["defaultExamDate"] = examDate
+  }
+  const durationRaw = form.defaultDurationMinutes.trim()
+  if (durationRaw.length > 0) {
+    const duration = Number(durationRaw)
+    if (Number.isInteger(duration)) {
+      payload["defaultDurationMinutes"] = duration
+    }
+  }
+  const instructions = form.defaultInstructions.trim()
+  if (instructions.length > 0) {
+    payload["defaultInstructions"] = instructions
+  }
+  return payload
 }
 
 function parseErrorMessage(error: unknown, fallback: string): string {
@@ -110,12 +158,7 @@ function firstIssueMessage(error: unknown, fallback: string): string {
 function validateTemplateForm(
   form: ClassTemplateForm
 ): Either.Either<CreateClassInput, TemplateFieldErrors> {
-  const payload = {
-    name: form.name,
-    schoolName: form.schoolName,
-    academicYear: form.academicYear,
-    defaultExamType: form.defaultExamType
-  }
+  const payload = buildClassPayload(form)
   const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)(payload)
   if (Either.isRight(decoded)) {
     return Either.right(decoded.right)
@@ -286,7 +329,7 @@ function KelasPageImpl() {
     <div className="space-y-6">
       <PageHeader
         title="Kelas"
-        subtitle="Kelola template identitas kelas untuk Detail Lembar Ujian."
+        subtitle="Template Kelas = header sekolah (nama SDN, tahun, semester, petunjuk). Beda dari menu Template = preset Generate (Coming Soon)."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
@@ -357,37 +400,103 @@ function KelasPageImpl() {
                   null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="class-exam-type">Jenis Ujian</Label>
+                <Label htmlFor="class-semester">Semester</Label>
                 <Select
-                  value={createForm.defaultExamType}
+                  {...(createForm.semester !== "" ? { value: createForm.semester } : {})}
                   onValueChange={(value) =>
                     setCreateForm((prev) => ({
                       ...prev,
-                      defaultExamType: value as ClassTemplateForm["defaultExamType"]
+                      semester: value as Semester
                     }))}
                 >
-                  <SelectTrigger
-                    id="class-exam-type"
-                    aria-invalid={createErrors.defaultExamType !== undefined}
-                  >
-                    <SelectValue />
+                  <SelectTrigger id="class-semester">
+                    <SelectValue placeholder="Pilih semester" />
                   </SelectTrigger>
                   <SelectContent>
-                    {EXAM_TYPE_OPTIONS.map((option) => (
+                    {SEMESTER_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {createErrors.defaultExamType !== undefined ?
-                  (
-                    <p className="text-caption text-danger-600" role="alert">
-                      {createErrors.defaultExamType}
-                    </p>
-                  ) :
-                  null}
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-exam-type">Jenis Ujian</Label>
+              <Select
+                value={createForm.defaultExamType}
+                onValueChange={(value) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    defaultExamType: value as ClassTemplateForm["defaultExamType"]
+                  }))}
+              >
+                <SelectTrigger
+                  id="class-exam-type"
+                  aria-invalid={createErrors.defaultExamType !== undefined}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXAM_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {createErrors.defaultExamType !== undefined ?
+                (
+                  <p className="text-caption text-danger-600" role="alert">
+                    {createErrors.defaultExamType}
+                  </p>
+                ) :
+                null}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="class-duration">Durasi default (menit)</Label>
+                <Input
+                  id="class-duration"
+                  type="number"
+                  min={1}
+                  value={createForm.defaultDurationMinutes}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      defaultDurationMinutes: e.target.value
+                    }))}
+                  placeholder="60"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="class-exam-date">Tanggal ujian default</Label>
+                <Input
+                  id="class-exam-date"
+                  type="date"
+                  value={createForm.defaultExamDate}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      defaultExamDate: e.target.value
+                    }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-instructions">Petunjuk default</Label>
+              <Textarea
+                id="class-instructions"
+                value={createForm.defaultInstructions}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    defaultInstructions: e.target.value
+                  }))}
+                placeholder="Kerjakan dengan teliti."
+                rows={3}
+              />
             </div>
             <Button type="submit" size="sm" className="w-full">
               <Plus size={14} />
@@ -427,6 +536,11 @@ function KelasPageImpl() {
                         <p className="font-medium text-text-primary truncate">{cls.name}</p>
                         <p className="text-body-sm text-text-tertiary">
                           {cls.schoolName ?? (cls.grade ? `Kelas ${cls.grade}` : "Belum ada template")}
+                          {cls.semester === "ganjil" ?
+                            " · Ganjil" :
+                            cls.semester === "genap" ?
+                            " · Genap" :
+                            ""}
                         </p>
                       </div>
                       <button
@@ -461,9 +575,9 @@ function KelasPageImpl() {
                 <div className="rounded-lg border border-border-default bg-bg-surface p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <h2 className="font-semibold text-text-primary">Template Lembar Ujian</h2>
+                      <h2 className="font-semibold text-text-primary">Template Kelas</h2>
                       <p className="text-body-sm text-text-tertiary">
-                        Simpan identitas kelas untuk mengisi Detail Lembar Ujian lebih cepat.
+                        Header sekolah untuk Detail Lembar Ujian — bukan preset Generate di menu Template.
                       </p>
                     </div>
                     <Button
@@ -560,6 +674,28 @@ function KelasPageImpl() {
                         null}
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="edit-semester">Semester template</Label>
+                      <Select
+                        {...(editForm.semester !== "" ? { value: editForm.semester } : {})}
+                        onValueChange={(value) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            semester: value as Semester
+                          }))}
+                      >
+                        <SelectTrigger id="edit-semester">
+                          <SelectValue placeholder="Pilih semester" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SEMESTER_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="edit-exam-type">Jenis ujian template</Label>
                       <Select
                         value={editForm.defaultExamType}
@@ -590,6 +726,48 @@ function KelasPageImpl() {
                           </p>
                         ) :
                         null}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-duration">Durasi default template</Label>
+                      <Input
+                        id="edit-duration"
+                        type="number"
+                        min={1}
+                        value={editForm.defaultDurationMinutes}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            defaultDurationMinutes: e.target.value
+                          }))}
+                        placeholder="60"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-exam-date">Tanggal ujian default</Label>
+                      <Input
+                        id="edit-exam-date"
+                        type="date"
+                        value={editForm.defaultExamDate}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            defaultExamDate: e.target.value
+                          }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Label htmlFor="edit-instructions">Petunjuk default template</Label>
+                      <Textarea
+                        id="edit-instructions"
+                        value={editForm.defaultInstructions}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            defaultInstructions: e.target.value
+                          }))}
+                        placeholder="Kerjakan dengan teliti."
+                        rows={3}
+                      />
                     </div>
                   </div>
                 </div>

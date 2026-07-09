@@ -24,6 +24,7 @@ function makeBankedExamRow(overrides: Record<string, unknown> = {}) {
     examType: "formatif",
     schoolName: null,
     academicYear: null,
+  semester: null,
     examDate: null,
     durationMinutes: null,
     instructions: null,

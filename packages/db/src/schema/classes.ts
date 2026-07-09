@@ -18,6 +18,7 @@ export const classes = pgTable(
     defaultExamDate: text("default_exam_date"),
     defaultDurationMinutes: integer("default_duration_minutes"),
     defaultInstructions: text("default_instructions"),
+    semester: text("semester"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },

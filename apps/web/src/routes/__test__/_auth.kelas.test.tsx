@@ -1,7 +1,7 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import type { ClassEntity } from "@teacher-exam/shared"
 import { ToastProvider } from "@teacher-exam/ui"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mockApiResolvedValueOnce } from "../../lib/api-test-utils.js"
@@ -68,6 +68,7 @@ const baseClass: ClassEntity = {
   subject: "matematika",
   schoolName: "SDN Jakarta",
   academicYear: "2025/2026",
+  semester: "ganjil",
   defaultExamType: "formatif",
   defaultExamDate: "2026-05-14",
   defaultDurationMinutes: 60,
@@ -87,6 +88,7 @@ function renderRoute() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  Element.prototype.scrollIntoView = vi.fn()
 })
 
 describe("Kelas route", () => {
@@ -101,7 +103,7 @@ describe("Kelas route", () => {
     expect(screen.queryByText(/segera hadir/i)).not.toBeInTheDocument()
   })
 
-  it("only shows class identity fields for the class template", async () => {
+  it("shows full sheet default fields for the class template", async () => {
     mockApiResolvedValueOnce(apiMocks.classesList, [])
 
     renderRoute()
@@ -109,13 +111,13 @@ describe("Kelas route", () => {
     expect(await screen.findByLabelText(/nama kelas/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/nama sekolah/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/tahun pelajaran/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/semester/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/jenis ujian/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/durasi default/i)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/tanggal ujian default/i)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/petunjuk default/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/durasi default/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/petunjuk default/i)).toBeInTheDocument()
   })
 
-  it("creates a class with class identity fields only", async () => {
+  it("creates a class with full sheet default fields", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(apiMocks.classesList, [])
     mockApiResolvedValueOnce(apiMocks.classesCreate, baseClass)
@@ -125,6 +127,10 @@ describe("Kelas route", () => {
     await user.type(await screen.findByLabelText(/nama kelas/i), "Kelas 5A")
     await user.type(screen.getByLabelText(/nama sekolah/i), "SDN Jakarta")
     await user.type(screen.getByLabelText(/tahun pelajaran/i), "2025/2026")
+    fireEvent.click(screen.getByRole("combobox", { name: /^semester$/i }))
+    fireEvent.click(screen.getByRole("option", { name: /^ganjil$/i }))
+    await user.type(screen.getByLabelText(/durasi default/i), "60")
+    await user.type(screen.getByLabelText(/petunjuk default/i), "Kerjakan dengan teliti.")
     await user.click(screen.getByRole("button", { name: /tambah kelas/i }))
 
     await waitFor(() => {
@@ -132,7 +138,10 @@ describe("Kelas route", () => {
         name: "Kelas 5A",
         schoolName: "SDN Jakarta",
         academicYear: "2025/2026",
-        defaultExamType: "formatif"
+        semester: "ganjil",
+        defaultExamType: "formatif",
+        defaultDurationMinutes: 60,
+        defaultInstructions: "Kerjakan dengan teliti."
       })
     })
     expect(await screen.findByText(/kelas ditambahkan/i)).toBeInTheDocument()
@@ -212,12 +221,28 @@ describe("Kelas route", () => {
     expect(await screen.findByText(/lengkapi template kelas/i)).toBeInTheDocument()
   })
 
-  it("updates class identity fields on selected class detail", async () => {
+  it("shows semester in the class list", async () => {
+    mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
+
+    renderRoute()
+
+    expect(await screen.findByText("Kelas 5A")).toBeInTheDocument()
+    expect(
+      screen.getByText((content, element) =>
+        element?.tagName === "P" &&
+        /SDN Jakarta/i.test(content) &&
+        /Ganjil/i.test(element.textContent ?? "")
+      )
+    ).toBeInTheDocument()
+  })
+
+  it("updates full sheet default fields on selected class detail", async () => {
     const user = userEvent.setup()
     mockApiResolvedValueOnce(apiMocks.classesList, [baseClass])
     mockApiResolvedValueOnce(apiMocks.classesUpdate, {
       ...baseClass,
-      schoolName: "SDN Baru"
+      schoolName: "SDN Baru",
+      semester: "genap"
     })
 
     renderRoute()
@@ -226,7 +251,12 @@ describe("Kelas route", () => {
     const schoolInput = await screen.findByLabelText(/nama sekolah template/i)
     await user.clear(schoolInput)
     await user.type(schoolInput, "SDN Baru")
-    expect(screen.queryByLabelText(/petunjuk default template/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/durasi default template/i)).toHaveValue(60)
+    expect(screen.getByLabelText(/petunjuk default template/i)).toHaveValue(
+      "Kerjakan dengan teliti."
+    )
+    fireEvent.click(screen.getByRole("combobox", { name: /semester template/i }))
+    fireEvent.click(screen.getByRole("option", { name: /^genap$/i }))
     await user.click(screen.getByRole("button", { name: /simpan template/i }))
 
     await waitFor(() => {
@@ -236,7 +266,11 @@ describe("Kelas route", () => {
           name: "Kelas 5A",
           schoolName: "SDN Baru",
           academicYear: "2025/2026",
-          defaultExamType: "formatif"
+          semester: "genap",
+          defaultExamType: "formatif",
+          defaultExamDate: "2026-05-14",
+          defaultDurationMinutes: 60,
+          defaultInstructions: "Kerjakan dengan teliti."
         }
       )
     })

@@ -12,6 +12,7 @@ export function buildExamUpdateData(input: UpdateExamInput): Record<string, unkn
   if (input.title !== undefined) updateData["title"] = input.title
   if (input.schoolName !== undefined) updateData["schoolName"] = input.schoolName
   if (input.academicYear !== undefined) updateData["academicYear"] = input.academicYear
+  if (input.semester !== undefined) updateData["semester"] = input.semester
   if (input.examType !== undefined) updateData["examType"] = input.examType
   if (input.examDate !== undefined) updateData["examDate"] = input.examDate
   if (input.durationMinutes !== undefined) updateData["durationMinutes"] = input.durationMinutes

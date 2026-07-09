@@ -27,6 +27,7 @@ describe("classes table schema", () => {
     expect((classes.defaultExamDate as { notNull: boolean }).notNull).toBe(false)
     expect((classes.defaultDurationMinutes as { notNull: boolean }).notNull).toBe(false)
     expect((classes.defaultInstructions as { notNull: boolean }).notNull).toBe(false)
+    expect((classes.semester as { notNull: boolean }).notNull).toBe(false)
   })
 })
 
@@ -88,5 +89,17 @@ describe("class sheet defaults migration", () => {
     expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_exam_date\" text")
     expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_duration_minutes\" integer")
     expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"default_instructions\" text")
+  })
+})
+
+describe("semester migration", () => {
+  const sql = readFileSync(
+    join(process.cwd(), "src/migrations/0020_add_semester.sql"),
+    "utf8"
+  )
+
+  test("adds semester on classes and exams", () => {
+    expect(sql).toContain("ALTER TABLE \"classes\" ADD COLUMN \"semester\" text")
+    expect(sql).toContain("ALTER TABLE \"exams\" ADD COLUMN \"semester\" text")
   })
 })
