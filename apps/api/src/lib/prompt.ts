@@ -2,6 +2,7 @@ import type { ExamDifficulty, ExamSubject, ExamType } from "@teacher-exam/shared
 import type { Composition } from "./exam-type-profile"
 import { EXAM_TYPE_PROFILE, resolveDifficultyDist } from "./exam-type-profile"
 import { buildMatematikaLatexPromptRules } from "./matematika-latex-prompt.js"
+import { isMatematikaSubjectLabel } from "./should-validate-latex.js"
 import { gradeAppropriatenessRules, phaseRoleCopyForGrade } from "./phase-prompt.js"
 import {
   authorityOrderBlock,
@@ -129,7 +130,9 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     throw new Error("buildExamPrompt: topics must contain at least one item")
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
-  const matematikaRules = input.subjectLabel === "Matematika" ? [...buildMatematikaLatexPromptRules()] : []
+  const matematikaRules = isMatematikaSubjectLabel(input.subjectLabel)
+    ? [...buildMatematikaLatexPromptRules()]
+    : []
 
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
   const gradeRules = gradeAppropriatenessRules(input.grade)
@@ -238,7 +241,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
 }
 
 export function buildRegeneratePrompt(input: BuildRegeneratePromptInput): BuiltPrompt {
-  const isMatematika = input.subjectLabel === "Matematika"
+  const isMatematika = isMatematikaSubjectLabel(input.subjectLabel)
   const matematikaRules = isMatematika ? [...buildMatematikaLatexPromptRules()] : []
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
 

@@ -37,4 +37,21 @@ describe("GenerateProgressDialog", () => {
     const steps = screen.getAllByRole("listitem")
     expect(steps).toHaveLength(4)
   })
+
+  it("pdf_guru mode does not claim CP analysis (#233)", () => {
+    render(
+      <GenerateProgressDialog
+        open
+        progress={5}
+        totalSoal={20}
+        phaseLabel="Fase C"
+        sourceMode="pdf_guru"
+      />
+    )
+
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).not.toHaveTextContent(/Capaian Pembelajaran/i)
+    expect(dialog).not.toHaveTextContent(/menganalisis.*CP/i)
+    expect(dialog).toHaveTextContent(/Menganalisis materi PDF/i)
+  })
 })

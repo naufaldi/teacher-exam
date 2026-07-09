@@ -20,6 +20,7 @@ import {
   resolveInputSubjectLabel
 } from "./ai-generate-mappers"
 import { logAiEvent } from "./ai-log"
+import { shouldValidateLatexForGenerate } from "./should-validate-latex.js"
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
 import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
 import { fetchExamWithQuestions } from "./exams-query"
@@ -326,7 +327,11 @@ export function executeGenerateExam(
           user,
           ...(pdfBytes !== undefined ? { pdfBytes } : {}),
           expectedCount: totalSoal,
-          shouldValidateLatex: input.subject === "matematika" && sourceMode !== "pdf_guru",
+          shouldValidateLatex: shouldValidateLatexForGenerate({
+            sourceMode,
+            ...(input.subject !== undefined ? { subject: input.subject } : {}),
+            subjectLabel: resolveInputSubjectLabel(input)
+          }),
           reviewMode: input.reviewMode,
           examId: resolvedExamId,
           createdAt: now,

@@ -142,6 +142,7 @@ const VALID_PUBLIC_EXAM_WITH_QUESTIONS = {
   status: "final",
   schoolName: null,
   academicYear: null,
+  semester: null,
   examType: "formatif",
   examDate: null,
   durationMinutes: null,

@@ -219,6 +219,7 @@ const VALID_EXAM = {
   status: "draft",
   schoolName: null,
   academicYear: null,
+  semester: null,
   examType: "formatif",
   examDate: null,
   durationMinutes: null,
@@ -241,6 +242,31 @@ describe("ExamSchema.topics", () => {
   it("rejects exam without topics array", () => {
     const bad = { ...VALID_EXAM, topics: undefined }
     const result = Schema.decodeUnknownEither(ExamSchema)(bad)
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("ExamSchema.semester", () => {
+  it("decodes null semester", () => {
+    const result = Schema.decodeUnknownEither(ExamSchema)(VALID_EXAM)
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right.semester).toBeNull()
+    }
+  })
+
+  it("decodes ganjil and genap", () => {
+    for (const semester of ["ganjil", "genap"] as const) {
+      const result = Schema.decodeUnknownEither(ExamSchema)({ ...VALID_EXAM, semester })
+      expect(Either.isRight(result)).toBe(true)
+      if (Either.isRight(result)) {
+        expect(result.right.semester).toBe(semester)
+      }
+    }
+  })
+
+  it("rejects invalid semester", () => {
+    const result = Schema.decodeUnknownEither(ExamSchema)({ ...VALID_EXAM, semester: "tengah" })
     expect(Either.isLeft(result)).toBe(true)
   })
 })

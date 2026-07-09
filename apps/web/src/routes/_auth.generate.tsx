@@ -5,6 +5,7 @@ import type {
   ExamType,
   Grade,
   PdfUploadId,
+  PdfUploadStatus,
   PdfUploadSummary,
   SourceMode,
   TemplateApplyResponse
@@ -89,12 +90,14 @@ function GeneratePage() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("default")
   const [freeTopic, setFreeTopic] = useState<string>("")
   const [uploadedPdfId, setUploadedPdfId] = useState<string | null>(null)
+  const [uploadPdfStatus, setUploadPdfStatus] = useState<PdfUploadStatus | null>(null)
+  const [uploadIngestError, setUploadIngestError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [pdfSource, setPdfSource] = useState<"upload" | "library">("upload")
   const [libraryItems, setLibraryItems] = useState<Array<PdfUploadSummary>>([])
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [selectedLibraryPdf, setSelectedLibraryPdf] = useState<PdfUploadSummary | null>(null)
-  const [includePdfImages, setIncludePdfImages] = useState(false)
+  const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
@@ -139,6 +142,13 @@ function GeneratePage() {
     setComposition(DEFAULT_COMPOSITION_BY_JENIS[next])
   }, [])
 
+  const clearUploadPoll = useCallback(() => {
+    if (uploadPollRef.current !== null) {
+      clearInterval(uploadPollRef.current)
+      uploadPollRef.current = null
+    }
+  }, [])
+
   const clearTimers = useCallback(() => {
     if (progressIntervalRef.current !== null) {
       clearInterval(progressIntervalRef.current)
@@ -156,8 +166,11 @@ function GeneratePage() {
 
   // Cleanup on unmount
   useEffect(() => {
-    return clearTimers
-  }, [clearTimers])
+    return () => {
+      clearTimers()
+      clearUploadPoll()
+    }
+  }, [clearTimers, clearUploadPoll])
 
   // Prefill from a template applied via router navigation state (see /templates).
   const location = useLocation()
@@ -177,6 +190,8 @@ function GeneratePage() {
     }
     if (t.composition !== undefined) {
       setComposition(t.composition)
+    } else if (t.totalSoal !== undefined) {
+      setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[t.examType ?? "formatif"], t.totalSoal))
     }
     if (t.topics.length > 0) {
       setTopiks([...t.topics])
@@ -286,10 +301,13 @@ function GeneratePage() {
     : sourceMode === "pdf_guru"
     ? freeTopic.trim().length >= 10
     : true
-  const pdfSatisfied = !showPdfControls ||
-    selectedFile !== null ||
-    uploadedPdfId !== null ||
-    selectedLibraryPdf?.status === "ready"
+  const readyPdfId = selectedLibraryPdf?.status === "ready"
+    ? selectedLibraryPdf.id
+    : (uploadPdfStatus === "ready" && uploadedPdfId !== null ? uploadedPdfId : null)
+  const pdfSatisfied = !showPdfControls || readyPdfId !== null
+  const pdfIngestPending = showPdfControls && (
+    uploadPdfStatus === "uploaded" || uploadPdfStatus === "processing"
+  )
 
   useEffect(() => {
     if (!showPdfControls || pdfSource !== "library") return
@@ -330,25 +348,18 @@ function GeneratePage() {
     return () => clearInterval(handle)
   }, [libraryHasPending, pdfSource, showPdfControls])
 
-  const filledCount = [
-    kelas,
-    mapel,
-    topicsSatisfied ? "ok" : "",
-    kesulitan,
-    examType,
-    ...(showPdfControls && pdfSatisfied ? ["pdf"] : [])
-  ].filter(Boolean).length
-
   const handleSourceModeChange = useCallback((next: SourceMode) => {
     setSourceMode(next)
     setFieldErrors({})
     if (next === "default") {
+      clearUploadPoll()
       setSelectedFile(null)
       setUploadedPdfId(null)
+      setUploadPdfStatus(null)
+      setUploadIngestError(null)
       setFreeTopic("")
       setCustomMapel("")
       setSelectedLibraryPdf(null)
-      setIncludePdfImages(false)
       setPdfSource("upload")
     } else if (next !== "pdf_guru") {
       setCustomMapel("")
@@ -357,7 +368,42 @@ function GeneratePage() {
       setCustomTopik("")
       setShowCustomInput(false)
     }
-  }, [])
+  }, [clearUploadPoll])
+
+  const startUploadIngest = useCallback((file: File) => {
+    clearUploadPoll()
+    setUploadIngestError(null)
+    setUploadPdfStatus("uploaded")
+    setUploadedPdfId(null)
+    void api.pdfUploads.create(file).then((uploadResult) => {
+      if (Either.isLeft(uploadResult)) {
+        setUploadPdfStatus("failed")
+        setUploadIngestError("Gagal mengunggah PDF. Coba unggah ulang.")
+        return
+      }
+      const upload = uploadResult.right
+      setUploadedPdfId(upload.id)
+      setUploadPdfStatus(upload.status)
+      if (upload.status === "ready") return
+      if (upload.status === "failed") {
+        setUploadIngestError("PDF gagal diproses. Hapus dan unggah ulang.")
+        return
+      }
+      uploadPollRef.current = setInterval(() => {
+        void api.pdfUploads.get(upload.id).then((detailResult) => {
+          if (Either.isLeft(detailResult)) return
+          const detail = detailResult.right
+          setUploadPdfStatus(detail.status)
+          if (detail.status === "ready" || detail.status === "failed") {
+            clearUploadPoll()
+            if (detail.status === "failed") {
+              setUploadIngestError(detail.errorMessage ?? "PDF gagal diproses. Hapus dan unggah ulang.")
+            }
+          }
+        })
+      }, 2000)
+    })
+  }, [clearUploadPoll])
 
   const runGenerate = useCallback(() => {
     const topics: Array<string> = showCustomInput && customTopik.trim() !== ""
@@ -426,7 +472,6 @@ function GeneratePage() {
         classContext: fokusGuru.trim() !== "" ? fokusGuru.trim() : undefined,
         exampleQuestions: contohSoal.trim() !== "" ? contohSoal.trim() : undefined,
         ...(sourceMode === "pdf_guru" && freeTopic.trim() !== "" ? { freeTopic: freeTopic.trim() } : {}),
-        ...(showPdfControls && includePdfImages ? { includePdfImages: true } : {}),
         ...(pdfUploadId !== undefined ? { pdfUploadId: pdfUploadId as PdfUploadId } : {})
       }).then((result) => {
         const payload = unwrapApiEither(result)
@@ -463,30 +508,8 @@ function GeneratePage() {
       })
     }
 
-    if (showPdfControls && selectedFile !== null) {
-      void api.pdfUploads.create(selectedFile).then((uploadResult) => {
-        const upload = unwrapApiEither(uploadResult)
-        setUploadedPdfId(upload.id)
-        startGenerate(upload.id)
-      }).catch((err: unknown) => {
-        clearTimers()
-        setIsGenerating(false)
-        setProgress(0)
-        if (err instanceof ApiError) {
-          setGenerateErrorMessage(err.message)
-        }
-        setShowErrorDialog(true)
-      })
-      return
-    }
-
-    if (showPdfControls && selectedLibraryPdf?.status === "ready") {
-      startGenerate(selectedLibraryPdf.id)
-      return
-    }
-
-    if (showPdfControls && uploadedPdfId !== null) {
-      startGenerate(uploadedPdfId)
+    if (showPdfControls && readyPdfId !== null) {
+      startGenerate(readyPdfId)
       return
     }
 
@@ -504,15 +527,13 @@ function GeneratePage() {
     kesulitan,
     mapel,
     navigate,
+    readyPdfId,
     reviewMode,
-    selectedFile,
     showCustomInput,
-    selectedLibraryPdf,
     showPdfControls,
     sourceMode,
     topiks,
-    totalSoal,
-    uploadedPdfId
+    totalSoal
   ])
 
   const selectedPdfLabel = selectedFile?.name ?? selectedLibraryPdf?.filename ?? null
@@ -553,8 +574,22 @@ function GeneratePage() {
       (sourceMode === "pdf_guru" || (catalogStatus === "ready" && selectedSubjectReady))
   )
   const isGenerateDisabled = Boolean(
-    !coreFormReady || (babRequired && effectiveTopiks.length === 0)
+    !coreFormReady ||
+      (babRequired && effectiveTopiks.length === 0) ||
+      (showPdfControls && !pdfSatisfied) ||
+      pdfIngestPending ||
+      uploadPdfStatus === "failed"
   )
+  const filledSlots = [
+    kelas,
+    mapelSatisfied ? "mapel" : "",
+    topicsSatisfied ? "ok" : "",
+    kesulitan,
+    examType,
+    ...(showPdfControls ? [pdfSatisfied ? "pdf" : ""] : [])
+  ]
+  const filledCount = filledSlots.filter(Boolean).length
+  const filledTotal = showPdfControls ? 6 : 5
 
   const topikSummary = effectiveTopiks.join(", ")
   const sidebarMateriLabel = sourceMode === "pdf_guru"
@@ -685,17 +720,20 @@ function GeneratePage() {
                       <FileUpload
                         onFileSelect={(file) => {
                           setSelectedFile(file)
-                          setUploadedPdfId(null)
                           setSelectedLibraryPdf(null)
                           setFieldErrors((prev) => {
                             const next = { ...prev }
                             delete next.pdf
                             return next
                           })
+                          startUploadIngest(file)
                         }}
                         onFileRemove={() => {
+                          clearUploadPoll()
                           setSelectedFile(null)
                           setUploadedPdfId(null)
+                          setUploadPdfStatus(null)
+                          setUploadIngestError(null)
                         }}
                         selectedFile={selectedFile}
                       />
@@ -706,9 +744,16 @@ function GeneratePage() {
                         loading={libraryLoading}
                         selectedId={selectedLibraryPdf?.id ?? null}
                         onSelect={(item) => {
+                          clearUploadPoll()
                           setSelectedLibraryPdf(item)
                           setSelectedFile(null)
-                          setUploadedPdfId(item.id)
+                          setUploadedPdfId(item.status === "ready" ? item.id : null)
+                          setUploadPdfStatus(item.status)
+                          setUploadIngestError(
+                            item.status === "failed"
+                              ? "PDF gagal diproses. Pilih dokumen lain atau unggah ulang."
+                              : null
+                          )
                           setFieldErrors((prev) => {
                             const next = { ...prev }
                             delete next.pdf
@@ -722,16 +767,42 @@ function GeneratePage() {
                         }}
                       />
                     )}
+                  {pdfIngestPending ?
+                    (
+                      <p className="text-caption text-text-secondary" role="status">
+                        Sedang memproses PDF… tunggu hingga siap sebelum generate.
+                      </p>
+                    ) :
+                    null}
+                  {uploadPdfStatus === "ready" && pdfSource === "upload" ?
+                    (
+                      <p className="text-caption text-success-700" role="status">
+                        PDF siap digunakan.
+                      </p>
+                    ) :
+                    null}
+                  {uploadIngestError !== null ?
+                    (
+                      <p className="text-caption text-danger-fg" role="alert">
+                        {uploadIngestError}
+                      </p>
+                    ) :
+                    null}
                   {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
                     (
-                      <label className="flex items-center gap-2 text-body-sm cursor-pointer">
+                      <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-border-ui"
-                          checked={includePdfImages}
-                          onChange={(event) => setIncludePdfImages(event.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-border-ui"
+                          checked={false}
+                          disabled
+                          aria-label="Sertakan gambar dari PDF (segera hadir)"
                         />
-                        Sertakan gambar dari PDF (maks. ~30% soal)
+                        <span>
+                          Sertakan gambar dari PDF
+                          {" "}
+                          <span className="text-caption">(segera hadir)</span>
+                        </span>
                       </label>
                     ) :
                     null}
@@ -1274,7 +1345,9 @@ function GeneratePage() {
                 Generate Lembar
               </Button>
               <p className="text-caption text-text-tertiary text-center mt-2">
-                AI akan membuat {totalSoal} soal sesuai Capaian Pembelajaran {phaseLabel}
+                {sourceMode === "pdf_guru"
+                  ? `AI akan membuat ${totalSoal} soal berdasarkan PDF yang dipilih`
+                  : `AI akan membuat ${totalSoal} soal sesuai Capaian Pembelajaran ${phaseLabel}`}
               </p>
             </div>
           </section>
@@ -1294,9 +1367,12 @@ function GeneratePage() {
                 Ringkasan Konfigurasi
               </h3>
               <div className="flex items-center gap-2">
-                <Progress value={filledCount * 20} className="h-1.5 flex-1" />
+                <Progress
+                  value={filledTotal > 0 ? (filledCount / filledTotal) * 100 : 0}
+                  className="h-1.5 flex-1"
+                />
                 <span className="text-caption text-text-tertiary tabular-nums">
-                  {filledCount}/5
+                  {filledCount}/{filledTotal}
                 </span>
               </div>
             </div>
@@ -1398,6 +1474,7 @@ function GeneratePage() {
         progress={progress}
         totalSoal={totalSoal}
         questionsCount={streamQuestionsCount}
+        sourceMode={sourceMode}
       />
       <GenerateErrorDialog
         open={showErrorDialog}

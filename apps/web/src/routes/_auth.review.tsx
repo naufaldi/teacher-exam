@@ -1,5 +1,12 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import type { ClassEntity, CreateClassInput, ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
+import type {
+  ClassEntity,
+  CreateClassInput,
+  ExamType,
+  Question,
+  Semester,
+  UpdateExamInput
+} from "@teacher-exam/shared"
 import {
   CreateClassInputSchema,
   isCompleteClassTemplate,
@@ -60,7 +67,13 @@ function buildMetadataPatchFromClassTemplate(cls: ClassEntity): Partial<UpdateEx
   return {
     ...(cls.schoolName ? { schoolName: cls.schoolName } : {}),
     ...(cls.academicYear ? { academicYear: cls.academicYear } : {}),
-    ...(cls.defaultExamType ? { examType: cls.defaultExamType } : {})
+    ...(cls.semester ? { semester: cls.semester } : {}),
+    ...(cls.defaultExamType ? { examType: cls.defaultExamType } : {}),
+    ...(cls.defaultExamDate ? { examDate: cls.defaultExamDate } : {}),
+    ...(cls.defaultDurationMinutes !== null
+      ? { durationMinutes: cls.defaultDurationMinutes }
+      : {}),
+    ...(cls.defaultInstructions ? { instructions: cls.defaultInstructions } : {})
   }
 }
 
@@ -70,14 +83,37 @@ function buildClassTemplatePayload(
     academicYear: string
     examType: ExamType
     schoolName: string
+    semester?: Semester | ""
+    examDate?: string
+    durationMinutes?: number
+    instructions?: string
   }
 ): Either.Either<CreateClassInput, string> {
-  const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
+  const payload: Record<string, unknown> = {
     name: name.trim(),
     schoolName: metadata.schoolName.trim(),
     academicYear: metadata.academicYear.trim(),
     defaultExamType: metadata.examType
-  })
+  }
+  if (metadata.semester === "ganjil" || metadata.semester === "genap") {
+    payload["semester"] = metadata.semester
+  }
+  const examDate = metadata.examDate?.trim() ?? ""
+  if (examDate.length > 0) {
+    payload["defaultExamDate"] = examDate
+  }
+  if (
+    metadata.durationMinutes !== undefined &&
+    Number.isInteger(metadata.durationMinutes) &&
+    metadata.durationMinutes > 0
+  ) {
+    payload["defaultDurationMinutes"] = metadata.durationMinutes
+  }
+  const instructions = metadata.instructions?.trim() ?? ""
+  if (instructions.length > 0) {
+    payload["defaultInstructions"] = instructions
+  }
+  const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)(payload)
   if (Either.isLeft(decoded)) {
     return Either.left("Lengkapi nama sekolah, tahun pelajaran, dan jenis ujian sebelum menyimpan template.")
   }
@@ -116,6 +152,7 @@ export const Route = createFileRoute("/_auth/review")({
     examDraftStore.setMetadata({
       schoolName: exam.schoolName ?? "",
       academicYear: exam.academicYear ?? "",
+      semester: exam.semester ?? "",
       examDate: exam.examDate ?? "",
       durationMinutes: exam.durationMinutes ?? 60,
       instructions: exam.instructions ?? ""
@@ -259,7 +296,8 @@ function ReviewPage() {
     examDate = "",
     examType,
     instructions = "",
-    schoolName = ""
+    schoolName = "",
+    semester = ""
   } = draft.metadata
 
   const persistMetaField = useCallback(async (patch: Partial<UpdateExamInput>) => {
@@ -287,7 +325,11 @@ function ReviewPage() {
     examDraftStore.setMetadata({
       ...(patch.schoolName !== undefined ? { schoolName: patch.schoolName } : {}),
       ...(patch.academicYear !== undefined ? { academicYear: patch.academicYear } : {}),
-      ...(patch.examType !== undefined ? { examType: patch.examType } : {})
+      ...(patch.semester !== undefined ? { semester: patch.semester } : {}),
+      ...(patch.examType !== undefined ? { examType: patch.examType } : {}),
+      ...(patch.examDate !== undefined ? { examDate: patch.examDate } : {}),
+      ...(patch.durationMinutes !== undefined ? { durationMinutes: patch.durationMinutes } : {}),
+      ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {})
     })
 
     setApplyingClassTemplate(true)
@@ -311,7 +353,11 @@ function ReviewPage() {
       {
         academicYear,
         examType,
-        schoolName
+        schoolName,
+        semester,
+        examDate,
+        durationMinutes,
+        instructions
       }
     )
 
@@ -1283,6 +1329,9 @@ function ReviewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(220px,320px)_auto] gap-3 md:min-w-[460px]">
               <div className="space-y-1.5">
                 <Label htmlFor="class-template">Template Kelas</Label>
+                <p className="text-caption text-text-tertiary">
+                  Header sekolah dari /kelas (snapshot ke lembar ini). Beda dari Template Generate di menu Template.
+                </p>
                 <Select
                   value={selectedClassTemplateId}
                   onValueChange={(value) => {
@@ -1341,6 +1390,25 @@ function ReviewPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {ACADEMIC_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="semester">Semester</Label>
+              <Select
+                {...(semester !== "" ? { value: semester } : {})}
+                onValueChange={(v) => {
+                  const next = v as Semester
+                  examDraftStore.setMetadata({ semester: next })
+                  void persistMetaField({ semester: next })
+                }}
+              >
+                <SelectTrigger id="semester">
+                  <SelectValue placeholder="Pilih semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ganjil">Ganjil</SelectItem>
+                  <SelectItem value="genap">Genap</SelectItem>
                 </SelectContent>
               </Select>
             </div>

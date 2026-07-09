@@ -13,10 +13,10 @@ describe("buildExamUpdateData", () => {
     expect(buildExamUpdateData({} as UpdateExamInput)).toEqual({})
   })
 
-  it("does not inject updatedAt (caller owns it)", () => {
-    const result = buildExamUpdateData({ status: "final" } as UpdateExamInput)
-    expect(result["updatedAt"]).toBeUndefined()
-    expect(result["status"]).toBe("final")
+  it("includes semester when provided", () => {
+    expect(buildExamUpdateData({ semester: "ganjil" } as UpdateExamInput)).toEqual({
+      semester: "ganjil"
+    })
   })
 })
 

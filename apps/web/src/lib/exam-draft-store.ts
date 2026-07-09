@@ -1,4 +1,4 @@
-import type { ExamSubject, ExamType, Question } from "@teacher-exam/shared"
+import type { ExamSubject, ExamType, Question, Semester } from "@teacher-exam/shared"
 import { useSyncExternalStore } from "react"
 
 /**
@@ -9,6 +9,7 @@ import { useSyncExternalStore } from "react"
 export interface ExamDraftMetadata {
   schoolName: string
   academicYear: string
+  semester: Semester | ""
   /** Strict literal union — see PRD §8.6 */
   examType: ExamType
   examDate: string
@@ -36,6 +37,7 @@ function makeInitialDraft(): ExamDraft {
     metadata: {
       schoolName: "",
       academicYear: "",
+      semester: "",
       examType: "formatif",
       examDate: "",
       durationMinutes: 60,
