@@ -1,0 +1,24 @@
+{
+  "stage": "prd",
+  "pass": 2,
+  "order": ["X", "Y"],
+  "anonymization": {
+    "X": "slot-A",
+    "Y": "slot-B"
+  },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 8, "d5": 9 },
+      "essay": "Same judgment as pass 1 for this artifact: sharp pain, strong edges (reservation/idempotency/grace), clear DoD. Scope stays additive and MVP-shaped.",
+      "total": 44
+    },
+    "Y": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 7, "d5": 9 },
+      "essay": "Same judgment as pass 1: excellent Indonesia fit and AC depth; MVP scope a bit broader (trial + many gates).",
+      "total": 43
+    }
+  },
+  "winner": "X",
+  "hardEvidence": { "typecheck": null, "tests": null },
+  "notes": "Blind pass 2 with swapped order. X=A Y=B. Winner maps to same slot as pass 1 (A)."
+}

@@ -1,0 +1,24 @@
+{
+  "stage": "prd",
+  "pass": 1,
+  "order": ["X", "Y"],
+  "anonymization": {
+    "X": "slot-B",
+    "Y": "slot-A"
+  },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 7, "d5": 9 },
+      "essay": "Strong Free/Pro PRD grounded in Indonesian payment reality (QRIS/VA/e-wallet), school-year pricing, and concrete code seams. Edge-case tables and acceptance criteria are thorough. Slightly weaker on scope realism: trial, many gated surfaces, and phase-2 features in the matrix make MVP feel heavier than necessary.",
+      "total": 43
+    },
+    "Y": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 8, "d5": 9 },
+      "essay": "Excellent product-fit PRD: clear teacher pain (AI/PDF cost, useful Free trial shape), additive architecture, and a tight Free/Pro matrix. Edge cases cover quota reservation/release, async jobs, grace/past_due, abuse, and DEV_AUTH. Acceptance stories and MVP-done scenarios are testable. Scope is ambitious but better constrained than a kitchen-sink monetize rewrite.",
+      "total": 44
+    }
+  },
+  "winner": "Y",
+  "hardEvidence": { "typecheck": null, "tests": null },
+  "notes": "Blind pass 1. X=B Y=A."
+}

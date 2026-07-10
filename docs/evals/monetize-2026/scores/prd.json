@@ -1,0 +1,28 @@
+{
+  "stage": "prd",
+  "slots": {
+    "A": {
+      "branch": "prd-eval-model-a",
+      "path": "artifacts/prd-a.md",
+      "model": "GPT 5.5"
+    },
+    "B": {
+      "branch": "prd-eval-model-b",
+      "path": "artifacts/prd-b.md",
+      "model": "GLM 5.2"
+    }
+  },
+  "blindPasses": ["scores/prd.pass1.json", "scores/prd.pass2.json"],
+  "inconclusive": false,
+  "winnerSlot": "A",
+  "baselineForNextStage": "A",
+  "dimensionMeans": {
+    "A": { "d1": 9, "d2": 9, "d3": 9, "d4": 8, "d5": 9, "total": 44 },
+    "B": { "d1": 9, "d2": 9, "d3": 9, "d4": 7, "d5": 9, "total": 43 }
+  },
+  "essays": {
+    "A": "Excellent product-fit PRD with clear pain, strong edge cases (quota reservation, async, grace), and testable DoD. Slightly tighter MVP scope than B.",
+    "B": "Strong Indonesia-native monetize PRD with QRIS/VA, school-year pricing, seam mapping, and thorough AC/edge tables. Slightly heavier MVP scope (trial + many gates)."
+  },
+  "notes": "Winner A does not change baseline rule — always promote PRD A to rfc-eval. Swap-order consistent (A wins both passes)."
+}
