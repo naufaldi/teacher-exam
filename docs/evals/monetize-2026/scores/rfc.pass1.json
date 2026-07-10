@@ -1,0 +1,21 @@
+{
+  "stage": "rfc",
+  "pass": 1,
+  "order": ["X", "Y"],
+  "anonymization": { "X": "slot-D", "Y": "slot-C" },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 8, "d2": 8, "d3": 8, "d4": 8, "d5": 8 },
+      "essay": "Solid capability-matrix RFC with centralized middleware and clear phasing. Faithful to Free/Pro intent but slightly reinterprets plan codes (monthly/yearly as plan codes) and leans on middleware in a codebase that often prefers typed in-handler errors. Edge coverage is good; async quota commit is thinner than the stronger candidate.",
+      "total": 40
+    },
+    "Y": {
+      "scores": { "d1": 9, "d2": 10, "d3": 9, "d4": 9, "d5": 9 },
+      "essay": "Excellent PRD-faithful architecture: subscriptions + usage ledger with reserve/commit/release, Entitlement/Usage/Billing services, async job commit rules, and MVP phases M1–M3. Deep fit to Effect Schema, Drizzle, AppLayer, and existing generate/export seams. Highly implementable with concrete flows and tests.",
+      "total": 46
+    }
+  },
+  "winner": "Y",
+  "hardEvidence": { "typecheck": null, "tests": null },
+  "notes": "Blind pass 1. X=D Y=C."
+}

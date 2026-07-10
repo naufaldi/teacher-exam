@@ -1,0 +1,28 @@
+{
+  "stage": "rfc",
+  "slots": {
+    "C": {
+      "branch": "rfc-eval-model-c",
+      "path": "artifacts/rfc-c.md",
+      "model": "Opus 4.8"
+    },
+    "D": {
+      "branch": "rfc-eval-model-d",
+      "path": "artifacts/rfc-d.md",
+      "model": "Kimi K2.7"
+    }
+  },
+  "blindPasses": ["scores/rfc.pass1.json", "scores/rfc.pass2.json"],
+  "inconclusive": false,
+  "winnerSlot": "C",
+  "baselineForNextStage": "C",
+  "dimensionMeans": {
+    "C": { "d1": 9, "d2": 10, "d3": 9, "d4": 9, "d5": 9, "total": 46 },
+    "D": { "d1": 8, "d2": 8, "d3": 8, "d4": 8, "d5": 8, "total": 40 }
+  },
+  "essays": {
+    "C": "PRD-faithful entitlement + usage ledger with deep monorepo fit and clear MVP phases.",
+    "D": "Capability-matrix + middleware design; good but more reinterpretation and thinner async quota detail."
+  },
+  "notes": "Always promote RFC C to code-eval (baseline rule). Note: rfc-c.md briefly appeared untracked on model-d working tree and was NOT committed there."
+}
