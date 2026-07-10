@@ -1,0 +1,34 @@
+{
+  "stage": "code",
+  "slots": {
+    "E": {
+      "branch": "code-eval-model-e",
+      "path": "commits + artifacts/code-e-notes.md",
+      "model": "GPT 5.5",
+      "tip": "f57b11b"
+    },
+    "F": {
+      "branch": "code-eval-model-f",
+      "path": "commits + artifacts/code-f-notes.md",
+      "model": "Kimi K2.7",
+      "tip": "f566914"
+    }
+  },
+  "blindPasses": ["scores/code.pass1.json", "scores/code.pass2.json"],
+  "inconclusive": false,
+  "winnerSlot": "F",
+  "baselineForNextStage": "E",
+  "dimensionMeans": {
+    "E": { "d1": 6, "d2": 9, "d3": 6, "d4": 5, "d5": 8, "total": 34 },
+    "F": { "d1": 8, "d2": 9, "d3": 8, "d4": 8, "d5": 7, "total": 40 }
+  },
+  "essays": {
+    "E": "Strong stack/UI entitlement surface; missing RFC C usage ledger reserve/commit.",
+    "F": "Closer RFC C services + generate quota enforcement; thinner generate UI gates."
+  },
+  "hardEvidence": {
+    "E_tests": "entitlement.test + shared billing.test PASS",
+    "F_tests": "billing-services.test + ai.generate-monetization.test PASS (6)"
+  },
+  "notes": "Always promote code E to review-eval (baseline rule), even though F won scoring."
+}

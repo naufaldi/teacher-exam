@@ -1,0 +1,24 @@
+{
+  "stage": "code",
+  "pass": 2,
+  "order": ["X", "Y"],
+  "anonymization": { "X": "slot-F", "Y": "slot-E" },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 8, "d2": 9, "d3": 8, "d4": 8, "d5": 7 },
+      "essay": "Same as pass 1: stronger RFC fidelity via usage ledger and reserve/commit on generate.",
+      "total": 40
+    },
+    "Y": {
+      "scores": { "d1": 6, "d2": 9, "d3": 6, "d4": 5, "d5": 8 },
+      "essay": "Same as pass 1: polished UI/entitlement read model, incomplete quota ledger vs RFC C.",
+      "total": 34
+    }
+  },
+  "winner": "X",
+  "hardEvidence": {
+    "typecheck": null,
+    "tests": "same as pass 1"
+  },
+  "notes": "Blind pass 2 swapped. Winner maps to F both times."
+}

@@ -1,0 +1,24 @@
+{
+  "stage": "code",
+  "pass": 1,
+  "order": ["X", "Y"],
+  "anonymization": { "X": "slot-E", "Y": "slot-F" },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 6, "d2": 9, "d3": 6, "d4": 5, "d5": 8 },
+      "essay": "Clean Effect/Drizzle/UI slice with entitlement API and generate/dashboard plan UX. Stack fit is strong and tests pass, but RFC C’s usage ledger reserve/commit/release is largely missing—quota appears as static limits (used:0), so Free exhaustion is not truly enforced. Partial MVP relative to the shared RFC.",
+      "total": 34
+    },
+    "Y": {
+      "scores": { "d1": 8, "d2": 9, "d3": 8, "d4": 8, "d5": 7 },
+      "essay": "Closer to RFC C: subscriptions + usage_ledger, Entitlement/Usage/Billing services, and generate-path reserve/commit with PlanLimitExceeded. Focused tests pass. Weaker on generate UI gating (dashboard more than /generate) and Pro limits as unlimited (-1) vs PRD fair-use caps; some churn in dev-auth handlers.",
+      "total": 40
+    }
+  },
+  "winner": "Y",
+  "hardEvidence": {
+    "typecheck": null,
+    "tests": "X entitlement+billing focused PASS; Y billing-services+generate-monetization PASS (6)"
+  },
+  "notes": "Blind pass 1. X=E Y=F."
+}
