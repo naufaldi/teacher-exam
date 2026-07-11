@@ -30,8 +30,20 @@ After the eval is complete (all stages scored):
 |----------|---------|
 | [`WRITEUP.md`](./WRITEUP.md) | Full research summary |
 | [`PRESENTATION.md`](./PRESENTATION.md) | Markdown slides (`---` breaks) for Marp / Slidev / Notion |
-| [`monetize-eval-results.canvas.tsx`](./monetize-eval-results.canvas.tsx) | Live Cursor canvas: winners, charts, takeaways |
+| **5 Cursor canvases** (below) | Live one-by-one deck beside chat |
 | [`scores/`](./scores/) | Raw JSON scorecards |
+
+### Canvas deck (open in Cursor)
+
+| # | File | Slide |
+|---|------|-------|
+| 1 | [`monetize-eval-results.canvas.tsx`](./monetize-eval-results.canvas.tsx) | Overview · winners · all stages |
+| 2 | [`monetize-eval-prd.canvas.tsx`](./monetize-eval-prd.canvas.tsx) | PRD A vs B |
+| 3 | [`monetize-eval-rfc.canvas.tsx`](./monetize-eval-rfc.canvas.tsx) | RFC C vs D |
+| 4 | [`monetize-eval-code.canvas.tsx`](./monetize-eval-code.canvas.tsx) | Code E vs F |
+| 5 | [`monetize-eval-review.canvas.tsx`](./monetize-eval-review.canvas.tsx) | Review G vs H |
+
+IDE copies also live under the project `canvases/` folder (same filenames).
 
 Headline winners: **PRD A** (44) · **RFC C** (46) · **Code F** (40) · **Review G** (45).
 
@@ -82,7 +94,7 @@ Optional on generator branches: [`GENERATOR.md`](./GENERATOR.md) only.
 |------|------------|
 | `theme-brief.md`, `context-pack.md`, `prompts/` | Generator |
 | `baselines/` | Generator (stage inputs) |
-| `EVAL-PLAN.md`, `slot-map.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md`, `PRESENTATION.md`, `*-results.canvas.tsx` | Ops only |
+| `EVAL-PLAN.md`, `slot-map.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md`, `PRESENTATION.md`, `monetize-eval-*.canvas.tsx` | Ops only |
 | `artifacts/` | Written by generators on result branches; copied to ops for judging |
 
 ---

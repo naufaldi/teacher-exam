@@ -76,12 +76,19 @@ export default function MonetizeEvalResultsCanvas() {
   return (
     <Stack gap={28} style={{ padding: 24, maxWidth: 960 }}>
       <Stack gap={8}>
+        <Pill size="sm" active>
+          Slide 1 of 5 · Overview
+        </Pill>
         <H1>Monetize eval results</H1>
         <Text tone="secondary">
           Free / Pro feature gates · teacher-exam · 2026-07-11 · research-only
         </Text>
         <Text tone="tertiary" size="small">
           Source: docs/evals/monetize-2026/scores/*.json · WRITEUP.md · 2026-07-11
+        </Text>
+        <Text size="small" tone="secondary">
+          One-by-one: monetize-eval-prd · monetize-eval-rfc · monetize-eval-code ·
+          monetize-eval-review
         </Text>
       </Stack>
 

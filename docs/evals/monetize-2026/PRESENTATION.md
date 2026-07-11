@@ -152,7 +152,11 @@ Baseline: Code E
 | Writeup | `docs/evals/monetize-2026/WRITEUP.md` |
 | This deck | `docs/evals/monetize-2026/PRESENTATION.md` |
 | Scores | `docs/evals/monetize-2026/scores/{prd,rfc,code,review}.json` |
-| Results canvas | `docs/evals/monetize-2026/monetize-eval-results.canvas.tsx` |
+| Canvas 1 · Overview | `monetize-eval-results.canvas.tsx` |
+| Canvas 2 · PRD | `monetize-eval-prd.canvas.tsx` |
+| Canvas 3 · RFC | `monetize-eval-rfc.canvas.tsx` |
+| Canvas 4 · Code | `monetize-eval-code.canvas.tsx` |
+| Canvas 5 · Review | `monetize-eval-review.canvas.tsx` |
 
 | Branch | Tip |
 |--------|-----|
