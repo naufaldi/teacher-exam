@@ -18,7 +18,22 @@ Research-only eval: compare model pairs on **PRD → RFC → Code → Review** f
 
 Canonical rules: **[`EVAL-PLAN.md`](./EVAL-PLAN.md)** (ops agents must read this first).
 
-Diagram: [`monetize-model-eval.canvas.tsx`](./monetize-model-eval.canvas.tsx) (ops only — strip from generator branches).
+Diagram (method): [`monetize-model-eval.canvas.tsx`](./monetize-model-eval.canvas.tsx) (ops only — strip from generator branches).
+
+---
+
+## Presenting results
+
+After the eval is complete (all stages scored):
+
+| Artifact | Use for |
+|----------|---------|
+| [`WRITEUP.md`](./WRITEUP.md) | Full research summary |
+| [`PRESENTATION.md`](./PRESENTATION.md) | Markdown slides (`---` breaks) for Marp / Slidev / Notion |
+| [`monetize-eval-results.canvas.tsx`](./monetize-eval-results.canvas.tsx) | Live Cursor canvas: winners, charts, takeaways |
+| [`scores/`](./scores/) | Raw JSON scorecards |
+
+Headline winners: **PRD A** (44) · **RFC C** (46) · **Code F** (40) · **Review G** (45).
 
 ---
 
@@ -53,7 +68,7 @@ Diagram: [`monetize-model-eval.canvas.tsx`](./monetize-model-eval.canvas.tsx) (o
 
 Generators see only: `theme-brief.md`, `context-pack.md`, one stage prompt, allowed `baselines/`, allowlisted product files.
 
-Generators must **never** see: `EVAL-PLAN.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md`, rival artifacts.
+Generators must **never** see: `EVAL-PLAN.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md`, `PRESENTATION.md`, results canvas, rival artifacts.
 
 When creating generator setup branches from `eval-ops`, strip operator-only files. See `EVAL-PLAN.md` §10.
 
@@ -67,7 +82,7 @@ Optional on generator branches: [`GENERATOR.md`](./GENERATOR.md) only.
 |------|------------|
 | `theme-brief.md`, `context-pack.md`, `prompts/` | Generator |
 | `baselines/` | Generator (stage inputs) |
-| `EVAL-PLAN.md`, `slot-map.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md` | Ops only |
+| `EVAL-PLAN.md`, `slot-map.md`, `rubrics/`, `judge/`, `scores/`, `WRITEUP.md`, `PRESENTATION.md`, `*-results.canvas.tsx` | Ops only |
 | `artifacts/` | Written by generators on result branches; copied to ops for judging |
 
 ---
