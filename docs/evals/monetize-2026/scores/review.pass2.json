@@ -1,0 +1,21 @@
+{
+  "stage": "review",
+  "pass": 2,
+  "order": ["X", "Y"],
+  "anonymization": { "X": "slot-G", "Y": "slot-H" },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 9, "d2": 9, "d3": 10, "d4": 9, "d5": 8 },
+      "essay": "Same as pass 1: strongest phase honesty + WT regression catch + actionable revert path.",
+      "total": 45
+    },
+    "Y": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 9, "d5": 8 },
+      "essay": "Same as pass 1: excellent committed-code gap analysis without WT distraction.",
+      "total": 44
+    }
+  },
+  "winner": "X",
+  "hardEvidence": { "typecheck": null, "tests": null },
+  "notes": "Blind pass 2 swapped. Winner maps to G both times."
+}

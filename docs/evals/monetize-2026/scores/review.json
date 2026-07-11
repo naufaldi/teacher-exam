@@ -1,0 +1,30 @@
+{
+  "stage": "review",
+  "slots": {
+    "G": {
+      "branch": "review-eval-model-g",
+      "path": "artifacts/review-g.md",
+      "model": "Opus 4.8",
+      "tip": "73a126c"
+    },
+    "H": {
+      "branch": "review-eval-model-h",
+      "path": "artifacts/review-h.md",
+      "model": "GLM 5.2",
+      "tip": "8b2c37e"
+    }
+  },
+  "blindPasses": ["scores/review.pass1.json", "scores/review.pass2.json"],
+  "inconclusive": false,
+  "winnerSlot": "G",
+  "baselineForNextStage": null,
+  "dimensionMeans": {
+    "G": { "d1": 9, "d2": 9, "d3": 10, "d4": 9, "d5": 8, "total": 45 },
+    "H": { "d1": 9, "d2": 9, "d3": 9, "d4": 9, "d5": 8, "total": 44 }
+  },
+  "essays": {
+    "G": "Caught WT route wipe + missing quota ledger; outstanding RFC phase grounding.",
+    "H": "Clean committed-code review of missing quota/sourceMode gates with concrete fixes."
+  },
+  "notes": "Both reviews agree Code E is M1-strong but not full MVP enforcement. Eval complete after WRITEUP."
+}

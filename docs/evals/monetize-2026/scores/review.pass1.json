@@ -1,0 +1,21 @@
+{
+  "stage": "review",
+  "pass": 1,
+  "order": ["X", "Y"],
+  "anonymization": { "X": "slot-H", "Y": "slot-G" },
+  "candidates": {
+    "X": {
+      "scores": { "d1": 9, "d2": 9, "d3": 9, "d4": 9, "d5": 8 },
+      "essay": "Sharp review of committed Code E: correctly identifies hardcoded quota (used:0), missing sourceMode gate, missing ApiPlanLimitExceeded/usage_ledger, and maps gaps to PRD/RFC with concrete fixes. Clean focus on the intended slice; a few soft P2s (caching, const mutation) are minor noise.",
+      "total": 44
+    },
+    "Y": {
+      "scores": { "d1": 9, "d2": 9, "d3": 10, "d4": 9, "d5": 8 },
+      "essay": "Excellent review: catches both the real MVP gaps (no usage ledger / PLAN_LIMIT) and a P0 working-tree route wipe that broke dashboard tests, with clear revert instructions. Spec grounding via RFC M1–M3 phase table is outstanding. Slightly mixes transient working-tree damage with committed-code defects, but labels them correctly.",
+      "total": 45
+    }
+  },
+  "winner": "Y",
+  "hardEvidence": { "typecheck": null, "tests": null },
+  "notes": "Blind pass 1. X=H Y=G."
+}
