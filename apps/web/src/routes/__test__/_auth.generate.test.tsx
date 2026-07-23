@@ -145,7 +145,7 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
       ai: { generate: vi.fn() },
       exams: { pollGenerateStream: vi.fn() },
       curriculum: { catalog: vi.fn(), babTopics: vi.fn() },
-      pdfUploads: { create: vi.fn(), list: vi.fn(), remove: vi.fn() }
+      pdfUploads: { create: vi.fn(), get: vi.fn(), list: vi.fn(), remove: vi.fn() }
     }
   }
 })
@@ -205,7 +205,12 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
 const mockApi = api as unknown as {
   ai: { generate: ReturnType<typeof vi.fn> }
   curriculum: { catalog: ReturnType<typeof vi.fn>; babTopics: ReturnType<typeof vi.fn> }
-  pdfUploads: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> }
+  pdfUploads: {
+    create: ReturnType<typeof vi.fn>
+    get: ReturnType<typeof vi.fn>
+    list: ReturnType<typeof vi.fn>
+    remove: ReturnType<typeof vi.fn>
+  }
 }
 
 const READY_LIBRARY_PDF = {
@@ -508,6 +513,17 @@ describe("GeneratePage — runGenerate flow", () => {
     await clickGenerateAndFlush()
 
     expect(screen.getByRole("dialog")).toHaveTextContent("Expected 40 questions, got 20")
+  })
+
+  it("shows a server connection message for network failures", async () => {
+    mockApi.ai.generate.mockRejectedValueOnce(new Error("Failed to fetch"))
+
+    renderGeneratePage()
+    await clickGenerateAndFlush()
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Tidak dapat menghubungi server. Periksa koneksi Anda lalu coba lagi."
+    )
   })
 
   it("uses the dynamic examId from api response, not a fixed value", async () => {
@@ -867,6 +883,120 @@ describe("Atur komposisi panel", () => {
 })
 
 describe("M7 UX polish (#215)", () => {
+  async function prepareNewPdfUpload() {
+    await selectPdfGuruKelas5()
+    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
+      target: { value: "PKN" }
+    })
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Pemberdayaan masyarakat di lingkungan sekolah" }
+    })
+    const file = new File(["%PDF-1.4"], "materi.pdf", { type: "application/pdf" })
+    fireEvent.change(screen.getByLabelText("Pilih file PDF"), {
+      target: { files: [file] }
+    })
+  }
+
+  it("waits for a newly uploaded PDF to become ready before generating", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-new",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-new",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-new",
+      status: "ready",
+      filename: "materi.pdf",
+      pageCount: 134,
+      createdAt: "2026-07-23T06:52:43.000Z",
+      readyAt: "2026-07-23T06:52:47.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-new"))
+
+    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(mockApi.pdfUploads.get).toHaveBeenCalledTimes(1)
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(mockApi.pdfUploads.get).toHaveBeenCalledTimes(2)
+    expect(mockApi.ai.generate).toHaveBeenCalledOnce()
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ pdfUploadId: "pdf-new" })
+    )
+  })
+
+  it("shows the ingestion failure and does not generate", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-failed",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-failed",
+      status: "failed",
+      filename: "materi.pdf",
+      errorMessage: "Tidak dapat mengekstrak teks dari PDF.",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Tidak dapat mengekstrak teks dari PDF."
+    )
+  })
+
+  it("stops waiting after 60 seconds and preserves the uploaded PDF for retry", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-slow",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValue(mockApi.pdfUploads.get, {
+      id: "pdf-slow",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "PDF masih diproses setelah 60 detik. Coba lagi tanpa mengunggah ulang."
+    )
+    expect(screen.getByTestId("generate-sidebar-summary")).toHaveTextContent("materi.pdf")
+  })
+
   it("shows inline PDF error (EC-A1) when pdf_guru has no PDF on generate click", async () => {
     await selectPdfGuruKelas5()
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), {

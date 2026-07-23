@@ -1,7 +1,7 @@
 import type { Auth } from "better-auth"
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import { logError } from "../../lib/server-log"
-import { applyAuthCors, authPreflightResponse } from "../auth-cors"
+import { applyCors, corsPreflightResponse } from "../auth-cors"
 import { isAuthPath, isHttpApiPath } from "./migrated-routes"
 import { nodeRequestToWebRequest, writeWebResponse } from "./node-http"
 import {
@@ -61,41 +61,49 @@ async function handleRequest(
     const webReq = await nodeRequestToWebRequest(req)
 
     if (webReq.method === "OPTIONS") {
-      await writeWebResponse(res, authPreflightResponse(webReq))
+      await writeWebResponse(res, corsPreflightResponse(webReq))
       return
     }
 
     const authResponse = await opts.authHandler(webReq)
-    await writeWebResponse(res, applyAuthCors(webReq, authResponse))
+    await writeWebResponse(res, applyCors(webReq, authResponse))
+    return
+  }
+
+  const pdfUploadDetailMatch = /^\/api\/pdf-uploads\/([^/]+)$/.exec(pathname)
+  const isPdfUploadPath = pathname === "/api/pdf-uploads" || pdfUploadDetailMatch !== null
+
+  if (isPdfUploadPath && req.method === "OPTIONS") {
+    const webReq = await nodeRequestToWebRequest(req)
+    await writeWebResponse(res, corsPreflightResponse(webReq))
     return
   }
 
   if (pathname === "/api/pdf-uploads" && req.method === "GET") {
     const webReq = await nodeRequestToWebRequest(req)
     const response = await handlePdfUploadGetList(webReq)
-    await writeWebResponse(res, response)
+    await writeWebResponse(res, applyCors(webReq, response))
     return
   }
 
   if (pathname === "/api/pdf-uploads" && req.method === "POST") {
     const webReq = await nodeRequestToWebRequest(req)
     const response = await handlePdfUploadPost(webReq)
-    await writeWebResponse(res, response)
+    await writeWebResponse(res, applyCors(webReq, response))
     return
   }
 
-  const pdfUploadDetailMatch = /^\/api\/pdf-uploads\/([^/]+)$/.exec(pathname)
   if (pdfUploadDetailMatch) {
     const webReq = await nodeRequestToWebRequest(req)
     const pdfUploadId = pdfUploadDetailMatch[1] ?? ""
     if (req.method === "GET") {
       const response = await handlePdfUploadGetDetail(webReq, pdfUploadId)
-      await writeWebResponse(res, response)
+      await writeWebResponse(res, applyCors(webReq, response))
       return
     }
     if (req.method === "DELETE") {
       const response = await handlePdfUploadDelete(webReq, pdfUploadId)
-      await writeWebResponse(res, response)
+      await writeWebResponse(res, applyCors(webReq, response))
       return
     }
   }

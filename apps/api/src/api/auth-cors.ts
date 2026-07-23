@@ -25,7 +25,7 @@ function corsHeaders(request: Request, env: CorsEnv = process.env): Headers {
   return headers
 }
 
-export function authPreflightResponse(request: Request, env: CorsEnv = process.env): Response {
+export function corsPreflightResponse(request: Request, env: CorsEnv = process.env): Response {
   const headers = corsHeaders(request, env)
   headers.set("Access-Control-Allow-Methods", ALLOWED_METHODS)
 
@@ -37,7 +37,7 @@ export function authPreflightResponse(request: Request, env: CorsEnv = process.e
   return new Response(null, { status: 204, headers })
 }
 
-export function applyAuthCors(
+export function applyCors(
   request: Request,
   response: Response,
   env: CorsEnv = process.env
@@ -53,3 +53,6 @@ export function applyAuthCors(
     headers
   })
 }
+
+export const authPreflightResponse = corsPreflightResponse
+export const applyAuthCors = applyCors

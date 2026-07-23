@@ -79,6 +79,19 @@ export const Route = createFileRoute("/_auth/generate")({
   }
 })
 
+const PDF_READY_POLL_INTERVAL_MS = 2_000
+const PDF_READY_POLL_TIMEOUT_MS = 60_000
+const SERVER_CONNECTION_ERROR_MESSAGE = "Tidak dapat menghubungi server. Periksa koneksi Anda lalu coba lagi."
+const PDF_PROCESSING_TIMEOUT_MESSAGE = "PDF masih diproses setelah 60 detik. Coba lagi tanpa mengunggah ulang."
+
+function isNetworkFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const message = error.message.toLowerCase()
+  return message.includes("failed to fetch") ||
+    message.includes("load failed") ||
+    message.includes("network")
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 function GeneratePage() {
@@ -131,6 +144,7 @@ function GeneratePage() {
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pdfReadyPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleJenisChange = useCallback((next: ExamType) => {
     setExamType(next)
@@ -151,6 +165,10 @@ function GeneratePage() {
     if (pollTimerRef.current !== null) {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
+    }
+    if (pdfReadyPollTimerRef.current !== null) {
+      clearTimeout(pdfReadyPollTimerRef.current)
+      pdfReadyPollTimerRef.current = null
     }
   }, [])
 
@@ -457,36 +475,87 @@ function GeneratePage() {
         } else if (err instanceof ApiError) {
           setGenerateErrorMessage(err.message)
           setShowErrorDialog(true)
+        } else if (isNetworkFailure(err)) {
+          setGenerateErrorMessage(SERVER_CONNECTION_ERROR_MESSAGE)
+          setShowErrorDialog(true)
         } else {
           setShowErrorDialog(true)
         }
       })
     }
 
+    const stopWithError = (message?: string) => {
+      clearTimers()
+      setIsGenerating(false)
+      setProgress(0)
+      if (message !== undefined) {
+        setGenerateErrorMessage(message)
+      }
+      setShowErrorDialog(true)
+    }
+
+    const waitForPdfReady = (pdfUploadId: string, waitStartedAt = Date.now()) => {
+      pdfReadyPollTimerRef.current = setTimeout(() => {
+        pdfReadyPollTimerRef.current = null
+        void api.pdfUploads.get(pdfUploadId).then((detailResult) => {
+          const detail = unwrapApiEither(detailResult)
+          if (detail.status === "ready") {
+            startGenerate(pdfUploadId)
+            return
+          }
+          if (detail.status === "failed") {
+            stopWithError(detail.errorMessage ?? "PDF gagal diproses. Upload ulang atau gunakan PDF lain.")
+            return
+          }
+          if (Date.now() - waitStartedAt >= PDF_READY_POLL_TIMEOUT_MS) {
+            stopWithError(PDF_PROCESSING_TIMEOUT_MESSAGE)
+            return
+          }
+          waitForPdfReady(pdfUploadId, waitStartedAt)
+        }).catch((err: unknown) => {
+          if (err instanceof ApiError) {
+            stopWithError(err.message)
+          } else if (isNetworkFailure(err)) {
+            stopWithError(SERVER_CONNECTION_ERROR_MESSAGE)
+          } else {
+            stopWithError()
+          }
+        })
+      }, PDF_READY_POLL_INTERVAL_MS)
+    }
+
+    if (showPdfControls && uploadedPdfId !== null) {
+      if (selectedLibraryPdf?.status === "ready") {
+        startGenerate(uploadedPdfId)
+      } else {
+        waitForPdfReady(uploadedPdfId)
+      }
+      return
+    }
+
     if (showPdfControls && selectedFile !== null) {
       void api.pdfUploads.create(selectedFile).then((uploadResult) => {
         const upload = unwrapApiEither(uploadResult)
         setUploadedPdfId(upload.id)
-        startGenerate(upload.id)
-      }).catch((err: unknown) => {
-        clearTimers()
-        setIsGenerating(false)
-        setProgress(0)
-        if (err instanceof ApiError) {
-          setGenerateErrorMessage(err.message)
+        if (upload.status === "ready") {
+          startGenerate(upload.id)
+        } else {
+          waitForPdfReady(upload.id)
         }
-        setShowErrorDialog(true)
+      }).catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          stopWithError(err.message)
+        } else if (isNetworkFailure(err)) {
+          stopWithError(SERVER_CONNECTION_ERROR_MESSAGE)
+        } else {
+          stopWithError()
+        }
       })
       return
     }
 
     if (showPdfControls && selectedLibraryPdf?.status === "ready") {
       startGenerate(selectedLibraryPdf.id)
-      return
-    }
-
-    if (showPdfControls && uploadedPdfId !== null) {
-      startGenerate(uploadedPdfId)
       return
     }
 

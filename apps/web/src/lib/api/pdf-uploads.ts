@@ -1,10 +1,17 @@
-import type { PdfUploadListResponse, PdfUploadResponse } from "@teacher-exam/shared"
-import { PdfUploadListResponseSchema, PdfUploadResponseSchema } from "@teacher-exam/shared"
+import type { PdfUploadDetail, PdfUploadListResponse, PdfUploadResponse } from "@teacher-exam/shared"
+import { PdfUploadDetailSchema, PdfUploadListResponseSchema, PdfUploadResponseSchema } from "@teacher-exam/shared"
 import { Either } from "effect"
 import type { ApiClientFailure } from "../api-errors.js"
 import { apiFetchEither, decodeEither } from "./core.js"
 
 export const pdfUploadsApi = {
+  get: async (id: string): Promise<Either.Either<PdfUploadDetail, ApiClientFailure>> => {
+    const raw = await apiFetchEither<unknown>(`/pdf-uploads/${id}`)
+    if (Either.isLeft(raw)) {
+      return raw as Either.Either<PdfUploadDetail, ApiClientFailure>
+    }
+    return decodeEither(PdfUploadDetailSchema, raw.right)
+  },
   list: async (): Promise<Either.Either<PdfUploadListResponse, ApiClientFailure>> => {
     const raw = await apiFetchEither<unknown>("/pdf-uploads")
     if (Either.isLeft(raw)) {
