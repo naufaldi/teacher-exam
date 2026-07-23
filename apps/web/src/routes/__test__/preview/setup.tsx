@@ -10,11 +10,27 @@ import { api } from "../../../lib/api.js"
 import { examDraftStore } from "../../../lib/exam-draft-store.js"
 import { Route } from "../../_auth.preview.js"
 
-const { mockGenerateDiscussion, mockNavigate, mockStreamDiscussion, previewTestCtx } = vi.hoisted(() => ({
+const {
+  mockExamsExport,
+  mockFeedbackSetExamOutcome,
+  mockGenerateDiscussion,
+  mockNavigate,
+  mockStreamDiscussion,
+  previewTestCtx
+} = vi.hoisted(() => ({
   mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
+  mockExamsExport: vi.fn(),
+  mockFeedbackSetExamOutcome: vi.fn(),
   mockGenerateDiscussion: vi.fn(),
   mockStreamDiscussion: vi.fn(),
   previewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined }
+}))
+
+vi.mock("../../../lib/teacher-feedback-config.js", () => ({
+  teacherFeedbackConfig: {
+    enabled: true,
+    formUrl: "https://forms.gle/example"
+  }
 }))
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -52,8 +68,12 @@ vi.mock("../../../lib/api.js", async (importOriginal) => {
       exams: {
         ...orig.api.exams,
         get: vi.fn(),
+        export: mockExamsExport,
         generateDiscussion: mockGenerateDiscussion,
         streamDiscussion: mockStreamDiscussion
+      },
+      feedback: {
+        setExamOutcome: mockFeedbackSetExamOutcome
       }
     }
   }
@@ -117,7 +137,9 @@ export {
   closestByAttr,
   fireEvent,
   getLoader,
+  mockExamsExport,
   mockExamsGet,
+  mockFeedbackSetExamOutcome,
   mockGenerateDiscussion,
   mockNavigate,
   mockStreamDiscussion,

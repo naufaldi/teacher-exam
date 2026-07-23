@@ -25,6 +25,7 @@ import {
 } from "./api/core.js"
 import { curriculumApi } from "./api/curriculum.js"
 import { examsApi } from "./api/exams.js"
+import { feedbackApi } from "./api/feedback.js"
 import { meApi } from "./api/me.js"
 import { pdfUploadsApi } from "./api/pdf-uploads.js"
 import { publicExamsApi } from "./api/public-exams.js"
@@ -57,6 +58,7 @@ export const api = {
     get: () => fetchDecoded("/health", HealthResponseSchema)
   },
   exams: examsApi,
+  feedback: feedbackApi,
   ai: aiApi,
   pdfUploads: pdfUploadsApi,
   curriculum: curriculumApi,

@@ -4,6 +4,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -69,6 +70,9 @@ function SheetPreviewDialog({
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto flex flex-col">
         <DialogHeader>
           <DialogTitle>{title ?? exam?.title ?? "Pratinjau lembar"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Pratinjau soal yang sudah diterima.
+          </DialogDescription>
         </DialogHeader>
         {loading ?
           (

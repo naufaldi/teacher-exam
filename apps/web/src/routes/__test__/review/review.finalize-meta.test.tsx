@@ -15,6 +15,7 @@ import {
   mockQuestionsPatch,
   mockToast,
   renderReviewPage,
+  setReviewLoaderData,
   setReviewSearch
 } from "./setup.js"
 
@@ -39,6 +40,7 @@ test("persistMetaField skips PATCH when examId is undefined", async () => {
   const examsPatchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
   setReviewSearch({ mode: "fast" })
   examDraftStore.reset()
+  setReviewLoaderData(makeExamWithQuestions("draft-only"))
   renderReviewPage()
 
   const input = screen.getByLabelText(/nama sekolah/i)

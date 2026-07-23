@@ -11,6 +11,7 @@ describe("api composed shape", () => {
         "classes",
         "curriculum",
         "exams",
+        "feedback",
         "health",
         "me",
         "pdfUploads",
@@ -27,6 +28,7 @@ describe("api composed shape", () => {
     expect(typeof api.health.get).toBe("function")
     expect(typeof api.exams.list).toBe("function")
     expect(typeof api.exams.streamDiscussion).toBe("function")
+    expect(typeof api.feedback.setExamOutcome).toBe("function")
     expect(typeof api.ai.generate).toBe("function")
     expect(typeof api.pdfUploads.create).toBe("function")
     expect(typeof api.curriculum.catalog).toBe("function")

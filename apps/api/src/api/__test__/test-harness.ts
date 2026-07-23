@@ -14,6 +14,7 @@ import { CurriculumLive } from "../handlers/curriculum"
 import { DevAuthLive } from "../handlers/dev-auth"
 import { ExamsLive } from "../handlers/exams"
 import { ExportsLive, PublicExportsLive } from "../handlers/export"
+import { FeedbackLive } from "../handlers/feedback"
 import { HealthLive } from "../handlers/health"
 import { MeLive } from "../handlers/me"
 import { PublicExamsLive } from "../handlers/public-exams"
@@ -40,6 +41,7 @@ import { ClassServiceLive } from "../services/class-service"
 import { type CurriculumService, TestCurriculumLayer } from "../services/curriculum-service"
 import type { ExportService } from "../services/export-service"
 import { ExportServiceLive } from "../services/export-service"
+import { FeedbackServiceLive } from "../services/feedback-service"
 import { GradingServiceLive } from "../services/grading-service"
 import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
 import { SessionServiceLive } from "../services/session-service"
@@ -81,7 +83,8 @@ const HandlerLayers = Layer.mergeAll(
   SessionsLive,
   PublicSessionsLive,
   ResultsLive,
-  AnalyticsLive
+  AnalyticsLive,
+  FeedbackLive
 )
 
 function createMiddlewareLayer(opts: {
@@ -165,6 +168,7 @@ export function createHttpApiTestLayer(opts: {
     SessionServiceLive.pipe(Layer.provide(TestDbLayer)),
     GradingServiceLive.pipe(Layer.provide(TestDbLayer)),
     AnalyticsServiceLive.pipe(Layer.provide(TestDbLayer)),
+    FeedbackServiceLive.pipe(Layer.provide(TestDbLayer)),
     FilesystemObjectStorageLive.pipe(Layer.provide(NodeContext.layer)),
     opts.exportServiceLayer ?? ExportServiceLive,
     opts.curriculumLayer ?? TestCurriculumLayer(),

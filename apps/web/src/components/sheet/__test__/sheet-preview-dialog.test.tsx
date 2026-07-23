@@ -37,6 +37,24 @@ describe("SheetPreviewDialog", () => {
     expect(screen.getByRole("button", { name: "Buka halaman cetak" })).toBeInTheDocument()
   })
 
+  it("provides an accessible description for the dialog", async () => {
+    const exam = makeExamWithQuestions(["Teks"])
+    const getSpy = vi.spyOn(api.exams, "get")
+    mockApiResolvedValueOnce(getSpy, exam)
+
+    render(
+      <SheetPreviewDialog examId={exam.id} open onClose={() => {}} />
+    )
+
+    const dialog = screen.getByRole("dialog")
+    const descriptionId = dialog.getAttribute("aria-describedby")
+
+    expect(descriptionId).toBeTruthy()
+    expect(document.getElementById(descriptionId ?? "")).toHaveTextContent(
+      "Pratinjau soal yang sudah diterima."
+    )
+  })
+
   it("navigates to preview page when Buka halaman cetak clicked", async () => {
     const user = userEvent.setup()
     const exam = makeExamWithQuestions(["Teks"], { id: "exam-print" })

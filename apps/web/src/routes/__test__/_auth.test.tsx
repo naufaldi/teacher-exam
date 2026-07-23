@@ -34,6 +34,13 @@ vi.mock("../../lib/api", () => ({
   setUnauthorizedHandler: mockSetUnauthorizedHandler
 }))
 
+vi.mock("../../lib/teacher-feedback-config", () => ({
+  teacherFeedbackConfig: {
+    enabled: true,
+    formUrl: "https://forms.gle/example"
+  }
+}))
+
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: Record<string, unknown>) => ({
     options: config,
@@ -171,6 +178,14 @@ describe("AuthLayout", () => {
     expect(help).toHaveAttribute("href", "/help/notasi-matematika")
     expect(help).toHaveAttribute("target", "_blank")
     expect(help).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  it("renders the persistent feedback action below dialog and toast layers", () => {
+    render(<AuthLayout />)
+    const feedback = screen.getByRole("link", { name: "Beri Masukan" })
+    expect(feedback).toHaveAttribute("href", "https://forms.gle/example")
+    expect(feedback.className).toContain("z-40")
+    expect(feedback).toHaveAttribute("data-no-print")
   })
 
   it("signs out and navigates home when \"Keluar\" is clicked", async () => {

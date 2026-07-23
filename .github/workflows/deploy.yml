@@ -74,6 +74,8 @@ jobs:
           build-args: |
             VITE_API_URL=https://api-ujian-sekolah.faldi.xyz/api
             VITE_APP_ORIGIN=https://ujian-sekolah.faldi.xyz
+            VITE_TEACHER_FEEDBACK_ENABLED=${{ vars.VITE_TEACHER_FEEDBACK_ENABLED || 'false' }}
+            VITE_FEEDBACK_FORM_URL=${{ vars.VITE_FEEDBACK_FORM_URL || '' }}
           tags: |
             ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
             ${{ env.WEB_IMAGE }}:latest

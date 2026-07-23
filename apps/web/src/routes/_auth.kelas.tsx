@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import type { ClassEntity, CreateClassInput } from "@teacher-exam/shared"
-import {
-  CreateClassInputSchema,
-  isCompleteClassTemplate
-} from "@teacher-exam/shared"
+import { CreateClassInputSchema, isCompleteClassTemplate } from "@teacher-exam/shared"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -515,8 +512,7 @@ function KelasPageImpl() {
                       <Input
                         id="edit-school-name"
                         value={editForm.schoolName}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, schoolName: e.target.value }))}
                         aria-invalid={editErrors.schoolName !== undefined}
                         aria-describedby={editErrors.schoolName !== undefined
                           ? "edit-school-name-error"
@@ -539,8 +535,7 @@ function KelasPageImpl() {
                       <Input
                         id="edit-academic-year"
                         value={editForm.academicYear}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({ ...prev, academicYear: e.target.value }))}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, academicYear: e.target.value }))}
                         placeholder="2025/2026"
                         aria-invalid={editErrors.academicYear !== undefined}
                         aria-describedby={editErrors.academicYear !== undefined

@@ -1,10 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { ClassEntity, CreateClassInput, ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
-import {
-  CreateClassInputSchema,
-  isCompleteClassTemplate,
-  resolveExamSubjectLabel
-} from "@teacher-exam/shared"
+import { CreateClassInputSchema, isCompleteClassTemplate, resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,

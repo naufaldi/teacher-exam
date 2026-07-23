@@ -22,6 +22,16 @@ export const pdfUploadStatusEnum = pgEnum("pdf_upload_status", [
   "failed"
 ])
 export const sourceModeEnum = pgEnum("source_mode", ["default", "pdf_guru", "combine"])
+export const examPilotTriggerEnum = pgEnum("exam_pilot_trigger", [
+  "export_pdf",
+  "export_docx",
+  "print_intent"
+])
+export const examPilotReadinessEnum = pgEnum("exam_pilot_readiness", [
+  "ready",
+  "ready_after_edit",
+  "not_ready"
+])
 export const questionStatusEnum = pgEnum("question_status", [
   "pending",
   "accepted",

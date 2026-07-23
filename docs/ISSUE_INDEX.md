@@ -27,7 +27,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | RFC-E3 | 3 | 4 | 0 | in_progress |
 | RFC-E4 | 5 | 4 | 1 | in_progress |
 | RFC-E5 | 0 | 6 | 0 | done |
-| Extra | 1 | 5 | 0 | in_progress |
+| Extra | 2 | 5 | 0 | in_progress |
 
 ## Issue rows
 
@@ -121,6 +121,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | Extra | — | #192 | Real PDF/DOCX export | closed | apps/api/src/api/services/export-service.ts | PR #194 |
 | Extra | — | #193 | Student delivery + analytics | closed | apps/web/src/routes/_auth.analytics.tsx | PR #194 |
 | Extra | — | #183 | Codex security remediation | closed | docs/security/2026-06-24-codex-security-remediation.md | PR #184 |
+| Extra | — | #239 | Teacher feedback pilot for Generate Soal | open | apps/web/src/components/exam-readiness-dialog.tsx | — |
 | M7 | #204 | — | M7 PRD v8 + RFC generate PDF enhancement docs | open | docs/PRD-v8-generate-pdf-enhancement.md | PR #203 |
 | M7 | #204 | #216 | M7.F0 corpus v2 richer text | open | apps/api/src/curriculum/md/ | — |
 | M7 | #204 | #207 | M7.F1 R2 upload + 3-mode schema + basic generate | open | apps/api/src/lib/pdf-upload-service.ts | PR #203 scaffold |

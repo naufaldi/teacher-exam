@@ -19,6 +19,12 @@ Teachers generate exam questions across all 5 academic subjects, correct student
 **Current state:** 5 subjects (BI + PPKN + IPAS + B. Inggris + Matematika), Kelas 1–6 generate (catalog-driven), Bank Soal per lembar, templates, PDF/DOCX export, delivery/analytics behind `DELIVERY_ENABLED`. Koreksi uses real session results when delivery enabled; full PRD v5 depth still pending.
 **Target by Nov 2026:** Full correction depth, weakness analysis with re-teach suggestions.
 
+## Current Focus — Indonesia Teacher Pilot
+
+The current release focus is [PRD v9: Indonesia Teacher Pilot](PRD-v9-indonesia-teacher-pilot.md), limited to the Generate → Review → Preview/Export journey. Broader roadmap work remains documented below, but it does not block pilot feedback from teachers.
+
+Tracking: [#239](https://github.com/naufaldi/teacher-exam/issues/239).
+
 ## Decisions
 
 Append-only record of cross-PRD product/technical decisions. Never edit a past decision; supersede with a new one.
@@ -45,6 +51,7 @@ Each milestone maps to a PRD:
 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
 | [PRD v8](PRD-v8-generate-pdf-enhancement.md) | 📝 Draft | M7 (Generate PDF Enhancement) — docs only; implementation F0–F5 |
+| [PRD v9](PRD-v9-indonesia-teacher-pilot.md) | 🔄 Current focus | Teacher feedback pilot for Generate Soal |
 
 ---
 

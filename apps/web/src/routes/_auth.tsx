@@ -2,8 +2,10 @@ import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router"
 import { Button } from "@teacher-exam/ui"
 import { HelpCircle, LogOut } from "lucide-react"
 import { useEffect, useState } from "react"
+import { TeacherFeedbackButton } from "../components/teacher-feedback-button.js"
 import { setUnauthorizedHandler } from "../lib/api"
 import { authClient, signOut } from "../lib/auth-client"
+import { teacherFeedbackConfig } from "../lib/teacher-feedback-config.js"
 import { useThrottle } from "../lib/use-throttle"
 
 const NAV_LINKS = [
@@ -160,6 +162,9 @@ function AuthLayout() {
           <Outlet />
         </main>
       </div>
+      {teacherFeedbackConfig.enabled && teacherFeedbackConfig.formUrl !== null ?
+        <TeacherFeedbackButton formUrl={teacherFeedbackConfig.formUrl} /> :
+        null}
     </div>
   )
 }

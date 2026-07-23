@@ -139,6 +139,10 @@ export function renderReviewPage() {
   return render(<ReviewPage />)
 }
 
+export function setReviewLoaderData(exam: ExamWithQuestions) {
+  reviewTestCtx.mockLoaderData = exam
+}
+
 export async function seedReviewLoader(examId: string, exam?: ExamWithQuestions) {
   mockApiResolvedValueOnce(mockExamsGet, exam ?? makeExamWithQuestions(examId))
   await getLoader()({ deps: { examId } })

@@ -1,6 +1,7 @@
 export * from "./classes"
 export * from "./document-chunks"
 export * from "./enums"
+export * from "./exam-pilot-outcomes"
 export * from "./exam-templates"
 export * from "./exams"
 export * from "./generation-jobs"

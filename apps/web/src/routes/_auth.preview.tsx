@@ -1,15 +1,17 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
-import type { ExamDetailResponse, ExamType } from "@teacher-exam/shared"
+import type { ExamDetailResponse, ExamPilotReadiness, ExamPilotTrigger, ExamType } from "@teacher-exam/shared"
 import { resolveExamSubjectLabel } from "@teacher-exam/shared"
 import { Badge, Button, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
 import { useState } from "react"
+import { ExamReadinessDialog } from "../components/exam-readiness-dialog.js"
 import { PaperFrame } from "../components/exam-sheet/exam-sheet-sections.js"
 import { ExamSheetBody, ExamSheetPrintStyles, kopLabelFor, triggerPrint } from "../components/exam-sheet/index.js"
 import { ExportMenu } from "../components/export-menu.js"
 import { MarkdownMath } from "../components/markdown-math.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
+import { teacherFeedbackConfig } from "../lib/teacher-feedback-config.js"
 
 export const Route = createFileRoute("/_auth/preview")({
   component: PreviewPage,
@@ -50,9 +52,56 @@ function PreviewPage() {
   const draft = useExamDraft()
   const exam = Route.useLoaderData()
   const [tab, setTab] = useState<"soal" | "lj" | "kunci" | "semua" | "pembahasan">("semua")
+  const [readinessOpen, setReadinessOpen] = useState(false)
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false)
+  const [lastFeedbackTrigger, setLastFeedbackTrigger] = useState<ExamPilotTrigger>("export_pdf")
 
   const { grade, metadata, questions, subjectLabel } = draft
   const topicsLabel = exam?.topics?.join(" · ") ?? ""
+
+  const recordOutcome = async (trigger: ExamPilotTrigger) => {
+    if (!teacherFeedbackConfig.enabled || feedbackDismissed) return
+    setLastFeedbackTrigger(trigger)
+    try {
+      const outcome = unwrapApiEither(
+        await api.feedback.setExamOutcome(exam.id, {
+          trigger,
+          readiness: null
+        })
+      )
+      if (outcome.readiness === null) setReadinessOpen(true)
+    } catch {
+      // Feedback is best-effort and must never block export or printing.
+    }
+  }
+
+  const handleExport = async (format: "pdf" | "docx") => {
+    try {
+      await api.exams.export(exam.id, format, "soal")
+    } catch {
+      return
+    }
+    await recordOutcome(format === "pdf" ? "export_pdf" : "export_docx")
+  }
+
+  const handlePrint = (scope: "soal" | "lj" | "kunci" | "pembahasan" | "all") => {
+    triggerPrint(scope)
+    void recordOutcome("print_intent")
+  }
+
+  const handleReadinessSubmit = async (readiness: ExamPilotReadiness) => {
+    unwrapApiEither(
+      await api.feedback.setExamOutcome(exam.id, {
+        trigger: lastFeedbackTrigger,
+        readiness
+      })
+    )
+  }
+
+  const handleReadinessOpenChange = (open: boolean) => {
+    setReadinessOpen(open)
+    if (!open) setFeedbackDismissed(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -94,21 +143,21 @@ function PreviewPage() {
           </TabsList>
         </Tabs>
         <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint("soal")}>
+          <Button variant="ghost" size="sm" onClick={() => handlePrint("soal")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Soal
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint("lj")}>
+          <Button variant="ghost" size="sm" onClick={() => handlePrint("lj")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak LJ
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint("kunci")}>
+          <Button variant="ghost" size="sm" onClick={() => handlePrint("kunci")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Kunci
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => triggerPrint("pembahasan")}>
+          <Button variant="ghost" size="sm" onClick={() => handlePrint("pembahasan")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
           </Button>
           <ExportMenu
-            onExport={(format) => api.exams.export(exam.id, format, "soal")}
-            onPrint={() => triggerPrint("all")}
+            onExport={handleExport}
+            onPrint={() => handlePrint("all")}
             triggerLabel="Unduh / Cetak"
           />
         </div>
@@ -145,6 +194,16 @@ function PreviewPage() {
           <PreviewPembahasanSection exam={exam} /> :
           null}
       </div>
+      {teacherFeedbackConfig.enabled ?
+        (
+          <ExamReadinessDialog
+            open={readinessOpen}
+            formUrl={teacherFeedbackConfig.formUrl}
+            onOpenChange={handleReadinessOpenChange}
+            onSubmit={handleReadinessSubmit}
+          />
+        ) :
+        null}
     </div>
   )
 }

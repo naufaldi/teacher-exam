@@ -9,6 +9,7 @@ import { CurriculumGroup } from "./groups/curriculum"
 import { DevAuthGroup } from "./groups/dev-auth"
 import { ExamsGroup } from "./groups/exams"
 import { ExportsGroup, PublicExportsGroup } from "./groups/export"
+import { FeedbackGroup } from "./groups/feedback"
 import { HealthGroup } from "./groups/health"
 import { MeGroup } from "./groups/me"
 import { PublicExamsGroup } from "./groups/public-exams"
@@ -27,6 +28,7 @@ export const TeacherExamApi = HttpApi.make("TeacherExamApi")
   .add(MeGroup)
   .add(ExamsGroup)
   .add(ExportsGroup)
+  .add(FeedbackGroup)
   .add(QuestionsGroup)
   .add(AiGroup)
   .add(BankGroup)

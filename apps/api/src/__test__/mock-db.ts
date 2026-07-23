@@ -13,7 +13,8 @@ const CHAIN_METHODS = [
   "leftJoin",
   "groupBy",
   "returning",
-  "onConflictDoNothing"
+  "onConflictDoNothing",
+  "onConflictDoUpdate"
 ] as const
 
 export function makeQueryEffect<T>(result: T) {
@@ -156,6 +157,17 @@ export function createMockDbModule() {
       pageCount: "pdf_uploads.pageCount",
       errorMessage: "pdf_uploads.errorMessage",
       extractedText: "pdf_uploads.extracted_text"
+    },
+    examPilotOutcomes: {
+      id: "exam_pilot_outcomes.id",
+      userId: "exam_pilot_outcomes.userId",
+      examId: "exam_pilot_outcomes.examId",
+      trigger: "exam_pilot_outcomes.trigger",
+      readiness: "exam_pilot_outcomes.readiness",
+      firstExportAt: "exam_pilot_outcomes.firstExportAt",
+      answeredAt: "exam_pilot_outcomes.answeredAt",
+      createdAt: "exam_pilot_outcomes.createdAt",
+      updatedAt: "exam_pilot_outcomes.updatedAt"
     },
     ingestJobs: {
       id: "ingest_jobs.id",

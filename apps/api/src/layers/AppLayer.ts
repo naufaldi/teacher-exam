@@ -13,6 +13,7 @@ import { CurriculumLive } from "../api/handlers/curriculum"
 import { DevAuthLive } from "../api/handlers/dev-auth"
 import { ExamsLive } from "../api/handlers/exams"
 import { ExportsLive, PublicExportsLive } from "../api/handlers/export"
+import { FeedbackLive } from "../api/handlers/feedback"
 import { HealthLive } from "../api/handlers/health"
 import { MeLive } from "../api/handlers/me"
 import { PublicExamsLive } from "../api/handlers/public-exams"
@@ -32,6 +33,7 @@ import { getSharedDatabaseLayer } from "../api/services/bootstrap-db"
 import { ClassServiceLive } from "../api/services/class-service"
 import { CurriculumServiceLive } from "../api/services/curriculum-service"
 import { ExportServiceLive } from "../api/services/export-service"
+import { FeedbackServiceLive } from "../api/services/feedback-service"
 import { GradingServiceLive } from "../api/services/grading-service"
 import { ObjectStorageLive } from "../api/services/object-storage-live"
 import { SessionServiceLive } from "../api/services/session-service"
@@ -44,6 +46,7 @@ const ClassServiceWithDbLive = ClassServiceLive.pipe(Layer.provide(getSharedData
 const SessionServiceWithDbLive = SessionServiceLive.pipe(Layer.provide(getSharedDatabaseLayer()))
 const GradingServiceWithDbLive = GradingServiceLive.pipe(Layer.provide(getSharedDatabaseLayer()))
 const AnalyticsServiceWithDbLive = AnalyticsServiceLive.pipe(Layer.provide(getSharedDatabaseLayer()))
+const FeedbackServiceWithDbLive = FeedbackServiceLive.pipe(Layer.provide(getSharedDatabaseLayer()))
 
 const CoreLive = Layer.mergeAll(
   AppConfigLive,
@@ -56,6 +59,7 @@ const CoreLive = Layer.mergeAll(
   SessionServiceWithDbLive,
   GradingServiceWithDbLive,
   AnalyticsServiceWithDbLive,
+  FeedbackServiceWithDbLive,
   ExportServiceLive
 )
 
@@ -81,6 +85,7 @@ const HandlersLive = Layer.mergeAll(
   MeLive,
   ExamsLive,
   ExportsLive,
+  FeedbackLive,
   QuestionsLive,
   AiLive,
   BankLive,
