@@ -241,9 +241,9 @@ Bidirectional sync between GitHub Issues, roadmap, and codebase:
 
 | Service | URL |
 |---|---|
-| Web | https://ujian-sekolah.faldi.xyz |
-| API | https://api-ujian-sekolah.faldi.xyz |
-| API health | https://api-ujian-sekolah.faldi.xyz/api/health |
+| Web | https://ujian-sekolah.naufaldi.com |
+| API | https://api-ujian-sekolah.naufaldi.com |
+| API health | https://api-ujian-sekolah.naufaldi.com/api/health |
 
 Full operational reference (architecture decisions, deploy commands, bug history, gotchas) → **`docs/ops/PRODUCTION.md`**
 
@@ -257,7 +257,7 @@ Full operational reference (architecture decisions, deploy commands, bug history
 ### Key deployment facts (no secrets)
 
 - **Infrastructure:** Caddy reverse-proxy (`edge-proxy-caddy`) on VPS `103.59.160.70`, reads Docker labels, auto-issues Let's Encrypt certs.
-- **Domains:** Cloudflare subdomains of `faldi.xyz` — DNS-only or Proxied, both work.
+- **Domains:** Cloudflare subdomains of `naufaldi.com` — DNS-only or Proxied, both work.
 - **Runtime:** API runs via `node --import tsx/esm src/index.ts` (no tsc build). WORKDIR must be `/app/apps/api` so pnpm-scoped `tsx` resolves.
 - **Vite bake:** `VITE_API_URL` is baked into the JS bundle at Docker build time. Domain changes require `--build web`.
 - **Auth redirect:** `callbackURL` in `signIn.social()` must be an **absolute URL** (`window.location.origin + '/dashboard'`), not relative — or better-auth resolves it against the API host.

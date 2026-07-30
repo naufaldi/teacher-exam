@@ -2,8 +2,8 @@
 
 > AI-generated, print-ready exam sheets for Indonesian elementary-school teachers — pair-built with **Opus 4.7**, **GPT 5.5**, and **Composer 2.5**; core exam generation runs on **OpenAI GPT-5.4-mini**.
 
-[![Live](https://img.shields.io/badge/live-ujian--sekolah.faldi.xyz-0a7c3a?logo=caddy&logoColor=white)](https://ujian-sekolah.faldi.xyz)
-[![API](https://img.shields.io/badge/api-api--ujian--sekolah.faldi.xyz-555?logo=hono)](https://api-ujian-sekolah.faldi.xyz/api/health)
+[![Live](https://img.shields.io/badge/live-ujian--sekolah.naufaldi.com-0a7c3a?logo=caddy&logoColor=white)](https://ujian-sekolah.naufaldi.com)
+[![API](https://img.shields.io/badge/api-api--ujian--sekolah.naufaldi.com-555?logo=hono)](https://api-ujian-sekolah.naufaldi.com/api/health)
 [![Built with Opus 4.7](https://img.shields.io/badge/built%20with-Claude%20Opus%204.7-d97706)](https://www.anthropic.com/)
 [![Built with GPT 5.5](https://img.shields.io/badge/built%20with-GPT%205.5-412991)](https://openai.com/)
 [![Built with Composer 2.5](https://img.shields.io/badge/built%20with-Composer%202.5-000000)](https://cursor.com/)
@@ -111,8 +111,8 @@ the deploy reference (Caddy, Docker labels, Cloudflare DNS, env vars).
 - **Schema-first.** Every entity is defined as an Effect Schema in `packages/shared`,
   the type is derived (`type X = typeof XSchema.Type`), and both ends of the wire
   validate with `Schema.decodeUnknownEither`.
-- **Subdomain-split deploy.** Web on `ujian-sekolah.faldi.xyz`, API on
-  `api-ujian-sekolah.faldi.xyz`, single Caddy reverse-proxy reading Docker labels.
+- **Subdomain-split deploy.** Web on `ujian-sekolah.naufaldi.com`, API on
+  `api-ujian-sekolah.naufaldi.com`, single Caddy reverse-proxy reading Docker labels.
   Better-auth sits on the API host with cross-subdomain session cookies.
 
 ## Built with AI coding agents

@@ -6,20 +6,20 @@
 
 | | URL |
 |---|---|
-| Web | https://ujian-sekolah.faldi.xyz |
-| API | https://api-ujian-sekolah.faldi.xyz |
-| API health | https://api-ujian-sekolah.faldi.xyz/api/health |
+| Web | https://ujian-sekolah.naufaldi.com |
+| API | https://api-ujian-sekolah.naufaldi.com |
+| API health | https://api-ujian-sekolah.naufaldi.com/api/health |
 
 ## Architecture
 
 ```
-ujian-sekolah.faldi.xyz       → web container  (caddy:alpine, Vite SPA)
-api-ujian-sekolah.faldi.xyz   → api container  (node:22-alpine + tsx + Hono)
+ujian-sekolah.naufaldi.com       → web container  (caddy:alpine, Vite SPA)
+api-ujian-sekolah.naufaldi.com   → api container  (node:22-alpine + tsx + Hono)
                                    ↕ teacher-exam-private network
                                db container    (postgres:16-alpine)
 ```
 
-Both subdomains are under the user's existing `faldi.xyz` Cloudflare zone.  
+Both subdomains are under the user's existing `naufaldi.com` Cloudflare zone.
 Reverse proxy: `edge-proxy-caddy` (shared, already running on VPS).
 
 ## One-Time Setup
@@ -34,7 +34,7 @@ In [Google Cloud Console](https://console.cloud.google.com) → OAuth 2.0 Client
 
 ```
 http://localhost:3000/api/auth/callback/google
-https://api-ujian-sekolah.faldi.xyz/api/auth/callback/google
+https://api-ujian-sekolah.naufaldi.com/api/auth/callback/google
 ```
 
 ### 3. VPS Bootstrap
@@ -111,11 +111,11 @@ ssh vps-faldi 'docker exec teacher-exam-db-1 pg_dump -U school_exam school_exam 
 ## Verify Checklist
 
 ```bash
-curl -sf https://api-ujian-sekolah.faldi.xyz/api/health   # → {"status":"ok"}
-curl -sIL https://ujian-sekolah.faldi.xyz | head -5       # → HTTP/2 200 text/html
+curl -sf https://api-ujian-sekolah.naufaldi.com/api/health   # → {"status":"ok"}
+curl -sIL https://ujian-sekolah.naufaldi.com | head -5       # → HTTP/2 200 text/html
 ```
 
-Manual: open `https://ujian-sekolah.faldi.xyz` → Sign in with Google → land on `/dashboard` (not on the API domain).
+Manual: open `https://ujian-sekolah.naufaldi.com` → Sign in with Google → land on `/dashboard` (not on the API domain).
 
 ---
 

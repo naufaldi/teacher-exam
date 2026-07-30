@@ -47,7 +47,7 @@ describe("POST /api/dev/login", () => {
     const app = buildApp()
     const res = await app.request("/api/dev/login", {
       method: "POST",
-      headers: { Host: "ujian-sekolah.faldi.xyz" }
+      headers: { Host: "ujian-sekolah.naufaldi.com" }
     })
 
     expect(res.status).toBe(403)
