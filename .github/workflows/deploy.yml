@@ -97,7 +97,9 @@ jobs:
 
             # Sync to origin/main (VPS clone must not keep local edits — e.g. manual migration hotfixes block git pull)
             git fetch origin main
+            git checkout -B main origin/main
             git reset --hard origin/main
+            git clean -fd -e .env.production
 
             # Login to GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -135,19 +137,36 @@ jobs:
             echo "Restarting services..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
-            # Health check
-            echo "Waiting for API to be healthy..."
+            # Primary health: in-container (bypasses Caddy/Cloudflare TLS races on domain cutover)
+            echo "Waiting for API container health..."
             for i in $(seq 1 30); do
-              if curl -sf https://api-ujian-sekolah.naufaldi.com/api/health > /dev/null 2>&1; then
-                echo "API is healthy"
+              if docker exec teacher-exam-api-1 node -e "fetch('http://localhost:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" > /dev/null 2>&1; then
+                echo "API container is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
-                echo "Health check failed after 30 attempts"
-                docker compose -f docker-compose.prod.yml logs --tail=20 api
+                echo "In-container health check failed after 30 attempts"
+                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
                 exit 1
               fi
-              echo "Attempt $i/30 - waiting 5s..."
+              echo "Container health attempt $i/30 - waiting 5s..."
+              sleep 5
+            done
+
+            # Secondary health: public URL (routing/DNS/TLS). Fail only after internal is already OK.
+            echo "Waiting for public API health..."
+            for i in $(seq 1 30); do
+              if curl -sf https://api-ujian-sekolah.naufaldi.com/api/health > /dev/null 2>&1; then
+                echo "Public API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Public health check failed after 30 attempts (container was healthy)"
+                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
+                docker logs edge-proxy-caddy --tail=50 || true
+                exit 1
+              fi
+              echo "Public health attempt $i/30 - waiting 5s..."
               sleep 5
             done
 
