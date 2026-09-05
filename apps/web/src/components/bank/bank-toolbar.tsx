@@ -1,10 +1,10 @@
-import type { BankSort, ExamDifficulty, ExamSubject, QuestionType } from "@teacher-exam/shared"
+import { type BankSort, type ExamDifficulty, type ExamSubject, type Grade, GradeSchema, type QuestionType } from "@teacher-exam/shared"
 import { Search, X } from "lucide-react"
 import { SUBJECT_OPTIONS } from "../../lib/subjects.js"
 import { FILTER_SEARCH_CLASS, SELECT_CHEVRON, SELECT_CLASS } from "../shared/filter-select-styles.js"
 
 export type BankSubjectFilter = "" | ExamSubject
-export type BankGradeFilter = "" | "5" | "6"
+export type BankGradeFilter = "" | `${Grade}`
 export type BankDifficultyFilter = "" | ExamDifficulty
 export type BankTypeFilter = "" | QuestionType
 export type BankSortFilter = BankSort
@@ -45,8 +45,7 @@ const SUBJECT_FILTER_OPTIONS: Array<{ value: BankSubjectFilter; label: string }>
 
 const GRADE_OPTIONS: Array<{ value: BankGradeFilter; label: string }> = [
   { value: "", label: "Semua kelas" },
-  { value: "5", label: "Kelas 5" },
-  { value: "6", label: "Kelas 6" }
+  ...GradeSchema.literals.map((grade) => ({ value: `${grade}` as BankGradeFilter, label: `Kelas ${grade}` }))
 ]
 
 const DIFFICULTY_OPTIONS: Array<{ value: BankDifficultyFilter; label: string }> = [

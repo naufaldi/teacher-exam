@@ -1,6 +1,7 @@
 import type * as TanStackRouter from "@tanstack/react-router"
 import type { PaginatedPublicBankSheetsResponse } from "@teacher-exam/shared"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Route } from "../bank-soal-publik.js"
@@ -34,6 +35,20 @@ vi.mock("../../lib/api.js", () => ({
 }))
 
 describe("BankSoalPublikPage", () => {
+  it("lets a teacher filter lower-grade sheets and reset to all grades", async () => {
+    const user = userEvent.setup()
+    const Page = Route.options.component as React.ComponentType
+    render(<Page />)
+    const gradeFilter = screen.getByRole("combobox", { name: "Filter kelas" })
+    await user.selectOptions(gradeFilter, "2")
+    await waitFor(() => {
+      expect(browsePublicSheetsMock).toHaveBeenLastCalledWith(expect.objectContaining({ grade: 2, page: 1 }))
+    })
+    await user.selectOptions(gradeFilter, "")
+    await waitFor(() => {
+      expect(browsePublicSheetsMock.mock.lastCall?.[0]).not.toHaveProperty("grade")
+    })
+  })
   beforeEach(() => {
     browsePublicSheetsMock.mockReset()
     browsePublicSheetsMock.mockResolvedValue({

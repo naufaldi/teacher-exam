@@ -35,20 +35,12 @@ test("Nama Sekolah onBlur PATCHes exam with schoolName only", async () => {
   examsPatchSpy.mockRestore()
 })
 
-test("persistMetaField skips PATCH when examId is undefined", async () => {
-  const examsPatchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
-  setReviewSearch({ mode: "fast" })
-  examDraftStore.reset()
-  renderReviewPage()
-
-  const input = screen.getByLabelText(/nama sekolah/i)
-  await userEvent.clear(input)
-  await userEvent.type(input, "SD Negeri 2")
-  fireEvent.blur(input)
-
-  await new Promise((r) => setTimeout(r, 50))
-  expect(examsPatchSpy).not.toHaveBeenCalled()
-  examsPatchSpy.mockRestore()
+test("redirects to dashboard when review has no examId", async () => {
+  await expect(getLoader()({ deps: {} })).rejects.toMatchObject({
+    isRedirect: true,
+    to: "/dashboard"
+  })
+  expect(mockExamsPatch).not.toHaveBeenCalled()
 })
 
 test("persistMetaField skips PATCH when Durasi value is NaN", async () => {
