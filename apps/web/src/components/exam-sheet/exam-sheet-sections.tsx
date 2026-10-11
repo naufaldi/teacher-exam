@@ -1,4 +1,4 @@
-import type { Question } from "@teacher-exam/shared"
+import { type Question, SHEET_CREDIT } from "@teacher-exam/shared"
 import type { ReactNode } from "react"
 import { pointsPerQuestion } from "../../lib/points.js"
 import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
@@ -21,6 +21,11 @@ function PaperFrame({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <p className="mt-7 text-center text-[11px] text-black">
+        <a className="underline" href={SHEET_CREDIT.url}>
+          {SHEET_CREDIT.sentence}
+        </a>
+      </p>
     </div>
   )
 }
