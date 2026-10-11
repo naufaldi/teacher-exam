@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import type { ReactElement, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -86,6 +88,20 @@ describe("index.beforeLoad", () => {
 })
 
 describe("LoginPage", () => {
+  it("names the product Ujian Sekolah on the landing", () => {
+    render(<LoginPage />)
+
+    expect(screen.getByText("Ujian Sekolah")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /Buat Soal Ujian Sekolah/i })).toBeInTheDocument()
+    expect(screen.queryByText("Ujian SD")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: /Buat Soal Ujian SD/i })).not.toBeInTheDocument()
+  })
+
+  it("sets the document title to Ujian Sekolah", () => {
+    const html = readFileSync(join(process.cwd(), "index.html"), "utf8")
+    expect(html).toContain("<title>Ujian Sekolah — Generator Soal</title>")
+  })
+
   it("starts Google sign-in with an absolute dashboard callback URL", async () => {
     const user = userEvent.setup()
     render(<LoginPage />)

@@ -96,7 +96,7 @@ function LoginPage() {
         >
           <BookOpen size={22} className="text-primary-600" strokeWidth={2} />
           <span className="font-semibold text-text-primary text-body-lg">
-            Ujian SD
+            Ujian Sekolah
           </span>
         </header>
 
@@ -112,7 +112,7 @@ function LoginPage() {
             className="animate-fade-up-stagger text-display font-bold text-text-primary tracking-tight leading-[1.05]"
             style={{ ["--index" as string]: 2 }}
           >
-            Buat Soal Ujian SD
+            Buat Soal Ujian Sekolah
             <br />
             <span className="text-primary-600">dengan Mudah</span>
           </h1>
