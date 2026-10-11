@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { recordFunnelStage, type FunnelSink, type FunnelStage } from "../funnel.js"
+import { type FunnelSink, type FunnelStage, recordFunnelStage } from "../funnel.js"
 
 function fakeSink(dsn: string | undefined): {
   sink: FunnelSink
-  stages: FunnelStage[]
-  networkStages: FunnelStage[]
+  stages: Array<FunnelStage>
+  networkStages: Array<FunnelStage>
 } {
-  const stages: FunnelStage[] = []
-  const networkStages: FunnelStage[] = []
+  const stages: Array<FunnelStage> = []
+  const networkStages: Array<FunnelStage> = []
   const sink: FunnelSink = {
     dsn,
     append(stage) {
