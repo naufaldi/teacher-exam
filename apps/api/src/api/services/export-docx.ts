@@ -2,9 +2,21 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   type PublicExamWithQuestions,
-  resolveExamSubjectLabel
+  resolveExamSubjectLabel,
+  SHEET_CREDIT
 } from "@teacher-exam/shared"
-import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun } from "docx"
+import {
+  AlignmentType,
+  Document,
+  ExternalHyperlink,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun
+} from "docx"
 import { Match } from "effect"
 
 type ExportExam = ExamWithQuestions | PublicExamWithQuestions
@@ -261,10 +273,25 @@ function variantChildren(
   )
 }
 
+function sheetCreditParagraphs(): Array<Paragraph> {
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 360 },
+      children: [
+        new ExternalHyperlink({
+          link: SHEET_CREDIT.url,
+          children: [new TextRun({ text: SHEET_CREDIT.sentence, style: "Hyperlink" })]
+        })
+      ]
+    })
+  ]
+}
+
 /** Builds a DOCX file from an exam + variant and returns its bytes. */
 export async function renderExamDocx(exam: ExportExam, variant: ExportVariant): Promise<Uint8Array> {
   const doc = new Document({
-    sections: [{ children: variantChildren(exam, variant) }]
+    sections: [{ children: [...variantChildren(exam, variant), ...sheetCreditParagraphs()] }]
   })
   const buffer = await Packer.toBuffer(doc)
   return new Uint8Array(buffer)

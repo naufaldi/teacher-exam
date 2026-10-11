@@ -2,7 +2,8 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   type PublicExamWithQuestions,
-  resolveExamSubjectLabel
+  resolveExamSubjectLabel,
+  SHEET_CREDIT
 } from "@teacher-exam/shared"
 import { Match } from "effect"
 import { renderFigureSvg } from "./export-figure.js"
@@ -261,11 +262,13 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .prose { font-size: 13px; line-height: 1.6; }
 .prose p { margin: 0 0 8px; }
 .muted { color: #555; font-size: 13px; }
+.sheet-credit { margin-top: 28px; font-size: 11px; text-align: center; }
 @media print { body { background: #fff; } }
 </style>
 </head>
 <body>
 ${section}
+<p class="sheet-credit"><a href="${SHEET_CREDIT.url}">${escapeHtml(SHEET_CREDIT.sentence)}</a></p>
 </body>
 </html>`
 }
