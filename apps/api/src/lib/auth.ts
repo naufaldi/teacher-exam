@@ -49,6 +49,8 @@ export function initAuth(db: AppDb): AuthInstance {
       additionalFields: {
         username: { type: "string", required: true, input: false },
         school: { type: "string", required: false },
+        schoolAddress: { type: "string", required: false },
+        schoolLogo: { type: "string", required: false },
         gradesTaught: { type: "number[]", required: false },
         subjectsTaught: { type: "string[]", required: false },
         profileCompleted: { type: "boolean", required: false, defaultValue: false, input: false },

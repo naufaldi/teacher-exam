@@ -34,8 +34,22 @@ export const Route = createFileRoute("/_auth/preview")({
       examType: exam.examType as ExamType,
       classContext: exam.classContext ?? ""
     })
+    let schoolName = exam.schoolName ?? ""
+    let schoolAddress: string
+    let schoolLogo: string | null
+    try {
+      const profile = unwrapApiEither(await api.me.get())
+      if (profile.school?.trim()) schoolName = profile.school.trim()
+      schoolAddress = profile.schoolAddress?.trim() ?? ""
+      schoolLogo = profile.schoolLogo ?? null
+    } catch {
+      schoolAddress = ""
+      schoolLogo = null
+    }
     examDraftStore.setMetadata({
-      schoolName: exam.schoolName ?? "",
+      schoolName,
+      schoolAddress,
+      schoolLogo,
       academicYear: exam.academicYear ?? "",
       examDate: exam.examDate ?? "",
       durationMinutes: exam.durationMinutes ?? 60,

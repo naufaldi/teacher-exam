@@ -10,6 +10,8 @@ export const user = pgTable("user", {
 
   username: text("username").notNull().unique(),
   school: text("school"),
+  schoolAddress: text("school_address"),
+  schoolLogo: text("school_logo"),
   gradesTaught: integer("grades_taught").array(),
   subjectsTaught: examSubjectEnum("subjects_taught").array(),
   profileCompleted: boolean("profile_completed").default(false).notNull(),
