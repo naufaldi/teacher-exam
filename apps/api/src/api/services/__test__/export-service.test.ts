@@ -118,6 +118,71 @@ describe("renderExamHtml", () => {
     expect(html).toContain("<span class=\"opt-letter\">a.</span> <span>3</span>")
     expect(html).toContain(".options { list-style: none;")
   })
+
+  it("prints each PG, PG kompleks, and benar/salah label once", () => {
+    const exam = makeExam()
+    const base = exam.questions[0]
+    if (base === undefined || base._tag !== "mcq_single") throw new Error("fixture soal missing")
+    const shared = {
+      examId: base.examId,
+      topic: base.topic,
+      difficulty: base.difficulty,
+      status: base.status,
+      validationStatus: base.validationStatus,
+      validationReason: base.validationReason,
+      createdAt: base.createdAt
+    }
+    const html = renderExamHtml({
+      ...exam,
+      questions: [
+        {
+          ...shared,
+          _tag: "mcq_single",
+          id: "q-pg" as never,
+          number: 1,
+          text: "Rumah pada gambar berada di sebelah...",
+          options: { a: "pohon", b: "sungai", c: "gunung", d: "sekolah" },
+          correct: "a"
+        },
+        {
+          ...shared,
+          _tag: "mcq_multi",
+          id: "q-pgk" as never,
+          number: 2,
+          text: "Pilih dua jawaban yang benar.",
+          options: { a: "akar", b: "daun", c: "bunga", d: "buah" },
+          correct: ["a", "c"]
+        },
+        {
+          ...shared,
+          _tag: "true_false",
+          id: "q-bs" as never,
+          number: 3,
+          text: "Tentukan benar atau salah.",
+          statements: [
+            { text: "pohon tinggi", answer: true },
+            { text: "sungai mengalir", answer: false },
+            { text: "gunung tinggi", answer: true }
+          ]
+        }
+      ]
+    }, "soal")
+
+    const lists = html.match(/<ol class="options"[\s\S]*?<\/ol>/g) ?? []
+    expect(lists).toEqual([
+      "<ol class=\"options\"><li><span class=\"opt-letter\">a.</span> <span>pohon</span></li><li><span class=\"opt-letter\">b.</span> <span>sungai</span></li><li><span class=\"opt-letter\">c.</span> <span>gunung</span></li><li><span class=\"opt-letter\">d.</span> <span>sekolah</span></li></ol>",
+      "<ol class=\"options\"><li><span class=\"opt-letter\">a.</span> <span>akar</span></li><li><span class=\"opt-letter\">b.</span> <span>daun</span></li><li><span class=\"opt-letter\">c.</span> <span>bunga</span></li><li><span class=\"opt-letter\">d.</span> <span>buah</span></li></ol>"
+    ])
+    expect(html.match(/\.options \{[^}]+\}/)?.[0]).toBe(
+      ".options { list-style: none; padding-left: 0; margin: 4px 0 0; }"
+    )
+    expect(html).toContain(
+      "<table class=\"tf\"><thead><tr><th>Pernyataan</th><th>B</th><th>S</th></tr></thead><tbody><tr><td>1</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr><tr><td>2</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr><tr><td>3</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr></tbody></table>"
+    )
+    expect(html).not.toContain("opt-letter\">1.")
+    expect(html).not.toContain("<th>B</th><th>B</th>")
+    expect(html).not.toContain("<th>S</th><th>S</th>")
+  })
 })
 
 function docxDocumentXml(bytes: Uint8Array): string {

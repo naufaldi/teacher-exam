@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { PaperFrame } from "../exam-sheet-sections.js"
+import { McqOptionsList, PaperFrame, TrueFalseTable } from "../exam-sheet-sections.js"
 
 const CREDIT_SENTENCE = "Dibuat dengan Ujian Sekolah"
 const CREDIT_URL = "https://ujian-sekolah.naufaldi.com"
@@ -19,5 +19,36 @@ describe("PaperFrame sheet credit", () => {
     expect(frame?.textContent?.indexOf("Isi soal")).toBeLessThan(
       frame?.textContent?.indexOf(CREDIT_SENTENCE) ?? -1
     )
+  })
+})
+
+describe("A4 choice labels", () => {
+  it("prints each PG and PG kompleks letter once", () => {
+    const { container } = render(
+      <McqOptionsList options={{ a: "pohon", b: "sungai", c: "gunung", d: "sekolah" }} />
+    )
+    const list = container.querySelector("ol")
+    expect(list?.getAttribute("type")).toBeNull()
+    expect(list?.className ?? "").not.toMatch(/list-\[lower-alpha\]|list-alpha/)
+    expect(list?.textContent).toBe("a.pohonb.sungaic.gunungd.sekolah")
+    expect(list?.textContent?.match(/a\./g)?.length).toBe(1)
+    expect(list?.textContent?.match(/b\./g)?.length).toBe(1)
+  })
+
+  it("prints each benar/salah statement once", () => {
+    render(
+      <TrueFalseTable
+        statements={[
+          { text: "pohon tinggi", answer: true },
+          { text: "sungai mengalir", answer: false },
+          { text: "gunung tinggi", answer: true }
+        ]}
+      />
+    )
+    const table = screen.getByRole("table")
+    expect(table.textContent).toBe("PernyataanBSpohon tinggisungai mengalirgunung tinggi")
+    expect(table.textContent?.match(/B/g)?.length).toBe(1)
+    expect(table.textContent?.match(/S/g)?.length).toBe(1)
+    expect(table.textContent).not.toMatch(/a\.\s*a\./)
   })
 })
