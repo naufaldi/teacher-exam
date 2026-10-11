@@ -87,7 +87,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app">
+    <main className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app">
       {/* Left column — brand and auth */}
       <section className="relative flex flex-col px-6 sm:px-10 lg:px-16 xl:px-20 py-10 lg:py-12">
         <header
@@ -297,6 +297,6 @@ function LoginPage() {
           aria-hidden="true"
         />
       </aside>
-    </div>
+    </main>
   )
 }

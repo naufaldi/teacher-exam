@@ -126,6 +126,12 @@ describe("LoginPage", () => {
     expect(html).toContain("<title>Ujian Sekolah — Generator Soal</title>")
   })
 
+  it("has one main landmark on the landing page", () => {
+    render(<LoginPage />)
+
+    expect(screen.getAllByRole("main")).toHaveLength(1)
+  })
+
   it("starts Google sign-in with an absolute dashboard callback URL", async () => {
     const user = userEvent.setup()
     render(<LoginPage />)

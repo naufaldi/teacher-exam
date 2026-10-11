@@ -80,8 +80,11 @@ services:
   web:
     image: ghcr.io/${GITHUB_REPOSITORY}/teacher-exam-web:${IMAGE_TAG:-latest}
     restart: always
+    environment:
+      API_INTERNAL_URL: http://api:3001
     networks:
       - edge
+      - teacher-exam-private
     labels:
       caddy: ${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 80}}"

@@ -130,6 +130,20 @@ describe("share/$slug route", () => {
     expect(screen.getByRole("link", { name: /halaman login/i })).toHaveAttribute("href", "/")
   })
 
+  it("sets a preview title, description, and image for the shared sheet", () => {
+    renderPage()
+
+    expect(document.title).toBe("Lembar Publik Bahasa Indonesia")
+    expect(document.querySelector("meta[name=\"description\"]")?.getAttribute("content")).toContain("Kelas 6 SD")
+    expect(document.querySelector("meta[name=\"description\"]")?.getAttribute("content")?.toLowerCase()).toContain(
+      "siap cetak"
+    )
+    expect(document.querySelector("meta[property=\"og:image\"]")?.getAttribute("content")).toContain("/og.png")
+    expect(document.querySelector("meta[property=\"og:title\"]")?.getAttribute("content")).toBe(
+      "Lembar Publik Bahasa Indonesia"
+    )
+  })
+
   it("renders exam sheet sections without auth context", () => {
     renderPage()
 
