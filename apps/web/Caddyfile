@@ -1,6 +1,6 @@
 :80 {
 	root * /srv
-	encode br gzip zstd
+	encode gzip zstd
 
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
