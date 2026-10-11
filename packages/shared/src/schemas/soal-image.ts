@@ -35,18 +35,224 @@ export const UploadSoalImageInputSchema = Schema.Struct({
 })
 export type UploadSoalImageInput = typeof UploadSoalImageInputSchema.Type
 
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg"
+
+const DRAWING_ELEMENTS: ReadonlySet<string> = new Set([
+  "svg",
+  "g",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "path",
+  "text",
+  "tspan",
+  "title",
+  "desc"
+])
+
+const PRESENTATION_ATTRS: ReadonlySet<string> = new Set([
+  "id",
+  "fill",
+  "stroke",
+  "stroke-width",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-dasharray",
+  "opacity",
+  "fill-opacity",
+  "stroke-opacity",
+  "transform",
+  "font-size",
+  "font-family",
+  "text-anchor"
+])
+
+const SHAPE_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
+  svg: new Set(["xmlns", "viewBox", "width", "height"]),
+  g: new Set<string>(),
+  rect: new Set(["x", "y", "width", "height", "rx", "ry"]),
+  circle: new Set(["cx", "cy", "r"]),
+  ellipse: new Set(["cx", "cy", "rx", "ry"]),
+  line: new Set(["x1", "y1", "x2", "y2"]),
+  polyline: new Set(["points"]),
+  polygon: new Set(["points"]),
+  path: new Set(["d"]),
+  text: new Set(["x", "y", "dx", "dy"]),
+  tspan: new Set(["x", "y", "dx", "dy"]),
+  title: new Set<string>(),
+  desc: new Set<string>()
+}
+
+function isNameStart(char: string): boolean {
+  return char >= "A" && char <= "Z" || char >= "a" && char <= "z"
+}
+
+function isNameChar(char: string): boolean {
+  return isNameStart(char) || char >= "0" && char <= "9" || char === "-" || char === ":"
+}
+
+function skipSpace(svg: string, index: number): number {
+  let next = index
+  while (next < svg.length && /\s/.test(svg[next] ?? "")) next += 1
+  return next
+}
+
+function readName(svg: string, index: number): { name: string; index: number } | null {
+  if (!isNameStart(svg[index] ?? "")) return null
+  let next = index + 1
+  while (next < svg.length && isNameChar(svg[next] ?? "")) next += 1
+  return { name: svg.slice(index, next), index: next }
+}
+
+function readValue(svg: string, index: number): { value: string; index: number } | null {
+  const quote = svg[index] ?? ""
+  if (quote === "\"" || quote === "'") {
+    const end = svg.indexOf(quote, index + 1)
+    if (end < 0) return null
+    return { value: svg.slice(index + 1, end), index: end + 1 }
+  }
+  let next = index
+  while (next < svg.length && !/[\s/>]/.test(svg[next] ?? "")) next += 1
+  if (next === index) return null
+  return { value: svg.slice(index, next), index: next }
+}
+
+function codePointChar(code: number): string | null {
+  if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) return null
+  if (code >= 0xd800 && code <= 0xdfff) return null
+  return String.fromCodePoint(code)
+}
+
+function decodeNumericEntities(value: string): string | null {
+  let failed = false
+  const decoded = value.replace(/&#x([0-9a-f]{1,6});?/gi, (match, hex: string) => {
+    const char = codePointChar(Number.parseInt(hex, 16))
+    if (char === null) {
+      failed = true
+      return match
+    }
+    return char
+  }).replace(/&#([0-9]{1,7});?/g, (match, num: string) => {
+    const char = codePointChar(Number.parseInt(num, 10))
+    if (char === null) {
+      failed = true
+      return match
+    }
+    return char
+  })
+  return failed ? null : decoded
+}
+
+function stripControls(value: string): string {
+  let out = ""
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0
+    if (code > 0x20) out += char
+  }
+  return out
+}
+
+function attributeValueIsSafe(name: string, value: string): boolean {
+  if (name === "xmlns") return value === SVG_NAMESPACE
+  if (value.length > 4000) return false
+  const decoded = decodeNumericEntities(value)
+  if (decoded === null) return false
+  const expanded = decoded
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+  if (expanded.includes("&") || expanded.includes("<") || expanded.includes(">")) return false
+  const flat = stripControls(expanded).toLowerCase()
+  if (flat.includes("javascript:")) return false
+  if (flat.includes("data:")) return false
+  if (flat.includes("http:") || flat.includes("https:")) return false
+  if (flat.includes("url(")) return false
+  if (flat.includes("expression(")) return false
+  return true
+}
+
+function attributeOk(element: string, name: string, value: string): boolean {
+  const shape = SHAPE_ATTRS[element]
+  if (shape === undefined) return false
+  if (!PRESENTATION_ATTRS.has(name) && !shape.has(name)) return false
+  return attributeValueIsSafe(name, value)
+}
+
+function parseDrawingSvg(svg: string): { xmlns: boolean } | null {
+  const stack: Array<string> = []
+  let index = 0
+  let sawRoot = false
+  let xmlns = false
+  while (index < svg.length) {
+    if ((svg[index] ?? "") !== "<") {
+      index += 1
+      continue
+    }
+    if (svg.startsWith("<!", index) || svg.startsWith("<?", index)) return null
+    if (svg.startsWith("</", index)) {
+      const name = readName(svg, index + 2)
+      if (name === null) return null
+      const end = skipSpace(svg, name.index)
+      if ((svg[end] ?? "") !== ">") return null
+      if (stack.pop() !== name.name) return null
+      index = end + 1
+      continue
+    }
+    const name = readName(svg, index + 1)
+    if (name === null || !DRAWING_ELEMENTS.has(name.name)) return null
+    if (!sawRoot && (name.name !== "svg" || index !== 0)) return null
+    sawRoot = true
+    let cursor = name.index
+    let selfClosing = false
+    let closed = false
+    while (cursor < svg.length) {
+      cursor = skipSpace(svg, cursor)
+      const char = svg[cursor] ?? ""
+      if (char === ">") {
+        closed = true
+        cursor += 1
+        break
+      }
+      if (char === "/") {
+        if ((svg[cursor + 1] ?? "") !== ">") return null
+        selfClosing = true
+        closed = true
+        cursor += 2
+        break
+      }
+      const attr = readName(svg, cursor)
+      if (attr === null) return null
+      cursor = skipSpace(svg, attr.index)
+      if ((svg[cursor] ?? "") !== "=") return null
+      cursor = skipSpace(svg, cursor + 1)
+      const read = readValue(svg, cursor)
+      if (read === null || !attributeOk(name.name, attr.name, read.value)) return null
+      if (name.name === "svg" && attr.name === "xmlns") xmlns = true
+      cursor = read.index
+    }
+    if (!closed) return null
+    if (!selfClosing) stack.push(name.name)
+    index = cursor
+  }
+  if (!sawRoot || stack.length !== 0) return null
+  return { xmlns }
+}
+
 export function sanitizeStimulusSvg(raw: string): string | null {
   const start = raw.indexOf("<svg")
   const end = raw.lastIndexOf("</svg>")
   if (start < 0 || end < start) return null
   let svg = raw.slice(start, end + "</svg>".length).trim()
   if (svg.length === 0 || svg.length > 20_000) return null
-  if (/<script/i.test(svg)) return null
-  if (/<foreignObject/i.test(svg)) return null
-  if (/\son[a-z]+\s*=/i.test(svg)) return null
-  if (/javascript:/i.test(svg)) return null
-  if (!/xmlns=/.test(svg)) {
-    svg = svg.replace("<svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"")
+  const parsed = parseDrawingSvg(svg)
+  if (parsed === null) return null
+  if (!parsed.xmlns) {
+    svg = svg.replace("<svg", `<svg xmlns="${SVG_NAMESPACE}"`)
   }
   return svg
 }
