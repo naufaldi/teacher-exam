@@ -1,5 +1,6 @@
 import { formatMathFallbackPlain, parseMathText, repairMatematikaLatexInText } from "@teacher-exam/shared"
 import { Match } from "effect"
+import "katex/dist/katex.min.css"
 import katex from "katex"
 import type { ReactNode } from "react"
 

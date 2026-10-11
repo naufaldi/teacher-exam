@@ -9,6 +9,28 @@ import { injectSharePreview, previewSubjectLabel, sharePreviewFromExam } from ".
 const webRoot = path.dirname(fileURLToPath(import.meta.url))
 const monorepoRoot = path.resolve(webRoot, "../..")
 
+function landingStylesFirst(): Plugin {
+  return {
+    name: "landing-styles-first",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        const sheets = [...html.matchAll(/<link rel="stylesheet"[^>]*>/g)].map((match) => match[0])
+        if (sheets.length === 0) return html
+        let next = html
+        for (const sheet of sheets) {
+          next = next.replace(sheet, "")
+        }
+        return next.replace(
+          "<link rel=\"icon\"",
+          `${sheets.join("\n    ")}\n    <link rel="icon"`
+        )
+      }
+    }
+  }
+}
+
 function sharePreviewPlugin(apiPort: string): Plugin {
   return {
     name: "share-preview",
@@ -54,13 +76,18 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       sharePreviewPlugin(apiPort),
+      landingStylesFirst(),
       TanStackRouterVite({
+        autoCodeSplitting: true,
         routesDirectory: "./src/routes",
         routeFileIgnorePattern: "__test__"
       }),
       react(),
       tailwindcss()
     ],
+    build: {
+      modulePreload: false
+    },
     server: {
       port: Number(process.env["WEB_PORT"] ?? fromFiles["WEB_PORT"] ?? 5173),
       proxy: {

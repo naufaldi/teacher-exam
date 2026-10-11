@@ -32,9 +32,11 @@ const EXIT_DURATION = 300
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Array<ToastItem>>([])
+  const [mounted, setMounted] = React.useState(false)
   const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
 
   React.useEffect(() => {
+    setMounted(true)
     return () => {
       timers.current.forEach(clearTimeout)
       timers.current.clear()
@@ -94,7 +96,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      {typeof document !== "undefined" &&
+      {mounted ?
         createPortal(
           <div
             role="region"
@@ -115,7 +117,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             ))}
           </div>,
           document.body
-        )}
+        ) :
+        null}
     </ToastContext.Provider>
   )
 }
