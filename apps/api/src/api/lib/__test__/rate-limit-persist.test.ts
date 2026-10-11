@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
   AI_GENERATE_RATE_WINDOWS,
@@ -9,7 +9,12 @@ import {
 } from "../rate-limit-core"
 
 function useRepoDatabaseUrl(): void {
-  const envText = readFileSync(new URL("../../../../../../.env", import.meta.url), "utf8")
+  const envUrl = new URL("../../../../../../.env", import.meta.url)
+  if (!existsSync(envUrl)) {
+    if (process.env["DATABASE_URL"]) return
+    throw new Error("DATABASE_URL is missing")
+  }
+  const envText = readFileSync(envUrl, "utf8")
   for (const line of envText.split("\n")) {
     const trimmed = line.trim()
     if (!trimmed.startsWith("DATABASE_URL=")) continue
