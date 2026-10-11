@@ -172,10 +172,11 @@ beforeEach(() => {
 })
 
 describe("DashboardPage", () => {
-  it("shows greeting with first name from route context", () => {
+  it("greets by the given name without a Bu prefix", () => {
     renderDashboard()
-    // name = 'Naufaldi Rafii' → firstName = 'Naufaldi'; h1 renders "Bu Naufaldi"
-    expect(screen.getByText(/Bu Naufaldi/)).toBeInTheDocument()
+    const heading = screen.getByRole("heading", { level: 1 })
+    expect(heading.textContent).toMatch(/Selamat (pagi|siang|sore|malam), Naufaldi!/)
+    expect(heading.textContent).not.toMatch(/\bBu\b/)
   })
 
   it("shows 0/0/0 stats for empty exams list", () => {
