@@ -115,6 +115,8 @@ describe("renderExamHtml", () => {
       }]
     }, "soal")
     expect(html).toContain("<circle cx=\"126\" cy=\"76\" r=\"56\"")
+    expect(html).toContain("<span class=\"opt-letter\">a.</span> <span>3</span>")
+    expect(html).toContain(".options { list-style: none;")
   })
 })
 
