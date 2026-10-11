@@ -205,8 +205,8 @@ function LoginPage() {
           style={{ ["--index" as string]: 5 }}
         >
           <p>
-            Buku Siswa: Matematika kelas 1–6. Bahasa Indonesia kelas 1–3 dan 5–6. Pendidikan Pancasila kelas 1–2 dan 4–6.
-            Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
+            Buku Siswa: Matematika kelas 1–6. Bahasa Indonesia kelas 1–3 dan 5–6. Pendidikan Pancasila kelas 1–2 dan
+            4–6. Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
           </p>
           <Link
             to="/kebijakan-privasi"
