@@ -4,7 +4,7 @@ import type { ExportFormat, ExportVariant, PublicExamDetailResponse } from "@tea
 import { Badge, Button, EmptyState, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { Either, Match } from "effect"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   acceptedQuestions,
   ExamSheetContent,
@@ -14,6 +14,7 @@ import {
 } from "../components/exam-sheet/index.js"
 import { ExportMenu } from "../components/export-menu.js"
 import { api, unwrapApiEither } from "../lib/api.js"
+import { applyDocumentPreview, sharePreviewFromExam } from "../lib/share-preview.js"
 
 class PublicShareNotFoundError extends Error {
   constructor() {
@@ -88,6 +89,16 @@ function PublicSharePage() {
   const questions = acceptedQuestions(exam)
   const topicsLabel = exam.topics.join(" · ")
   const hasPembahasan = exam.discussionMd !== null && exam.discussionMd.trim() !== ""
+
+  useEffect(() => {
+    applyDocumentPreview(sharePreviewFromExam({
+      title: exam.title,
+      subjectLabel,
+      grade: exam.grade,
+      origin: window.location.origin,
+      slug
+    }))
+  }, [exam.grade, exam.title, slug, subjectLabel])
 
   const handleExport = async (format: ExportFormat, variant: ExportVariant) => {
     await api.publicExams.export(slug, format, variant)

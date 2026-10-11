@@ -21,6 +21,12 @@ ENV VITE_BUILD_ID=$VITE_BUILD_ID
 RUN pnpm --filter @teacher-exam/web build
 
 FROM caddy:alpine AS runtime
+RUN apk add --no-cache nodejs
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
+COPY apps/web/docker-entrypoint.sh /docker-entrypoint.sh
+COPY apps/web/server/preview-server.mjs /opt/preview/preview-server.mjs
+COPY apps/web/src/lib/share-preview.ts /opt/preview/share-preview.ts
 COPY --from=build /app/apps/web/dist /srv
+RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
+ENTRYPOINT ["/docker-entrypoint.sh"]
