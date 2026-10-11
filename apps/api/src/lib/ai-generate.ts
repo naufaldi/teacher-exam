@@ -17,6 +17,7 @@ import {
   convertGeneratedToQuestion,
   examSubjectInsertFields,
   failureReasonForNumber,
+  generatedDiagramNeedsRetry,
   makeFakeQuestionShape,
   makePlaceholderQuestion,
   resolveInputSubjectLabel
@@ -60,7 +61,7 @@ async function generateWithSalvage(
     includePdfImages?: boolean
   }
 ): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
-  const maxAttempts = request.shouldValidateLatex ? 3 : 1
+  const maxAttempts = request.shouldValidateLatex ? 3 : 2
   let lastSalvage:
     | {
       valid: ReadonlyArray<GeneratedQuestion>
@@ -115,8 +116,9 @@ async function generateWithSalvage(
     }
 
     const hasInvalidLatex = [...latexByNumber.values()].some((r) => r._tag === "invalid")
+    const hasDiagramMismatch = valid.some((question) => generatedDiagramNeedsRetry(question))
     lastSalvage = { valid, failed, missingNumbers, latexByNumber }
-    if (!hasInvalidLatex) break
+    if (!hasInvalidLatex && !hasDiagramMismatch) break
   }
 
   if (!lastSalvage) {

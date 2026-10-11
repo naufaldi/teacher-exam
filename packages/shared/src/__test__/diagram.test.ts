@@ -1,6 +1,12 @@
 import { Either, Schema } from "effect"
 import { describe, expect, test } from "vitest"
-import { checkClockDrawing, checkFigureAnswer, drawnClockTime, renderFigureSvg } from "../diagram.js"
+import {
+  checkClockDrawing,
+  checkFigureAnswer,
+  checkNumberLineDrawing,
+  drawnClockTime,
+  renderFigureSvg
+} from "../diagram.js"
 import { type FigureSpec, FigureSpecSchema } from "../schemas/figures.js"
 
 const decode = Schema.decodeUnknownEither(FigureSpecSchema)
@@ -102,6 +108,42 @@ describe("renderFigureSvg", () => {
       measure: { kind: "value", index: 0 }
     })
     expect(svg).toContain("<circle cx=\"126\" cy=\"96\" r=\"5\"")
+  })
+
+  test("the number under a mark of 5 is 5, not the neighboring tick 6", () => {
+    const svg = renderFigureSvg({
+      type: "number_line",
+      min: 0,
+      max: 10,
+      step: 2,
+      marks: [{ value: 5 }],
+      measure: { kind: "value", index: 0 }
+    })
+    const mark = svg.match(/<circle cx="(\d+)" cy="96" r="5"/)
+    const x = mark?.[1]
+    const labels = [...svg.matchAll(/<text x="(\d+)"[^>]*>([^<]*)<\/text>/g)]
+    const under = labels.find((label) => label[1] === x)
+    const six = labels.find((label) => label[2] === "6")
+    expect(under?.[2]).toBe("5")
+    expect(six?.[1]).not.toBe(x)
+    expect(checkNumberLineDrawing(svg, "5")).toEqual({ _tag: "Match", derived: "5" })
+    expect(checkNumberLineDrawing(svg, "6")).toEqual({ _tag: "Mismatch", derived: "5", keyedText: "6" })
+  })
+
+  test("a dot drawn on 6 does not match kunci 5", () => {
+    const svg = renderFigureSvg({
+      type: "number_line",
+      min: 0,
+      max: 10,
+      step: 2,
+      marks: [{ value: 6 }],
+      measure: { kind: "value", index: 0 }
+    })
+    expect(checkNumberLineDrawing(svg, "5")).toEqual({
+      _tag: "Mismatch",
+      derived: "6",
+      keyedText: "5"
+    })
   })
 
   test("draws a fraction circle with one shaded slice", () => {
