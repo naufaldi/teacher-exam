@@ -88,6 +88,17 @@ describe("index.beforeLoad", () => {
 })
 
 describe("LoginPage", () => {
+  it("shows the sample sheet before the login control on a phone", () => {
+    render(<LoginPage />)
+
+    const sample = screen.getByRole("article", { name: "Contoh lembar ujian" })
+    const aside = sample.closest("aside")
+    expect(aside).not.toBeNull()
+    expect(aside?.className ?? "").not.toMatch(/(?:^|\s)hidden(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/(?:^|\s)order-first(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:order-none/)
+  })
+
   it("names the product Ujian Sekolah on the landing", () => {
     render(<LoginPage />)
 

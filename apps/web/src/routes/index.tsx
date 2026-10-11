@@ -209,7 +209,7 @@ function LoginPage() {
       </section>
 
       {/* Right column — paper preview */}
-      <aside className="relative hidden lg:flex items-center justify-center overflow-hidden bg-kertas-100 p-12">
+      <aside className="relative order-first flex items-center justify-center overflow-hidden bg-kertas-100 p-6 lg:order-none lg:p-12">
         <div
           className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
