@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import type { ReactElement, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
