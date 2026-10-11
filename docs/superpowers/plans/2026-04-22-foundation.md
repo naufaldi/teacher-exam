@@ -1,5 +1,7 @@
 # Foundation Implementation Plan
 
+> **2026-10-11 Launch readiness.** This plan is the April scaffold. The product name is **Ujian Sekolah**, the API is Effect HttpApi, generate covers kelas 1–6, and kisi-kisi shipped in #254. The “Kelas 5 & 6” copy later in this file is the old scaffold, not the current landing. See [ROADMAP](../../ROADMAP.md#2026-10-11-launch-readiness).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Scaffold the pnpm monorepo with Hono + Effect TS (api), Vite + TanStack Router (web), Drizzle + PostgreSQL (db), shadcn + Tailwind v4 design tokens (ui), and a shared types package — all wired together with a health-check round trip.

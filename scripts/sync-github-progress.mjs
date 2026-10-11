@@ -161,6 +161,7 @@ function patchRoadmapOverview(roadmap, rollupByMilestone) {
     if (rollup === "done" && num === 1) statusCell = "✅ Done (2026-05-26)"
     if (rollup === "done" && num === 2) statusCell = "✅ Done (2026-06-23)"
     if (rollup === "done" && num === 4) statusCell = "✅ Done (revised per-lembar, 2026-06-29)"
+    if (num === 3 && rollup === "not_started") statusCell = "🔄 Partial (6 shapes, 2026-10-11)"
 
     const parts = line.split("|")
     parts[5] = ` ${statusCell} `

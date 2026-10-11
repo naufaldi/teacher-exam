@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v8
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. PDF page cap, scan detection, and source-page citation are still open (#238). See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 ## Generate PDF Enhancement — Multi-Source Materi
 
 | Field            | Value                                                                 |

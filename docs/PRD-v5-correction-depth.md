@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v5
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. Delivery, koreksi, and analytics stay gated off until the launch checklist decides. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 ## School Exam Generator — Correction Depth
 
 | Field             | Value                                                                  |

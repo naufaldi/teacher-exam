@@ -1,10 +1,10 @@
 # Product Roadmap 2026–2027
 
-## School Exam Generator (Ujian SD)
+## Ujian Sekolah
 
 | Field | Value |
 |-------|-------|
-| **Product** | School Exam Generator (Ujian SD) |
+| **Product** | Ujian Sekolah |
 | **School Year** | 2026–2027 (Indonesia: Jul 2026 – Jun 2027) |
 | **Created** | 2026-04-29 |
 | **Strategy** | Ship easy wins first, layer features over the school year |
@@ -30,6 +30,25 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | D-3 | 2026-06-29 | Tabel lembar disatukan (`SheetTable`) di Dashboard Riwayat terbaru, Riwayat, Bank Saya, Bank Publik. Pratinjau modal untuk browse; `/preview` untuk cetak/export. | — | Konsistensi UI; guru melihat isi soal cepat tanpa meninggalkan halaman. Lihat [RFC 2026-06-29-unified-sheet-table](rfc/2026-06-29-unified-sheet-table-rfc.md). |
 | D-4 | 2026-06-29 | Halaman `/share/:slug` = pratinjau anonim penuh (soal + LJ + kunci + pembahasan) untuk guru rekan; renderers dibagi via `exam-sheet`. | — | Link Bagikan dari Riwayat harus printable seperti `/preview`. Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md). |
 | D-5 | 2026-06-29 | Generate enhancement v8: tiga mode materi (`default` / `pdf_guru` / `combine`); default = Buku Siswa; PDF guru + gambar di **Cloudflare R2** (bukan VPS disk); perpustakaan PDF per guru; RAG topik + agentic search; streaming + durable jobs — phased F0–F5. | RFC 2026-06-10 Flow B `UPLOAD_DIR` (guru PDF) | Guru worksheet + combine materi; reuse PDF; selaras PRD v2 intent upload. Lihat [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29-generate-pdf-enhancement](rfc/2026-06-29-generate-pdf-enhancement-rfc.md). |
+| D-6 | 2026-10-11 | Product name stays **Ujian Sekolah**. Launch work follows the order in [2026-10-11 Launch readiness](#2026-10-11-launch-readiness). Payments stay out of this pass. | “Ujian SD” in README and older PRD titles | The live app and the 11 Oct 2026 audit already use Ujian Sekolah. |
+
+---
+
+## 2026-10-11 Launch readiness
+
+History of the read-only audit at commit `d8e054c` (merge of #257), 11 Oct 2026, 15:30 WIB. There is no `plan.html` in this repo. The kelas 5–6 landing line and the “kisi-kisi is missing” line lived in that missing page and in PRD v2; both are stale. Kisi-kisi and kartu soal shipped in #254. Generate covers kelas 1–6. Six geometry figures already exist in `packages/shared/src/schemas/figures.ts`.
+
+**Audit summary.** Print-ready A4, PDF, and DOCX are live. The school header is still a text name with a blank fallback. Corpus gaps: Bahasa Indonesia kelas 4, Pendidikan Pancasila kelas 3, Bahasa Inggris kelas 1–2. IPAS starts at kelas 3. The sheet footer “Dibuat dengan Ujian Sekolah” is missing. Per-sheet link previews were not confirmed live at audit time. WhatsApp share, security headers, privacy policy, account deletion, Sentry, and a signup-to-print funnel were missing. Delivery, koreksi, and analytics are built and switched off. The live JS bundle was one chunk of about 1.35 MB. Dependabot #245–#250 were open; hold #250 (`@effect/ai-openai` 4.0). #238 (PDF trust) was still open.
+
+**Order after this history entry.** One focused PR at a time:
+
+1. Math diagrams on both routes. Default to code-drawn SVG from structured numbers. One shared drawing module. Add number line, fractions, clock, and bar chart. Scale shapes to the given values. Check the answer key against the diagram data. An image model is only for decorative pictures.
+2. Soal images on both routes: model-drawn SVG, or the GPT Image model available through the OpenAI provider. An image field on the soal, shown in the editor, the A4 print, and the PDF, plus teacher upload and print-safe grayscale. Teachers can regenerate or remove any image.
+3. PDF attach. 60-page cap. Clear “PDF hasil scan belum didukung” when extraction is junk. Show the source page for each soal. Reuse or finish #238.
+4. Textbook corpus. Index per bab with a content hash so edits re-index. Send only the chosen bab. CI check that the manifest matches the files. Fill the missing books if the source PDFs exist. Otherwise make the landing honest, including that IPAS starts at kelas 3.
+5. Launch checklist, no payments, one PR each: real kop sekolah with logo and address; “Dibuat dengan Ujian Sekolah” sheet footer; WhatsApp/native share; confirm #257 previews live; route code-splitting; security headers; privacy policy and delete account; Sentry plus a signup-to-print funnel; decide whether to enable or hide online delivery, koreksi, and analytics.
+
+#258 (WhatsApp) and #259 (route splitting and prerender) merged after this audit snapshot. They do not close the checklist items that still need a live check.
 
 ---
 
@@ -40,7 +59,7 @@ Each milestone maps to a PRD:
 | PRD | Status | Milestones |
 |-----|--------|------------|
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done (M3 diagrams pending) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
+| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done (M3 Partial: 6 shapes shipped) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar model, D-2) | M4 (Bank Soal) |
 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
@@ -54,7 +73,7 @@ Each milestone maps to a PRD:
 |---|-----------|--------|-----|--------|
 | 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ✅ Done (2026-06-23) |
-| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
+| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | 🔄 Partial (6 shapes, 2026-10-11) |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar, 2026-06-29) |
 | 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
@@ -133,13 +152,13 @@ _(Record issues here as they're discovered)_
 
 **Target:** Jul 15, 2026
 **Goal:** Math fully production-ready with geometry figures
-**Status:** ⬜ Not started
+**Status:** 🔄 Partial (6 shapes in `figures.ts`, 2026-10-11). Number line, fractions, clock, and bar chart are still open. Web and server drawing are still duplicated.
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ⬜ |
+| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ✅ |
 | 3.2 | Build deterministic SVG renderer | SVG identical on web and PDF (visual diff <1px) | Screenshot comparison | ⬜ |
 | 3.3 | AI outputs `figure` field per soal | JSON with type + parameters | 50 samples, ≥95% valid JSON | ⬜ |
 | 3.4 | Validator rejects unsupported figures | Regen with alternative topic succeeds ≥90% | Unit test + 50 samples | ⬜ |

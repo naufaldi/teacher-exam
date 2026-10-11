@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v2
 
+> **2026-10-11 Launch readiness.** The product name is **Ujian Sekolah**. Generate covers kelas 1–6. Kisi-kisi and kartu soal shipped in #254. The “Kelas 5 & 6” title below is the April 2026 MVP record, not the current product. There is no `plan.html` in this repo. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 > **Changelog 2026-06-29:** Unified `SheetTable` + modal-first Pratinjau across Dashboard, Riwayat, Bank Soal. See [RFC 2026-06-29-unified-sheet-table](../rfc/2026-06-29-unified-sheet-table-rfc.md).
 
 ## School Exam Generator — Ujian SD Kelas 5 & 6

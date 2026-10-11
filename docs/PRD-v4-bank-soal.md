@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v4
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. This PRD is the bank-soal record. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 > **Changelog 2026-06-29:** Bank browse memakai `SheetTable` bersama Dashboard/Riwayat; Pratinjau modal + Pakai lembar → `/preview`. Lihat [RFC unified sheet table](../rfc/2026-06-29-unified-sheet-table-rfc.md).
 
 ## School Exam Generator — Bank Soal + Exam Builder

@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v6
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. This milestone is still not started. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 ## School Exam Generator — Weakness Analysis + Re-teach
 
 | Field             | Value                                                                  |

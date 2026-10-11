@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v3
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. Six geometry shapes are in code; number line, fractions, clock, and bar chart are still open. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 ## School Exam Generator — Ekspansi Multi-Mata Pelajaran
 
 | Field             | Value                                                                  |

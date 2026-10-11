@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD) v7
 
+> **2026-10-11 Launch readiness.** Product name is **Ujian Sekolah**. See [ROADMAP](ROADMAP.md#2026-10-11-launch-readiness).
+
 ## Bab-Based Materi Picker on Generate
 
 | Field            | Value                                      |
