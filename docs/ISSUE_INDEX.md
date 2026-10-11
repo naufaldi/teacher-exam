@@ -17,7 +17,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 |-----------|------|--------|---------|---------------|
 | M1 | 0 | 7 | 0 | done |
 | M2 | 0 | 8 | 0 | done |
-| M3 | 7 | 0 | 0 | not_started |
+| M3 | 5 | 0 | 2 | in_progress |
 | M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
@@ -48,8 +48,8 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M2 | — | — | M2.5 Hide diagram topics | closed | apps/web/src/routes/_auth.generate.tsx | — |
 | M2 | — | — | M2.6 Generate Mtk non-diagram QA | closed | docs/qa/cd-issue-evidence.md | — |
 | M2 | — | — | M2.7 Browser verification Mtk | closed | docs/qa/cd-issue-evidence.md | — |
-| M3 | — | — | M3.1 figure_spec schema | open | — | — |
-| M3 | — | — | M3.2 SVG renderer | open | — | — |
+| M3 | — | — | M3.1 figure_spec schema | partial | packages/shared/src/schemas/figures.ts | — |
+| M3 | — | — | M3.2 SVG renderer | partial | apps/web/src/lib/figure-renderer.ts | — |
 | M3 | — | — | M3.3 AI figure field | open | — | — |
 | M3 | — | — | M3.4 Figure validator | open | — | — |
 | M3 | — | — | M3.5 Unhide diagram topics | open | — | — |
