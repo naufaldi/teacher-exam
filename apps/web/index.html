@@ -19,6 +19,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        var path = location.pathname
+        if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1)
+        if (path === "/" && location.search === "") return
+        var root = document.getElementById("root")
+        if (root) root.textContent = ""
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

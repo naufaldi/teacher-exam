@@ -1,9 +1,12 @@
 :80 {
 	root * /srv
-	encode gzip zstd
+	encode br gzip zstd
 
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	@html path / /index.html /bank-soal-publik
+	header @html Cache-Control "public, max-age=60"
 
 	handle /share/* {
 		reverse_proxy 127.0.0.1:8080

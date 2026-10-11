@@ -1,12 +1,18 @@
 import { inferAdditionalFields } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
+export function authClientBaseUrl(origin: string | undefined, apiUrl: string | undefined): string {
+  if (apiUrl) return `${apiUrl}/auth`
+  return `${origin ?? "http://127.0.0.1"}/api/auth`
+}
+
 export const authClient = createAuthClient({
-  // Prod: VITE_API_URL=https://api.ujiansd.com/api → baseURL=https://api.ujiansd.com/api/auth
+  // Prod: VITE_API_URL=https://api.example.com/api → baseURL=https://api.example.com/api/auth
   // Dev: unset → same-origin /api/auth, proxied by Vite to API_PORT (default :3000)
-  baseURL: import.meta.env["VITE_API_URL"]
-    ? `${import.meta.env["VITE_API_URL"]}/auth`
-    : `${typeof window === "undefined" ? "" : window.location.origin}/api/auth`,
+  baseURL: authClientBaseUrl(
+    typeof window === "undefined" ? undefined : window.location.origin,
+    import.meta.env["VITE_API_URL"]
+  ),
   plugins: [
     inferAdditionalFields({
       user: {
