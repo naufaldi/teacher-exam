@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { resolveExamSubjectLabel } from "@teacher-exam/shared"
-import type { PublicExamDetailResponse } from "@teacher-exam/shared"
+import type { ExportFormat, ExportVariant, PublicExamDetailResponse } from "@teacher-exam/shared"
 import { Badge, Button, EmptyState, PageHeader, Tabs, TabsList, TabsTrigger } from "@teacher-exam/ui"
 import { Either, Match } from "effect"
 import { BookOpen, ClipboardList, FileText, Key, Layers, Printer } from "lucide-react"
@@ -89,7 +89,7 @@ function PublicSharePage() {
   const topicsLabel = exam.topics.join(" · ")
   const hasPembahasan = exam.discussionMd !== null && exam.discussionMd.trim() !== ""
 
-  const handleExport = async (format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
+  const handleExport = async (format: ExportFormat, variant: ExportVariant) => {
     await api.publicExams.export(slug, format, variant)
   }
 
@@ -166,6 +166,12 @@ function PublicSharePage() {
                 onPrint={() => triggerPrint("all")}
                 triggerLabel="Unduh Soal"
               />
+              <Button variant="secondary" size="sm" onClick={() => void handleExport("docx", "kisi_kisi")}>
+                Kisi-kisi
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => void handleExport("docx", "kartu_soal")}>
+                Kartu soal
+              </Button>
               <Button variant="secondary" size="sm" onClick={() => void handleExport("pdf", "kunci")}>
                 PDF Kunci
               </Button>

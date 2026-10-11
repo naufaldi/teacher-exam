@@ -10,12 +10,15 @@ import { api } from "../../../lib/api.js"
 import { examDraftStore } from "../../../lib/exam-draft-store.js"
 import { Route } from "../../_auth.preview.js"
 
-const { mockGenerateDiscussion, mockNavigate, mockStreamDiscussion, previewTestCtx } = vi.hoisted(() => ({
-  mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
-  mockGenerateDiscussion: vi.fn(),
-  mockStreamDiscussion: vi.fn(),
-  previewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined }
-}))
+const { mockExamExport, mockGenerateDiscussion, mockNavigate, mockStreamDiscussion, previewTestCtx } = vi.hoisted(
+  () => ({
+    mockNavigate: vi.fn<(opts: unknown) => Promise<void>>(),
+    mockGenerateDiscussion: vi.fn(),
+    mockStreamDiscussion: vi.fn(),
+    mockExamExport: vi.fn(),
+    previewTestCtx: { mockLoaderData: undefined as ExamWithQuestions | undefined }
+  })
+)
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const orig = await importOriginal<typeof TanStackRouter>()
@@ -52,6 +55,7 @@ vi.mock("../../../lib/api.js", async (importOriginal) => {
       exams: {
         ...orig.api.exams,
         get: vi.fn(),
+        export: mockExamExport,
         generateDiscussion: mockGenerateDiscussion,
         streamDiscussion: mockStreamDiscussion
       }
@@ -117,6 +121,7 @@ export {
   closestByAttr,
   fireEvent,
   getLoader,
+  mockExamExport,
   mockExamsGet,
   mockGenerateDiscussion,
   mockNavigate,
