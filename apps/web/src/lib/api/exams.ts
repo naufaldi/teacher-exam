@@ -73,9 +73,11 @@ export const examsApi = {
 
     if (!response.ok || !response.body) {
       const body = await response.json().catch(() => ({})) as { message?: string; error?: string }
+      const message = body.message ?? body.error ?? `Request failed (${response.status})`
+      onError(message)
       return Either.left(
         new ApiClientError({
-          message: body.message ?? body.error ?? `Request failed (${response.status})`,
+          message,
           code: "DISCUSSION_ERROR",
           status: response.status
         })

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { Readable } from "node:stream"
+import { stampSocketPeer } from "../middleware/ip-rate-limit"
 
 export async function nodeRequestToWebRequest(req: IncomingMessage): Promise<Request> {
   const host = req.headers.host ?? "localhost"
@@ -15,6 +16,8 @@ export async function nodeRequestToWebRequest(req: IncomingMessage): Promise<Req
       headers.set(key, value)
     }
   }
+
+  stampSocketPeer(headers, req.socket.remoteAddress)
 
   const hasBody = method !== "GET" && method !== "HEAD"
   if (!hasBody) {

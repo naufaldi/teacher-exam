@@ -7,7 +7,9 @@ import {
   AI_GENERATE_RATE_WINDOWS,
   createRateLimitChecker,
   GLOBAL_RATE_WINDOWS,
-  type RateLimitChecker
+  persistedRateLimitsEnabled,
+  type RateLimitChecker,
+  takePersistedRateLimitHit
 } from "../lib/rate-limit-core"
 
 export class GlobalRateLimit extends HttpApiMiddleware.Tag<GlobalRateLimit>()("GlobalRateLimit", {
@@ -62,9 +64,40 @@ export const GlobalRateLimitLive = Layer.succeed(
   makeRateLimitMiddleware(createRateLimitChecker(GLOBAL_RATE_WINDOWS))
 )
 
+function makePersistedAiRateLimitMiddleware(): AiGenerateRateLimit["Type"] {
+  return Effect.gen(function*() {
+    const request = yield* HttpServerRequest.HttpServerRequest
+    const session = yield* Effect.tryPromise({
+      try: () => auth.api.getSession({ headers: request.headers }),
+      catch: () => null
+    })
+    if (!session?.user) {
+      return
+    }
+    const result = yield* takePersistedRateLimitHit(
+      `ai:${session.user.id}`,
+      AI_GENERATE_RATE_WINDOWS,
+      Date.now()
+    ).pipe(Effect.orDie)
+    if (!result.allowed) {
+      return yield* Effect.fail(
+        new ApiRateLimited({
+          error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
+          code: "RATE_LIMITED",
+          retryAfterSec: result.retryAfterSec
+        })
+      )
+    }
+  }) as unknown as AiGenerateRateLimit["Type"]
+}
+
 export const AiGenerateRateLimitLive = Layer.succeed(
   AiGenerateRateLimit,
-  makeRateLimitMiddleware(createRateLimitChecker(AI_GENERATE_RATE_WINDOWS)) as unknown as AiGenerateRateLimit["Type"]
+  (persistedRateLimitsEnabled()
+    ? makePersistedAiRateLimitMiddleware()
+    : makeRateLimitMiddleware(createRateLimitChecker(AI_GENERATE_RATE_WINDOWS))) as unknown as AiGenerateRateLimit[
+      "Type"
+    ]
 )
 
 export function createTestGlobalRateLimitLive(opts: {
