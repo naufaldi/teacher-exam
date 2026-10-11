@@ -1062,6 +1062,31 @@ describe("M7 UX polish (#215)", () => {
     )
   })
 
+  it("shows the scan message when ingestion rejects a scanned PDF", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-scan",
+      status: "processing",
+      filename: "scan.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-scan",
+      status: "failed",
+      filename: "scan.pdf",
+      errorMessage: "PDF hasil scan belum didukung",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent("PDF hasil scan belum didukung")
+  })
+
   it("stops waiting after 60 seconds and preserves the uploaded PDF for retry", async () => {
     await prepareNewPdfUpload()
     mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
