@@ -164,7 +164,7 @@ function ProfilePage() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                pattern="[a-z0-9._-]{3,32}"
+                pattern="[-a-z0-9._]{3,32}"
                 required
               />
             </div>
