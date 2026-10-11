@@ -4,6 +4,7 @@ import * as HttpServer from "@effect/platform/HttpServer"
 import { Layer } from "effect"
 import { createCorsLayer } from "../api/cors"
 import { TeacherExamApi } from "../api/definition"
+import { AccountLive } from "../api/handlers/account"
 import { AiLive } from "../api/handlers/ai"
 import { AnalyticsLive } from "../api/handlers/analytics"
 import { BankLive } from "../api/handlers/bank"
@@ -79,6 +80,7 @@ const HandlersLive = Layer.mergeAll(
   PublicExportsLive,
   CurriculumLive,
   MeLive,
+  AccountLive,
   ExamsLive,
   ExportsLive,
   QuestionsLive,

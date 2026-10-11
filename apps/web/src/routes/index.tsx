@@ -204,8 +204,16 @@ function LoginPage() {
           className="animate-fade-up-stagger mt-auto pt-8 text-caption text-text-tertiary"
           style={{ ["--index" as string]: 5 }}
         >
-          Buku Siswa: Matematika kelas 1–6. Bahasa Indonesia kelas 1–3 dan 5–6. Pendidikan Pancasila kelas 1–2 dan 4–6.
-          Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
+          <p>
+            Buku Siswa: Matematika kelas 1–6. Bahasa Indonesia kelas 1–3 dan 5–6. Pendidikan Pancasila kelas 1–2 dan 4–6.
+            Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
+          </p>
+          <Link
+            to="/kebijakan-privasi"
+            className="mt-2 inline-block font-medium text-primary-700 hover:text-primary-800"
+          >
+            Kebijakan privasi
+          </Link>
         </footer>
       </section>
 

@@ -5,6 +5,7 @@ import { db } from "@teacher-exam/db"
 import { Effect, Layer, Stream } from "effect"
 import { createCorsLayer } from "../cors"
 import { TeacherExamApi } from "../definition"
+import { AccountLive } from "../handlers/account"
 import { AiLive } from "../handlers/ai"
 import { AnalyticsLive } from "../handlers/analytics"
 import { BankLive } from "../handlers/bank"
@@ -70,6 +71,7 @@ const HandlerLayers = Layer.mergeAll(
   PublicExportsLive,
   CurriculumLive,
   MeLive,
+  AccountLive,
   ExamsLive,
   ExportsLive,
   QuestionsLive,

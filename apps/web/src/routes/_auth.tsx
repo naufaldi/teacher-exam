@@ -141,6 +141,19 @@ function AuthLayout() {
                 )}
             </Link>
 
+            <Link
+              to="/akun"
+              className="text-body-sm text-text-tertiary hover:text-text-primary transition-colors duration-[120ms]"
+            >
+              Akun
+            </Link>
+            <Link
+              to="/kebijakan-privasi"
+              className="hidden text-body-sm text-text-tertiary hover:text-text-primary transition-colors duration-[120ms] sm:inline"
+            >
+              Kebijakan privasi
+            </Link>
+
             {/* Logout */}
             <button
               type="button"
