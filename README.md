@@ -1,22 +1,22 @@
-# Ujian SD
+# Ujian Sekolah
 
 > AI-generated, print-ready exam sheets for Indonesian elementary-school teachers — pair-built with **Opus 4.7**, **GPT 5.5**, and **Composer 2.5**; core exam generation runs on **OpenAI GPT-5.4-mini**.
 
 [![Live](https://img.shields.io/badge/live-ujian--sekolah.naufaldi.com-0a7c3a?logo=caddy&logoColor=white)](https://ujian-sekolah.naufaldi.com)
-[![API](https://img.shields.io/badge/api-api--ujian--sekolah.naufaldi.com-555?logo=hono)](https://api-ujian-sekolah.naufaldi.com/api/health)
+[![API](https://img.shields.io/badge/api-api--ujian--sekolah.naufaldi.com-555)](https://api-ujian-sekolah.naufaldi.com/api/health)
 [![Built with Opus 4.7](https://img.shields.io/badge/built%20with-Claude%20Opus%204.7-d97706)](https://www.anthropic.com/)
 [![Built with GPT 5.5](https://img.shields.io/badge/built%20with-GPT%205.5-412991)](https://openai.com/)
 [![Built with Composer 2.5](https://img.shields.io/badge/built%20with-Composer%202.5-000000)](https://cursor.com/)
 [![Exam AI](https://img.shields.io/badge/exam%20AI-GPT--5.4--mini-10a37f)](https://openai.com/)
-[![Stack](https://img.shields.io/badge/stack-React%2019%20·%20Hono%20·%20Effect--TS-3178c6)](#stack)
+[![Stack](https://img.shields.io/badge/stack-React%2019%20·%20Effect%20HttpApi%20·%20Effect--TS-3178c6)](#stack)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Ujian SD** turns one sentence ("PPKn kelas 5, sumatif tengah semester, sila ke-3, 20 soal")
+**Ujian Sekolah** turns one sentence ("PPKn kelas 5, sumatif tengah semester, sila ke-3, 20 soal")
 into an A4-ready exam sheet — mixed item types, answer key, and a teacher-facing
 *pembahasan* (explanation) for every question. One click → PDF on the photocopier.
 
 Indonesian SD teachers spend 4–8 hours a week hand-writing exams in Word.
-Ujian SD compresses that into a 30-second generate + a 2-minute review.
+Ujian Sekolah compresses that into a 30-second generate + a 2-minute review.
 
 ## Screenshots
 
@@ -56,7 +56,7 @@ out is what a guru would print, not what an LLM would freestyle.
 | Layer        | Tech                                                                                     |
 |--------------|------------------------------------------------------------------------------------------|
 | Frontend     | React 19, Vite 8, TanStack Router (file-based), Tailwind v4, Radix primitives            |
-| Backend      | Hono v4 on Node 22, Effect-TS service layers, Drizzle ORM (Postgres), better-auth        |
+| Backend      | Effect HttpApi on Node 22, Effect-TS service layers, Drizzle ORM (Postgres), better-auth |
 | AI           | **OpenAI GPT-5.4-mini** for core exam generate + pembahasan/validation when `AI_PROVIDER=openai`; Effect Schema structured output; also supports Anthropic Claude and MiniMax via `AI_PROVIDER` (see [`.env.example`](.env.example)) |
 | Shared types | `@teacher-exam/shared` Effect Schemas — single source of truth between API and web       |
 | Tooling      | pnpm 10, Turborepo, Vitest, TypeScript 6 (strict + `exactOptionalPropertyTypes`)         |
@@ -66,7 +66,7 @@ out is what a guru would print, not what an LLM would freestyle.
 
 ```
 apps/
-  api/              Hono REST API + Effect-TS layers + better-auth
+  api/              Effect HttpApi + Effect-TS layers + better-auth
   web/              React 19 SPA (TanStack Router)
 packages/
   shared/           Effect Schema validation contracts (the contract between api and web)
