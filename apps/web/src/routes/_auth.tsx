@@ -87,11 +87,11 @@ function AuthLayout() {
           <a href="/dashboard" className="flex items-center gap-2.5 shrink-0">
             <img
               src="/assets/logo-mark.svg"
-              alt="Ujian SD logo"
+              alt=""
               className="w-7 h-7"
             />
             <span className="font-extrabold text-[17px] tracking-[-0.01em] text-text-primary">
-              Ujian<span className="text-primary-600">SD</span>
+              Ujian <span className="text-primary-600">Sekolah</span>
             </span>
           </a>
 
