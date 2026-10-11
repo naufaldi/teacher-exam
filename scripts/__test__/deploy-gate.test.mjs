@@ -1,0 +1,102 @@
+import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
+import { test } from "node:test"
+import { assessProbe, planRollback, probeTable, productionCaddyImage, rollbackCommand } from "../deploy-gate.mjs"
+
+test("production caddy image is the runtime image in the web Dockerfile", () => {
+  const dockerfile = readFileSync(new URL("../../apps/web/Dockerfile", import.meta.url), "utf8")
+  assert.equal(productionCaddyImage(dockerfile), "caddy:alpine")
+})
+
+test("a brotli encode directive is not a passing probe", () => {
+  assert.deepEqual(
+    assessProbe({ status: 308, redirects: 1, body: "<html></html>", expectShell: true }),
+    { ok: false, reason: "status 308" }
+  )
+  assert.deepEqual(
+    assessProbe({ status: 308, redirects: 2, body: "", expectShell: true }),
+    { ok: false, reason: "redirect loop" }
+  )
+})
+
+test("home and share require the app shell and 200 with at most one redirect", () => {
+  const shell = "<div id=\"root\"></div>"
+  assert.deepEqual(
+    assessProbe({ status: 200, redirects: 0, body: shell, expectShell: true }),
+    { ok: true, reason: "ok" }
+  )
+  assert.deepEqual(
+    assessProbe({ status: 200, redirects: 1, body: shell, expectShell: true }),
+    { ok: true, reason: "ok" }
+  )
+  assert.deepEqual(
+    assessProbe({ status: 200, redirects: 0, body: "<html></html>", expectShell: true }),
+    { ok: false, reason: "missing app shell" }
+  )
+  assert.deepEqual(
+    assessProbe({ status: 200, redirects: 0, body: "favicon", expectShell: false }),
+    { ok: true, reason: "ok" }
+  )
+})
+
+test("smoke probes are the public home, a share path, a static asset, and api health", () => {
+  assert.deepEqual(
+    probeTable({
+      webOrigin: "https://ujian-sekolah.naufaldi.com",
+      apiHealthUrl: "https://api-ujian-sekolah.naufaldi.com/api/health"
+    }),
+    [
+      { name: "home", url: "https://ujian-sekolah.naufaldi.com/", expectShell: true },
+      { name: "share", url: "https://ujian-sekolah.naufaldi.com/share/smoke", expectShell: true },
+      { name: "asset", url: "https://ujian-sekolah.naufaldi.com/favicon.svg", expectShell: false },
+      { name: "api", url: "https://api-ujian-sekolah.naufaldi.com/api/health", expectShell: false }
+    ]
+  )
+})
+
+test("a failed smoke restores the previous image tag", () => {
+  assert.deepEqual(planRollback({ previousTag: "abc123", nextTag: "def456", smokeOk: false }), {
+    action: "restore",
+    tag: "abc123"
+  })
+  assert.equal(
+    rollbackCommand("abc123"),
+    "IMAGE_TAG=abc123 docker compose -f docker-compose.prod.yml --env-file .env.production up -d"
+  )
+})
+
+test("a passed smoke keeps the new image tag", () => {
+  assert.deepEqual(planRollback({ previousTag: "abc123", nextTag: "def456", smokeOk: true }), {
+    action: "keep",
+    tag: "def456"
+  })
+})
+
+test("rollback aborts when there is no previous tag", () => {
+  assert.deepEqual(planRollback({ previousTag: "", nextTag: "def456", smokeOk: false }), {
+    action: "abort",
+    reason: "no previous image tag"
+  })
+})
+
+test("dry-run rollback prints the restore command and does not require docker", () => {
+  const run = spawnSync("sh", ["scripts/vps-rollback.sh"], {
+    encoding: "utf8",
+    env: { ...process.env, DRY_RUN: "1", PREVIOUS_TAG: "abc123" }
+  })
+  assert.equal(run.status, 0)
+  assert.equal(
+    run.stdout,
+    "IMAGE_TAG=abc123 docker compose -f docker-compose.prod.yml --env-file .env.production up -d\n"
+  )
+})
+
+test("dry-run rollback refuses a missing tag", () => {
+  const run = spawnSync("sh", ["scripts/vps-rollback.sh"], {
+    encoding: "utf8",
+    env: { ...process.env, DRY_RUN: "1", PREVIOUS_TAG: "" }
+  })
+  assert.equal(run.status, 1)
+  assert.match(run.stderr, /no previous image tag/)
+})

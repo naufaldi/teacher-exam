@@ -88,6 +88,12 @@ services:
     labels:
       caddy: ${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 80}}"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1/').then(async (r)=>{const t=await r.text();process.exit(r.ok&&t.includes('id=\\\"root\\\"')?0:1)}).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   db_data: {}
