@@ -96,6 +96,7 @@ describe("convertGeneratedToQuestion", () => {
       status: "accepted",
       createdAt: new Date("2026-01-01T00:00:00.000Z")
     })
+    expect(q.figure).toBeNull()
     expect(q.validationStatus).toBe("needs_review")
     expect(q.validationReason).toBe("Kunci tidak sesuai diagram: diagram 49π; teks kunci 154")
   })
@@ -111,6 +112,7 @@ describe("convertGeneratedToQuestion", () => {
       status: "accepted",
       createdAt: new Date("2026-01-01T00:00:00.000Z")
     })
+    expect(q.figure).toBeNull()
     expect(q.validationStatus).toBe("needs_review")
     expect(q.validationReason).toBe("Diagram belum menyatakan besaran yang ditanyakan.")
   })

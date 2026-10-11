@@ -144,11 +144,31 @@ function applyDiagramCheck(question: Question, source: "generate" | "edit"): Que
   const answerReason = diagramValidationReason(question, source)
   if (answerReason === null) return question
   const reasons = [question.validationReason, answerReason].filter((reason): reason is string => reason !== null)
-  return {
+  const flagged = {
     ...question,
-    validationStatus: "needs_review",
+    validationStatus: "needs_review" as const,
     validationReason: reasons.join("\n")
   }
+  if (source === "generate") return { ...flagged, figure: null }
+  return flagged
+}
+
+const DIAGRAM_PREVIEW_META = {
+  id: "00000000-0000-4000-8000-000000000001",
+  examId: "00000000-0000-4000-8000-000000000002",
+  number: 1,
+  status: "pending" as const,
+  createdAt: new Date(0)
+}
+
+export function generatedDiagramNeedsRetry(question: GeneratedQuestion): boolean {
+  const decoded = decodeGeneratedFigure(question.figure)
+  if (decoded.figure == null) return false
+  const preview = convertGeneratedToQuestion(question, {
+    ...DIAGRAM_PREVIEW_META,
+    number: question.number
+  })
+  return preview.figure == null
 }
 
 export function failureReasonForNumber(

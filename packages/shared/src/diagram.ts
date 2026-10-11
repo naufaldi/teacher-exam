@@ -543,9 +543,11 @@ function drawNumberLine(spec: Extract<FigureSpec, { type: "number_line" }>): str
   if (!(spec.min < spec.max) || !(spec.step > 0)) return errorFrame()
   const steps = Math.round((spec.max - spec.min) / spec.step)
   const ticks: Array<string> = []
+  const tickX = new Set<number>()
   for (let index = 0; index <= steps; index++) {
     const value = spec.min + index * spec.step
     const x = scaleX(value, spec.min, spec.max)
+    tickX.add(x)
     ticks.push(
       `<line x1="${x}" y1="${LINE_Y - 6}" x2="${x}" y2="${LINE_Y + 6}" stroke="#111827" stroke-width="1.5"/>`
     )
@@ -553,7 +555,13 @@ function drawNumberLine(spec: Extract<FigureSpec, { type: "number_line" }>): str
   }
   const marks = spec.marks.map((mark) => {
     const x = scaleX(mark.value, spec.min, spec.max)
-    return `<circle cx="${x}" cy="${LINE_Y}" r="5" fill="#111827"/>`
+    const labeled = tickX.has(x)
+      ? ""
+      : [
+        `<line x1="${x}" y1="${LINE_Y - 6}" x2="${x}" y2="${LINE_Y + 6}" stroke="#111827" stroke-width="1.5"/>`,
+        text(x, LINE_Y + 20, formatQuantity(mark.value))
+      ].join("")
+    return `${labeled}<circle cx="${x}" cy="${LINE_Y}" r="5" fill="#111827"/>`
   }).join("")
   return frame([
     `<line x1="${LEFT}" y1="${LINE_Y}" x2="${RIGHT}" y2="${LINE_Y}" stroke="#111827" stroke-width="2"/>`,
@@ -1121,8 +1129,93 @@ function keyedText(question: DiagramQuestion): string {
   )(question)
 }
 
+function labelTextAt(svg: string, x: number): string | null {
+  for (const match of svg.matchAll(/<text x="(-?\d+(?:\.\d+)?)"[^>]*>([^<]*)<\/text>/g)) {
+    if (match[1] !== undefined && Number(match[1]) === x) return match[2] ?? null
+  }
+  return null
+}
+
+function shadedPaint(svg: string, form: "bar" | "circle" | undefined): number {
+  const pattern = form === "circle" ? /<path\b[^>]*fill="#111827"/g : /<rect\b[^>]*fill="#111827"/g
+  return svg.match(pattern)?.length ?? 0
+}
+
+function barHeightsAgree(svg: string, spec: Extract<FigureSpec, { type: "bar_chart" }>): boolean {
+  const max = Math.max(...spec.bars.map((bar) => bar.value), 0)
+  const expected = spec.bars.map((bar) => max === 0 ? 0 : Math.round((bar.value / max) * INNER_H))
+  const heights = [...svg.matchAll(/<rect x="[^"]*" y="[^"]*" width="[^"]*" height="(\d+)" fill="#111827"/g)]
+  return heights.length === expected.length &&
+    heights.every((height, index) => Number(height[1]) === expected[index])
+}
+
+function drawingAgrees(spec: FigureSpec): boolean {
+  const svg = renderFigureSvg(spec)
+  return pipe(
+    Match.type<FigureSpec>(),
+    Match.discriminatorsExhaustive("type")({
+      circle: (row) => svg.includes(`r="${Math.round(row.radius * fit(row.radius * 2, row.radius * 2))}"`),
+      square: (row) => {
+        const side = Math.round(row.side * fit(row.side, row.side))
+        return svg.includes(`width="${side}" height="${side}"`)
+      },
+      rectangle: (row) => {
+        const width = Math.round(row.width * fit(row.width, row.height))
+        const height = Math.round(row.height * fit(row.width, row.height))
+        return svg.includes(`width="${width}" height="${height}"`)
+      },
+      triangle: () => svg.includes("<polygon ") && !svg.includes("data-figure-error"),
+      trapezoid: () => svg.includes("<polygon ") && !svg.includes("data-figure-error"),
+      coordinate_plane: (row) => {
+        if (!(row.xMin < row.xMax) || !(row.yMin < row.yMax)) return false
+        return row.points.every((point) => {
+          const x = scaleX(point.x, row.xMin, row.xMax)
+          const y = scaleY(point.y, row.yMin, row.yMax)
+          return svg.includes(`<circle cx="${x}" cy="${y}" r="4"`)
+        })
+      },
+      number_line: (row) => {
+        if (!(row.min < row.max) || !(row.step > 0)) return false
+        return row.marks.every((mark) =>
+          labelTextAt(svg, scaleX(mark.value, row.min, row.max)) === formatQuantity(mark.value)
+        )
+      },
+      fraction: (row) => shadedPaint(svg, row.form) === row.shaded,
+      clock: (row) => {
+        const drawn = drawnClockTime(svg)
+        return drawn !== null && drawn.hour === row.hour && drawn.minute === row.minute
+      },
+      bar_chart: (row) => barHeightsAgree(svg, row)
+    })
+  )(spec)
+}
+
+export function checkNumberLineDrawing(svg: string, keyedText: string): FigureCheck {
+  let label: string | null = null
+  for (const circle of svg.matchAll(/<circle\b[^>]*>/g)) {
+    const tag = circle[0]
+    if (svgAttr(tag, "r") !== 5) continue
+    const cx = svgAttr(tag, "cx")
+    if (cx === null) continue
+    label = labelTextAt(svg, cx)
+    break
+  }
+  if (label === null) return { _tag: "Mismatch", derived: "no mark", keyedText }
+  const drawn = parseQuantity(label)
+  const keyed = parseQuantity(keyedText)
+  if (drawn && keyed && exactEqual(drawn, keyed)) return { _tag: "Match", derived: label }
+  return { _tag: "Mismatch", derived: label, keyedText }
+}
+
 export function checkFigureAnswer(question: DiagramQuestion): FigureCheck {
   if (question.figure == null) return { _tag: "Unchecked" }
+  const derived = measureOf(question.figure)
+  if (derived._tag === "NotOrderable" || derived._tag === "Inexact") {
+    return finishCheck(question, derived)
+  }
+  if (!drawingAgrees(question.figure)) {
+    return { _tag: "Mismatch", derived: "drawing", keyedText: keyedText(question) }
+  }
   if (question.figure.type === "clock" && question.figure.measure === "time") {
     const drawn = drawnClockTime(renderFigureSvg(question.figure))
     if (drawn === null) {
@@ -1130,5 +1223,5 @@ export function checkFigureAnswer(question: DiagramQuestion): FigureCheck {
     }
     return finishCheck(question, { _tag: "Time", hour: drawn.hour, minute: drawn.minute })
   }
-  return finishCheck(question, measureOf(question.figure))
+  return finishCheck(question, derived)
 }

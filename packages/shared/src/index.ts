@@ -1,4 +1,10 @@
-export { checkClockDrawing, checkFigureAnswer, drawnClockTime, renderFigureSvg } from "./diagram.js"
+export {
+  checkClockDrawing,
+  checkFigureAnswer,
+  checkNumberLineDrawing,
+  drawnClockTime,
+  renderFigureSvg
+} from "./diagram.js"
 export type { DiagramQuestion, FigureCheck } from "./diagram.js"
 export * from "./exam-title.js"
 export * from "./format-math-fallback.js"
