@@ -10,6 +10,7 @@ import {
 } from "@teacher-exam/shared"
 import { and, eq, ne } from "drizzle-orm"
 import { Effect, Either, Match, Schema } from "effect"
+import { selectChosenBabText } from "../../curriculum/bab-index.js"
 import { validateGeneratedQuestionLatex } from "../../lib/latex-validator.js"
 import { normalizeMatematikaLatexField } from "../../lib/normalize-matematika-latex.js"
 import { buildRegeneratePrompt } from "../../lib/prompt"
@@ -228,10 +229,13 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         const isMatematika = exam.subject === "matematika" || examSubjectLabel === "Matematika"
         const curriculum = yield* CurriculumService
         const curriculumText = exam.subject
-          ? yield* curriculum.getText(exam.subject, exam.grade).pipe(
-            Effect.mapError(
-              () => new ApiDatabaseError({ error: "Curriculum lookup failed", code: "DATABASE_ERROR" })
-            )
+          ? selectChosenBabText(
+            yield* curriculum.getText(exam.subject, exam.grade).pipe(
+              Effect.mapError(
+                () => new ApiDatabaseError({ error: "Curriculum lookup failed", code: "DATABASE_ERROR" })
+              )
+            ),
+            exam.topics
           )
           : (exam.freeTopic ?? "")
         const { system, user } = buildRegeneratePrompt({

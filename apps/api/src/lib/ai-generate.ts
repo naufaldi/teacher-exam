@@ -8,6 +8,7 @@ import { runDb } from "../api/lib/db-effect"
 import { CurriculumReadError, CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
+import { selectChosenBabText } from "../curriculum/bab-index.js"
 import { isReadySibiPdfForGenerate } from "../curriculum/catalog.js"
 import { AiGenerationError } from "../errors"
 import { type AiService } from "../services/AiService"
@@ -521,7 +522,10 @@ function prepareGenerateContext(
     let curriculumText: string
     if (!useRag && sourceMode !== "pdf_guru") {
       const curriculum = yield* CurriculumService
-      curriculumText = yield* curriculum.getText(input.subject!, input.grade)
+      curriculumText = selectChosenBabText(
+        yield* curriculum.getText(input.subject!, input.grade),
+        promptTopics
+      )
     } else {
       const retrievalResult = yield* Effect.either(
         resolveRetrievalContext({
@@ -544,7 +548,10 @@ function prepareGenerateContext(
         return yield* Effect.fail(retrievalResult.left)
       } else if (sourceMode !== "pdf_guru") {
         const curriculum = yield* CurriculumService
-        curriculumText = yield* curriculum.getText(input.subject!, input.grade)
+        curriculumText = selectChosenBabText(
+          yield* curriculum.getText(input.subject!, input.grade),
+          promptTopics
+        )
       } else {
         return {
           _tag: "err",

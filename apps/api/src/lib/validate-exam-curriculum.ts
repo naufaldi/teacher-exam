@@ -8,6 +8,7 @@ import { runDb } from "../api/lib/db-effect"
 import type { CurriculumReadError } from "../api/services/curriculum-service"
 import { CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
+import { selectChosenBabText } from "../curriculum/bab-index.js"
 import type { AiService } from "../services/AiService"
 import { validateQuestionBatch } from "../services/ValidatorService"
 import { logAiEvent } from "./ai-log"
@@ -43,7 +44,10 @@ export function validateExamCurriculum(
 
     const curriculum = yield* CurriculumService
     const curriculumText = examRow.subject
-      ? yield* curriculum.getText(examRow.subject, examRow.grade)
+      ? selectChosenBabText(
+        yield* curriculum.getText(examRow.subject, examRow.grade),
+        examRow.topics
+      )
       : (examRow.freeTopic ?? "")
 
     const validationUpdates = yield* validateQuestionBatch({
