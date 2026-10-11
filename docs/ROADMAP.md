@@ -30,6 +30,7 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | D-3 | 2026-06-29 | Tabel lembar disatukan (`SheetTable`) di Dashboard Riwayat terbaru, Riwayat, Bank Saya, Bank Publik. Pratinjau modal untuk browse; `/preview` untuk cetak/export. | — | Konsistensi UI; guru melihat isi soal cepat tanpa meninggalkan halaman. Lihat [RFC 2026-06-29-unified-sheet-table](rfc/2026-06-29-unified-sheet-table-rfc.md). |
 | D-4 | 2026-06-29 | Halaman `/share/:slug` = pratinjau anonim penuh (soal + LJ + kunci + pembahasan) untuk guru rekan; renderers dibagi via `exam-sheet`. | — | Link Bagikan dari Riwayat harus printable seperti `/preview`. Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md). |
 | D-5 | 2026-06-29 | Generate enhancement v8: tiga mode materi (`default` / `pdf_guru` / `combine`); default = Buku Siswa; PDF guru + gambar di **Cloudflare R2** (bukan VPS disk); perpustakaan PDF per guru; RAG topik + agentic search; streaming + durable jobs — phased F0–F5. | RFC 2026-06-10 Flow B `UPLOAD_DIR` (guru PDF) | Guru worksheet + combine materi; reuse PDF; selaras PRD v2 intent upload. Lihat [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29-generate-pdf-enhancement](rfc/2026-06-29-generate-pdf-enhancement-rfc.md). |
+| D-6 | 2026-10-11 | The product name is Ujian Sekolah. Milestone 3 is partial. Six geometry figure types have a schema and SVG renderers. Kisi-kisi and kartu soal export exist. | The README and this roadmap named the product Ujian SD, and Milestone 3 was marked not started. | Audit of `main` at `d8e054c`. The full record is the 2026-10-11 Launch readiness history below. |
 
 ---
 
@@ -352,3 +353,39 @@ Bidirectional sync between GitHub Issues, this roadmap, and the codebase:
 3. On merged PR, `.github/workflows/sync-progress.yml` runs `scripts/sync-github-progress.mjs` to refresh the index and milestone overview table.
 4. Manual full resync: `node scripts/sync-github-progress.mjs` or workflow_dispatch.
 5. Audit open issues vs code: `node scripts/sync-github-progress.mjs --verify`.
+
+## History
+
+### 2026-10-11 Launch readiness
+
+This entry records a read-only audit of `main` at `d8e054c`, the merge of #257, taken on 11 Oct 2026 at 15:30 WIB. The live site is [ujian-sekolah.naufaldi.com](https://ujian-sekolah.naufaldi.com). Payments were outside the audit. There is no `plan.html` in this repository, so this section is the plan record. The audit said that file's section 2.1 described a kelas 5 and 6 landing and a missing kisi-kisi. Both claims are obsolete. The landing says kelas 1 to 6 (#253). Kisi-kisi and kartu soal export shipped in #254.
+
+#### Audit summary
+
+These items are shipped and on the live site. Print-ready A4 soal, lembar jawaban, and kunci export to PDF and DOCX. The question bank stores whole sheets, with history, duplicate, a personal bank, and a public bank. The app title is Ujian Sekolah. A sample sheet is available before login. The landing says kelas 1 to 6. Onboarding is shorter, and the username is optional. Generate opens with 3 choices and "Pengaturan lanjutan". Global Open Graph tags are present. `/og.png` and `/robots.txt` respond. The meta description is present. CI on main is green, and deploy waits on CI. High production dependency advisories are cleared. AI rate limits on regenerate and discussion are stored and keyed per IP.
+
+These items are shipped with a gap. CP and TP questions cover Fase A, Fase B, Fase C, and Matematika. 24 Buku Siswa files are ready. B. Indonesia kelas 4, Pendidikan Pancasila kelas 3, and Bahasa Inggris kelas 1 and 2 have no corpus. IPAS kelas 1 and 2 stay disabled because Fase A does not include IPAS. The custom kop is the school name only, and the fallback text is a blank "SD Negeri ____". There is no logo and no address. Kisi-kisi and kartu soal strings are in the live bundle. A logged-in check of the downloaded files was open at audit time. Per-sheet Open Graph on `/share/*` was waiting on the #257 deploy. The sample sheet covers part of the requested public demo. There is no demo account and no README video.
+
+`packages/shared/src/schemas/figures.ts` defines circle, square, rectangle, triangle, trapezoid, and coordinate_plane. `FigureSpecSchema` tests decode those six types. The web renderer tests emit the same SVG twice for each type. The API renderer is a separate copy, so the two can drift. The prompt allows figures only on geometry bab. Number line, fractions, bar chart, pictogram, clock, bangun ruang, angles, and grid area are missing. The shapes are a fixed size, and the labels are not drawn to scale. Nothing checks that the answer key matches the figure parameters.
+
+These items are not in production. Koreksi cepat and the lembar-jawaban scan stay hidden because `VITE_DELIVERY_ENABLED` is absent from the deploy build. The dashboard shows "Segera hadir". Analytics is built and gated the same way. Excel export and e-Rapor export do not exist. Offline CBT and autosave do not exist. Printed sheets have no "Dibuat dengan Ujian Sekolah" footer. SAS packs are not in the public bank. The audit counted about 8 public sheets. WhatsApp share is absent. The audit measured the live web bundle as one file of 1,351,448 bytes. Responses send no HSTS, CSP, X-Frame-Options, or `X-Content-Type-Options` nosniff header. There is no privacy policy, no delete-account flow, and no Sentry or funnel analytics. Dependabot pull requests #245 to #250 were open. #250 bumps `@effect/ai-openai` across a major version. #238 has been open since 9 Jul 2026.
+
+`docs/ISSUE_INDEX.md` lists Milestone 3 as not started, with no code signal on tasks 3.1 to 3.7. This change does not edit that index. `scripts/sync-github-progress.mjs` rewrites the milestone overview status from the index. A later sync can put "Not started" back in that one cell. The Milestone 3 section in this file is the status set by hand.
+
+#### Launch plan
+
+Ranked work before the late-November SAS window.
+
+1. Fill the corpus holes, or change the kelas 1 to 6 claim so it lists the real coverage. The holes are B. Indonesia kelas 4, Pendidikan Pancasila kelas 3, and Bahasa Inggris kelas 1 and 2.
+2. Verify kisi-kisi and kartu soal while logged in. Save a kop with name, address, and logo. Print the footer "Dibuat dengan Ujian Sekolah" on every sheet.
+3. Add WhatsApp share, and confirm per-sheet Open Graph on `/share/<slug>` after the #257 deploy.
+4. Add number line, fraction, clock, and bar chart as deterministic SVG. Fail generation when the figure parameters and the answer key disagree. Move the web renderer and the API renderer to one shared function.
+5. Split the web routes so the first load is not one 1.35 MB chunk. Add security headers. Publish a privacy policy and account deletion. Add Sentry and a funnel that logs AI cost per sheet.
+
+Stimulus pictures are the largest missing feature. A question has no image field, and the export has no picture. Prefer crops from the SIBI Buku Siswa PDFs, plus a teacher upload. Offer a generated image only as an opt-in, in grayscale line art, after the teacher accepts it. Leave that work until after the SAS window if time is short.
+
+PDF materi upload already exists. The limit is 10 MB, and there is no page cap. Cap an upload at 60 pages. When a page has almost no text, tell the teacher that a scan is not supported. Store a page number on each chunk, and show that page on the soal.
+
+Buku Siswa markdown is updated by hand. Index each bab with a content hash, and re-index when the hash changes. Send only the selected bab to the model. Add a CI test that every ready manifest row has a parsable markdown file with at least one bab.
+
+The audit left a logged-in smoke test open. The path is onboarding, then generate, then review, then PDF, DOCX, kisi-kisi, and kartu soal. It also left a delivery-flag choice open. Hide every "Segera hadir" card, or turn koreksi on with autosave. Hold Dependabot #250. Close or rebase #238. Add SAS packs to the public bank, and recruit 20 co-design teachers. This history entry closes the audit item that asked for a README and ROADMAP update.
