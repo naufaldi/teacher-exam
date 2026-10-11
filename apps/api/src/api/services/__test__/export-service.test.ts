@@ -100,6 +100,22 @@ describe("renderExamHtml", () => {
     expect(html).toContain("<rect")
     expect(html).toContain("circle")
   })
+
+  it("inlines the shared circle svg for a diagram soal", () => {
+    const exam = makeExam()
+    const first = exam.questions[0]
+    if (first === undefined || first._tag !== "mcq_single") {
+      throw new Error("fixture soal missing")
+    }
+    const html = renderExamHtml({
+      ...exam,
+      questions: [{
+        ...first,
+        figure: { type: "circle", radius: 7, measure: { kind: "area" } }
+      }]
+    }, "soal")
+    expect(html).toContain("<circle cx=\"126\" cy=\"76\" r=\"56\"")
+  })
 })
 
 function docxDocumentXml(bytes: Uint8Array): string {

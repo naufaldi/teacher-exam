@@ -11,6 +11,7 @@ import {
 import { and, eq, ne } from "drizzle-orm"
 import { Effect, Either, Match, Schema } from "effect"
 import { selectChosenBabText } from "../../curriculum/bab-index.js"
+import { diagramValidationReason } from "../../lib/ai-generate-mappers.js"
 import { validateGeneratedQuestionLatex } from "../../lib/latex-validator.js"
 import { normalizeMatematikaLatexField } from "../../lib/normalize-matematika-latex.js"
 import { buildRegeneratePrompt } from "../../lib/prompt"
@@ -149,6 +150,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         )
 
         const typeCols = questionToRow(mergedQuestion)
+        const diagramReason = diagramValidationReason(mergedQuestion, "edit")
         const updateData: Record<string, unknown> = {
           type: typeCols.type,
           optionA: typeCols.optionA,
@@ -160,6 +162,10 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         }
         if (input.text !== undefined) updateData["text"] = input.text
         if (input.status !== undefined) updateData["status"] = input.status
+        if (diagramReason !== null) {
+          updateData["validationStatus"] = "needs_review"
+          updateData["validationReason"] = diagramReason
+        }
 
         const updatedRows = yield* runDb(
           db.update(questions).set(updateData).where(eq(questions.id, id)).returning()

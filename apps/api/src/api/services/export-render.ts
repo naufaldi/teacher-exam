@@ -7,8 +7,8 @@ import {
   SHEET_CREDIT,
   soalImageHtml
 } from "@teacher-exam/shared"
+import { renderFigureSvg } from "@teacher-exam/shared"
 import { Match } from "effect"
-import { renderFigureSvg } from "./export-figure.js"
 import { loadKatexCss } from "./export-katex-css.js"
 import { renderMathText } from "./export-math.js"
 
