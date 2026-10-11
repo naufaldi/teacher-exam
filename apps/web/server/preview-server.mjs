@@ -1,5 +1,5 @@
-import { createServer } from "node:http"
 import { readFileSync } from "node:fs"
+import { createServer } from "node:http"
 import { injectSharePreview, previewSubjectLabel, sharePreviewFromExam } from "./share-preview.ts"
 
 const indexHtml = readFileSync(process.env["INDEX_HTML"] ?? "/srv/index.html", "utf8")
@@ -26,16 +26,19 @@ const server = createServer((req, res) => {
       return
     }
     const exam = await response.json()
-    const html = injectSharePreview(indexHtml, sharePreviewFromExam({
-      title: typeof exam.title === "string" ? exam.title : "Lembar ujian",
-      subjectLabel: previewSubjectLabel(
-        typeof exam.subject === "string" ? exam.subject : null,
-        typeof exam.subjectLabel === "string" ? exam.subjectLabel : null
-      ),
-      grade: typeof exam.grade === "number" ? exam.grade : 0,
-      origin,
-      slug
-    }))
+    const html = injectSharePreview(
+      indexHtml,
+      sharePreviewFromExam({
+        title: typeof exam.title === "string" ? exam.title : "Lembar ujian",
+        subjectLabel: previewSubjectLabel(
+          typeof exam.subject === "string" ? exam.subject : null,
+          typeof exam.subjectLabel === "string" ? exam.subjectLabel : null
+        ),
+        grade: typeof exam.grade === "number" ? exam.grade : 0,
+        origin,
+        slug
+      })
+    )
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" })
     res.end(html)
   }).catch(() => {

@@ -29,13 +29,16 @@ function sharePreviewPlugin(apiPort: string): Plugin {
             grade?: number
           }
           const port = ctx.server?.config.server.port ?? 5173
-          return injectSharePreview(html, sharePreviewFromExam({
-            title: exam.title ?? "Lembar ujian",
-            subjectLabel: previewSubjectLabel(exam.subject ?? null, exam.subjectLabel ?? null),
-            grade: exam.grade ?? 0,
-            origin: `http://localhost:${port}`,
-            slug
-          }))
+          return injectSharePreview(
+            html,
+            sharePreviewFromExam({
+              title: exam.title ?? "Lembar ujian",
+              subjectLabel: previewSubjectLabel(exam.subject ?? null, exam.subjectLabel ?? null),
+              grade: exam.grade ?? 0,
+              origin: `http://localhost:${port}`,
+              slug
+            })
+          )
         } catch {
           return html
         }
