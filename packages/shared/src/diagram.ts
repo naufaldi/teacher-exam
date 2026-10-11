@@ -601,20 +601,54 @@ function drawFractionCircle(spec: Extract<FigureSpec, { type: "fraction" }>): st
   return frame(slices.join(""))
 }
 
-function hand(degreesFrom12: number, length: number): string {
+function hand(degreesFrom12: number, length: number, width: number): string {
   const radians = (degreesFrom12 * Math.PI) / 180
   const x = Math.round(CX + Math.sin(radians) * length)
   const y = Math.round(CY - Math.cos(radians) * length)
-  return `<line x1="${CX}" y1="${CY}" x2="${x}" y2="${y}" stroke="#111827" stroke-width="2"/>`
+  return `<line x1="${CX}" y1="${CY}" x2="${x}" y2="${y}" stroke="#111827" stroke-width="${width}" stroke-linecap="round"/>`
+}
+
+function clockTicks(): string {
+  const ticks: Array<string> = []
+  for (let index = 0; index < 12; index++) {
+    const radians = (index * 30 * Math.PI) / 180
+    const inner = index % 3 === 0 ? 38 : 43
+    const x1 = Math.round(CX + Math.sin(radians) * inner)
+    const y1 = Math.round(CY - Math.cos(radians) * inner)
+    const x2 = Math.round(CX + Math.sin(radians) * 48)
+    const y2 = Math.round(CY - Math.cos(radians) * 48)
+    ticks.push(
+      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111827" stroke-width="2"/>`
+    )
+  }
+  return ticks.join("")
+}
+
+function hourWedge(degreesFrom12: number, length: number): string {
+  const radians = (degreesFrom12 * Math.PI) / 180
+  const tipX = CX + Math.sin(radians) * length
+  const tipY = CY - Math.cos(radians) * length
+  const back = 4
+  const width = 5
+  const baseX = CX - Math.sin(radians) * back
+  const baseY = CY + Math.cos(radians) * back
+  const px = Math.cos(radians) * width
+  const py = Math.sin(radians) * width
+  return `<polygon points="${Math.round(tipX)},${Math.round(tipY)} ${Math.round(baseX + px)},${
+    Math.round(baseY + py)
+  } ${Math.round(baseX - px)},${Math.round(baseY - py)}" fill="#111827"/>`
 }
 
 function drawClock(spec: Extract<FigureSpec, { type: "clock" }>): string {
   const minuteAngle = spec.minute * 6
   const hourAngle = (spec.hour % 12) * 30 + spec.minute * 0.5
   return frame([
-    `<circle cx="${CX}" cy="${CY}" r="48" fill="none" stroke="#111827" stroke-width="2"/>`,
-    hand(hourAngle, HOUR_HAND),
-    hand(minuteAngle, MINUTE_HAND)
+    `<circle cx="${CX}" cy="${CY}" r="48" fill="#ffffff" stroke="#111827" stroke-width="2"/>`,
+    clockTicks(),
+    hand(hourAngle, HOUR_HAND, 6),
+    hourWedge(hourAngle, HOUR_HAND),
+    hand(minuteAngle, MINUTE_HAND, 2),
+    `<circle cx="${CX}" cy="${CY}" r="4" fill="#111827"/>`
   ].join(""))
 }
 
@@ -1012,7 +1046,89 @@ function finishCheck(question: DiagramQuestion, derived: Derived): FigureCheck {
   )(question)
 }
 
+function svgAttr(tag: string, name: string): number | null {
+  const match = tag.match(new RegExp(`${name}="(-?\\d+(?:\\.\\d+)?)"`))
+  if (!match?.[1]) return null
+  return Number(match[1])
+}
+
+function faceCenter(svg: string): { cx: number; cy: number } | null {
+  let best: { cx: number; cy: number; r: number } | null = null
+  for (const circle of svg.matchAll(/<circle\b[^>]*>/g)) {
+    const tag = circle[0]
+    const cx = svgAttr(tag, "cx")
+    const cy = svgAttr(tag, "cy")
+    const r = svgAttr(tag, "r")
+    if (cx === null || cy === null || r === null) continue
+    if (best === null || r > best.r) best = { cx, cy, r }
+  }
+  return best === null ? null : { cx: best.cx, cy: best.cy }
+}
+
+export function drawnClockTime(svg: string): { hour: number; minute: number } | null {
+  const center = faceCenter(svg)
+  if (center === null) return null
+  const hands: Array<{ angle: number; length: number }> = []
+  for (const line of svg.matchAll(/<line\b[^>]*>/g)) {
+    const tag = line[0]
+    const x1 = svgAttr(tag, "x1")
+    const y1 = svgAttr(tag, "y1")
+    const x2 = svgAttr(tag, "x2")
+    const y2 = svgAttr(tag, "y2")
+    if (x1 === null || y1 === null || x2 === null || y2 === null) continue
+    const startAtCenter = Math.hypot(x1 - center.cx, y1 - center.cy) <= 2
+    const endAtCenter = Math.hypot(x2 - center.cx, y2 - center.cy) <= 2
+    if (!startAtCenter && !endAtCenter) continue
+    const endX = startAtCenter ? x2 : x1
+    const endY = startAtCenter ? y2 : y1
+    const length = Math.hypot(endX - center.cx, endY - center.cy)
+    if (length < 8) continue
+    const degrees = (Math.atan2(endX - center.cx, center.cy - endY) * 180) / Math.PI
+    hands.push({ angle: (degrees + 360) % 360, length })
+  }
+  if (hands.length < 2) return null
+  hands.sort((left, right) => right.length - left.length)
+  const minuteHand = hands[0]
+  const hourHand = hands[1]
+  if (minuteHand === undefined || hourHand === undefined) return null
+  if (minuteHand.length - hourHand.length < 4) return null
+  const minute = Math.round(minuteHand.angle / 6) % 60
+  const hourAngle = (hourHand.angle - minute * 0.5 + 360) % 360
+  const hourIndex = Math.round(hourAngle / 30) % 12
+  return { hour: hourIndex === 0 ? 12 : hourIndex, minute }
+}
+
+export function checkClockDrawing(svg: string, keyedText: string): FigureCheck {
+  const drawn = drawnClockTime(svg)
+  if (drawn === null) return { _tag: "Mismatch", derived: "no hands", keyedText }
+  const derived = { _tag: "Time" as const, hour: drawn.hour, minute: drawn.minute }
+  const formatted = formatDerived(derived)
+  const parsed = parseTime(keyedText)
+  if (parsed !== null && parsed.hour === drawn.hour && parsed.minute === drawn.minute) {
+    return { _tag: "Match", derived: formatted }
+  }
+  return { _tag: "Mismatch", derived: formatted, keyedText }
+}
+
+function keyedText(question: DiagramQuestion): string {
+  return pipe(
+    Match.type<DiagramQuestion>(),
+    Match.discriminatorsExhaustive("_tag")({
+      mcq_single: (row) => row.options[row.correct],
+      mcq_multi: (row) => row.correct.map((letter) => row.options[letter]).join(", "),
+      true_false: (row) => row.statements.map((statement) => statement.text).join("; ")
+    })
+  )(question)
+}
+
 export function checkFigureAnswer(question: DiagramQuestion): FigureCheck {
   if (question.figure == null) return { _tag: "Unchecked" }
+  if (question.figure.type === "clock" && question.figure.measure === "time") {
+    const drawn = drawnClockTime(renderFigureSvg(question.figure))
+    if (drawn === null) {
+      return { _tag: "Mismatch", derived: "no hands", keyedText: keyedText(question) }
+    }
+    return finishCheck(question, { _tag: "Time", hour: drawn.hour, minute: drawn.minute })
+  }
   return finishCheck(question, measureOf(question.figure))
 }

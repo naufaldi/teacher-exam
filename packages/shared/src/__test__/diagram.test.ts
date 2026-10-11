@@ -1,6 +1,6 @@
 import { Either, Schema } from "effect"
 import { describe, expect, test } from "vitest"
-import { checkFigureAnswer, renderFigureSvg } from "../diagram.js"
+import { checkClockDrawing, checkFigureAnswer, drawnClockTime, renderFigureSvg } from "../diagram.js"
 import { type FigureSpec, FigureSpecSchema } from "../schemas/figures.js"
 
 const decode = Schema.decodeUnknownEither(FigureSpecSchema)
@@ -127,6 +127,39 @@ describe("renderFigureSvg", () => {
     expect(svg.match(/fill="#111827"/g)?.length).toBe(3)
     expect(svg.match(/fill="#ffffff"/g)?.length).toBe(1)
     expect(svg).not.toContain("3/4")
+  })
+
+  test("a 07:30 clock answer matches the drawn hands", () => {
+    const figure: FigureSpec = {
+      type: "clock",
+      hour: 7,
+      minute: 30,
+      measure: "time"
+    }
+    const svg = renderFigureSvg(figure)
+    expect(drawnClockTime(svg)).toEqual({ hour: 7, minute: 30 })
+    expect(svg).not.toContain(">1<")
+    const result = checkFigureAnswer(mcq(figure, "d", {
+      a: "7.00",
+      b: "3:30",
+      c: "8:30",
+      d: "07.30"
+    }))
+    expect(result).toEqual({ _tag: "Match", derived: "7:30" })
+  })
+
+  test("a face that only contains a digit fails the clock check", () => {
+    const face = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160">`,
+      `<circle cx="126" cy="76" r="48" fill="none" stroke="#111827" stroke-width="2"/>`,
+      `<text x="126" y="82" text-anchor="middle">1</text>`,
+      `</svg>`
+    ].join("")
+    expect(checkClockDrawing(face, "07.30")).toEqual({
+      _tag: "Mismatch",
+      derived: "no hands",
+      keyedText: "07.30"
+    })
   })
 
   test("points clock hands at 3:00", () => {
