@@ -103,4 +103,6 @@ test("the deploy workflow does not full-prune images on every deploy", () => {
   assert.equal(workflow.includes("docker image prune -af"), false)
   assert.equal(workflow.includes("docker builder prune -af"), false)
   assert.match(workflow, /sh scripts\/vps-pull\.sh/)
+  assert.match(workflow, /timeout-minutes:\s*45/)
+  assert.match(workflow, /command_timeout:\s*2400s/)
 })
