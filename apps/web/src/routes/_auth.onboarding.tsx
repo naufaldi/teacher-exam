@@ -13,6 +13,27 @@ export const Route = createFileRoute("/_auth/onboarding")({
 
 const ALL_GRADES: ReadonlyArray<Grade> = [1, 2, 3, 4, 5, 6] as const
 const DEFAULT_GRADES: Array<Grade> = [5, 6]
+const USERNAME_PATTERN = /^[a-z0-9._-]{3,32}$/
+
+function fillUsername(raw: string, name: string): string {
+  const cleaned = raw
+    .trim()
+    .toLowerCase()
+    .replaceAll(/\s+/g, ".")
+    .replaceAll(/[^a-z0-9._-]/g, "")
+    .replaceAll(/\.{2,}/g, ".")
+    .replaceAll(/^[._-]+|[._-]+$/g, "")
+  if (USERNAME_PATTERN.test(cleaned)) return cleaned
+  const fromName = name
+    .trim()
+    .toLowerCase()
+    .replaceAll(/\s+/g, ".")
+    .replaceAll(/[^a-z0-9._-]/g, "")
+    .replaceAll(/\.{2,}/g, ".")
+    .replaceAll(/^[._-]+|[._-]+$/g, "")
+  if (USERNAME_PATTERN.test(fromName)) return fromName.slice(0, 32)
+  return "guru.dev"
+}
 
 function OnboardingPage() {
   const navigate = useNavigate()
@@ -48,24 +69,21 @@ function OnboardingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!school.trim()) return setError("Nama sekolah wajib diisi.")
     if (grades.length === 0) return setError("Pilih minimal satu kelas.")
     if (subjects.length === 0) return setError("Pilih minimal satu mata pelajaran.")
-    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
-      return setError("Username harus 3-32 karakter (a-z, 0-9, titik, garis bawah, atau strip).")
-    }
 
     setSubmitting(true)
     try {
+      const schoolName = school.trim()
       const payload: UpdateProfileInput = {
-        school: school.trim(),
-        username,
+        username: fillUsername(username, profile?.name ?? ""),
         gradesTaught: grades,
-        subjectsTaught: subjects
+        subjectsTaught: subjects,
+        ...(schoolName ? { school: schoolName } : {})
       }
       unwrapApiEither(await api.me.update(payload))
       await authClient.getSession({ query: { disableCookieCache: true } })
-      await navigate({ to: "/dashboard" })
+      await navigate({ to: "/generate" })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan profil.")
     } finally {
@@ -83,36 +101,36 @@ function OnboardingPage() {
           Sebentar lagi siap pakai
         </h1>
         <p className="text-body text-text-secondary">
-          Beri tahu kami sekolah dan kelas yang Anda ajar agar pembuatan soal lebih relevan.
+          Pilih kelas dan mata pelajaran, lalu lanjut membuat soal.
         </p>
       </header>
 
       <PaperCard as="article" tilt={0} className="p-6 sm:p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="school">Nama sekolah</Label>
+            <Label htmlFor="school">Nama sekolah (opsional)</Label>
             <Input
               id="school"
               autoFocus
-              required
               value={school}
               onChange={(e) => setSchool(e.target.value)}
               placeholder="SD Negeri 1 Jakarta"
             />
+            <p className="text-caption text-text-tertiary">
+              Teks untuk kop lembar ujian. Boleh dikosongkan.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              required
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              pattern="[a-z0-9._\-]{3,32}"
               placeholder="nama.guru"
             />
             <p className="text-caption text-text-tertiary">
-              3-32 karakter: a-z, 0-9, titik, garis bawah, atau strip.
+              Bisa diubah nanti di profil.
             </p>
           </div>
 
@@ -184,7 +202,7 @@ function OnboardingPage() {
               {profile ? `Masuk sebagai ${profile.email}` : " "}
             </p>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Menyimpan…" : "Selesaikan & lanjut"}
+              {submitting ? "Menyimpan…" : "Simpan"}
             </Button>
           </div>
         </form>
