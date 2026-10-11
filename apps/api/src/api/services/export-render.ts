@@ -3,7 +3,8 @@ import {
   type ExportVariant,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
-  SHEET_CREDIT
+  SHEET_CREDIT,
+  soalImageHtml
 } from "@teacher-exam/shared"
 import { Match } from "effect"
 import { renderFigureSvg } from "./export-figure.js"
@@ -110,6 +111,7 @@ function soalSectionHtml(exam: ExportExam): string {
         `<div class="soal">` +
         `<p><span class="num">${q.number}.</span> <span class="stem">${renderMathText(q.text)}</span></p>` +
         (q.figure ? `<div class="figure">${renderFigureSvg(q.figure)}</div>` : "") +
+        (q.image ? soalImageHtml(q.image) : "") +
         questionBodyHtml(q) +
         `</div>`
     )
@@ -249,6 +251,8 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .opt-letter { font-weight: 600; margin-right: 4px; }
 .figure { text-align: center; margin: 8px 0; }
 .figure svg { max-width: 240px; height: auto; }
+.soal-stimulus { text-align: center; margin: 8px 0; }
+.soal-stimulus svg, .soal-stimulus img { max-width: 220px; max-height: 180px; height: auto; }
 .tf { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
 .tf th, .tf td { border: 1px solid rgba(0,0,0,.4); padding: 3px 6px; text-align: center; }
 .tf td:first-child { text-align: left; }

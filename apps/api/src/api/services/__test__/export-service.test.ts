@@ -83,6 +83,23 @@ describe("renderExamHtml", () => {
     const html = renderExamHtml(makeExam(), "pembahasan")
     expect(html).toContain("PEMBAHASAN")
   })
+
+  it("prints a soal image in grayscale and keeps the geometry figure", () => {
+    const exam = makeExam()
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#336699"/></svg>`
+    const question = exam.questions[0]
+    if (question === undefined) throw new Error("missing question")
+    exam.questions = [{
+      ...question,
+      figure: { type: "circle", radius: 7, label: "r = 7 cm" },
+      image: { source: "svg", svg }
+    }]
+    const html = renderExamHtml(exam, "soal")
+    expect(html).toContain("filter:grayscale(1)")
+    expect(html).toContain("<rect")
+    expect(html).toContain("circle")
+  })
 })
 
 function docxDocumentXml(bytes: Uint8Array): string {
