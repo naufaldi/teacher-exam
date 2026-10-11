@@ -22,6 +22,20 @@ env:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: school_exam
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: school_exam
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U school_exam"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +66,14 @@ jobs:
       - name: Shared test
         run: pnpm --filter @teacher-exam/shared test
 
+      - name: Apply migrations
+        env:
+          DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam
+        run: pnpm --filter @teacher-exam/db db:migrate
+
       - name: API test
+        env:
+          DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam
         run: pnpm --filter @teacher-exam/api test
 
   db-migrate:
