@@ -208,7 +208,7 @@ Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/dep
 1. Build and push API + web images to GHCR (tagged by commit SHA).
 2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
-4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
+4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. Then SSH runs `scripts/ai-live-smoke.sh`, which probes `http://127.0.0.1:3001/api/health/ai-live` inside `teacher-exam-api-1`. That loopback route is the only one that calls the model. Public `GET /api/health/ai` reports the configured provider, model, and whether the key is present, and does not call OpenAI. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
 
 Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
 

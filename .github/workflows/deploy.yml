@@ -153,6 +153,18 @@ jobs:
         id: smoke
         run: node scripts/deploy-smoke.mjs
 
+      - name: Smoke AI model inside the API container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 120s
+          script: |
+            set -eu
+            cd ~/projects/teacher-exam
+            sh scripts/ai-live-smoke.sh
+
       - name: Roll back to the previous image
         if: failure() && steps.switch.outcome == 'success'
         uses: appleboy/ssh-action@master

@@ -40,8 +40,7 @@ export function probeTable(env) {
     { name: "home", url: `${web}/`, expectShell: true },
     { name: "share", url: `${web}/share/smoke`, expectShell: true },
     { name: "asset", url: `${web}/favicon.svg`, expectShell: false },
-    { name: "api", url: env.apiHealthUrl, expectShell: false },
-    { name: "ai", url: env.apiAiUrl, expectShell: false, expectText: "gpt-6-luna" }
+    { name: "api", url: env.apiHealthUrl, expectShell: false }
   ]
 }
 

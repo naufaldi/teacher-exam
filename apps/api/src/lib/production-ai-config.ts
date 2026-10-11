@@ -18,6 +18,12 @@ export interface ProductionAiSelection {
   readonly baseUrl?: string
 }
 
+export interface AiConfigPresence {
+  readonly provider: ProductionAiProvider
+  readonly model: string
+  readonly keyConfigured: boolean
+}
+
 const MISSING_OPENAI_KEY = "OPENAI_API_KEY is required when AI_PROVIDER=openai. Refusing to fall back to Anthropic."
 
 export function readAiProvider(env: NodeJS.ProcessEnv = process.env): ProductionAiProvider {
@@ -25,6 +31,29 @@ export function readAiProvider(env: NodeJS.ProcessEnv = process.env): Production
   if (raw === "" || raw === "openai") return "openai"
   if (raw === "anthropic" || raw === "minimax") return raw
   throw new Error(`AI_PROVIDER must be "anthropic", "minimax", or "openai", got "${raw}"`)
+}
+
+export function describeAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfigPresence {
+  const provider = readAiProvider(env)
+  if (provider === "openai") {
+    return {
+      provider,
+      model: env["AI_MODEL"]?.trim() || DEFAULT_OPENAI_MODEL,
+      keyConfigured: Boolean(env["OPENAI_API_KEY"]?.trim())
+    }
+  }
+  if (provider === "anthropic") {
+    return {
+      provider,
+      model: env["AI_MODEL"]?.trim() || DEFAULT_MODEL,
+      keyConfigured: Boolean(env["ANTHROPIC_API_KEY"]?.trim())
+    }
+  }
+  return {
+    provider,
+    model: env["AI_MODEL"]?.trim() || DEFAULT_MINIMAX_MODEL,
+    keyConfigured: Boolean(env["MINIMAX_API_KEY"]?.trim())
+  }
 }
 
 export function assertAiProviderReady(env: NodeJS.ProcessEnv = process.env): ProductionAiSelection {

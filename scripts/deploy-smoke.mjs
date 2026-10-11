@@ -58,8 +58,7 @@ function sleep(seconds) {
 
 const probes = probeTable({
   webOrigin: process.env["WEB_ORIGIN"] ?? "https://ujian-sekolah.naufaldi.com",
-  apiHealthUrl: process.env["API_HEALTH_URL"] ?? "https://api-ujian-sekolah.naufaldi.com/api/health",
-  apiAiUrl: process.env["API_AI_URL"] ?? "https://api-ujian-sekolah.naufaldi.com/api/health/ai"
+  apiHealthUrl: process.env["API_HEALTH_URL"] ?? "https://api-ujian-sekolah.naufaldi.com/api/health"
 })
 
 for (let attempt = 1; attempt <= attempts; attempt++) {
