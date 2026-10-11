@@ -3,6 +3,7 @@ import {
   type ExportVariant,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
+  resolveHeaderKop,
   SHEET_CREDIT
 } from "@teacher-exam/shared"
 import {
@@ -10,6 +11,7 @@ import {
   Document,
   ExternalHyperlink,
   HeadingLevel,
+  ImageRun,
   Packer,
   Paragraph,
   Table,
@@ -42,12 +44,48 @@ function plainText(text: string): string {
   return text.replaceAll(/\$+/g, "")
 }
 
+const LOGO_DATA_URL = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/]+={0,2})$/
+
+function logoRun(dataUrl: string | null): ImageRun | null {
+  if (dataUrl === null) return null
+  const match = LOGO_DATA_URL.exec(dataUrl)
+  const kind = match?.[1]
+  const bytes = match?.[2]
+  if (kind === undefined || bytes === undefined) return null
+  return new ImageRun({
+    type: kind === "png" ? "png" : "jpg",
+    data: Buffer.from(bytes, "base64"),
+    transformation: { width: 64, height: 64 }
+  })
+}
+
 function headerParagraphs(exam: ExportExam): Array<Paragraph> {
+  const kop = resolveHeaderKop({
+    schoolName: exam.schoolName,
+    kop: Object.hasOwn(exam, "kop") ? Reflect.get(exam, "kop") : undefined
+  })
+  const image = logoRun(kop.logoDataUrl)
   return [
+    ...(image === null
+      ? []
+      : [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [image]
+        })
+      ]),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: exam.schoolName ?? "SD Negeri ___________", bold: true })]
+      children: [new TextRun({ text: kop.name, bold: true })]
     }),
+    ...(kop.address === ""
+      ? []
+      : [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: kop.address })]
+        })
+      ]),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [

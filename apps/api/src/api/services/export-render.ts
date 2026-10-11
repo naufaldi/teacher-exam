@@ -3,6 +3,7 @@ import {
   type ExportVariant,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
+  resolveHeaderKop,
   SHEET_CREDIT,
   soalImageHtml
 } from "@teacher-exam/shared"
@@ -41,14 +42,23 @@ function examTypeOf(exam: ExportExam): string {
 }
 
 function paperHeaderHtml(exam: ExportExam): string {
-  const school = exam.schoolName ?? "SD Negeri ___________"
+  const kop = resolveHeaderKop({
+    schoolName: exam.schoolName,
+    kop: Object.hasOwn(exam, "kop") ? Reflect.get(exam, "kop") : undefined
+  })
   const year = exam.academicYear ?? "____/____"
   const date = exam.examDate ?? "......................"
   const duration = exam.durationMinutes ?? 60
   const topics = exam.topics.join(" · ")
+  const logo = kop.logoDataUrl === null
+    ? ""
+    : `<img class="logo" alt="" src="${escapeHtml(kop.logoDataUrl)}">`
+  const address = kop.address === "" ? "" : `<p class="address">${escapeHtml(kop.address)}</p>`
   return [
     `<div class="kop">`,
-    `<p class="school">${escapeHtml(school)}</p>`,
+    logo,
+    `<p class="school">${escapeHtml(kop.name)}</p>`,
+    address,
     `<p class="title">${escapeHtml(kopLabelFor(examTypeOf(exam)))} Tahun Pelajaran ${escapeHtml(year)}</p>`,
     `</div>`,
     `<table class="meta">`,
@@ -238,6 +248,8 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .page-break { page-break-before: always; }
 .kop { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; }
 .kop .school { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.kop .address { font-size: 12px; margin: 2px 0 0; }
+.kop .logo { display: block; width: 64px; height: 64px; object-fit: contain; margin: 0 auto 6px; }
 .kop .title { font-size: 15px; font-weight: 700; text-transform: uppercase; margin: 4px 0 0; text-decoration: underline; }
 .meta { width: 100%; font-size: 13px; margin: 0 0 16px; border-collapse: collapse; }
 .meta td { padding: 2px 0; }

@@ -37,17 +37,25 @@ function PaperHeader({
   subjectLabel,
   topicsLabel
 }: {
-  metadata: Pick<ExamSheetMetadata, "schoolName" | "academicYear" | "examType" | "examDate" | "durationMinutes">
+  metadata: Pick<
+    ExamSheetMetadata,
+    "schoolName" | "schoolAddress" | "schoolLogo" | "academicYear" | "examType" | "examDate" | "durationMinutes"
+  >
   subjectLabel: string
   grade: number
   topicsLabel: string
 }) {
+  const address = metadata.schoolAddress?.trim() ?? ""
   return (
     <>
       <div className="text-center border-b-2 border-black pb-3 mb-4">
+        {metadata.schoolLogo
+          ? <img src={metadata.schoolLogo} alt="" className="mx-auto mb-2 h-16 w-16 object-contain" />
+          : null}
         <p className="text-sm font-bold uppercase tracking-wide">
           {metadata.schoolName || "SD Negeri ___________"}
         </p>
+        {address ? <p className="text-[12px] mt-1">{address}</p> : null}
         <p className="text-base font-bold uppercase mt-1 underline">
           {kopLabelFor(metadata.examType)} Tahun Pelajaran {metadata.academicYear || "____/____"}
         </p>

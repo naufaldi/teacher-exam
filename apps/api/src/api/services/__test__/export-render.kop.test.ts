@@ -1,5 +1,7 @@
 import { brandExamId, brandUserId, type ExamWithQuestions } from "@teacher-exam/shared"
+import { inflateRawSync } from "node:zlib"
 import { describe, expect, it } from "vitest"
+import { renderExamDocx } from "../export-docx.js"
 import { renderExamHtml } from "../export-render.js"
 
 const NOW = "2024-01-01T00:00:00.000Z"
@@ -79,4 +81,70 @@ describe("paper header kop", () => {
     expect(html).toContain(ADDRESS)
     expect(html).not.toContain("<img")
   })
+
+  it("omits the address line when the address is blank", () => {
+    const html = renderExamHtml(
+      withKop({ name: SCHOOL, address: "   ", logoDataUrl: null }),
+      "soal"
+    )
+    expect(html).toContain(SCHOOL)
+    expect(html).not.toContain("class=\"address\"")
+    expect(html).not.toContain("<img")
+  })
+
+  it("prints the school name and address in the docx header and stores the logo", async () => {
+    const bytes = await renderExamDocx(
+      withKop({ name: SCHOOL, address: ADDRESS, logoDataUrl: LOGO }),
+      "soal"
+    )
+    const xml = docxDocumentXml(bytes)
+    expect(xml).toContain(SCHOOL)
+    expect(xml).toContain(ADDRESS)
+    expect(zipNames(bytes).join("\n")).toMatch(/word\/media\/.+\.png/)
+  })
+
+  it("omits the docx image when the logo is null", async () => {
+    const bytes = await renderExamDocx(
+      withKop({ name: SCHOOL, address: ADDRESS, logoDataUrl: null }),
+      "soal"
+    )
+    expect(docxDocumentXml(bytes)).toContain(ADDRESS)
+    expect(zipNames(bytes).some((name) => name.startsWith("word/media/"))).toBe(false)
+  })
 })
+
+function zipNames(bytes: Uint8Array): Array<string> {
+  const buf = Buffer.from(bytes)
+  const names: Array<string> = []
+  let offset = 0
+  while (offset + 30 <= buf.length) {
+    if (buf.readUInt32LE(offset) !== 0x04034b50) break
+    const compSize = buf.readUInt32LE(offset + 18)
+    const nameLen = buf.readUInt16LE(offset + 26)
+    const extraLen = buf.readUInt16LE(offset + 28)
+    names.push(buf.subarray(offset + 30, offset + 30 + nameLen).toString("utf8"))
+    offset = offset + 30 + nameLen + extraLen + compSize
+  }
+  return names
+}
+
+function docxDocumentXml(bytes: Uint8Array): string {
+  const buf = Buffer.from(bytes)
+  let offset = 0
+  while (offset + 30 <= buf.length) {
+    if (buf.readUInt32LE(offset) !== 0x04034b50) break
+    const method = buf.readUInt16LE(offset + 8)
+    const compSize = buf.readUInt32LE(offset + 18)
+    const nameLen = buf.readUInt16LE(offset + 26)
+    const extraLen = buf.readUInt16LE(offset + 28)
+    const name = buf.subarray(offset + 30, offset + 30 + nameLen).toString("utf8")
+    const dataStart = offset + 30 + nameLen + extraLen
+    const compressed = buf.subarray(dataStart, dataStart + compSize)
+    if (name === "word/document.xml") {
+      const raw = method === 0 ? compressed : inflateRawSync(compressed)
+      return raw.toString("utf8")
+    }
+    offset = dataStart + compSize
+  }
+  throw new Error("word/document.xml missing")
+}

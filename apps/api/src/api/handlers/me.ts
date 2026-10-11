@@ -40,6 +40,8 @@ function loadProfile(userId: string): Effect.Effect<UserProfile | null, ApiDatab
       username: row.username,
       image: row.image,
       school: row.school,
+      schoolAddress: row.schoolAddress,
+      schoolLogo: row.schoolLogo,
       gradesTaught: row.gradesTaught as Array<Grade> | null,
       subjectsTaught: row.subjectsTaught,
       profileCompleted: row.profileCompleted,
@@ -74,7 +76,16 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, "me", (handlers) =>
             })
           )
         }
-        const input: UpdateProfileInput = parsed.right
+        const input: UpdateProfileInput = {
+          ...parsed.right,
+          ...(parsed.right.schoolAddress !== undefined
+            ? {
+              schoolAddress: parsed.right.schoolAddress?.trim()
+                ? parsed.right.schoolAddress.trim()
+                : null
+            }
+            : {})
+        }
 
         if (input.username !== undefined) {
           const taken = yield* runDb(

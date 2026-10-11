@@ -38,6 +38,45 @@ export const brandPdfUploadId = (id: string): PdfUploadId => Schema.decodeSync(P
 export const brandTemplateId = (id: string): TemplateId => Schema.decodeSync(TemplateIdSchema)(id)
 
 // ── User profile ───────────────────────────────────────────
+export const SCHOOL_ADDRESS_MAX = 200
+export const SCHOOL_LOGO_MAX_CHARS = 120 * 1024
+export const BLANK_SCHOOL_NAME = "SD Negeri ___________"
+
+export const SchoolAddressSchema = Schema.String.pipe(
+  Schema.maxLength(SCHOOL_ADDRESS_MAX),
+  Schema.pattern(/^[^\r\n]*$/)
+)
+
+export const SchoolLogoDataUrlSchema = Schema.String.pipe(
+  Schema.maxLength(SCHOOL_LOGO_MAX_CHARS),
+  Schema.pattern(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/)
+)
+
+export const SchoolKopSchema = Schema.Struct({
+  name: Schema.String,
+  address: Schema.String,
+  logoDataUrl: Schema.NullOr(Schema.String)
+})
+export type SchoolKop = typeof SchoolKopSchema.Type
+
+export function resolveHeaderKop(input: {
+  readonly schoolName: string | null
+  readonly kop: unknown
+}): SchoolKop {
+  const decoded = Schema.decodeUnknownEither(SchoolKopSchema)(input.kop)
+  const attached = decoded._tag === "Right" ? decoded.right : null
+  const fallback = input.schoolName?.trim() || BLANK_SCHOOL_NAME
+  if (attached === null) {
+    return { name: fallback, address: "", logoDataUrl: null }
+  }
+  const logo = Schema.decodeUnknownEither(SchoolLogoDataUrlSchema)(attached.logoDataUrl ?? "")
+  return {
+    name: attached.name.trim() || fallback,
+    address: attached.address.trim(),
+    logoDataUrl: logo._tag === "Right" ? logo.right : null
+  }
+}
+
 export const UserProfileSchema = Schema.Struct({
   id: UserIdSchema,
   email: Schema.String,
@@ -45,6 +84,8 @@ export const UserProfileSchema = Schema.Struct({
   username: Schema.String,
   image: Schema.NullOr(Schema.String),
   school: Schema.NullOr(Schema.String),
+  schoolAddress: Schema.optional(Schema.NullOr(Schema.String)),
+  schoolLogo: Schema.optional(Schema.NullOr(Schema.String)),
   gradesTaught: Schema.NullOr(Schema.Array(GradeSchema)),
   subjectsTaught: Schema.NullOr(Schema.Array(ExamSubjectSchema)),
   profileCompleted: Schema.Boolean,
