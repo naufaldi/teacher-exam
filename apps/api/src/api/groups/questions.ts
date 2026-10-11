@@ -12,7 +12,7 @@ import {
   ApiValidationError422NoDetails
 } from "../errors/http"
 import { Authorization } from "../middleware/auth"
-import { GlobalRateLimit } from "../middleware/rate-limit"
+import { AiGenerateRateLimit, GlobalRateLimit } from "../middleware/rate-limit"
 
 const idParam = HttpApiSchema.param("id", Schema.String)
 
@@ -36,6 +36,7 @@ export const QuestionsGroup = HttpApiGroup.make("questions")
       .addError(ApiNotFound, { status: 404 })
       .addError(ApiAiError, { status: 502 })
       .addError(ApiDatabaseError, { status: 500 })
+      .middleware(AiGenerateRateLimit)
   )
   .middleware(Authorization)
   .middleware(GlobalRateLimit)
