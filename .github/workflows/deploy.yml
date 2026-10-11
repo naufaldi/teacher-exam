@@ -113,20 +113,16 @@ jobs:
             git reset --hard origin/main
             git clean -fd -e .env.production
 
-            # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            # VPS disk is limited (~50GB); prune unused images/cache before pull (avoids "no space left on device" on layer extract)
-            echo "Pruning unused Docker images and build cache..."
-            docker image prune -af
-            docker builder prune -af
+            echo "Disk before image pull:"
             df -h /
 
-            # Pull new images
-            echo "Pulling API image..."
-            docker pull ${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
-            echo "Pulling Web image..."
-            docker pull ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+            # Dangling images only. GHCR_PULL_TOKEN is an optional packages:read credential; the job token is the fallback.
+            GHCR_USER='${{ github.actor }}' \
+            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
+            GHCR_PULL_TOKEN='${{ secrets.GHCR_PULL_TOKEN }}' \
+            API_IMAGE='${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}' \
+            WEB_IMAGE='${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}' \
+              sh scripts/vps-pull.sh
 
             # Update GITHUB_REPOSITORY only; IMAGE_TAG is written after migrate succeeds
             grep -v "^GITHUB_REPOSITORY=" .env.production > .env.production.tmp || true
@@ -170,7 +166,7 @@ jobs:
             cd ~/projects/teacher-exam
             sh scripts/vps-rollback.sh
 
-      - name: Prune unused images
+      - name: Prune dangling images
         if: success()
         uses: appleboy/ssh-action@master
         with:
@@ -180,4 +176,4 @@ jobs:
           command_timeout: 300s
           script: |
             set -eu
-            docker image prune -af
+            docker image prune -f

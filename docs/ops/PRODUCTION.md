@@ -208,7 +208,7 @@ Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/dep
 1. Build and push API + web images to GHCR (tagged by commit SHA).
 2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
-4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. Image prune runs only after the smoke passes.
+4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
 
 Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
 
@@ -391,7 +391,7 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 
 5. **`BETTER_AUTH_URL` ≠ `APP_URL`** in subdomain-split deployments. `BETTER_AUTH_URL` is the API's own public URL (for OAuth callback construction); `APP_URL` is the web app's URL (for CORS/trustedOrigins).
 
-6. **Docker disk on VPS can fill during image pull** (49 GB total; `node_modules` layers are large). Symptom: `failed to register layer: no space left on device`. Deploy workflow runs `docker image prune -af` + `docker builder prune -af` before each pull. Manual fix: `ssh vps-faldi 'docker image prune -af && docker builder prune -af && df -h /'`.
+6. **Docker disk on VPS can fill during image pull** (49 GB total; `node_modules` layers are large). Symptom: `failed to register layer: no space left on device`. Each deploy prunes dangling images only (`docker image prune -f`) so the images that are serving stay tagged. A failed GHCR pull logs in again and retries up to 3 times. Manual emergency when the disk is full: `ssh vps-faldi 'docker image prune -af && docker builder prune -af && df -h /'`.
 
 7. **Caddy docker-proxy reloads on every container event**. In-flight ACME cert requests get cancelled on reload — the `context canceled` errors in Caddy logs during startup are expected and Caddy retries automatically.
 
