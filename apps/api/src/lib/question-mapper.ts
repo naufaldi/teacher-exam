@@ -6,6 +6,8 @@ import {
   type McqSingleQuestion,
   type Question,
   QuestionIdSchema,
+  type SoalImage,
+  SoalImageSchema,
   type TrueFalseQuestion
 } from "@teacher-exam/shared"
 import { Either, Match, Schema } from "effect"
@@ -55,9 +57,17 @@ function decodePayloadFigure(payload: unknown): FigureSpec | null {
   return Either.isRight(decoded) ? decoded.right : null
 }
 
+function decodePayloadImage(payload: unknown): SoalImage | null {
+  const image = payloadObject(payload)["image"]
+  if (image === undefined || image === null) return null
+  const decoded = Schema.decodeUnknownEither(SoalImageSchema)(image)
+  return Either.isRight(decoded) ? decoded.right : null
+}
+
 function commonFields(row: QuestionRow): Omit<McqSingleQuestion, "_tag" | "options" | "correct"> {
   const generationFailed = readGenerationFailed(row.payload)
   const sourcePage = readSourcePage(row.payload)
+  const image = decodePayloadImage(row.payload)
   return {
     id: Schema.decodeSync(QuestionIdSchema)(row.id),
     examId: Schema.decodeSync(ExamIdSchema)(row.examId),
@@ -71,6 +81,7 @@ function commonFields(row: QuestionRow): Omit<McqSingleQuestion, "_tag" | "optio
     ...(generationFailed === true ? { generationFailed: true } : {}),
     ...(sourcePage !== undefined ? { sourcePage } : {}),
     figure: decodePayloadFigure(row.payload),
+    ...(image !== null ? { image } : {}),
     createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString()
   }
 }
@@ -140,7 +151,8 @@ function payloadWithFigure(
   payload: QuestionRowPayload | null,
   figure: FigureSpec | null | undefined,
   generationFailed?: boolean,
-  sourcePage?: number
+  sourcePage?: number,
+  image?: SoalImage | null
 ): QuestionRowPayload | null {
   const base = { ...(payload ?? {}) }
   if (generationFailed === true) {
@@ -148,6 +160,7 @@ function payloadWithFigure(
   }
   if (figure) base["figure"] = figure
   if (sourcePage !== undefined) base["sourcePage"] = sourcePage
+  if (image) base["image"] = image
   if (Object.keys(base).length === 0) return payload
   return base
 }
@@ -161,7 +174,7 @@ export function questionToRow(q: Question): QuestionRowWrite {
       optionC: x.options.c,
       optionD: x.options.d,
       correctAnswer: x.correct,
-      payload: payloadWithFigure(null, x.figure, x.generationFailed, x.sourcePage)
+      payload: payloadWithFigure(null, x.figure, x.generationFailed, x.sourcePage, x.image)
     })),
     Match.tag("mcq_multi", (x) => ({
       type: "mcq_multi" as const,
@@ -174,7 +187,8 @@ export function questionToRow(q: Question): QuestionRowWrite {
         { options: x.options, correct: x.correct },
         x.figure,
         x.generationFailed,
-        x.sourcePage
+        x.sourcePage,
+        x.image
       )
     })),
     Match.tag("true_false", (x) => ({
@@ -188,7 +202,8 @@ export function questionToRow(q: Question): QuestionRowWrite {
         { statements: x.statements },
         x.figure,
         x.generationFailed,
-        x.sourcePage
+        x.sourcePage,
+        x.image
       )
     })),
     Match.exhaustive

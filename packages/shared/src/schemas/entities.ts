@@ -13,6 +13,7 @@ import {
   ReviewModeSchema,
   ValidationStatusSchema
 } from "./primitives.js"
+import { SoalImageSchema } from "./soal-image.js"
 
 // ── Branded IDs ────────────────────────────────────────────
 export const UserIdSchema = Schema.String.pipe(Schema.brand("UserId"))
@@ -75,6 +76,7 @@ const QuestionCommonFields = {
   generationFailed: Schema.optional(Schema.Boolean),
   sourcePage: Schema.optional(Schema.Int.pipe(Schema.between(1, 10_000))),
   figure: Schema.optional(Schema.NullOr(FigureSpecSchema)),
+  image: Schema.optional(Schema.NullOr(SoalImageSchema)),
   createdAt: Schema.String
 } as const
 

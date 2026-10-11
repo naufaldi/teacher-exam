@@ -43,6 +43,7 @@ import { ExportServiceLive } from "../services/export-service"
 import { GradingServiceLive } from "../services/grading-service"
 import { FilesystemObjectStorageLive } from "../services/object-storage-filesystem"
 import { SessionServiceLive } from "../services/session-service"
+import { TestSoalImageModelLive } from "../services/soal-image-model"
 import { TemplateServiceLive } from "../services/template-service"
 import { createTestDbLayer, TestSqlLayer } from "../services/test-db"
 
@@ -159,6 +160,7 @@ export function createHttpApiTestLayer(opts: {
     TestDbLayer,
     TestSqlLayer,
     TestAiLayer(opts.aiService ?? defaultTestAiService),
+    TestSoalImageModelLive,
     BankServiceLive.pipe(Layer.provide(TestDbLayer)),
     TemplateServiceLive.pipe(Layer.provide(TestDbLayer)),
     ClassServiceLive.pipe(Layer.provide(TestDbLayer)),

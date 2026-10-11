@@ -28,6 +28,7 @@ import { CurrentUser } from "../middleware/auth"
 import { AiClient } from "../services/ai"
 import { CurriculumService } from "../services/curriculum-service"
 import { DbClient } from "../services/db"
+import { removeQuestionImageEffect, setQuestionImageEffect, uploadQuestionImageEffect } from "./question-image-effects"
 
 export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (handlers) =>
   handlers
@@ -322,4 +323,7 @@ export const QuestionsLive = HttpApiBuilder.group(TeacherExamApi, "questions", (
         )
 
         return rowToQuestion(updatedRow)
-      })))
+      }))
+    .handle("setQuestionImage", ({ path, payload }) => setQuestionImageEffect(path.id, payload))
+    .handle("uploadQuestionImage", ({ path, payload }) => uploadQuestionImageEffect(path.id, payload))
+    .handle("removeQuestionImage", ({ path }) => removeQuestionImageEffect(path.id)))

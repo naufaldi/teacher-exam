@@ -5,6 +5,7 @@ import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.j
 import { FigureSvg } from "../figure-svg.js"
 import { MarkdownMath } from "../markdown-math.js"
 import { MathText } from "../math-text.js"
+import { SoalImageView } from "../soal-image-view.js"
 import type { ExamSheetMetadata } from "./exam-sheet-types.js"
 import { kopLabelFor } from "./exam-type-labels.js"
 
@@ -154,6 +155,7 @@ function SoalSection({
                 </span>
               </p>
               {q.figure ? <FigureSvg figure={q.figure} /> : null}
+              {q.image ? <SoalImageView image={q.image} printSafe /> : null}
               {matchQuestion(q, {
                 mcq_single: (x) => <McqOptionsList options={x.options} />,
                 mcq_multi: (x) => <McqOptionsList options={x.options} />,
