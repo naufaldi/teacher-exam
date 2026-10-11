@@ -17,11 +17,11 @@ import { CurrentUser } from "../middleware/auth"
 import { DbClient } from "../services/db"
 
 export function profileIsComplete(profile: {
-  readonly username: string
-  readonly gradesTaught: ReadonlyArray<unknown> | null
-  readonly subjectsTaught: ReadonlyArray<unknown> | null
+  readonly username: string | null | undefined
+  readonly gradesTaught: ReadonlyArray<unknown> | null | undefined
+  readonly subjectsTaught: ReadonlyArray<unknown> | null | undefined
 }): boolean {
-  return profile.username.length > 0
+  return (profile.username?.length ?? 0) > 0
     && (profile.gradesTaught?.length ?? 0) > 0
     && (profile.subjectsTaught?.length ?? 0) > 0
 }

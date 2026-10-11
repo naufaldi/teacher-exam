@@ -92,8 +92,8 @@ function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[640px]">
-      <header className="mb-6 flex flex-col gap-2">
+    <div className="mx-auto max-w-[640px] pb-24 sm:pb-0">
+      <header className="mb-4 flex flex-col gap-2 sm:mb-6">
         <span className="inline-flex w-fit items-center gap-2 rounded-pill bg-primary-50 px-3 py-1 text-caption font-semibold uppercase tracking-[0.08em] text-primary-700">
           Lengkapi Profil
         </span>
@@ -105,8 +105,8 @@ function OnboardingPage() {
         </p>
       </header>
 
-      <PaperCard as="article" tilt={0} className="p-6 sm:p-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <PaperCard as="article" tilt={0} className="p-4 sm:p-8">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-6">
           <div className="flex flex-col gap-2">
             <Label htmlFor="school">Nama sekolah (opsional)</Label>
             <Input
@@ -197,7 +197,7 @@ function OnboardingPage() {
             ) :
             null}
 
-          <div className="flex items-center justify-between gap-4 pt-2">
+          <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-between gap-4 border-t border-border-default bg-bg-surface px-4 py-3 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-2">
             <p className="text-caption text-text-tertiary">
               {profile ? `Masuk sebagai ${profile.email}` : " "}
             </p>

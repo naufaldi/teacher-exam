@@ -6,7 +6,6 @@ import { Either } from "effect"
 import type { ComponentType } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "../../lib/api.js"
-import type * as AuthModule from "../../lib/auth-client.js"
 import { Route } from "../_auth.onboarding.js"
 
 const { mockGetSession, mockMeGet, mockMeUpdate, mockNavigate } = vi.hoisted(() => ({
@@ -39,16 +38,11 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
   }
 })
 
-vi.mock("../../lib/auth-client.js", async (importOriginal) => {
-  const orig = await importOriginal<typeof AuthModule>()
-  return {
-    ...orig,
-    authClient: {
-      ...orig.authClient,
-      getSession: mockGetSession
-    }
+vi.mock("../../lib/auth-client", () => ({
+  authClient: {
+    getSession: mockGetSession
   }
-})
+}))
 
 function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
