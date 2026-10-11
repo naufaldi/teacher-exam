@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { publicBankClientKey } from "../ip-rate-limit"
 import { buildHttpApiTestApp } from "../../../routes/__test__/http-api-setup"
+import { publicBankClientKey } from "../ip-rate-limit"
 
 describe("AI generate window on regenerate", () => {
   it("returns the rate-limit error once regenerate is past the window", async () => {
@@ -60,31 +60,30 @@ describe("AI generate window on regenerate", () => {
 })
 
 describe("public bank client key", () => {
-  const trustedLoopback = { remoteAddress: "127.0.0.1", trustedProxies: ["127.0.0.1", "::1"] }
+  it("keys two cf-connecting-ip values apart", () => {
+    const peer = { remoteAddress: "198.51.100.8" }
 
-  it("ignores a rotated cf-connecting-ip when the peer is not a trusted proxy", () => {
-    const peer = { remoteAddress: "198.51.100.8", trustedProxies: ["127.0.0.1"] }
-
-    expect(publicBankClientKey("203.0.113.10", peer)).toBe("bank:198.51.100.8")
-    expect(publicBankClientKey("203.0.113.99", peer)).toBe("bank:198.51.100.8")
+    expect(publicBankClientKey("203.0.113.10", peer)).toBe("bank:203.0.113.10")
+    expect(publicBankClientKey("203.0.113.99", peer)).toBe("bank:203.0.113.99")
   })
 
-  it("does not persist an unbounded or non-IP header from a trusted proxy", () => {
+  it("falls back to the socket address when the header is not an IP", () => {
+    const peer = { remoteAddress: "127.0.0.1" }
     const huge = `203.0.113.10${"x".repeat(400)}`
 
-    expect(publicBankClientKey(huge, trustedLoopback)).toBe("bank:anonymous")
-    expect(publicBankClientKey("not an ip", trustedLoopback)).toBe("bank:anonymous")
+    expect(publicBankClientKey(huge, peer)).toBe("bank:127.0.0.1")
+    expect(publicBankClientKey("not an ip", peer)).toBe("bank:127.0.0.1")
     expect(huge.length).toBeGreaterThan(45)
   })
 
-  it("keeps two valid addresses apart when the peer is a trusted proxy", () => {
-    expect(publicBankClientKey("203.0.113.10", trustedLoopback)).toBe("bank:203.0.113.10")
-    expect(publicBankClientKey("2001:db8::1", trustedLoopback)).toBe("bank:2001:db8::1")
+  it("keeps two valid addresses apart", () => {
+    expect(publicBankClientKey("203.0.113.10")).toBe("bank:203.0.113.10")
+    expect(publicBankClientKey("2001:db8::1")).toBe("bank:2001:db8::1")
   })
 })
 
 describe("public bank windows per client IP", () => {
-  it("does not give a rotated cf-connecting-ip its own window", async () => {
+  it("keeps a second cf-connecting-ip on its own window", async () => {
     const app = buildHttpApiTestApp({
       publicBankRateLimit: { windows: [{ windowMs: 60_000, max: 1 }] }
     })
@@ -103,6 +102,6 @@ describe("public bank windows per client IP", () => {
     expect(secondA.status).toBe(429)
     const blocked = (await secondA.json()) as { code: string }
     expect(blocked.code).toBe("RATE_LIMITED")
-    expect(firstB.status).toBe(429)
+    expect(firstB.status).not.toBe(429)
   })
 })

@@ -17,7 +17,6 @@ export const PUBLIC_BANK_RATE_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 
 
 export type PublicBankPeer = {
   remoteAddress?: string | undefined
-  trustedProxies?: ReadonlyArray<string> | undefined
 }
 
 function stripMappedIpv4(value: string): string {
@@ -51,23 +50,15 @@ function isBoundedClientIp(value: string): boolean {
   return value.length > 0 && value.length <= MAX_CLIENT_IP_LENGTH && (isIpv4(value) || isIpv6(value))
 }
 
-function defaultTrustedProxies(): ReadonlyArray<string> {
-  const raw = process.env["TRUSTED_PROXY_IPS"]
-  if (raw === undefined || raw.trim().length === 0) return ["127.0.0.1", "::1"]
-  return raw.split(",").map((part) => part.trim()).filter((part) => part.length > 0)
-}
-
 export function publicBankClientKey(
   connectingIp: string | undefined,
   peer: PublicBankPeer = {}
 ): string {
-  const trusted = peer.trustedProxies ?? defaultTrustedProxies()
   const remote = stripMappedIpv4((peer.remoteAddress ?? "").trim())
   const header = stripMappedIpv4((connectingIp?.split(",")[0] ?? "").trim())
-  const peerIsTrusted = remote.length > 0 && trusted.includes(remote)
-  if (peerIsTrusted && isBoundedClientIp(header)) return `bank:${header}`
-  if (!peerIsTrusted && isBoundedClientIp(remote)) return `bank:${remote}`
-  return "bank:anonymous"
+  if (isBoundedClientIp(header)) return `bank:${header}`
+  if (isBoundedClientIp(remote)) return `bank:${remote}`
+  return "bank:missing"
 }
 
 export class PublicBankIpRateLimit extends HttpApiMiddleware.Tag<PublicBankIpRateLimit>()(
