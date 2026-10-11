@@ -1,10 +1,10 @@
 # Product Roadmap 2026–2027
 
-## School Exam Generator (Ujian SD)
+## Ujian Sekolah
 
 | Field | Value |
 |-------|-------|
-| **Product** | School Exam Generator (Ujian SD) |
+| **Product** | Ujian Sekolah |
 | **School Year** | 2026–2027 (Indonesia: Jul 2026 – Jun 2027) |
 | **Created** | 2026-04-29 |
 | **Strategy** | Ship easy wins first, layer features over the school year |
@@ -40,7 +40,7 @@ Each milestone maps to a PRD:
 | PRD | Status | Milestones |
 |-----|--------|------------|
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done (M3 diagrams pending) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
+| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done. M3 diagrams partial (6 shapes) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar model, D-2) | M4 (Bank Soal) |
 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
@@ -54,7 +54,7 @@ Each milestone maps to a PRD:
 |---|-----------|--------|-----|--------|
 | 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ✅ Done (2026-06-23) |
-| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
+| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | 🔄 Partial (6 shapes, 2026-10-11) |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar, 2026-06-29) |
 | 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
@@ -133,14 +133,14 @@ _(Record issues here as they're discovered)_
 
 **Target:** Jul 15, 2026
 **Goal:** Math fully production-ready with geometry figures
-**Status:** ⬜ Not started
+**Status:** 🔄 Partial (2026-10-11). Six figure types have a shared schema and SVG renderers. Number line, fraction, clock, bar chart, and answer-key checks are still open.
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ⬜ |
-| 3.2 | Build deterministic SVG renderer | SVG identical on web and PDF (visual diff <1px) | Screenshot comparison | ⬜ |
+| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ✅ `FigureSpecSchema` decodes the six types |
+| 3.2 | Build deterministic SVG renderer | SVG identical on web and PDF (visual diff <1px) | Screenshot comparison | 🔄 Web renderer tests emit stable SVG. Web versus PDF visual diff is not recorded |
 | 3.3 | AI outputs `figure` field per soal | JSON with type + parameters | 50 samples, ≥95% valid JSON | ⬜ |
 | 3.4 | Validator rejects unsupported figures | Regen with alternative topic succeeds ≥90% | Unit test + 50 samples | ⬜ |
 | 3.5 | Unhide diagram topics in UI | Topics appear in dropdown | Browser verify | ⬜ |
