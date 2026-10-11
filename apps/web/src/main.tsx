@@ -48,3 +48,19 @@ if (shouldHydratePrerenderedRoot(window.location.pathname, window.location.searc
   if (rootText !== "") root.replaceChildren()
   renderApp("create")
 }
+
+const sentryDsn = import.meta.env["VITE_SENTRY_DSN"]
+if (typeof sentryDsn === "string" && sentryDsn.length > 0) {
+  const startSentry = () => {
+    void import("./lib/sentry-client").then((mod) => {
+      void mod.initWebSentry()
+    })
+  }
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(() => {
+      startSentry()
+    })
+  } else {
+    window.setTimeout(startSentry, 1)
+  }
+}

@@ -78,6 +78,7 @@ jobs:
           build-args: |
             VITE_API_URL=https://api-ujian-sekolah.naufaldi.com/api
             VITE_APP_ORIGIN=https://ujian-sekolah.naufaldi.com
+            VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}
           tags: |
             ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
             ${{ env.WEB_IMAGE }}:latest

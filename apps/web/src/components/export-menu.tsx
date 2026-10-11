@@ -1,6 +1,8 @@
+import { recordFunnelStage } from "@teacher-exam/shared/funnel"
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@teacher-exam/ui"
 import { ChevronDown, FileText, FileType, Printer } from "lucide-react"
 import { type ReactNode, useState } from "react"
+import { activeFunnelSink } from "../lib/sentry-client"
 
 type ExportFormat = "pdf" | "docx"
 
@@ -32,6 +34,7 @@ export function ExportMenu({
   const runExport = async (format: ExportFormat) => {
     setOpen(false)
     setBusy(true)
+    recordFunnelStage("print", activeFunnelSink())
     try {
       await onExport(format)
     } finally {
@@ -41,6 +44,7 @@ export function ExportMenu({
 
   const handlePrint = () => {
     setOpen(false)
+    recordFunnelStage("print", activeFunnelSink())
     onPrint()
   }
 

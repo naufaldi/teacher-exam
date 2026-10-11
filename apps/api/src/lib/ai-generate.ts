@@ -2,6 +2,7 @@ import { SqlClient } from "@effect/sql/SqlClient"
 import { exams, questions } from "@teacher-exam/db"
 import { formatExamTitle, normalizeExamType, validateGenerateExamInput } from "@teacher-exam/shared"
 import type { GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
+import { recordFunnelStage } from "@teacher-exam/shared/funnel"
 import { Data, Effect, Either } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
@@ -32,6 +33,7 @@ import { loadReadyPdfUpload } from "./pdf-upload-service"
 import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
+import { activeFunnelSink } from "./sentry"
 import { citeQuestionSourcePage } from "./source-page"
 
 class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
@@ -437,6 +439,7 @@ export function executeGenerateExam(
       questionCount: insertedQuestions.length,
       durationMs: Date.now() - handlerT0
     })
+    recordFunnelStage("generate", activeFunnelSink())
 
     return {
       _tag: "success",
