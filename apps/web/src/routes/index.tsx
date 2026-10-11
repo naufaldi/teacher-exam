@@ -105,7 +105,7 @@ function LoginPage() {
             className="animate-fade-up-stagger inline-flex items-center self-start gap-2 rounded-pill bg-primary-50 px-3 py-1 text-caption font-semibold tracking-[0.08em] uppercase text-primary-700"
             style={{ ["--index" as string]: 1 }}
           >
-            Kurikulum Merdeka · Kelas 5 &amp; 6
+            Kurikulum Merdeka · Kelas 1–6
           </span>
 
           <h1
@@ -204,7 +204,7 @@ function LoginPage() {
           className="animate-fade-up-stagger mt-auto pt-8 text-caption text-text-tertiary"
           style={{ ["--index" as string]: 5 }}
         >
-          SD Kelas 5 &amp; 6 · Sesuai Kurikulum Merdeka · Dibuat untuk guru Indonesia.
+          Kelas 1–6 · Sesuai Kurikulum Merdeka · Dibuat untuk guru Indonesia.
         </footer>
       </section>
 

@@ -103,6 +103,15 @@ describe("LoginPage", () => {
     expect(aside?.className ?? "").toMatch(/lg:overflow-hidden/)
   })
 
+  it("says the landing covers kelas 1 to 6", () => {
+    render(<LoginPage />)
+
+    expect(screen.getByText("Kurikulum Merdeka · Kelas 1–6")).toBeInTheDocument()
+    expect(screen.getByText(/Kelas 1–6 · Sesuai Kurikulum Merdeka/)).toBeInTheDocument()
+    expect(screen.queryByText("Kurikulum Merdeka · Kelas 5 & 6")).not.toBeInTheDocument()
+    expect(screen.queryByText(/SD Kelas 5 & 6/)).not.toBeInTheDocument()
+  })
+
   it("names the product Ujian Sekolah on the landing", () => {
     render(<LoginPage />)
 
