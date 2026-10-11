@@ -1,6 +1,12 @@
-import { ExamIdSchema, FigureSpecSchema, QuestionIdSchema, SUBJECT_LABEL } from "@teacher-exam/shared"
+import {
+  checkFigureAnswer,
+  ExamIdSchema,
+  FigureSpecSchema,
+  QuestionIdSchema,
+  SUBJECT_LABEL
+} from "@teacher-exam/shared"
 import type { ExamSubject, FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
-import { Either, Match, Schema } from "effect"
+import { Either, Match, pipe, Schema } from "effect"
 import type { LatexValidationResult } from "./latex-validator"
 import type { ParsedItemFailure } from "./parse-generated-questions"
 
@@ -116,7 +122,33 @@ export function convertGeneratedToQuestion(
     })),
     Match.exhaustive
   )
-  return result
+  return applyDiagramCheck(result, "generate")
+}
+
+export function diagramValidationReason(question: Question, source: "generate" | "edit"): string | null {
+  if (question.figure == null) return null
+  const check = checkFigureAnswer(question)
+  return pipe(
+    Match.value(check),
+    Match.tag("Unchecked", () => source === "generate" ? "Diagram belum menyatakan besaran yang ditanyakan." : null),
+    Match.tag("Match", () => null),
+    Match.tag("Mismatch", (row) => `Kunci tidak sesuai diagram: diagram ${row.derived}; teks kunci ${row.keyedText}`),
+    Match.tag("Unparsed", (row) => `Teks kunci tidak berisi nilai eksak diagram: ${row.text}`),
+    Match.tag("Inexact", () => "Diagram tidak menghasilkan bilangan eksak."),
+    Match.tag("NotOrderable", () => "Batas diagram tidak terurut."),
+    Match.exhaustive
+  )
+}
+
+function applyDiagramCheck(question: Question, source: "generate" | "edit"): Question {
+  const answerReason = diagramValidationReason(question, source)
+  if (answerReason === null) return question
+  const reasons = [question.validationReason, answerReason].filter((reason): reason is string => reason !== null)
+  return {
+    ...question,
+    validationStatus: "needs_review",
+    validationReason: reasons.join("\n")
+  }
 }
 
 export function failureReasonForNumber(

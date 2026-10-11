@@ -7,8 +7,8 @@ import {
   SHEET_CREDIT,
   soalImageHtml
 } from "@teacher-exam/shared"
+import { renderFigureSvg } from "@teacher-exam/shared"
 import { Match } from "effect"
-import { renderFigureSvg } from "./export-figure.js"
 import { loadKatexCss } from "./export-katex-css.js"
 import { renderMathText } from "./export-math.js"
 
@@ -98,8 +98,8 @@ function trueFalseTableHtml(statements: ReadonlyArray<{ text: string }>): string
 
 function questionBodyHtml(q: ExportExam["questions"][number]): string {
   return Match.value(q).pipe(
-    Match.tag("mcq_single", (mcq) => `<ol class="options" type="a">${optionsHtml(mcq.options)}</ol>`),
-    Match.tag("mcq_multi", (mcq) => `<ol class="options" type="a">${optionsHtml(mcq.options)}</ol>`),
+    Match.tag("mcq_single", (mcq) => `<ol class="options">${optionsHtml(mcq.options)}</ol>`),
+    Match.tag("mcq_multi", (mcq) => `<ol class="options">${optionsHtml(mcq.options)}</ol>`),
     Match.tag("true_false", (tf) => trueFalseTableHtml(tf.statements)),
     Match.exhaustive
   )
@@ -258,7 +258,7 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .soal-grid { column-count: 2; column-gap: 32px; font-size: 13px; line-height: 1.5; }
 .soal { break-inside: avoid; margin-bottom: 16px; }
 .soal .num { font-weight: 700; margin-right: 4px; }
-.options { list-style: lower-alpha; padding-left: 18px; margin: 4px 0 0; }
+.options { list-style: none; padding-left: 0; margin: 4px 0 0; }
 .options li { margin: 1px 0; }
 .opt-letter { font-weight: 600; margin-right: 4px; }
 .figure { text-align: center; margin: 8px 0; }

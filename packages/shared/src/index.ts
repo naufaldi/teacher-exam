@@ -1,3 +1,5 @@
+export { checkFigureAnswer, renderFigureSvg } from "./diagram.js"
+export type { DiagramQuestion, FigureCheck } from "./diagram.js"
 export * from "./exam-title.js"
 export * from "./format-math-fallback.js"
 export * from "./parse-math-text.js"
