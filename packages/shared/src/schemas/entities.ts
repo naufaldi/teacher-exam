@@ -73,6 +73,7 @@ const QuestionCommonFields = {
   validationReason: Schema.NullOr(Schema.String),
   /** True when bulk generate could not produce this soal; guru should use Regenerate. */
   generationFailed: Schema.optional(Schema.Boolean),
+  sourcePage: Schema.optional(Schema.Int.pipe(Schema.between(1, 10_000))),
   figure: Schema.optional(Schema.NullOr(FigureSpecSchema)),
   createdAt: Schema.String
 } as const

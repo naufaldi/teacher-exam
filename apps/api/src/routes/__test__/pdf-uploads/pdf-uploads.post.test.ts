@@ -3,6 +3,7 @@ import { File } from "node:buffer"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { PDFDocument } from "pdf-lib"
 import { describe, expect, it } from "vitest"
 import { validatePdfUploadFile } from "../../../lib/pdf-upload-service.js"
 
@@ -23,6 +24,21 @@ describe("validatePdfUploadFile", () => {
     expect(result._tag).toBe("Left")
     if (result._tag === "Left") {
       expect(result.left.status).toBe(415)
+    }
+  })
+
+  it("rejects a PDF with more than 60 pages", async () => {
+    const doc = await PDFDocument.create()
+    for (let i = 0; i < 61; i++) doc.addPage()
+    const bytes = Buffer.from(await doc.save())
+    const file = new File([bytes], "terlalu-panjang.pdf", { type: "application/pdf" })
+
+    const result = await Effect.runPromise(Effect.either(validatePdfUploadFile(file)))
+
+    expect(result._tag).toBe("Left")
+    if (result._tag === "Left") {
+      expect(result.left.status).toBe(413)
+      expect(result.left.message).toBe("PDF maksimal 60 halaman.")
     }
   })
 

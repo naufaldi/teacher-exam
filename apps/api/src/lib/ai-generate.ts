@@ -31,6 +31,7 @@ import { loadReadyPdfUpload } from "./pdf-upload-service"
 import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
+import { citeQuestionSourcePage } from "./source-page"
 
 class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
   message: string
@@ -343,7 +344,9 @@ export function executeGenerateExam(
       return { _tag: "ai_error", message: String((err as { cause?: unknown }).cause) }
     }
 
-    const insertedQuestions = [...generated.right.questions]
+    const insertedQuestions = generated.right.questions.map((question) =>
+      citeQuestionSourcePage(question, curriculumText)
+    )
     const generationIncomplete = generated.right.generationIncomplete
     const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
 

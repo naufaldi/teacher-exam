@@ -34,6 +34,22 @@ describe("rowToQuestion", () => {
     }
   })
 
+  test("maps sourcePage from payload and writes it back", () => {
+    const row = {
+      ...baseRow,
+      type: "mcq_single",
+      optionA: "Jakarta",
+      optionB: "Bandung",
+      optionC: "Surabaya",
+      optionD: "Medan",
+      correctAnswer: "a",
+      payload: { sourcePage: 4 }
+    }
+    const question = rowToQuestion(row)
+    expect(question.sourcePage).toBe(4)
+    expect(questionToRow(question).payload).toEqual({ sourcePage: 4 })
+  })
+
   test("maps figure from payload for a persisted mcq_single row", () => {
     const result = rowToQuestion({
       ...baseRow,

@@ -895,6 +895,16 @@ function ReviewPage() {
                   <span className="text-caption text-text-tertiary font-mono w-6 shrink-0">
                     {q.number}.
                   </span>
+                  {q.sourcePage !== undefined ?
+                    (
+                      <span
+                        data-testid={`source-page-${q.number}`}
+                        className="text-caption text-text-tertiary shrink-0"
+                      >
+                        Hal. {q.sourcePage}
+                      </span>
+                    ) :
+                    null}
                   <div className="flex-1 min-w-0 space-y-1">
                     {q.generationFailed === true ?
                       <span className="text-caption font-medium text-danger-fg">Gagal dibuat</span> :
@@ -1040,6 +1050,16 @@ function ReviewPage() {
                                 </Badge>
                               )}
                               {q.topic && <span className="text-caption text-text-tertiary">{q.topic}</span>}
+                              {q.sourcePage !== undefined ?
+                                (
+                                  <span
+                                    data-testid={`source-page-${q.number}`}
+                                    className="text-caption text-text-tertiary"
+                                  >
+                                    Hal. {q.sourcePage}
+                                  </span>
+                                ) :
+                                null}
                               {editedIds.has(q.id) && (
                                 <Badge variant="secondary" className="text-caption">
                                   Diedit

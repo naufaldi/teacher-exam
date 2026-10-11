@@ -43,6 +43,11 @@ function readGenerationFailed(payload: unknown): boolean | undefined {
   return flag === true ? true : undefined
 }
 
+function readSourcePage(payload: unknown): number | undefined {
+  const value = payloadObject(payload)["sourcePage"]
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : undefined
+}
+
 function decodePayloadFigure(payload: unknown): FigureSpec | null {
   const figure = payloadObject(payload)["figure"]
   if (figure === undefined || figure === null) return null
@@ -52,6 +57,7 @@ function decodePayloadFigure(payload: unknown): FigureSpec | null {
 
 function commonFields(row: QuestionRow): Omit<McqSingleQuestion, "_tag" | "options" | "correct"> {
   const generationFailed = readGenerationFailed(row.payload)
+  const sourcePage = readSourcePage(row.payload)
   return {
     id: Schema.decodeSync(QuestionIdSchema)(row.id),
     examId: Schema.decodeSync(ExamIdSchema)(row.examId),
@@ -63,6 +69,7 @@ function commonFields(row: QuestionRow): Omit<McqSingleQuestion, "_tag" | "optio
     validationStatus: row.validationStatus as McqSingleQuestion["validationStatus"],
     validationReason: row.validationReason,
     ...(generationFailed === true ? { generationFailed: true } : {}),
+    ...(sourcePage !== undefined ? { sourcePage } : {}),
     figure: decodePayloadFigure(row.payload),
     createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString()
   }
@@ -132,14 +139,16 @@ export function rowToQuestion(row: QuestionRow): Question {
 function payloadWithFigure(
   payload: QuestionRowPayload | null,
   figure: FigureSpec | null | undefined,
-  generationFailed?: boolean
+  generationFailed?: boolean,
+  sourcePage?: number
 ): QuestionRowPayload | null {
   const base = { ...(payload ?? {}) }
   if (generationFailed === true) {
     base["generationFailed"] = true
   }
-  if (!figure && Object.keys(base).length === 0) return payload
   if (figure) base["figure"] = figure
+  if (sourcePage !== undefined) base["sourcePage"] = sourcePage
+  if (Object.keys(base).length === 0) return payload
   return base
 }
 
@@ -152,7 +161,7 @@ export function questionToRow(q: Question): QuestionRowWrite {
       optionC: x.options.c,
       optionD: x.options.d,
       correctAnswer: x.correct,
-      payload: payloadWithFigure(null, x.figure, x.generationFailed)
+      payload: payloadWithFigure(null, x.figure, x.generationFailed, x.sourcePage)
     })),
     Match.tag("mcq_multi", (x) => ({
       type: "mcq_multi" as const,
@@ -161,7 +170,12 @@ export function questionToRow(q: Question): QuestionRowWrite {
       optionC: null,
       optionD: null,
       correctAnswer: null,
-      payload: payloadWithFigure({ options: x.options, correct: x.correct }, x.figure, x.generationFailed)
+      payload: payloadWithFigure(
+        { options: x.options, correct: x.correct },
+        x.figure,
+        x.generationFailed,
+        x.sourcePage
+      )
     })),
     Match.tag("true_false", (x) => ({
       type: "true_false" as const,
@@ -170,7 +184,12 @@ export function questionToRow(q: Question): QuestionRowWrite {
       optionC: null,
       optionD: null,
       correctAnswer: null,
-      payload: payloadWithFigure({ statements: x.statements }, x.figure, x.generationFailed)
+      payload: payloadWithFigure(
+        { statements: x.statements },
+        x.figure,
+        x.generationFailed,
+        x.sourcePage
+      )
     })),
     Match.exhaustive
   )

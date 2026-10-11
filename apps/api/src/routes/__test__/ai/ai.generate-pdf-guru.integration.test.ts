@@ -78,7 +78,11 @@ const fakeAiService: AiService = {
 }
 
 async function buildFixtureChunkRows(docId: string) {
-  const { text } = await extractPdfText(pdfBytes)
+  const extracted = await extractPdfText(pdfBytes)
+  if (extracted._tag !== "ok") {
+    throw new Error(`fixture PDF did not extract: ${extracted._tag}`)
+  }
+  const { text } = extracted
   const chunks = chunkText(text, { source: "teacher_pdf", docId })
   return chunks.map((chunk, index) => ({
     id: `chunk-${index}`,
