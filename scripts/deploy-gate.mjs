@@ -6,6 +6,15 @@ export function productionCaddyImage(dockerfile) {
   return line.trim().split(/\s+/)[1] ?? ""
 }
 
+const bootStatuses = new Set([0, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527])
+
+export function isBootFailure(result) {
+  if (result.reason === "redirect loop" || result.reason === "missing app shell") return false
+  const match = /^status (\d+)$/.exec(result.reason)
+  if (match === null) return false
+  return bootStatuses.has(Number(match[1]))
+}
+
 export function assessProbe(probe) {
   if (!Number.isInteger(probe.redirects) || probe.redirects < 0) {
     return { ok: false, reason: "redirect count missing" }
