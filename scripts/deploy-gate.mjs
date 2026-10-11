@@ -28,6 +28,9 @@ export function assessProbe(probe) {
   if (probe.expectShell && !String(probe.body).includes(shellMark)) {
     return { ok: false, reason: "missing app shell" }
   }
+  if (probe.expectText !== undefined && !String(probe.body).includes(probe.expectText)) {
+    return { ok: false, reason: "missing ai model" }
+  }
   return { ok: true, reason: "ok" }
 }
 
@@ -37,7 +40,8 @@ export function probeTable(env) {
     { name: "home", url: `${web}/`, expectShell: true },
     { name: "share", url: `${web}/share/smoke`, expectShell: true },
     { name: "asset", url: `${web}/favicon.svg`, expectShell: false },
-    { name: "api", url: env.apiHealthUrl, expectShell: false }
+    { name: "api", url: env.apiHealthUrl, expectShell: false },
+    { name: "ai", url: env.apiAiUrl, expectShell: false, expectText: "gpt-6-luna" }
   ]
 }
 

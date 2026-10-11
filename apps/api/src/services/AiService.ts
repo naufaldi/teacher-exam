@@ -31,6 +31,7 @@ import { CURRICULUM_VALIDATION_OBJECT_NAME, GENERATED_QUESTIONS_OBJECT_NAME } fr
 import { CurriculumValidationBatchSchema } from "../lib/effect-ai/schemas/curriculum-validation"
 import { GeneratedQuestionsBatchSchema } from "../lib/effect-ai/schemas/generated-questions"
 import { parseGeneratedQuestionsStrict } from "../lib/parse-generated-questions"
+import { assertAiProviderReady, readAiProvider } from "../lib/production-ai-config"
 
 export interface GenerateInput {
   system: string
@@ -351,7 +352,8 @@ function createAiServiceFromResolved(config: ResolvedModelLayerConfig): AiServic
 }
 
 export function createDefaultAiService(): AiService {
-  const provider = (process.env["AI_PROVIDER"] ?? "anthropic").toLowerCase()
+  const provider = readAiProvider()
+  assertAiProviderReady()
 
   if (provider === "openai") {
     return createAiServiceFromResolved(resolveOpenAiLayerConfig())
@@ -371,10 +373,6 @@ export function createDefaultAiService(): AiService {
     }
 
     return wrapPdfAnthropicProxy(minimaxService, getAnthropicPdfService)
-  }
-
-  if (provider !== "anthropic") {
-    throw new Error(`AI_PROVIDER must be "anthropic", "minimax", or "openai", got "${provider}"`)
   }
 
   return createAiServiceFromResolved(resolveAnthropicLayerConfig())
