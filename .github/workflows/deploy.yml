@@ -87,7 +87,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Deploy to VPS
+        id: switch
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -132,49 +139,44 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env.production \
               --profile migrate run --rm migrate 2>&1 | tee /tmp/migrate.log
 
+            # Remember the tag that is still serving, then persist the new tag.
+            grep '^IMAGE_TAG=' .env.production | head -n 1 | cut -d= -f2- | tr -d '[:space:]' > .deploy-previous-tag || true
+
             # Persist IMAGE_TAG only after migrate succeeds
             grep -v "^IMAGE_TAG=" .env.production > .env.production.tmp || true
             mv .env.production.tmp .env.production
             echo "IMAGE_TAG=${{ needs.commit-hash.outputs.commit_hash }}" >> .env.production
 
-            # Restart services with new images
+            # Restart services with new images. Public smoke runs on the runner after this step.
             echo "Restarting services..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
-
-            # Primary health: in-container (bypasses Caddy/Cloudflare TLS races on domain cutover)
-            echo "Waiting for API container health..."
-            for i in $(seq 1 30); do
-              if docker exec teacher-exam-api-1 node -e "fetch('http://localhost:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" > /dev/null 2>&1; then
-                echo "API container is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "In-container health check failed after 30 attempts"
-                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
-                exit 1
-              fi
-              echo "Container health attempt $i/30 - waiting 5s..."
-              sleep 5
-            done
-
-            # Secondary health: public URL (routing/DNS/TLS). Fail only after internal is already OK.
-            echo "Waiting for public API health..."
-            for i in $(seq 1 30); do
-              if curl -sf https://api-ujian-sekolah.naufaldi.com/api/health > /dev/null 2>&1; then
-                echo "Public API is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "Public health check failed after 30 attempts (container was healthy)"
-                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
-                docker logs edge-proxy-caddy --tail=50 || true
-                exit 1
-              fi
-              echo "Public health attempt $i/30 - waiting 5s..."
-              sleep 5
-            done
-
-            # Cleanup unused images after deploy
-            docker image prune -af
-
             echo "Deployed ${{ needs.commit-hash.outputs.commit_hash }}"
+
+      - name: Smoke public routes
+        id: smoke
+        run: node scripts/deploy-smoke.mjs
+
+      - name: Roll back to the previous image
+        if: failure() && steps.switch.outcome == 'success'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 300s
+          script: |
+            set -eu
+            cd ~/projects/teacher-exam
+            sh scripts/vps-rollback.sh
+
+      - name: Prune unused images
+        if: success()
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 300s
+          script: |
+            set -eu
+            docker image prune -af

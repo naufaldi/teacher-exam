@@ -1,6 +1,6 @@
 # Production Reference — teacher-exam
 
-> **Last updated:** 2026-06-26  
+> **Last updated:** 2026-10-11  
 > **Status:** Live ✅  
 > AI agents: read this entire file before making any infrastructure changes.
 
@@ -189,6 +189,16 @@ This downloads the macOS/Linux Chromium build to `~/Library/Caches/ms-playwright
 
 ---
 
+## Incident — web container never served (2026-10-11)
+
+**Cause.** PR 259 added `encode br` to `apps/web/Caddyfile`. The production image is `caddy:alpine`, which has no brotli module, so Caddy exited and the web container never listened. `https://ujian-sekolah.naufaldi.com` answered 308 to itself. The deploy job still exited 0 because it only checked the API.
+
+**Fix.** PR 260 removed `br`. The site has returned 200 since 16:53 WIB. Later changes keep `encode gzip zstd`.
+
+**Prevention.** CI runs `caddy validate` with the `caddy:alpine` image named in `apps/web/Dockerfile`. After `docker compose up`, the deploy job curls `/`, `/share/smoke`, `/favicon.svg`, and the API health check from outside the VPS. Each must be 200, with at most one redirect, and the HTML must contain `id="root"`. A failure fails the job and runs `scripts/vps-rollback.sh`, which puts the previous `IMAGE_TAG` back and starts those images again. The web service healthcheck requests `/` and requires the same app shell, so a container that is not serving shows unhealthy.
+
+---
+
 ## Deployment Commands
 
 ### Automated deploy (GitHub Actions — primary)
@@ -198,7 +208,7 @@ Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/dep
 1. Build and push API + web images to GHCR (tagged by commit SHA).
 2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
-4. Health check via public URL (through Cloudflare → **`edge-proxy-caddy`** → API).
+4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. Image prune runs only after the smoke passes.
 
 Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
 
@@ -335,7 +345,7 @@ Note: the redirect URI points to the **API** subdomain, not the web subdomain.
 ```bash
 # 1. Containers healthy
 ssh vps-faldi 'docker compose -f ~/projects/teacher-exam/docker-compose.prod.yml --env-file ~/projects/teacher-exam/.env.production ps'
-# Expected: db healthy, api healthy, web up
+# Expected: db healthy, api healthy, web healthy
 
 # 2. API health (public, via Cloudflare)
 curl -sf https://api-ujian-sekolah.naufaldi.com/api/health
@@ -394,3 +404,5 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 11. **PDF export needs glibc Chromium (not Alpine).** The API image runs `node:22-bookworm` + `playwright install --with-deps chromium` so `exportExamPdf` works in production; DOCX works everywhere (pure JS). On `node:22-alpine` (musl), Playwright's Chromium does not launch and the endpoint returns 500. See the "Feature B — PDF/DOCX export" section. The `api` compose service sets `init: true` + `ipc: host` for Chromium stability.
 
 12. **The `api` healthcheck uses `node fetch`, not `wget`.** `wget` is present on Alpine but absent on `node:22-bookworm`. The healthcheck runs `node -e "fetch('http://localhost:3001/api/health')..."`. Do not switch it back to `wget`/`curl` while the base image is bookworm, or the container reports unhealthy and Caddy stops routing to it.
+
+13. **Do not add `encode br` while the web image is stock `caddy:alpine`.** That image has no brotli module. Caddy exits, the site 308-loops, and a deploy that only curls the API still looks successful. `sh scripts/validate-caddyfile.sh` uses the Dockerfile's runtime image. The web healthcheck and the post-deploy smoke both require `id="root"` on `/`.
