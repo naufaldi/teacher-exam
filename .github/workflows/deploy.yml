@@ -86,7 +86,7 @@ jobs:
   deploy:
     needs: [build-and-push-api, build-and-push-web, commit-hash, quality]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +101,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 900s
+          command_timeout: 2400s
           script: |
             set -e
 
