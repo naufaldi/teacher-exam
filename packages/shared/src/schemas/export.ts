@@ -3,7 +3,7 @@ import { Schema } from "effect"
 export const ExportFormatSchema = Schema.Literal("pdf", "docx")
 export type ExportFormat = typeof ExportFormatSchema.Type
 
-export const ExportVariantSchema = Schema.Literal("soal", "kunci", "pembahasan")
+export const ExportVariantSchema = Schema.Literal("soal", "kunci", "pembahasan", "kisi_kisi", "kartu_soal")
 export type ExportVariant = typeof ExportVariantSchema.Type
 
 export const ExportQuerySchema = Schema.Struct({

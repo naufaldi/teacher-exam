@@ -1,7 +1,7 @@
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse"
 import { type ExportFormat, type ExportVariant, resolveExamSubjectLabel } from "@teacher-exam/shared"
-import { Effect } from "effect"
+import { Effect, Match } from "effect"
 import { fetchExamWithQuestions, fetchPublicExamWithQuestions } from "../../lib/exams-query"
 import { TeacherExamApi } from "../definition"
 import { ApiBadRequest, ApiDatabaseError, ApiNotFound } from "../errors/http"
@@ -24,18 +24,31 @@ function sanitizeFileName(name: string): string {
   return name.replaceAll(/[^\w\-.\s]/g, "").trim().replaceAll(/\s+/g, "_").slice(0, 80)
 }
 
+function variantFileToken(variant: ExportVariant): string {
+  return Match.value(variant).pipe(
+    Match.when("kisi_kisi", () => "-kisi-kisi"),
+    Match.when("kartu_soal", () => "-kartu-soal"),
+    Match.when("soal", () => ""),
+    Match.when("kunci", () => ""),
+    Match.when("pembahasan", () => ""),
+    Match.exhaustive
+  )
+}
+
 function buildBinaryResponse(
   bytes: Uint8Array,
   format: ExportFormat,
-  examTitle: string
+  examTitle: string,
+  variant: ExportVariant
 ): Response {
   const ext = fileExtensionFor(format)
   const base = sanitizeFileName(examTitle) || "ujian"
+  const fileName = `${base}${variantFileToken(variant)}.${ext}`
   return new Response(bytes, {
     status: 200,
     headers: {
       "Content-Type": contentTypeFor(format),
-      "Content-Disposition": `attachment; filename="${base}.${ext}"`,
+      "Content-Disposition": `attachment; filename="${fileName}"`,
       "Content-Length": String(bytes.byteLength)
     }
   })
@@ -82,7 +95,7 @@ export const ExportsLive = HttpApiBuilder.group(
             })
           )
 
-        return HttpServerResponse.fromWeb(buildBinaryResponse(bytes, format, exam.title))
+        return HttpServerResponse.fromWeb(buildBinaryResponse(bytes, format, exam.title, variant))
       }))
 )
 
@@ -115,6 +128,6 @@ export const PublicExportsLive = HttpApiBuilder.group(
           )
 
         const title = `${resolveExamSubjectLabel(exam)} · Kelas ${exam.grade}`
-        return HttpServerResponse.fromWeb(buildBinaryResponse(bytes, format, title))
+        return HttpServerResponse.fromWeb(buildBinaryResponse(bytes, format, title, variant))
       }))
 )

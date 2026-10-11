@@ -106,6 +106,12 @@ function PreviewPage() {
           <Button variant="ghost" size="sm" onClick={() => triggerPrint("pembahasan")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => void api.exams.export(exam.id, "docx", "kisi_kisi")}>
+            Kisi-kisi
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void api.exams.export(exam.id, "docx", "kartu_soal")}>
+            Kartu soal
+          </Button>
           <ExportMenu
             onExport={(format) => api.exams.export(exam.id, format, "soal")}
             onPrint={() => triggerPrint("all")}

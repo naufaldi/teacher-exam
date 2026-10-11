@@ -202,6 +202,16 @@ describe("share/$slug route", () => {
     expect(mockPublicExamExport).toHaveBeenCalledWith("share-abc123", "pdf", "soal")
   })
 
+  it("downloads kisi-kisi and kartu soal as docx", () => {
+    renderPage()
+
+    screen.getByRole("button", { name: "Kisi-kisi" }).click()
+    screen.getByRole("button", { name: "Kartu soal" }).click()
+
+    expect(mockPublicExamExport).toHaveBeenNthCalledWith(1, "share-abc123", "docx", "kisi_kisi")
+    expect(mockPublicExamExport).toHaveBeenNthCalledWith(2, "share-abc123", "docx", "kartu_soal")
+  })
+
   it("PDF Kunci button exports kunci variant", async () => {
     const user = userEvent.setup()
     renderPage()

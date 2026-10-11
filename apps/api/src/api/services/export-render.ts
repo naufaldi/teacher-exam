@@ -153,11 +153,64 @@ function pembahasanSectionHtml(exam: ExportExam): string {
   return `<section class="paper page-break"><div class="center"><p class="title">PEMBAHASAN</p></div>${body}</section>`
 }
 
+function plainStem(text: string): string {
+  return text.replaceAll(/\$+/g, "")
+}
+
+function htmlTypeLabel(q: ExportExam["questions"][number]): string {
+  return Match.value(q).pipe(
+    Match.tag("mcq_single", () => "Pilihan ganda"),
+    Match.tag("mcq_multi", () => "Pilihan ganda kompleks"),
+    Match.tag("true_false", () => "Benar/Salah"),
+    Match.exhaustive
+  )
+}
+
+function htmlCorrectLabel(q: ExportExam["questions"][number]): string {
+  return Match.value(q).pipe(
+    Match.tag("mcq_single", (mcq) => mcq.correct.toUpperCase()),
+    Match.tag("mcq_multi", (mcq) => mcq.correct.map((letter) => letter.toUpperCase()).join(", ")),
+    Match.tag("true_false", (tf) => tf.statements.map((statement) => (statement.answer ? "B" : "S")).join(", ")),
+    Match.exhaustive
+  )
+}
+
+function sheetTableHtml(
+  title: string,
+  exam: ExportExam,
+  headers: ReadonlyArray<string>,
+  rows: ReadonlyArray<ReadonlyArray<string>>
+): string {
+  const head = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")
+  const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")
+  return `<section class="paper page-break"><div class="center"><p class="title">${escapeHtml(title)}</p><p>${
+    escapeHtml(subjectLabel(exam))
+  } — Kelas ${exam.grade} SD</p></div><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`
+}
+
+function kisiKisiSectionHtml(exam: ExportExam): string {
+  const rows = exam.questions.map((q) => [
+    String(q.number),
+    plainStem(q.text),
+    htmlTypeLabel(q),
+    q.difficulty ?? "",
+    q.topic ?? ""
+  ])
+  return sheetTableHtml("KISI-KISI", exam, ["No", "Soal", "Tipe", "Level", "Topik"], rows)
+}
+
+function kartuSoalSectionHtml(exam: ExportExam): string {
+  const rows = exam.questions.map((q) => [String(q.number), plainStem(q.text), htmlCorrectLabel(q)])
+  return sheetTableHtml("KARTU SOAL", exam, ["No", "Soal", "Kunci"], rows)
+}
+
 function variantSection(exam: ExportExam, variant: ExportVariant): string {
   return Match.value(variant).pipe(
     Match.when("soal", () => soalSectionHtml(exam)),
     Match.when("kunci", () => kunciSectionHtml(exam)),
     Match.when("pembahasan", () => pembahasanSectionHtml(exam)),
+    Match.when("kisi_kisi", () => kisiKisiSectionHtml(exam)),
+    Match.when("kartu_soal", () => kartuSoalSectionHtml(exam)),
     Match.exhaustive
   )
 }

@@ -1,6 +1,7 @@
-import { brandExamId, brandUserId, type ExamWithQuestions } from "@teacher-exam/shared"
+import { brandExamId, brandUserId, type ExamWithQuestions, type ExportVariant } from "@teacher-exam/shared"
 import { Effect } from "effect"
 import fs from "node:fs"
+import { inflateRawSync } from "node:zlib"
 import { describe, expect, it } from "vitest"
 import { renderExamHtml } from "../export-render.js"
 import { ExportService, ExportServiceLive } from "../export-service.js"
@@ -81,6 +82,75 @@ describe("renderExamHtml", () => {
   it("renders the pembahasan variant heading even without discussion markdown", () => {
     const html = renderExamHtml(makeExam(), "pembahasan")
     expect(html).toContain("PEMBAHASAN")
+  })
+})
+
+function docxDocumentXml(bytes: Uint8Array): string {
+  const buf = Buffer.from(bytes)
+  let offset = 0
+  while (offset + 30 <= buf.length) {
+    if (buf.readUInt32LE(offset) !== 0x04034b50) break
+    const method = buf.readUInt16LE(offset + 8)
+    const compSize = buf.readUInt32LE(offset + 18)
+    const nameLen = buf.readUInt16LE(offset + 26)
+    const extraLen = buf.readUInt16LE(offset + 28)
+    const name = buf.subarray(offset + 30, offset + 30 + nameLen).toString("utf8")
+    const dataStart = offset + 30 + nameLen + extraLen
+    const compressed = buf.subarray(dataStart, dataStart + compSize)
+    if (name === "word/document.xml") {
+      const raw = method === 0 ? compressed : inflateRawSync(compressed)
+      return raw.toString("utf8")
+    }
+    offset = dataStart + compSize
+  }
+  throw new Error("word/document.xml missing")
+}
+
+async function exportDocxXml(variant: ExportVariant): Promise<string> {
+  const exam = makeExam()
+  exam.questions = [
+    exam.questions[0]!,
+    {
+      ...exam.questions[0]!,
+      id: "q-2" as never,
+      number: 2,
+      text: "Mana yang lebih panjang?",
+      correct: "c"
+    }
+  ]
+  exam.questions[0] = {
+    ...exam.questions[0]!,
+    text: "Hitung $3 + 3$."
+  }
+  const program = Effect.gen(function*() {
+    const service = yield* ExportService
+    return yield* service.exportExamDocx(exam, { variant })
+  })
+  const bytes = await Effect.runPromise(program.pipe(Effect.provide(ExportServiceLive)))
+  return docxDocumentXml(bytes)
+}
+
+describe("kisi-kisi and kartu soal docx", () => {
+  it("puts each question stem on its own kisi-kisi row", async () => {
+    const xml = await exportDocxXml("kisi_kisi")
+    expect(xml).toContain("KISI-KISI")
+    expect(xml).toContain("Hitung 3 + 3.")
+    expect(xml).not.toContain("$")
+    expect(xml).toContain("Mana yang lebih panjang?")
+    expect(xml).toContain("Pilihan ganda")
+    expect(xml).toContain("mudah")
+    expect(xml).toContain("Teks Narasi")
+    expect(xml.match(/<w:tr[\s>]/g)?.length).toBe(3)
+  })
+
+  it("puts the stem and answer key on each kartu soal row", async () => {
+    const xml = await exportDocxXml("kartu_soal")
+    expect(xml).toContain("KARTU SOAL")
+    expect(xml).toContain("Hitung 3 + 3.")
+    expect(xml).toContain("Mana yang lebih panjang?")
+    expect(xml).toContain(">B</w:t>")
+    expect(xml).toContain(">C</w:t>")
+    expect(xml.match(/<w:tr[\s>]/g)?.length).toBe(3)
   })
 })
 

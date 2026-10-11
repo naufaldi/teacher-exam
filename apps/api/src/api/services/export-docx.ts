@@ -142,6 +142,98 @@ function kunciChildren(exam: ExportExam): Array<Paragraph | Table> {
   ]
 }
 
+function textCell(text: string, bold = false): TableCell {
+  return new TableCell({
+    children: [new Paragraph({ children: [new TextRun({ text, bold })] })]
+  })
+}
+
+function headerRow(labels: ReadonlyArray<string>): TableRow {
+  return new TableRow({
+    tableHeader: true,
+    children: labels.map((label) => textCell(label, true))
+  })
+}
+
+function questionTypeLabel(q: ExportExam["questions"][number]): string {
+  return Match.value(q).pipe(
+    Match.tag("mcq_single", () => "Pilihan ganda"),
+    Match.tag("mcq_multi", () => "Pilihan ganda kompleks"),
+    Match.tag("true_false", () => "Benar/Salah"),
+    Match.exhaustive
+  )
+}
+
+function readOptionalText(q: object, key: string): string | undefined {
+  if (!Object.hasOwn(q, key)) return undefined
+  const value = (q as Record<string, unknown>)[key]
+  return typeof value === "string" && value.trim() !== "" ? value : undefined
+}
+
+/** Columns that only appear when at least one stored question carries the code. */
+function optionalCodeColumns(exam: ExportExam): Array<{ key: string; label: string }> {
+  const candidates = [
+    { key: "cp", label: "CP" },
+    { key: "tp", label: "TP" },
+    { key: "cognitive_level", label: "Level kognitif" }
+  ]
+  return candidates.filter((column) => exam.questions.some((q) => readOptionalText(q, column.key) !== undefined))
+}
+
+function titledRows(title: string, exam: ExportExam, rows: Array<TableRow>): Array<Paragraph | Table> {
+  return [
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: title, bold: true })]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun(`${subjectLabel(exam)} — Kelas ${exam.grade} SD`)]
+    }),
+    new Paragraph({ text: "" }),
+    new Table({ width: { size: 100, type: "pct" }, rows })
+  ]
+}
+
+function kisiKisiChildren(exam: ExportExam): Array<Paragraph | Table> {
+  const extra = optionalCodeColumns(exam)
+  const rows = [
+    headerRow(["No", "Soal", "Tipe", "Level", "Topik", ...extra.map((column) => column.label)]),
+    ...exam.questions.map(
+      (q) =>
+        new TableRow({
+          children: [
+            textCell(String(q.number)),
+            textCell(plainText(q.text)),
+            textCell(questionTypeLabel(q)),
+            textCell(q.difficulty ?? ""),
+            textCell(q.topic ?? ""),
+            ...extra.map((column) => textCell(readOptionalText(q, column.key) ?? ""))
+          ]
+        })
+    )
+  ]
+  return titledRows("KISI-KISI", exam, rows)
+}
+
+function kartuSoalChildren(exam: ExportExam): Array<Paragraph | Table> {
+  const rows = [
+    headerRow(["No", "Soal", "Kunci"]),
+    ...exam.questions.map(
+      (q) =>
+        new TableRow({
+          children: [
+            textCell(String(q.number)),
+            textCell(plainText(q.text)),
+            textCell(correctLabel(q), true)
+          ]
+        })
+    )
+  ]
+  return titledRows("KARTU SOAL", exam, rows)
+}
+
 function pembahasanChildren(exam: ExportExam): Array<Paragraph | Table> {
   return [
     new Paragraph({
@@ -163,6 +255,8 @@ function variantChildren(
     Match.when("soal", () => soalChildren(exam)),
     Match.when("kunci", () => kunciChildren(exam)),
     Match.when("pembahasan", () => pembahasanChildren(exam)),
+    Match.when("kisi_kisi", () => kisiKisiChildren(exam)),
+    Match.when("kartu_soal", () => kartuSoalChildren(exam)),
     Match.exhaustive
   )
 }
