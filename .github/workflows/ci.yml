@@ -71,6 +71,9 @@ jobs:
           DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam
         run: pnpm --filter @teacher-exam/db db:migrate
 
+      - name: Bab manifest matches corpus files
+        run: pnpm --filter @teacher-exam/api bab:check
+
       - name: API test
         env:
           DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam

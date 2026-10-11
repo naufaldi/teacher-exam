@@ -103,13 +103,16 @@ describe("LoginPage", () => {
     expect(aside?.className ?? "").toMatch(/lg:overflow-hidden/)
   })
 
-  it("says the landing covers kelas 1 to 6", () => {
+  it("names the mapel and kelas the corpus actually covers", () => {
     render(<LoginPage />)
 
-    expect(screen.getByText("Kurikulum Merdeka · Kelas 1–6")).toBeInTheDocument()
-    expect(screen.getByText(/Kelas 1–6 · Sesuai Kurikulum Merdeka/)).toBeInTheDocument()
-    expect(screen.queryByText("Kurikulum Merdeka · Kelas 5 & 6")).not.toBeInTheDocument()
-    expect(screen.queryByText(/SD Kelas 5 & 6/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Matematika kelas 1–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Bahasa Indonesia kelas 1–3 dan 5–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Pendidikan Pancasila kelas 1–2 dan 4–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Bahasa Inggris kelas 3–6/)).toBeInTheDocument()
+    expect(screen.getByText(/IPAS mulai kelas 3/)).toBeInTheDocument()
+    expect(screen.queryByText("Kurikulum Merdeka · Kelas 1–6")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Kelas 1–6 · Sesuai Kurikulum Merdeka/)).not.toBeInTheDocument()
   })
 
   it("names the product Ujian Sekolah on the landing", () => {

@@ -1,0 +1,955 @@
+{
+  "version": 1,
+  "books": [
+    {
+      "file": "bahasa-indonesia-kelas-1.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "b542f824adbd94d7b44b5d75a485b30e8ea03b95450e186817345b31e8349c8d"
+        },
+        {
+          "bab": 1,
+          "title": "Bunyi Apa?",
+          "contentHash": "41322b4388906ba392ad09f5ae0de2d39782e2c15ffa510e6f4b22a4036466f0"
+        },
+        {
+          "bab": 2,
+          "title": "Ayo, Bermain!",
+          "contentHash": "2bada92d7a68c357ad65483b882c0077852c8f1bcd16fa812eff862ed81fb80a"
+        },
+        {
+          "bab": 3,
+          "title": "Awas Kuman!",
+          "contentHash": "725e372d64559bdadc778c5b06d0e4d22b2a526c316391ac58dc1e064c67f61a"
+        },
+        {
+          "bab": 4,
+          "title": "Aku Bisa!",
+          "contentHash": "e2a78e70626c5a30e8f7f83dfe380212676a2d9811c6a460f7e5a87939f11230"
+        },
+        {
+          "bab": 5,
+          "title": "Teman Baru",
+          "contentHash": "81649ef9edb20570620db4a2d1efee2496afc6bff0c8e5de346e31362a723103"
+        },
+        {
+          "bab": 6,
+          "title": "Temanku Berbeda",
+          "contentHash": "a69b4c544c1a2caca3c39ccd134e52258f87befcb827d25b190169dace964902"
+        },
+        {
+          "bab": 7,
+          "title": "Aku Ingin",
+          "contentHash": "fa28812d3ccc07d47158a74e39665b1d87dec5da9c1552c141c4969a6b846290"
+        },
+        {
+          "bab": 8,
+          "title": "Di Sekitar Rumah",
+          "contentHash": "45a11614fb3149d4fe4c01dca2fbdc3cee766f40296927a342f7afdce9b679c6"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-indonesia-kelas-2.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "8450f45959190af8a1b66400b35f4d417293be04b1c9f88832dd5f4da3ce09f0"
+        },
+        {
+          "bab": 1,
+          "title": "Mengenal Perasaan",
+          "contentHash": "7693eef483d8161cc8ce354892f153b0d847cc4af895f41c93cb8b68d11ea9c4"
+        },
+        {
+          "bab": 2,
+          "title": "Menjaga Kesehatan",
+          "contentHash": "9e87e7d2ea6147107abf7d3cb0c387438add105a8694999aaa227484a3a7a47e"
+        },
+        {
+          "bab": 3,
+          "title": "Berhati-hati di Mana Saja",
+          "contentHash": "a52ec76b2c2e7405f97273dc43c8ae55f72527d030cd38af91a4a0b4bda2f6ce"
+        },
+        {
+          "bab": 4,
+          "title": "Keluargaku Unik",
+          "contentHash": "cc0e64eb995e36648ebc9a4ec9a5a16fa76e0c35f75bad32ab695b0a113fff2b"
+        },
+        {
+          "bab": 5,
+          "title": "Berteman dalam Keragaman",
+          "contentHash": "3c716a40ff0ce86d3489e215d19e9a15e3992d431d24ff590f7081cddd0b5ed1"
+        },
+        {
+          "bab": 6,
+          "title": "Bijak Memakai Uang",
+          "contentHash": "0ebf047564f7461de25764d9ceda4b5905b8a0be76c22a6f16e1593a3a5ce6d5"
+        },
+        {
+          "bab": 7,
+          "title": "Sayang Lingkungan",
+          "contentHash": "eab900b91502faf8f8f0800fdfbf5e93d2adad15d66e33e52375717bb6b73faf"
+        },
+        {
+          "bab": 8,
+          "title": "Hobi yang Jadi Prestasi",
+          "contentHash": "abdc67871235f29723d54be78c1ec3056c712b044b33e3705918148a6b570153"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-indonesia-kelas-3.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "cafdf00f34382b15c95d37fbf2756d415e0e9345a2d909ddefe1a0b7dd631b07"
+        },
+        {
+          "bab": 1,
+          "title": "Kawan Seiring",
+          "contentHash": "60b80fe02c4ac6efa0241c6503076f7d9c90a6dde0655e43455635e4cbcf9bb9"
+        },
+        {
+          "bab": 2,
+          "title": "Yuk, Berpendapat!",
+          "contentHash": "5e4924a351b6625316c51ee6a5d5f37ef4391e8014a655cceaaa20d485372537"
+        },
+        {
+          "bab": 3,
+          "title": "Pribadi yang Hebat",
+          "contentHash": "1fc5ccabe2fa7d18c5ce77d9c83ce94ec3d890e2a314b28e49794967292a32c5"
+        },
+        {
+          "bab": 4,
+          "title": "Menyelamatkan Lingkungan",
+          "contentHash": "e32c96d8db218675ad5d2f74c584dc3fcf772b96932751894b450d65fee2fe11"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-indonesia-kelas-5.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "5970d9bed63bd3a995d62eda795820af02765bbb359f46cf0ce7f56e6ae97508"
+        },
+        {
+          "bab": 1,
+          "title": "Aku yang Unik",
+          "contentHash": "e6fa2aa03d6f4f2e151d122544982607823ec77fcff1ee6be2e08d821b445d46"
+        },
+        {
+          "bab": 2,
+          "title": "Buku Jendela Dunia",
+          "contentHash": "aa12db4581b59ac3d5628a32ed86511c854549698bcfdd44aa189a6781383887"
+        },
+        {
+          "bab": 3,
+          "title": "Ekspresi Diri Melalui Hobi",
+          "contentHash": "6b27a657897b5991c4f647e63b9b4ee7a14cb8da9de62509f0148a8cb58e8f2e"
+        },
+        {
+          "bab": 4,
+          "title": "Belajar Berwirausaha",
+          "contentHash": "e45fba42e830932929fea8eb683cc8a1cb22f50c271e8811e65c5ff3d2dc9c04"
+        },
+        {
+          "bab": 5,
+          "title": "Cinta Indonesia",
+          "contentHash": "cc87ebc0232ec5803f8d8399d3261e62b7ea44b9e2ee72d6d0f28118dfdce2e3"
+        },
+        {
+          "bab": 6,
+          "title": "Sayangi Bumi",
+          "contentHash": "647c4fe07721761961a5e665ac71d8282b8196c3a0f8e69f98b3ab291b58babf"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-indonesia-kelas-6.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "2d83e71d235a9176ce4b36247eaf2417a7a082b501859b05a85c501177f116a5"
+        },
+        {
+          "bab": 1,
+          "title": "Bangga Menjadi Anak Indonesia",
+          "contentHash": "db54772a4698604735c4fe6bde3e414d6af5cddf6208d433270779fc96ff78b8"
+        },
+        {
+          "bab": 2,
+          "title": "Musisi Indonesia di Pentas Dunia",
+          "contentHash": "fc6d145ec5130060c166c12523078ffa221388fbea04f3743490cfba3004d453"
+        },
+        {
+          "bab": 3,
+          "title": "Taman Nasional dan Situs Warisan Dunia",
+          "contentHash": "b8bbb10377ce3ee544b31f51abcc7f4ea48bcec12adfbd5bdb521364387d67ec"
+        },
+        {
+          "bab": 4,
+          "title": "Jeda untuk Iklim",
+          "contentHash": "9f2f37991ccb97633209ad3456f0cd450e6d3179402f81b529e588eeaea2d4ee"
+        },
+        {
+          "bab": 5,
+          "title": "Anak-Anak yang Mengubah Dunia",
+          "contentHash": "6a9368afc3d765c5477013f864eb6be3b677bbe53621b1d0fb2f473db0cf086c"
+        },
+        {
+          "bab": 6,
+          "title": "Liburan Perpisahan Kelas",
+          "contentHash": "6cda107ca11e427a4c555f6dcad348bd02449feb9800597214d30901462a1158"
+        },
+        {
+          "bab": 7,
+          "title": "Aku Bisa Berempati",
+          "contentHash": "7c54fe4fcce09b87a33934e397522bae0ff5c9fe13404fdca18d5e16c8e1a3c1"
+        },
+        {
+          "bab": 8,
+          "title": "Aman di Dunia Maya",
+          "contentHash": "0e7a87d4429419ca7a288b87b7a5af4d20415d6f86dccf0699d2c1087a4b26e8"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-inggris-kelas-3.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "12ccfb5c6bb7e4d480592bc29b96763022b5e9b796a2876819b98756b75a6a08"
+        },
+        {
+          "bab": 1,
+          "title": "My Self",
+          "contentHash": "10150a0f9f424a40de88fa943949fa9f129d732eacb0bc0a6f3e683c6c4c46e9"
+        },
+        {
+          "bab": 2,
+          "title": "My Family",
+          "contentHash": "9735cd56788b27c1aff038d494468f8fd3522fae93de5715d83b8d40929cb544"
+        },
+        {
+          "bab": 3,
+          "title": "My Family Time",
+          "contentHash": "8dcb6d6716c23e65e14ca0397b4c966884cc93c840f869d8088c94ad4483742a"
+        },
+        {
+          "bab": 4,
+          "title": "My School",
+          "contentHash": "3893c0e0f33dd5424739a649c3ba2abe44c125a8145288508514b95263d1bf8a"
+        },
+        {
+          "bab": 5,
+          "title": "My Classroom",
+          "contentHash": "36a108fdac3c5b7b13b7078ae32a281afa1c189646721bafc66e63fbd5906f04"
+        },
+        {
+          "bab": 6,
+          "title": "My Teachers",
+          "contentHash": "56bd9c55aa4071dc69714851b62d1036c86e42cfa4e5003698fc13c59e045961"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-inggris-kelas-4.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "0a9241d87fdac4e45da2485cf9e099ccb61e88fe8f68f55fb6a7296cd5d345ee"
+        },
+        {
+          "bab": 1,
+          "title": "Pengantar",
+          "contentHash": "deeac600e9bf46f9510aa3e70caa135610b4408fe53181fcec953b2b5b01c041"
+        },
+        {
+          "bab": 2,
+          "title": "Meal Time",
+          "contentHash": "0eeb95f8eea82d41eb56d7290f9435c11bbb5272bb8067ad4d753845528869d4"
+        },
+        {
+          "bab": 3,
+          "title": "My Toys",
+          "contentHash": "650df00b84994bdfe0f6d7a4941074291df56ee03c17feb36dcd8ef44de396fc"
+        },
+        {
+          "bab": 4,
+          "title": "My School Activities",
+          "contentHash": "e61c83e3521a1db7e4ff001212d5165d7fd31682634f90f87b44a4ed4e99bcd0"
+        },
+        {
+          "bab": 5,
+          "title": "My PE Class",
+          "contentHash": "d6f1a82d7a0d0ff819bb592d0950e71f3b1d09eaf7b02ca7a4e1ed6a176938e6"
+        },
+        {
+          "bab": 6,
+          "title": "My School Days",
+          "contentHash": "7b6cd6d9075684366231919cfc695af4222739a8911824d9a6f2f149ba9eb2f9"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-inggris-kelas-5.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "fc4201f818ac4238333b6acd24686f7e6e67d178242494c1860337d8ccd74808"
+        },
+        {
+          "bab": 1,
+          "title": "Buying Some Mangoes and Spinach",
+          "contentHash": "c1f72db383b33e8c097122b3e423c80d2ac12f11bf61d5d5efb26d12c31a828f"
+        },
+        {
+          "bab": 2,
+          "title": "In the Kitchen",
+          "contentHash": "23f0cc39fed6a404c8f883b8717b9b12371d71789ee38843aa6b183b02ba585c"
+        },
+        {
+          "bab": 3,
+          "title": "Visiting Bara’s House",
+          "contentHash": "24ddfe1e0d011f3d91d698d213ce0e92ce0dc3fb85c31b5f25bacca951dd2454"
+        },
+        {
+          "bab": 4,
+          "title": "A Market Day",
+          "contentHash": "ed7304ee4c8d48f7e830d856b4fe79af3dcba2da734536c7917cd18528f91330"
+        },
+        {
+          "bab": 5,
+          "title": "At the Library",
+          "contentHash": "3182c73cd46bdbe1da2f2c3dd89e2e135473941a131189f8269b4202341219d0"
+        },
+        {
+          "bab": 6,
+          "title": "Reading a Lot of Stories",
+          "contentHash": "3ea53cc1ac3bbc0be827738bae998ff70874aeefc5ad96050333c3e327861f03"
+        }
+      ]
+    },
+    {
+      "file": "bahasa-inggris-kelas-6.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "c8dd1c8a37ccb07038e624d52beb9a1931b215d88ade8aa2a01229d74adf16b9"
+        },
+        {
+          "bab": 1,
+          "title": "Healthy Vegetables",
+          "contentHash": "18b613d09ab43a1667234a408ce32bf45b17a4861c199b0487d51a1bd0bae698"
+        },
+        {
+          "bab": 2,
+          "title": "Our Hygiene Habits",
+          "contentHash": "34b645acad8e677cb2af0addb0552ac93ec89532d56280e11914d66bb904ea39"
+        },
+        {
+          "bab": 3,
+          "title": "A Trip to the Zoo",
+          "contentHash": "c102866e4abf183c10851bb83e608f863f0d1b09708a9cd5bb9ebfeeb905b7f3"
+        },
+        {
+          "bab": 4,
+          "title": "Let’s Play!",
+          "contentHash": "7731edac0916eceb4ae99d49c401ad23e20cbaa324b0ce189d6eb1b2120135b4"
+        },
+        {
+          "bab": 5,
+          "title": "Having Fun in Our After-School Club",
+          "contentHash": "bf559a4b022865fb6839101b0a430367b85958944845d9bc26a3deeb80a2beba"
+        },
+        {
+          "bab": 6,
+          "title": "Our School Project",
+          "contentHash": "26dc7172fb9da4fe2428b1375cd2e96dd3aa36977d3125c7f42c2a9234eef132"
+        }
+      ]
+    },
+    {
+      "file": "ipas-kelas-3.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "014e2dd8f00cb6a6bf4cfc3595e93cafb82440d8ad678b3ea4f678f518d85b2c"
+        },
+        {
+          "bab": 1,
+          "title": "Keajaiban Tubuhku",
+          "contentHash": "35b67fdf7154559fff0fc9269baa51a432e3e3036f0df4c9cee5fac3d8d31ba8"
+        },
+        {
+          "bab": 2,
+          "title": "Dahulu, Kini, dan Nanti",
+          "contentHash": "9847eebd4230895304f0454941e44cb9eee81c5f838658ccb77e687071d747c7"
+        },
+        {
+          "bab": 3,
+          "title": "Peduli dan Berbagi",
+          "contentHash": "2e108768a524cdc69fde566ca48f750fcdfd238d6191f245bce0dc59eae24668"
+        },
+        {
+          "bab": 4,
+          "title": "Siklus Hidup yang Menakjubkan",
+          "contentHash": "b1be79204231b29a051df52d11f598d20948918c9de4bc8095a8693840f2f24b"
+        },
+        {
+          "bab": 5,
+          "title": "Bijak Berbelanja Kebutuhan",
+          "contentHash": "96a5907fa78435b1eac116bbbb3912318c0b41372f8884792d85207ba2367670"
+        },
+        {
+          "bab": 6,
+          "title": "Energi, sang Pemberi Kekuatan",
+          "contentHash": "28885fa741404fd35993bc4d35cd2cf5cc2eccdfbc4536326bf7d5ff0f1757d8"
+        },
+        {
+          "bab": 7,
+          "title": "Jejak Penjelajah",
+          "contentHash": "9f4e201776b6e4499fabba4f1f488bec2e81443876eca7394499664b33d57e0f"
+        },
+        {
+          "bab": 8,
+          "title": "Rahasia Tiga Wujud Zat",
+          "contentHash": "ee1c011d0f699307b093445905bbe50d8aec5c1567e3468888f3015171eb674e"
+        }
+      ]
+    },
+    {
+      "file": "ipas-kelas-4.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "74e8ff9a8bc66d46a2b63fd8a2d672add613d57b00c98bd0db60e41227d52593"
+        },
+        {
+          "bab": 1,
+          "title": "Mengubah Bentuk Energi",
+          "contentHash": "1b762bc091917dc181c8cd05fcf5d7b1fb666978459d36bf0c1cbdd6a26a2eaf"
+        },
+        {
+          "bab": 2,
+          "title": "Gaya di Sekitar Kita",
+          "contentHash": "b8b8135f6e8d8020b3b6ad30856c2119b6126d828b032c0707ebfe9641f0ac51"
+        },
+        {
+          "bab": 3,
+          "title": "Di Sini Tempat Tinggalku",
+          "contentHash": "1ebbf6eb91ad7bda762b5e80e91b5277471a5882b07d7be39391a9f2897d8a9e"
+        },
+        {
+          "bab": 4,
+          "title": "Iklim dan Perubahannya",
+          "contentHash": "6d992c3ef335021b2691c78d3a8ed43ae5f556a03cda87ddc72afcd377ab2ae1"
+        },
+        {
+          "bab": 5,
+          "title": "Ini Khas Daerahku!",
+          "contentHash": "56a104cea058e48380e4bbf5ad4d7bc77675e929f7459bca7f382cfff81c4918"
+        },
+        {
+          "bab": 6,
+          "title": "Peranku di Lingkungan Sekolah dan Masyarakat",
+          "contentHash": "cbc2eef3f2f8ca8d56af6e8bf254f2aa627376d1361ac4a1cf7970deaa7a336f"
+        },
+        {
+          "bab": 7,
+          "title": "Keragaman Budaya dan Kearifan Lokal",
+          "contentHash": "4f6cbed1a4946025f93e2a35083afdefa75267151a13cc4eb207b8c52b0e2ad1"
+        },
+        {
+          "bab": 8,
+          "title": "Menjadi Pahlawan Lingkungan",
+          "contentHash": "bcca0548d003a5f5b1890da58b70dc690cd00d4cb1a2bb40e580fffc50794be6"
+        }
+      ]
+    },
+    {
+      "file": "ipas-kelas-5.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "f24e144379f6fb9357ae968af0f8ec815f6c8727172c2fda70c0a458bd389cb6"
+        },
+        {
+          "bab": 1,
+          "title": "Di Mana Indonesia Berada?",
+          "contentHash": "76d495c548f7680cbd07a293e43064886febdc1c551c1d42ab235365fecdb275"
+        },
+        {
+          "bab": 2,
+          "title": "Majulah Daerahku!",
+          "contentHash": "7190a1b5f2dd1b013411cc6f00310395301509c415d9f24086b89d120edbe06a"
+        },
+        {
+          "bab": 3,
+          "title": "Harmoni dalam Ekosistem",
+          "contentHash": "325fd38a099c6533e6bcd4e68ba00435331db967d0546490e8e22e811635d0ad"
+        },
+        {
+          "bab": 4,
+          "title": "Air Sumber Kehidupan",
+          "contentHash": "4a11963fc400531ae818160c6d2eb4267d2ab7fb06b4c27e115e73d5f02420c7"
+        }
+      ]
+    },
+    {
+      "file": "ipas-kelas-6.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "f72a2b04ae3c6d62f9f0574b0c17a2c64597ff0c7c08aa1cd03215f5ef119814"
+        },
+        {
+          "bab": 1,
+          "title": "Makanan Bergizi untuk Kesehatan Pencernaanmu",
+          "contentHash": "e19335ba4b43d94f84237474295bdfc9c0bf4c32857c3350690af866f0d680fc"
+        },
+        {
+          "bab": 2,
+          "title": "Tarik dan Embuskan",
+          "contentHash": "165c7c1077a29bb24c837434c3cdef33e5e937b3066b88c0f7f6143b557d0928"
+        },
+        {
+          "bab": 3,
+          "title": "Jejak Sang Pahlawan",
+          "contentHash": "b6fb2c7c63bd61187c9199e0392a77e3ae4eeea4ade3dfb449ef11eb3bad1d51"
+        },
+        {
+          "bab": 4,
+          "title": "Kearifan Lokal, Warisan Leluhur untuk Persatuan Bangsa",
+          "contentHash": "c8a1e049f78e50e4a74c9052a90760732b60a01d0d92e64fce676d6746edb46e"
+        },
+        {
+          "bab": 5,
+          "title": "Energi untuk Masa Depan",
+          "contentHash": "945ddac93caeb191a46a5410aba918bf023652f73c0370fff21ebcff860ef319"
+        },
+        {
+          "bab": 6,
+          "title": "Mengembara di Jagat Raya",
+          "contentHash": "f6090e898cabdc625a0de1279b85e1500c71fceb677b1f6714e824cd79c94864"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-1.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "99853d48dc974033800b176e2838098bbed0d9808f30857405ed222746c2b059"
+        },
+        {
+          "bab": 1,
+          "title": "Ayo Membilang sampai dengan 10",
+          "contentHash": "c8965edc1691e1603b556544f0ade61d3cda70bdf212c2c58fd2f52f375b31a2"
+        },
+        {
+          "bab": 2,
+          "title": "Penjumlahan sampai dengan 10",
+          "contentHash": "b01936cd92de514a3f91b7199307c357ce63c0ec47e0570a911a853c2e4eeaad"
+        },
+        {
+          "bab": 3,
+          "title": "Pengurangan sampai dengan 10",
+          "contentHash": "30cfaeb9b7af6795046591b276d0b7da5ff9df1113b10cbe426d4d7a01a9f53b"
+        },
+        {
+          "bab": 4,
+          "title": "Mengenal Bentuk",
+          "contentHash": "2e6ef7d527c07c23ccdd5824ab0cdba32f5ca9cc28d4a7f35b39b13fea3f8fca"
+        },
+        {
+          "bab": 5,
+          "title": "Ayo Membilang sampai dengan 20",
+          "contentHash": "0eec962fae0cfc34574b9966e5b91b52a7756c7b644f189aad597300f188fb95"
+        },
+        {
+          "bab": 6,
+          "title": "Penjumlahan dan Pengurangan sampai dengan 20",
+          "contentHash": "620030f744ec5fff9debcf99c2f2349e1a60963c3d11bbabfa55e09d2d75dca3"
+        },
+        {
+          "bab": 7,
+          "title": "Mengukur Panjang Benda",
+          "contentHash": "a4976c692af10a8fed36b9ae5bc80416c9aa9553a122594159267650523f5a96"
+        },
+        {
+          "bab": 8,
+          "title": "Mengenal Diagram",
+          "contentHash": "05df0e412c24dd9a7e4cc56ce4cc82c8b6cc75de1b0ec736a46bca456350c3f5"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-2.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "632329367b6f5e944ee4ef69611572f77b02bc5907f4de2447ce0a65283e0a8c"
+        },
+        {
+          "bab": 1,
+          "title": "Ayo Membilang sampai dengan 50",
+          "contentHash": "582aa18875dd7e5aed73d290e6f8f28aad0479feca096098ab20c64e6a36c393"
+        },
+        {
+          "bab": 2,
+          "title": "Penjumlahan dan Pengurangan",
+          "contentHash": "4941a2c125b98f0343a1e3447b44ac7cc24aed5ac9746916b94f091bf09ad182"
+        },
+        {
+          "bab": 3,
+          "title": "Bentuk di Sekitar Kita",
+          "contentHash": "6961b9f54c61fde55c710e762aa7fa707e233003d24d462b1a03873aa64e86cb"
+        },
+        {
+          "bab": 4,
+          "title": "Posisi Benda dan Pola di Sekitar Kita",
+          "contentHash": "ed9a18b78a357a55d914376c4a80d0ca93191b18922451a2bc0d638586b64667"
+        },
+        {
+          "bab": 5,
+          "title": "Pecahan",
+          "contentHash": "f35aa1f5231e5be9c338944a088bebd95539baf8a3c6be2e80caac80c875aff5"
+        },
+        {
+          "bab": 6,
+          "title": "Pengukuran",
+          "contentHash": "520e208f95bef33c4b27fb3966f2ddf47ba1dc12f9bd7cb5095a4dfd17473b5a"
+        },
+        {
+          "bab": 7,
+          "title": "Ayo Membilang sampai dengan 100",
+          "contentHash": "8b5d0521412d408e242a68bec608c16827d1643360f89cb238fefd22d7e82086"
+        },
+        {
+          "bab": 8,
+          "title": "Berbagai Diagram",
+          "contentHash": "5d876f449b51e04eea8a657a01e09b5fed593790f9b12a2f97efa6fa9ddebf1d"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-3.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "b08e587d6625aa56388bdf067324601ce71c26a65f7fc8ab9457e54fd0448aeb"
+        },
+        {
+          "bab": 1,
+          "title": "Bilangan Cacah sampai 1.000",
+          "contentHash": "98ce88e5673b40507929ac552a0a56397137476df9dabef93aebfb088b9ec382"
+        },
+        {
+          "bab": 2,
+          "title": "Kalimat Matematika",
+          "contentHash": "6989706f9092988b2bb5e0abfde486d2050fc7b5fcc6428e297eba1482cc1567"
+        },
+        {
+          "bab": 3,
+          "title": "Pengukuran Panjang dan Berat",
+          "contentHash": "bd5ea9ee853441ebb37b452a22c25e3f5f9e71309455b3b88892cab59b3ddebc"
+        },
+        {
+          "bab": 4,
+          "title": "Unsur-Unsur Bangun Datar",
+          "contentHash": "a8152a57422ca2470770f0c921409651c20a1aba517b900d6cb6c61c538d6d4b"
+        },
+        {
+          "bab": 5,
+          "title": "Penyajian Data dalam Tabel",
+          "contentHash": "1d9d5c08b1557319c63d9baac3fa0446c5b422b37e965c2cea417786c0378ffa"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-4.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "a114c2c019c8bdea6fa9c3f8775f4f5056cc103ba523311802bf4157edd0ff8f"
+        },
+        {
+          "bab": 1,
+          "title": "Bilangan Cacah sampai 10.000",
+          "contentHash": "4dd45d9bb54c5dc539b6ffdb0cb8817abf631e2132ac4b6ec2772d7376dac914"
+        },
+        {
+          "bab": 2,
+          "title": "Pecahan",
+          "contentHash": "c36270fd8b5f09cc5a5ca58b0c3ec8fa19ddf5b5779db663330e2bf50a096e5c"
+        },
+        {
+          "bab": 3,
+          "title": "Pola Gambar dan Pola Bilangan",
+          "contentHash": "92f8624a658576ef8926b551d320d38e3437c77755de8b7999bccf5c3a895fdc"
+        },
+        {
+          "bab": 4,
+          "title": "Pengukuran Luas dan Volume",
+          "contentHash": "56ba1d8cd756759d0495c87a9072548334c7df5ddaf67a5329850efce896869e"
+        },
+        {
+          "bab": 5,
+          "title": "Bangun Datar",
+          "contentHash": "6ff15e4b7e8d32870435eb68aabde48bc741c603504e808cb3f41e087fd0863a"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-5.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "dab640f2416210842e6a46ea9f9f838b4e2e9b36b85ff2b9ec4140b234631939"
+        },
+        {
+          "bab": 1,
+          "title": "Bilangan Cacah Sampai 100.000",
+          "contentHash": "ecd038153fd4d133620f2c0f10a077e5aa5d97370073c75b4075a98014bd129f"
+        },
+        {
+          "bab": 2,
+          "title": "KPK dan FPB",
+          "contentHash": "90a1bf86c31e8aede0915d11663fe96232d31af80c838e139d9d275203cd50f2"
+        },
+        {
+          "bab": 3,
+          "title": "Bilangan Pecahan",
+          "contentHash": "5b56ec058204b7738cb47f9c6d510eb565576e5de45fdb15168b4d75a88f128b"
+        },
+        {
+          "bab": 4,
+          "title": "Keliling Bangun Datar",
+          "contentHash": "be2095053f48e590cd3a168896dda5244f0838ff783bb778fe8787356b847161"
+        },
+        {
+          "bab": 5,
+          "title": "Luas Daerah Bangun Datar",
+          "contentHash": "b1a9b09eeaa81f38bb15be069cdaa1b39b2dd0820e8d2c448d06d85b757717c8"
+        }
+      ]
+    },
+    {
+      "file": "matematika-kelas-6.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "2f74dba7fcbb3c976c733bcbce0fbf6dcbd583356532fea1ee3c40269228eaa4"
+        },
+        {
+          "bab": 1,
+          "title": "Pecahan dan Desimal",
+          "contentHash": "2d1cd15d9a342031e69b4d19a2332dae3fe11c508963b874e81bbdfea48b75bc"
+        },
+        {
+          "bab": 2,
+          "title": "Rasio",
+          "contentHash": "ceac2be98a93e6b9c07041f264bcc6140e4fd0d2483b81f341d78fc982772b0d"
+        },
+        {
+          "bab": 3,
+          "title": "Kubus dan Balok",
+          "contentHash": "10356a96b834629d4aba05f1bc06fb7518c6e45632cd3594176b8b2857523232"
+        },
+        {
+          "bab": 4,
+          "title": "Peluang",
+          "contentHash": "15b9268d2d92725b8b7b2d5046141376c52934544db4568f7848826458c38bed"
+        }
+      ]
+    },
+    {
+      "file": "pendidikan-pancasila-kelas-1.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "e4e8f245e7d564399b265856afdb90a3ea173b110fa50bc7d279b25756670e0e"
+        },
+        {
+          "bab": 1,
+          "title": "Aku dan Teman-Temanku",
+          "contentHash": "ec81364bcd74e8185dc04db614a2ed59c1744ed0befa3f26a1466fb9104a0c6a"
+        },
+        {
+          "bab": 2,
+          "title": "Aku Patuh pada Aturan",
+          "contentHash": "30de61f0271585b7ca67e1391d87d25d213c21b18b58d025d7ffb958dbe364c4"
+        },
+        {
+          "bab": 3,
+          "title": "Aku Mengenal Indonesia",
+          "contentHash": "3c1b29cbd5ca1ae9c16aa758728733b259993d8fff0200c54e0c72ac8349ba78"
+        },
+        {
+          "bab": 4,
+          "title": "Aku dan Lingkunganku",
+          "contentHash": "361c9a30ee9ecee8d4cdf1f35c4233ea317744de00e64f405e56586e9d3548eb"
+        }
+      ]
+    },
+    {
+      "file": "pendidikan-pancasila-kelas-2.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "e264ba008f395e9c8a6d24df0421ff6f8250873294b2b0e36504ab8b56bbe84b"
+        },
+        {
+          "bab": 1,
+          "title": "Aku Patuh Aturan",
+          "contentHash": "950dde004b2a7cd16f26718745bde147ea9e0175609f8217c6afa41621f714e0"
+        },
+        {
+          "bab": 2,
+          "title": "Aku Berperilaku Pancasila",
+          "contentHash": "8a19030f981b24ee68e3ef3b4e79b610d75cf6cf3b8616f86eadc20d1759a491"
+        },
+        {
+          "bab": 3,
+          "title": "Aku dan Teman-Temanku",
+          "contentHash": "4c6b6d1fd194243c2b39619c5901cffb8d87f460a481f96328a739a11afcae56"
+        },
+        {
+          "bab": 4,
+          "title": "Aku Peduli Lingkungan",
+          "contentHash": "7816e2e296e22586de39e68c92a77f1a5d8969d55f052ca76c1cfced04eb14fc"
+        }
+      ]
+    },
+    {
+      "file": "pendidikan-pancasila-kelas-4.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "30cf2460ff56f216117d96f6e2bf1fa21bc9bd07f974bc3bca17ea1de5dfe876"
+        },
+        {
+          "bab": 1,
+          "title": "Mengenal Lingkungan Sekitar",
+          "contentHash": "60a0fda1aeafeb8cca5273861c6f26b6ad4a0c893cb1f7ad763cbac31d8c3d7b"
+        },
+        {
+          "bab": 2,
+          "title": "Aku Anak yang Disiplin",
+          "contentHash": "98b7399d3118ad2b9023967e654832b631c3ea00763b3e276d21684c1cab3d41"
+        },
+        {
+          "bab": 3,
+          "title": "Kerja Sama di Lingkunganku",
+          "contentHash": "58d3bd92fc68d5bcdc580a7eac8bb1b38eedb75748550e6966eded465e8a4b05"
+        },
+        {
+          "bab": 4,
+          "title": "Pancasila dalam Diriku",
+          "contentHash": "3f8d016e9f791d86ff33a806ac19d368d6d48ed38cf1aa870b9ba7b1e7a2fe26"
+        }
+      ]
+    },
+    {
+      "file": "pendidikan-pancasila-kelas-5.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "1634d6f0f904ca1fd889db38e377e085ab53236af4367e3dadc32b9097d34f9c"
+        },
+        {
+          "bab": 1,
+          "title": "Pancasila dalam Kehidupanku",
+          "contentHash": "e573fff129f73632f53ff144a02b54d667910f394d134d265b3cd221fa54136d"
+        },
+        {
+          "bab": 2,
+          "title": "Norma dalam Kehidupanku",
+          "contentHash": "14caadc9063378483c9a0ef848d0e2277dfa593574b399882fc073779bec7a3a"
+        },
+        {
+          "bab": 3,
+          "title": "Keragaman Budaya Indonesiaku",
+          "contentHash": "fd6606c0e22a0f124188994dc7098a059918685f6b04f074c752a67c28352f57"
+        },
+        {
+          "bab": 4,
+          "title": "Aku dan Lingkungan Sekitarku",
+          "contentHash": "87f381144334fbc09328f3c87aba8a40c746829e1d792c915d09b6ec2dc2cfdb"
+        }
+      ]
+    },
+    {
+      "file": "pendidikan-pancasila-kelas-6.md",
+      "babs": [
+        {
+          "bab": 0,
+          "title": "Pembuka",
+          "contentHash": "5042516d1d44e495abcfeaa569c0274be180dd71b10df09b9c9d502738674eb4"
+        },
+        {
+          "bab": 1,
+          "title": "Belajar Pancasila dengan Menyenangkan",
+          "contentHash": "78d3de32fc187c3bc101711f838871e0da1cb17772ea53ca42e24e3943eaafed"
+        },
+        {
+          "bab": 2,
+          "title": "Mengamalkan Pancasila untuk Kebahagiaan Bersama",
+          "contentHash": "854ba718f837a3e11907122ad90c99ee714cc0ff9024f3e3d8e1260e8dc09f18"
+        },
+        {
+          "bab": 3,
+          "title": "Panduan dan Hasil Wawancara",
+          "contentHash": "ff339708bafb7f6486431d8ecd9746c72cb4ba289df1fe470edac91891aae034"
+        },
+        {
+          "bab": 4,
+          "title": "Lembar Kerja Musyawarah",
+          "contentHash": "6c9495837136d83834618d793561b66d0ed4c89564f6acf4ef46e78763639a38"
+        },
+        {
+          "bab": 5,
+          "title": "Menghormati Perbedaan Budaya dan Agama dalam Kehidupan Sehari-hari",
+          "contentHash": "8da49d76389f956102d5cb4bb0f203c8c598fcdf25f10c07255ec57f88315e8a"
+        },
+        {
+          "bab": 6,
+          "title": "Provinsiku Bagian dari Wilayah Negara Kesatuan Republik Indonesia",
+          "contentHash": "d50f6533d9c6df196234d2f434a25ac8a2ea8fcaa873dda90bdbbaf936805f4f"
+        },
+        {
+          "bab": 7,
+          "title": "Menjaga Persatuan dan Kesatuan dengan Gotong Royong",
+          "contentHash": "2485cd7be99d90165c992478f8c9f59c153a52114ce633fe31c73b07cd64c79f"
+        }
+      ]
+    }
+  ]
+}
