@@ -147,12 +147,6 @@ function AuthLayout() {
             >
               Akun
             </Link>
-            <Link
-              to="/kebijakan-privasi"
-              className="hidden text-body-sm text-text-tertiary hover:text-text-primary transition-colors duration-[120ms] sm:inline"
-            >
-              Kebijakan privasi
-            </Link>
 
             {/* Logout */}
             <button
@@ -172,6 +166,11 @@ function AuthLayout() {
         <main data-print-app-main className="max-w-[var(--container-app)] mx-auto py-8 px-6">
           <Outlet />
         </main>
+        <footer className="max-w-[var(--container-app)] mx-auto px-6 pb-8 text-caption text-text-tertiary">
+          <Link to="/kebijakan-privasi" className="hover:text-text-primary">
+            Kebijakan privasi
+          </Link>
+        </footer>
       </div>
     </div>
   )
