@@ -1,10 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { ClassEntity, CreateClassInput, ExamType, Question, UpdateExamInput } from "@teacher-exam/shared"
-import {
-  CreateClassInputSchema,
-  isCompleteClassTemplate,
-  resolveExamSubjectLabel
-} from "@teacher-exam/shared"
+import { CreateClassInputSchema, isCompleteClassTemplate, resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -839,7 +835,7 @@ function ReviewPage() {
             />
             {hasCurriculumValidation ? "Periksa ulang kurikulum" : "Periksa kurikulum"}
           </Button>
-          {exam.subject === null && (exam.subjectLabel?.trim().length ?? 0) > 0 ?
+          {exam?.subject === null && (exam?.subjectLabel?.trim().length ?? 0) > 0 ?
             (
               <p className="text-caption text-text-tertiary max-w-md">
                 Mode PDF: pemeriksaan mengacu topik/PDF yang diunggah, bukan klaim Capaian Pembelajaran Buku Siswa.
@@ -1437,7 +1433,7 @@ function ReviewPage() {
             <QuestionEditDialog
               open
               question={editingQuestion}
-              subject={exam.subject ?? undefined}
+              subject={exam?.subject ?? undefined}
               onClose={() => setEditingId(null)}
               onSave={(updated) => {
                 void handleEditSave(updated)
