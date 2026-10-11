@@ -1,6 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { Exam } from "@teacher-exam/shared"
-import { Button, LoadingSpinner, useToast } from "@teacher-exam/ui"
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  LoadingSpinner,
+  useToast
+} from "@teacher-exam/ui"
 import { useEffect, useMemo, useState } from "react"
 import { DuplicateConfirmDialog } from "../components/dashboard/duplicate-confirm-dialog.js"
 import {
@@ -36,6 +45,10 @@ function withinPeriod(createdAt: string, period: PeriodFilter): boolean {
   if (period === "30d") return now - created <= 30 * 24 * 60 * 60 * 1000
   // this_semester: rough — Jan 2026 onward (semester 2 of TA 2025/2026)
   return created >= new Date("2026-01-01T00:00:00.000Z").getTime()
+}
+
+function whatsAppShareHref(publicUrl: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(publicUrl)}`
 }
 
 function isThisMonth(dateStr: string): boolean {
@@ -77,6 +90,7 @@ function HistoryPage() {
   const [sort, setSort] = useState<SortOrder>("terbaru")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(8)
+  const [shareSheet, setShareSheet] = useState<{ title: string; publicUrl: string } | null>(null)
 
   function loadExams() {
     setLoading(true)
@@ -113,10 +127,20 @@ function HistoryPage() {
     try {
       const share = unwrapApiEither(await api.exams.share(exam.id))
       const publicUrl = `${window.location.origin}${share.publicUrlPath}`
-      await window.navigator.clipboard.writeText(publicUrl)
-      toast({ variant: "success", title: "Link publik berhasil disalin" })
+      setShareSheet({ title: exam.title, publicUrl })
     } catch (err: unknown) {
       const message = err instanceof ApiError ? err.message : "Gagal membuat link publik"
+      toast({ variant: "error", title: message })
+    }
+  }
+
+  async function copyShareLink() {
+    if (!shareSheet) return
+    try {
+      await window.navigator.clipboard.writeText(shareSheet.publicUrl)
+      toast({ variant: "success", title: "Link publik berhasil disalin" })
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : "Gagal menyalin link"
       toast({ variant: "error", title: message })
     }
   }
@@ -322,6 +346,46 @@ function HistoryPage() {
         open={sheetPreview.previewOpen}
         onClose={sheetPreview.closePreview}
       />
+
+      <Dialog
+        open={shareSheet !== null}
+        onOpenChange={(open) => {
+          if (!open) setShareSheet(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bagikan lembar</DialogTitle>
+            <DialogDescription>
+              {shareSheet ? shareSheet.title : "Link publik lembar ujian."}
+            </DialogDescription>
+          </DialogHeader>
+          {shareSheet && (
+            <div className="flex flex-col gap-3">
+              <p className="text-body-sm text-text-secondary break-all">{shareSheet.publicUrl}</p>
+              <Button asChild variant="primary" size="md" className="w-full">
+                <a
+                  href={whatsAppShareHref(shareSheet.publicUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Kirim lewat WhatsApp
+                </a>
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                className="w-full"
+                onClick={() => {
+                  void copyShareLink()
+                }}
+              >
+                Salin link
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

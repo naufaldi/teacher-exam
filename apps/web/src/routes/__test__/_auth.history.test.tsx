@@ -193,6 +193,7 @@ describe("HistoryPage", () => {
 
     expect(screen.queryByRole("button", { name: /cetak/i })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /koreksi/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^bagikan$/i })).not.toBeInTheDocument()
   })
 
   it("draft Edit opens the existing exam in review with examId and mode", async () => {
@@ -307,8 +308,9 @@ describe("HistoryPage", () => {
     })
   })
 
-  it("copies a public share link for final exams", async () => {
+  it("opens Bagikan lembar with a WhatsApp link and Salin link", async () => {
     const user = userEvent.setup()
+    const writeText = vi.spyOn(window.navigator.clipboard, "writeText").mockResolvedValue(undefined)
     mockApiResolvedValueOnce(mockApi.exams.list, [
       makeExam({ id: "exam-share", status: "final", title: "Final untuk Dibagikan" })
     ])
@@ -326,6 +328,15 @@ describe("HistoryPage", () => {
       expect(mockApi.exams.share).toHaveBeenCalledWith("exam-share")
     })
 
+    expect(await screen.findByRole("heading", { name: "Bagikan lembar" })).toBeInTheDocument()
+    const whatsapp = screen.getByRole("link", { name: /kirim lewat whatsapp/i })
+    const href = whatsapp.getAttribute("href") ?? ""
+    expect(decodeURIComponent(href)).toContain("https://wa.me/")
+    expect(decodeURIComponent(href)).toContain("/share/share-abc123")
+
+    await user.click(screen.getByRole("button", { name: /salin link/i }))
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/share/share-abc123`)
     expect(await screen.findByText("Link publik berhasil disalin")).toBeInTheDocument()
+    expect(screen.getAllByText("Final untuk Dibagikan").length).toBeGreaterThan(0)
   })
 })
