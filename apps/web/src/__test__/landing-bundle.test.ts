@@ -10,9 +10,10 @@ describe("phone landing bundle", () => {
     expect(config).toContain("autoCodeSplitting: true")
   })
 
-  it("serves brotli and a short HTML cache from Caddy", () => {
+  it("uses the encoders shipped by caddy:alpine and a short HTML cache", () => {
     const caddy = readFileSync(join(webRoot, "Caddyfile"), "utf8")
-    expect(caddy).toContain("br")
+    expect(caddy).toContain("encode gzip zstd")
+    expect(caddy).not.toMatch(/\bbr\b/)
     expect(caddy).toMatch(/max-age=60/)
   })
 
