@@ -195,7 +195,7 @@ This downloads the macOS/Linux Chromium build to `~/Library/Caches/ms-playwright
 
 **Fix.** PR 260 removed `br`. The site has returned 200 since 16:53 WIB. Later changes keep `encode gzip zstd`.
 
-**Prevention.** CI runs `caddy validate` with the `caddy:alpine` image named in `apps/web/Dockerfile`. After `docker compose up`, the deploy job curls `/`, `/share/smoke`, `/favicon.svg`, and the API health check from outside the VPS. Each must be 200, with at most one redirect, and the HTML must contain `id="root"`. A failure fails the job and runs `scripts/vps-rollback.sh`, which puts the previous `IMAGE_TAG` back and starts those images again. The web service healthcheck requests `/` and requires the same app shell, so a container that is not serving shows unhealthy.
+**Prevention.** CI runs `caddy validate` with the `caddy:alpine` image named in `apps/web/Dockerfile`. After `docker compose up`, the deploy job curls `/`, `/share/smoke`, `/favicon.svg`, and the API health check from outside the VPS. Each must be 200, with at most one redirect, and the HTML must contain `id="root"`. A failure fails the job and runs `scripts/vps-rollback.sh`, which puts the previous `IMAGE_TAG` back and starts those images again. Gateway and Cloudflare origin errors (502, 525) are retried while the new container boots. A 308 loop or a page missing `id="root"` fails immediately. The web service healthcheck requests `/` and requires the same app shell, so a container that is not serving shows unhealthy.
 
 ---
 

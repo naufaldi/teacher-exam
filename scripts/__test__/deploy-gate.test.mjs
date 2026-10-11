@@ -2,11 +2,27 @@ import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { test } from "node:test"
-import { assessProbe, planRollback, probeTable, productionCaddyImage, rollbackCommand } from "../deploy-gate.mjs"
+import {
+  assessProbe,
+  isBootFailure,
+  planRollback,
+  probeTable,
+  productionCaddyImage,
+  rollbackCommand
+} from "../deploy-gate.mjs"
 
 test("production caddy image is the runtime image in the web Dockerfile", () => {
   const dockerfile = readFileSync(new URL("../../apps/web/Dockerfile", import.meta.url), "utf8")
   assert.equal(productionCaddyImage(dockerfile), "caddy:alpine")
+})
+
+test("cloudflare origin errors during boot are retried and a redirect loop is not", () => {
+  assert.equal(isBootFailure({ ok: false, reason: "status 0" }), true)
+  assert.equal(isBootFailure({ ok: false, reason: "status 502" }), true)
+  assert.equal(isBootFailure({ ok: false, reason: "status 525" }), true)
+  assert.equal(isBootFailure({ ok: false, reason: "status 308" }), false)
+  assert.equal(isBootFailure({ ok: false, reason: "redirect loop" }), false)
+  assert.equal(isBootFailure({ ok: false, reason: "missing app shell" }), false)
 })
 
 test("a brotli encode directive is not a passing probe", () => {

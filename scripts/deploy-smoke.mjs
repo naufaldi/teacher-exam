@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { assessProbe, probeTable } from "./deploy-gate.mjs"
+import { assessProbe, isBootFailure, probeTable } from "./deploy-gate.mjs"
 
 const attempts = Number(process.env["SMOKE_ATTEMPTS"] ?? "30")
 const pauseSeconds = Number(process.env["SMOKE_PAUSE_SECONDS"] ?? "5")
@@ -76,7 +76,7 @@ for (let attempt = 1; attempt <= attempts; attempt++) {
     console.log("smoke ok")
     process.exit(0)
   }
-  const hardFailure = failed.some((result) => result.reason !== "status 0")
+  const hardFailure = failed.some((result) => !isBootFailure(result))
   if (hardFailure || attempt === attempts) process.exit(1)
   console.error(`smoke attempt ${attempt}/${attempts} still booting`)
   sleep(pauseSeconds)
