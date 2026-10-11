@@ -48,6 +48,47 @@ describe("sanitizeStimulusSvg", () => {
     expect(sanitizeStimulusSvg(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)).toBeNull()
     expect(sanitizeStimulusSvg(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"></svg>`)).toBeNull()
   })
+
+  test("rejects onload and onerror when they are not preceded by whitespace", () => {
+    expect(sanitizeStimulusSvg(`<svg/onload="alert(1)"></svg>`)).toBeNull()
+    expect(sanitizeStimulusSvg(`<svg xmlns="http://www.w3.org/2000/svg"onload="alert(1)"></svg>`)).toBeNull()
+    expect(sanitizeStimulusSvg(`<svg xmlns="http://www.w3.org/2000/svg"><img/onerror="alert(1)" src="x"></svg>`))
+      .toBeNull()
+    expect(soalImageHtml({ source: "svg", svg: `<svg/onload="alert(1)"></svg>` })).toBe("")
+  })
+
+  test("rejects SMIL, iframes, and style expressions", () => {
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><set attributeName="onmouseover" to="alert(1)"/></svg>`
+    )).toBeNull()
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><animate attributeName="href" values="javascript:alert(1)"/></svg>`
+    )).toBeNull()
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><iframe src="https://evil.example/"></iframe></svg>`
+    )).toBeNull()
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><rect style="width:expression(alert(1))"></rect></svg>`
+    )).toBeNull()
+  })
+
+  test("rejects an external image href", () => {
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><image href="http://169.254.169.254/"/></svg>`
+    )).toBeNull()
+  })
+
+  test("rejects a javascript url hidden in an entity", () => {
+    expect(sanitizeStimulusSvg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><rect fill="javascript&#58;alert(1)"></rect></svg>`
+    )).toBeNull()
+  })
+
+  test("keeps a shape illustration", () => {
+    const house =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" width="220" height="140"><rect width="220" height="90" fill="#87CEEB"/><polygon points="30,60 75,28 120,60" fill="#E76F51"/><circle cx="160" cy="78" r="22" fill="#2E7D32"/></svg>`
+    expect(sanitizeStimulusSvg(house)).toBe(house)
+  })
 })
 
 describe("soalImageHtml", () => {
