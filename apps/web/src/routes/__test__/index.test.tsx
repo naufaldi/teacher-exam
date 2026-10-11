@@ -97,6 +97,10 @@ describe("LoginPage", () => {
     expect(aside?.className ?? "").not.toMatch(/(?:^|\s)hidden(?:\s|$)/)
     expect(aside?.className ?? "").toMatch(/(?:^|\s)order-first(?:\s|$)/)
     expect(aside?.className ?? "").toMatch(/lg:order-none/)
+    expect(aside?.className ?? "").toMatch(/(?:^|\s)items-start(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:items-center/)
+    expect(aside?.className ?? "").not.toMatch(/(?:^|\s)overflow-hidden(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:overflow-hidden/)
   })
 
   it("names the product Ujian Sekolah on the landing", () => {

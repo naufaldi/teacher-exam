@@ -209,7 +209,7 @@ function LoginPage() {
       </section>
 
       {/* Right column — paper preview */}
-      <aside className="relative order-first flex items-center justify-center overflow-hidden bg-kertas-100 p-6 lg:order-none lg:p-12">
+      <aside className="relative order-first flex items-start justify-center overflow-visible bg-kertas-100 p-4 lg:order-none lg:items-center lg:overflow-hidden lg:p-12">
         <div
           className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
@@ -223,7 +223,7 @@ function LoginPage() {
           <PaperCard
             as="article"
             tilt={-1.5}
-            className="animate-fade-up-stagger flex flex-col gap-6 px-10 py-12"
+            className="animate-fade-up-stagger flex flex-col gap-4 px-5 py-6 lg:gap-6 lg:px-10 lg:py-12"
             style={{ ["--index" as string]: 2 }}
             aria-label="Contoh lembar ujian"
           >
