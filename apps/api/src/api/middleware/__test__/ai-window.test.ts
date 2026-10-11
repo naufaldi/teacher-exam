@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { buildHttpApiTestApp } from "../../../routes/__test__/http-api-setup"
-import { publicBankClientKey } from "../ip-rate-limit"
+import { publicBankClientKey, stampSocketPeer } from "../ip-rate-limit"
 
 describe("AI generate window on regenerate", () => {
   it("returns the rate-limit error once regenerate is past the window", async () => {
@@ -74,6 +74,19 @@ describe("public bank client key", () => {
     expect(publicBankClientKey(huge, peer)).toBe("bank:127.0.0.1")
     expect(publicBankClientKey("not an ip", peer)).toBe("bank:127.0.0.1")
     expect(huge.length).toBeGreaterThan(45)
+  })
+
+  it("replaces a spoofed peer header with the socket address", () => {
+    const headers = new Headers()
+    headers.set("cf-connecting-ip", "203.0.113.10")
+    headers.set("x-teacher-exam-peer", "127.0.0.1")
+
+    stampSocketPeer(headers, "198.51.100.8")
+
+    expect(headers.get("x-teacher-exam-peer")).toBe("198.51.100.8")
+    expect(publicBankClientKey(headers.get("cf-connecting-ip") ?? undefined, {
+      remoteAddress: headers.get("x-teacher-exam-peer") ?? undefined
+    })).toBe("bank:198.51.100.8")
   })
 
   it("splits client addresses only for a trusted proxy", () => {

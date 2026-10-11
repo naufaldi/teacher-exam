@@ -12,6 +12,7 @@ import {
 } from "../lib/rate-limit-core"
 
 const MAX_CLIENT_IP_LENGTH = 45
+export const TEACHER_EXAM_PEER_HEADER = "x-teacher-exam-peer"
 
 export const PUBLIC_BANK_RATE_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 60_000, max: 60 }]
 
@@ -51,6 +52,15 @@ function isBoundedClientIp(value: string): boolean {
   return value.length > 0 && value.length <= MAX_CLIENT_IP_LENGTH && (isIpv4(value) || isIpv6(value))
 }
 
+export function stampSocketPeer(
+  headers: { delete: (name: string) => void; set: (name: string, value: string) => void },
+  remoteAddress: string | undefined
+): void {
+  headers.delete(TEACHER_EXAM_PEER_HEADER)
+  const remote = stripMappedIpv4((remoteAddress ?? "").trim())
+  if (isBoundedClientIp(remote)) headers.set(TEACHER_EXAM_PEER_HEADER, remote)
+}
+
 function defaultTrustedProxies(): ReadonlyArray<string> {
   const raw = process.env["TRUSTED_PROXY_IPS"]
   if (raw === undefined || raw.trim().length === 0) return ["127.0.0.1", "::1"]
@@ -82,12 +92,20 @@ function readConnectingIp(headers: Headers.Headers): string | undefined {
   })
 }
 
+function readStampedPeer(headers: Headers.Headers): string | undefined {
+  return Option.match(Headers.get(headers, TEACHER_EXAM_PEER_HEADER), {
+    onNone: () => undefined,
+    onSome: (value) => value
+  })
+}
+
 function peerFromRequest(request: HttpServerRequest.HttpServerRequest): PublicBankPeer {
+  const socket = Option.match(request.remoteAddress, {
+    onNone: () => undefined,
+    onSome: (value) => value
+  })
   return {
-    remoteAddress: Option.match(request.remoteAddress, {
-      onNone: () => undefined,
-      onSome: (value) => value
-    })
+    remoteAddress: socket ?? readStampedPeer(request.headers)
   }
 }
 
