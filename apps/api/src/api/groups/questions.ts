@@ -1,7 +1,12 @@
 import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
 import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
 import * as HttpApiSchema from "@effect/platform/HttpApiSchema"
-import { QuestionSchema, RegenerateQuestionInputSchema } from "@teacher-exam/shared"
+import {
+  QuestionSchema,
+  RegenerateQuestionInputSchema,
+  SetSoalImageInputSchema,
+  UploadSoalImageInputSchema
+} from "@teacher-exam/shared"
 import { Schema } from "effect"
 import {
   ApiAiError,
@@ -37,6 +42,32 @@ export const QuestionsGroup = HttpApiGroup.make("questions")
       .addError(ApiAiError, { status: 502 })
       .addError(ApiDatabaseError, { status: 500 })
       .middleware(AiGenerateRateLimit)
+  )
+  .add(
+    HttpApiEndpoint.post("setQuestionImage")`/questions/${idParam}/image`
+      .setPayload(SetSoalImageInputSchema)
+      .addSuccess(QuestionSchema)
+      .addError(ApiInvalidJsonBodyWithCode, { status: 400 })
+      .addError(ApiValidationError422, { status: 422 })
+      .addError(ApiNotFound, { status: 404 })
+      .addError(ApiAiError, { status: 502 })
+      .addError(ApiDatabaseError, { status: 500 })
+      .middleware(AiGenerateRateLimit)
+  )
+  .add(
+    HttpApiEndpoint.post("uploadQuestionImage")`/questions/${idParam}/image/upload`
+      .setPayload(UploadSoalImageInputSchema)
+      .addSuccess(QuestionSchema)
+      .addError(ApiInvalidJsonBodyWithCode, { status: 400 })
+      .addError(ApiValidationError422, { status: 422 })
+      .addError(ApiNotFound, { status: 404 })
+      .addError(ApiDatabaseError, { status: 500 })
+  )
+  .add(
+    HttpApiEndpoint.del("removeQuestionImage")`/questions/${idParam}/image`
+      .addSuccess(QuestionSchema)
+      .addError(ApiNotFound, { status: 404 })
+      .addError(ApiDatabaseError, { status: 500 })
   )
   .middleware(Authorization)
   .middleware(GlobalRateLimit)

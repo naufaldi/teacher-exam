@@ -35,6 +35,7 @@ import { ExportServiceLive } from "../api/services/export-service"
 import { GradingServiceLive } from "../api/services/grading-service"
 import { ObjectStorageLive } from "../api/services/object-storage-live"
 import { SessionServiceLive } from "../api/services/session-service"
+import { SoalImageModelLive } from "../api/services/soal-image-model"
 import { TemplateServiceLive } from "../api/services/template-service"
 import { createTelemetryLayer } from "../api/telemetry"
 
@@ -97,6 +98,7 @@ const ApiLive = HttpApiBuilder.api(TeacherExamApi).pipe(
   Layer.provide(HandlersLive),
   Layer.provide(MiddlewareLive),
   Layer.provide(AiLayer),
+  Layer.provide(SoalImageModelLive),
   Layer.provideMerge(createCorsLayer())
 )
 
