@@ -1,7 +1,7 @@
+import { betterAuth } from "better-auth"
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
-import { betterAuth } from "better-auth"
 import { describe, expect, it } from "vitest"
 
 const require = createRequire(import.meta.url)
