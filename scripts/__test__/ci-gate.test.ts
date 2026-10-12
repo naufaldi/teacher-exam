@@ -99,4 +99,11 @@ describe("ci gate", () => {
       packages: "write"
     })
   })
+
+  it("does not publish images until quality passes", () => {
+    const deploy = loadWorkflow("deploy.yml")
+
+    expect(needsOf(deploy.jobs?.["build-and-push-api"])).toEqual(["commit-hash", "quality"])
+    expect(needsOf(deploy.jobs?.["build-and-push-web"])).toEqual(["commit-hash", "quality"])
+  })
 })
