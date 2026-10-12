@@ -16,6 +16,8 @@ export const TEACHER_EXAM_PEER_HEADER = "x-teacher-exam-peer"
 
 export const PUBLIC_BANK_RATE_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 60_000, max: 60 }]
 
+export const SESSION_IP_CEILING_WINDOWS: ReadonlyArray<RateWindow> = [{ windowMs: 60_000, max: 600 }]
+
 export type PublicBankPeer = {
   remoteAddress?: string | undefined
   trustedProxies?: ReadonlyArray<string> | undefined
@@ -112,20 +114,16 @@ function sessionRateSubject(url: string): SessionRateSubject | undefined {
   return { code, action: "lobby" }
 }
 
-function limitKey(
-  request: HttpServerRequest.HttpServerRequest
-): Effect.Effect<string> {
-  const subject = sessionRateSubject(request.url)
-  if (subject === undefined) {
-    return Effect.succeed(
-      publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request))
-    )
-  }
-  if (subject.action === "lobby") return Effect.succeed(`student:${subject.code}:lobby`)
-  return request.json.pipe(
-    Effect.catchAll(() => Effect.succeed({})),
-    Effect.map((body) => studentLockoutKey(subject.code, body))
-  )
+function sessionIpCeilingKey(request: HttpServerRequest.HttpServerRequest): string {
+  return `session-ip:${publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request))}`
+}
+
+function rateLimited(retryAfterSec: number): ApiRateLimited {
+  return new ApiRateLimited({
+    error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
+    code: "RATE_LIMITED",
+    retryAfterSec
+  })
 }
 
 export class PublicBankIpRateLimit extends HttpApiMiddleware.Tag<PublicBankIpRateLimit>()(
@@ -157,41 +155,57 @@ function peerFromRequest(request: HttpServerRequest.HttpServerRequest): PublicBa
   }
 }
 
-function makeIpRateLimitMiddleware(checker: RateLimitChecker): PublicBankIpRateLimit["Type"] {
+function makeIpRateLimitMiddleware(
+  checker: RateLimitChecker,
+  ipCeiling: RateLimitChecker
+): PublicBankIpRateLimit["Type"] {
   return Effect.gen(function*() {
     const request = yield* HttpServerRequest.HttpServerRequest
-    const key = yield* limitKey(request)
-    const result = checker.check(key)
-    if (!result.allowed) {
-      return yield* Effect.fail(
-        new ApiRateLimited({
-          error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
-          code: "RATE_LIMITED",
-          retryAfterSec: result.retryAfterSec
-        })
+    const subject = sessionRateSubject(request.url)
+    if (subject === undefined) {
+      const result = checker.check(
+        publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request))
       )
+      if (!result.allowed) return yield* Effect.fail(rateLimited(result.retryAfterSec))
+      return
     }
+    const ipResult = ipCeiling.check(sessionIpCeilingKey(request))
+    if (!ipResult.allowed) return yield* Effect.fail(rateLimited(ipResult.retryAfterSec))
+    if (subject.action === "lobby") return
+    const body = yield* request.json.pipe(Effect.catchAll(() => Effect.succeed({})))
+    const result = checker.check(studentLockoutKey(subject.code, body))
+    if (!result.allowed) return yield* Effect.fail(rateLimited(result.retryAfterSec))
   }) as unknown as PublicBankIpRateLimit["Type"]
 }
 
 function makePersistedIpRateLimitMiddleware(): PublicBankIpRateLimit["Type"] {
   return Effect.gen(function*() {
     const request = yield* HttpServerRequest.HttpServerRequest
-    const key = yield* limitKey(request)
-    const result = yield* takePersistedRateLimitHit(
-      key,
-      PUBLIC_BANK_RATE_WINDOWS,
-      Date.now()
-    ).pipe(Effect.orDie)
-    if (!result.allowed) {
-      return yield* Effect.fail(
-        new ApiRateLimited({
-          error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
-          code: "RATE_LIMITED",
-          retryAfterSec: result.retryAfterSec
-        })
-      )
+    const subject = sessionRateSubject(request.url)
+    const nowMs = Date.now()
+    if (subject === undefined) {
+      const result = yield* takePersistedRateLimitHit(
+        publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request)),
+        PUBLIC_BANK_RATE_WINDOWS,
+        nowMs
+      ).pipe(Effect.orDie)
+      if (!result.allowed) return yield* Effect.fail(rateLimited(result.retryAfterSec))
+      return
     }
+    const ipResult = yield* takePersistedRateLimitHit(
+      sessionIpCeilingKey(request),
+      SESSION_IP_CEILING_WINDOWS,
+      nowMs
+    ).pipe(Effect.orDie)
+    if (!ipResult.allowed) return yield* Effect.fail(rateLimited(ipResult.retryAfterSec))
+    if (subject.action === "lobby") return
+    const body = yield* request.json.pipe(Effect.catchAll(() => Effect.succeed({})))
+    const result = yield* takePersistedRateLimitHit(
+      studentLockoutKey(subject.code, body),
+      PUBLIC_BANK_RATE_WINDOWS,
+      nowMs
+    ).pipe(Effect.orDie)
+    if (!result.allowed) return yield* Effect.fail(rateLimited(result.retryAfterSec))
   }) as unknown as PublicBankIpRateLimit["Type"]
 }
 
@@ -199,17 +213,31 @@ export const PublicBankIpRateLimitLive = Layer.succeed(
   PublicBankIpRateLimit,
   persistedRateLimitsEnabled()
     ? makePersistedIpRateLimitMiddleware()
-    : makeIpRateLimitMiddleware(createRateLimitChecker(PUBLIC_BANK_RATE_WINDOWS))
+    : makeIpRateLimitMiddleware(
+      createRateLimitChecker(PUBLIC_BANK_RATE_WINDOWS),
+      createRateLimitChecker(SESSION_IP_CEILING_WINDOWS)
+    )
 )
 
-export function createTestPublicBankIpRateLimitLive(opts: {
+export type PublicBankRateLimitTestOpts = {
   windows: ReadonlyArray<{ windowMs: number; max: number }>
   now?: () => number
-}) {
+  ipCeiling?: {
+    windows: ReadonlyArray<{ windowMs: number; max: number }>
+    now?: () => number
+  }
+}
+
+export function createTestPublicBankIpRateLimitLive(opts: PublicBankRateLimitTestOpts) {
   const now = opts.now
   const checker = createRateLimitChecker(
     opts.windows,
     now !== undefined ? { now } : {}
   )
-  return Layer.succeed(PublicBankIpRateLimit, makeIpRateLimitMiddleware(checker))
+  const ceilingNow = opts.ipCeiling?.now
+  const ipCeiling = createRateLimitChecker(
+    opts.ipCeiling?.windows ?? SESSION_IP_CEILING_WINDOWS,
+    ceilingNow !== undefined ? { now: ceilingNow } : {}
+  )
+  return Layer.succeed(PublicBankIpRateLimit, makeIpRateLimitMiddleware(checker, ipCeiling))
 }

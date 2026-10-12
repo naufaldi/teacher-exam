@@ -82,4 +82,54 @@ describe("public session lockout", () => {
     expect(budiAgain.status).toBe(429)
     expect(siti.status).toBe(201)
   })
+
+  it("stops one school IP from opening a start window for every name", async () => {
+    let started = 0
+    ;(db.insert as Mock).mockReturnValue({
+      values: vi.fn(() => ({
+        returning: vi.fn(() => {
+          started += 1
+          return makeChain([makeStudent(`Murid ${started}`, `tok-cap-${started}`)])
+        })
+      }))
+    })
+    const app = buildHttpApiTestApp({
+      authenticated: false,
+      publicBankRateLimit: {
+        windows: [{ windowMs: 60_000, max: 30 }],
+        ipCeiling: { windows: [{ windowMs: 60_000, max: 2 }] }
+      }
+    })
+    const headersFor = (ip: string) => ({
+      "content-type": "application/json",
+      "x-teacher-exam-peer": ip,
+      "cf-connecting-ip": ip
+    })
+
+    const ani = await app.request("/api/sessions/ABC123/start", {
+      method: "POST",
+      headers: headersFor(SCHOOL_IP),
+      body: JSON.stringify({ studentName: "Ani" })
+    })
+    const cici = await app.request("/api/sessions/ABC123/start", {
+      method: "POST",
+      headers: headersFor(SCHOOL_IP),
+      body: JSON.stringify({ studentName: "Cici" })
+    })
+    const dedi = await app.request("/api/sessions/ABC123/start", {
+      method: "POST",
+      headers: headersFor(SCHOOL_IP),
+      body: JSON.stringify({ studentName: "Dedi" })
+    })
+    const eka = await app.request("/api/sessions/ABC123/start", {
+      method: "POST",
+      headers: headersFor("203.0.113.51"),
+      body: JSON.stringify({ studentName: "Eka" })
+    })
+
+    expect(ani.status).toBe(201)
+    expect(cici.status).toBe(201)
+    expect(dedi.status).toBe(429)
+    expect(eka.status).toBe(201)
+  })
 })
