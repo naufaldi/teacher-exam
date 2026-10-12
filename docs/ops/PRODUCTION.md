@@ -208,7 +208,7 @@ Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/dep
 1. Build and push API + web images to GHCR (tagged by commit SHA).
 2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
-4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
+4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. Then SSH runs `scripts/ai-live-smoke.sh`, which probes `http://127.0.0.1:3001/api/health/ai-live` inside `teacher-exam-api-1`. That loopback route is the only one that calls the model. Public `GET /api/health/ai` reports the configured provider, model, and whether the key is present, and does not call OpenAI. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
 
 Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
 
@@ -314,13 +314,13 @@ ssh vps-faldi 'docker exec teacher-exam-api-1 wget -qO- http://localhost:3001/ap
 | `BETTER_AUTH_URL` | docker-compose (from API_DOMAIN) | `https://api-ujian-sekolah.naufaldi.com` | better-auth `baseURL` — must be the **API** host |
 | `GOOGLE_CLIENT_ID` | `.env.production` | (secret) | |
 | `GOOGLE_CLIENT_SECRET` | `.env.production` | (secret) | |
-| `AI_PROVIDER` | `.env.production` | `anthropic` \| `minimax` \| `openai` | Default `anthropic` if unset — match key block below |
+| `AI_PROVIDER` | `.env.production` | `openai` \| `anthropic` \| `minimax` | Default `openai` if unset. A missing key for that provider stops the API at startup. |
 | `ANTHROPIC_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=anthropic`; keep it set even with `AI_PROVIDER=minimax` if you want PDF generation to continue working |
 | `MINIMAX_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=minimax` |
 | `MINIMAX_ANTHROPIC_BASE_URL` | `.env.production` | `https://api.minimax.io/anthropic` | MiniMax API root for Anthropic-compatible requests |
 | `OPENAI_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=openai` |
 | `OPENAI_BASE_URL` | `.env.production` | `https://api.openai.com/v1` | OpenAI API root (optional proxy/Azure) |
-| `AI_MODEL` | `.env.production` | provider-specific | Text generation default (`MiniMax-M2.7` for minimax; `gpt-5.4-mini` for openai) |
+| `AI_MODEL` | `.env.production` | provider-specific | OpenAI default `gpt-6-luna`. MiniMax default `MiniMax-M2.7` when that provider is selected. |
 | `AI_DISCUSSION_MODEL` | `.env.production` | provider-specific | Discussion/pembahasan + curriculum validation override |
 | `VITE_API_URL` | docker-compose build arg | `https://api-ujian-sekolah.naufaldi.com/api` | Baked into JS bundle at build time; changes require `--build web` |
 

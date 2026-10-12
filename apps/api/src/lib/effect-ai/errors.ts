@@ -1,6 +1,7 @@
 import type { AiError } from "@effect/ai"
 import { Match } from "effect"
 import { AiGenerationError } from "../../errors"
+import { AI_CREDIT_MESSAGE, AI_TIMEOUT_MESSAGE } from "./provider-http"
 
 export interface ProviderErrorContext {
   provider?: "anthropic" | "minimax" | "openai"
@@ -33,9 +34,14 @@ export function appendConnectionContext(message: string, context: ProviderErrorC
 
 function summarizeAiError(error: AiError.AiError): string {
   return Match.value(error).pipe(
-    Match.tag("HttpRequestError", (err) => err.message),
+    Match.tag("HttpRequestError", (err) => {
+      if (/timeout|timed out|aborted/i.test(err.message)) return AI_TIMEOUT_MESSAGE
+      return err.message
+    }),
     Match.tag("HttpResponseError", (err) => {
       const status = err.response.status
+      const body = `${err.body ?? ""} ${err.description ?? ""}`
+      if (status === 400 && /credit|billing|insufficient/i.test(body)) return AI_CREDIT_MESSAGE
       return `[HTTP ${status}] ${err.message}`
     }),
     Match.tag("MalformedInput", (err) => err.message),

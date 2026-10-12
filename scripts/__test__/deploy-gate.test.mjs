@@ -56,18 +56,68 @@ test("home and share require the app shell and 200 with at most one redirect", (
   )
 })
 
-test("smoke probes are the public home, a share path, a static asset, and api health", () => {
+test("public smoke probes are home, a share path, a static asset, and api health", () => {
+  const probes = probeTable({
+    webOrigin: "https://ujian-sekolah.naufaldi.com",
+    apiHealthUrl: "https://api-ujian-sekolah.naufaldi.com/api/health"
+  })
+  assert.deepEqual(probes, [
+    { name: "home", url: "https://ujian-sekolah.naufaldi.com/", expectShell: true },
+    { name: "share", url: "https://ujian-sekolah.naufaldi.com/share/smoke", expectShell: true },
+    { name: "asset", url: "https://ujian-sekolah.naufaldi.com/favicon.svg", expectShell: false },
+    { name: "api", url: "https://api-ujian-sekolah.naufaldi.com/api/health", expectShell: false }
+  ])
+  assert.equal(JSON.stringify(probes).includes("/health/ai"), false)
+})
+
+test("the AI model probe runs inside the API container against loopback", () => {
+  const script = readFileSync(new URL("../ai-live-smoke.sh", import.meta.url), "utf8")
+  const workflow = readFileSync(new URL("../../.github/workflows/deploy.yml", import.meta.url), "utf8")
+  const smoke = readFileSync(new URL("../deploy-smoke.mjs", import.meta.url), "utf8")
+
+  assert.match(script, /docker exec teacher-exam-api-1/)
+  assert.match(script, /http:\/\/127\.0\.0\.1:3001\/api\/health\/ai-live/)
+  assert.match(script, /gpt-6-luna/)
+  assert.match(script, /status !== 200/)
+  assert.equal(script.includes("api-ujian-sekolah"), false)
+  assert.equal(smoke.includes("/api/health/ai"), false)
+
+  const probeAt = workflow.indexOf("scripts/ai-live-smoke.sh")
+  const rollbackAt = workflow.indexOf("Roll back to the previous image")
+  assert.ok(probeAt > 0)
+  assert.ok(rollbackAt > probeAt)
+})
+
+test("an AI probe fails the deploy when the model is missing or the status is not 200", () => {
   assert.deepEqual(
-    probeTable({
-      webOrigin: "https://ujian-sekolah.naufaldi.com",
-      apiHealthUrl: "https://api-ujian-sekolah.naufaldi.com/api/health"
+    assessProbe({
+      status: 200,
+      redirects: 0,
+      body: JSON.stringify({ status: "ok", provider: "openai", model: "gpt-6-luna" }),
+      expectShell: false,
+      expectText: "gpt-6-luna"
     }),
-    [
-      { name: "home", url: "https://ujian-sekolah.naufaldi.com/", expectShell: true },
-      { name: "share", url: "https://ujian-sekolah.naufaldi.com/share/smoke", expectShell: true },
-      { name: "asset", url: "https://ujian-sekolah.naufaldi.com/favicon.svg", expectShell: false },
-      { name: "api", url: "https://api-ujian-sekolah.naufaldi.com/api/health", expectShell: false }
-    ]
+    { ok: true, reason: "ok" }
+  )
+  assert.deepEqual(
+    assessProbe({
+      status: 200,
+      redirects: 0,
+      body: JSON.stringify({ model: "gpt-5.4-mini" }),
+      expectShell: false,
+      expectText: "gpt-6-luna"
+    }),
+    { ok: false, reason: "missing ai model" }
+  )
+  assert.deepEqual(
+    assessProbe({
+      status: 502,
+      redirects: 0,
+      body: "Kredit penyedia AI habis. Isi saldo, lalu coba generate lagi.",
+      expectShell: false,
+      expectText: "gpt-6-luna"
+    }),
+    { ok: false, reason: "status 502" }
   )
 })
 

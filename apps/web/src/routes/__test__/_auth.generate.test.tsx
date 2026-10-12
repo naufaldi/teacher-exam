@@ -573,6 +573,58 @@ describe("GeneratePage — runGenerate flow", () => {
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
+  it("shows a credit error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Kredit penyedia AI habis. Isi saldo, lalu coba generate lagi.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Kredit penyedia AI habis. Isi saldo, lalu coba generate lagi."
+    )
+  })
+
+  it("shows a timeout error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Penyedia AI tidak menjawab tepat waktu. Coba lagi sebentar.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Penyedia AI tidak menjawab tepat waktu. Coba lagi sebentar."
+    )
+  })
+
+  it("shows a wrong-model error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Model yang menjawab bukan gpt-6-luna.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent("Model yang menjawab bukan gpt-6-luna.")
+  })
+
   it("shows the API error message in the failure dialog", async () => {
     mockApiFailOnce(
       mockApi.ai.generate,

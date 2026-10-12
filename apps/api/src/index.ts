@@ -10,6 +10,7 @@ import { startBackgroundWorkers } from "./jobs/poll-workers"
 import { initAuth } from "./lib/auth"
 import { resolveApiPort } from "./lib/auth-origins"
 import { assertDevAuthNotEnabledInProduction } from "./lib/dev-auth"
+import { assertAiProviderReady } from "./lib/production-ai-config"
 import { initApiSentry } from "./lib/sentry"
 import { logError, logInfo } from "./lib/server-log"
 
@@ -35,6 +36,7 @@ process.on("unhandledRejection", (reason) => {
 })
 
 async function main() {
+  assertAiProviderReady()
   await initApiSentry()
   const db = await startDatabase()
   setAuthEffectRunner((effect) => databaseRuntime.runPromise(effect))

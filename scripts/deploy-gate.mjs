@@ -28,6 +28,9 @@ export function assessProbe(probe) {
   if (probe.expectShell && !String(probe.body).includes(shellMark)) {
     return { ok: false, reason: "missing app shell" }
   }
+  if (probe.expectText !== undefined && !String(probe.body).includes(probe.expectText)) {
+    return { ok: false, reason: "missing ai model" }
+  }
   return { ok: true, reason: "ok" }
 }
 
