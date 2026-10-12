@@ -390,9 +390,9 @@ Buku Siswa markdown is updated by hand. Index each bab with a content hash, and 
 
 The audit left a logged-in smoke test open. The path is onboarding, then generate, then review, then PDF, DOCX, kisi-kisi, and kartu soal. It also left a delivery-flag choice open. Hide every "Segera hadir" card, or turn koreksi on with autosave. Hold Dependabot #250. Close or rebase #238. Add SAS packs to the public bank, and recruit 20 co-design teachers. This history entry closes the audit item that asked for a README and ROADMAP update.
 
-### 2026-10-12 Pause until 14 Oct
+### 2026-10-12 Pause until 26 Oct 2026
 
-Faldi paused new work because usage is low. This entry is the state at the pause. A thread that already had a pull request open may finish that one pull request under the usual rule, then stop. The rule is tests, CI, a security review, and a live screenshot. No new thread, pull request, or fix starts before 14 Oct.
+Faldi paused new work because usage is low. This entry is the state at the pause. A thread that already had a pull request open may finish that one pull request under the usual rule, then stop. The rule is tests, CI, a security review, and a live screenshot. No new thread, pull request, or fix starts before 26 Oct 2026.
 
 #### Done and on the live site
 
@@ -430,7 +430,7 @@ The Tanggal Ujian save and the first-load CORS failure ("Terjadi kesalahan" on A
 
 #### Paused
 
-No new thread, pull request, or fix until 14 Oct.
+No new thread, pull request, or fix until 26 Oct 2026.
 
 The kelas 5 IPAS walkthrough, and a live check that a Pecahan sheet's diagrams match their kunci, wait on a teacher Google session. Agent desktops stop at "Masuk dengan Google".
 
@@ -438,7 +438,7 @@ A WhatsApp preview of a real shared sheet waits.
 
 The privacy placeholders wait on Faldi for the contact email and the retention periods.
 
-#### Resume order for 14 Oct
+#### Resume order for 26 Oct 2026
 
 1. Free disk on the VPS without removing the images the running containers are using. Then redeploy the merged commits that never went live. #286 is the one confirmed still on the old sample.
 2. Confirm #285 and #288 on the live site once a deploy can finish.
