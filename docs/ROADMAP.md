@@ -389,3 +389,62 @@ PDF materi upload already exists. The limit is 10 MB, and there is no page cap. 
 Buku Siswa markdown is updated by hand. Index each bab with a content hash, and re-index when the hash changes. Send only the selected bab to the model. Add a CI test that every ready manifest row has a parsable markdown file with at least one bab.
 
 The audit left a logged-in smoke test open. The path is onboarding, then generate, then review, then PDF, DOCX, kisi-kisi, and kartu soal. It also left a delivery-flag choice open. Hide every "Segera hadir" card, or turn koreksi on with autosave. Hold Dependabot #250. Close or rebase #238. Add SAS packs to the public bank, and recruit 20 co-design teachers. This history entry closes the audit item that asked for a README and ROADMAP update.
+
+### 2026-10-12 Pause until 14 Oct
+
+Faldi paused new work because usage is low. This entry is the state at the pause. A thread that already had a pull request open may finish that one pull request under the usual rule, then stop. The rule is tests, CI, a security review, and a live screenshot. No new thread, pull request, or fix starts before 14 Oct.
+
+#### Done and on the live site
+
+#280 (`22ab408`) defaults production AI to OpenAI `gpt-6-luna`. The in-container probe returned provider `openai` and model `gpt-6-luna`. A signed-in generate of kelas 4 Matematika Bab 2 Pecahan, 10 soal, exam `bf87c261-e117-44bb-83f2-885c84f32ac6`, finished in about 40 to 60 seconds with no error. Token usage was not recorded. An unauthenticated generate from the agent environment returned HTTP 401. Production dev login is off.
+
+#283 (`87652ef`) makes image publish wait for the quality job. That deploy succeeded and the site returned 200.
+
+#284 (`34a79e6`) publishes the UU PDP notice at `/privacy` and `/kebijakan-privasi`. The contact email and the retention periods are still marked `[PLACEHOLDER]`.
+
+#287 (`689d454`) upgrades better-auth to 1.7.7. That commit is inside the `34a79e6` deploy. The homepage and API health returned 200. A signed-in Google login was not run.
+
+#281 (`c79cc4f`) changes the landing trust bullet to "5 mapel" and keeps the honest per-subject coverage line. Its own deploy failed because the VPS disk was full. A later fetch of the homepage HTML already contained "5 mapel".
+
+#282 (`2d32524`) adds `og:url`, `og:type` `website`, `og:locale` `id_ID`, and a canonical link on the homepage. Those tags are in the live HTML. A real `/share/<slug>` page and a WhatsApp preview were not captured.
+
+Question bank, classes, online exam, and grading stay partial. `VITE_DELIVERY_ENABLED` stays off.
+
+#### Merged, not confirmed live
+
+#285 (`c32c7cc`) keys regenerate and pembahasan to the signed-in guru, and keys a student lockout to that student. Deploy run 38195113070 was still in progress at the pause.
+
+#286 (`e0b130b`) prints each choice letter once. Deploy run 38194068386 failed with `no space left on device` while registering an image layer. The live landing sample still showed `a. a. kalimat penjelas`.
+
+#288 (`dc40ea6`) fails the deploy smoke when the provider rejects the key. It is merged. A deploy of that commit was not confirmed before the pause.
+
+Deploys after #283 are hitting a full VPS disk. A dangling-image prune on the last successful deploy reclaimed 0 bytes. This environment cannot SSH to the VPS.
+
+#### Open
+
+#289 attaches topic diagrams that match the kunci. It was already open at the pause, so that thread may finish it and then stop.
+
+The Tanggal Ujian save and the first-load CORS failure ("Terjadi kesalahan" on Akun, Riwayat, and a fresh review page) were already being written and had no pull request number at the pause. Each of those threads may finish the one pull request it is already writing, then stop.
+
+#250, the major `@effect/ai-openai` bump, stays held. #245, #246, #247, #248, and #249 stay held. #238 stays open and untouched.
+
+#### Paused
+
+No new thread, pull request, or fix until 14 Oct.
+
+The kelas 5 IPAS walkthrough, and a live check that a Pecahan sheet's diagrams match their kunci, wait on a teacher Google session. Agent desktops stop at "Masuk dengan Google".
+
+A WhatsApp preview of a real shared sheet waits.
+
+The privacy placeholders wait on Faldi for the contact email and the retention periods.
+
+#### Resume order for 14 Oct
+
+1. Free disk on the VPS without removing the images the running containers are using. Then redeploy the merged commits that never went live. #286 is the one confirmed still on the old sample.
+2. Confirm #285 and #288 on the live site once a deploy can finish.
+3. If #289, the date-save pull request, or the CORS pull request is still open, finish those and no others.
+4. If the date save or the CORS fix never opened a pull request, start the date save first, then the CORS fix.
+5. With a teacher Google session, check a kelas 4 Pecahan sheet for at least two diagrams that match their kunci, then a kelas 5 IPAS sheet whose soal image prints legibly.
+6. Capture a real `/share/<slug>` page and a WhatsApp preview.
+7. Replace the privacy placeholders when the real contact and retention values exist.
+8. Keep #250, #245 to #249, and #238 held.
