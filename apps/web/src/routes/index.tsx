@@ -283,7 +283,7 @@ function LoginPage() {
                         : "flex gap-2"}
                     >
                       <span className="font-mono text-text-tertiary">{option.label}</span>
-                      <span>{` ${option.text}`}</span>
+                      <span>{option.text}</span>
                     </div>
                   )
                 })}

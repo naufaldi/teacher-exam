@@ -1,4 +1,4 @@
-import { formatMcqOption, type Question, SHEET_CREDIT } from "@teacher-exam/shared"
+import { formatMcqOption, MCQ_OPTION_LETTERS, type Question, SHEET_CREDIT } from "@teacher-exam/shared"
 import type { ReactNode } from "react"
 import { pointsPerQuestion } from "../../lib/points.js"
 import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
@@ -75,12 +75,10 @@ function PaperHeader({
   )
 }
 
-const OPTION_LETTERS = ["a", "b", "c", "d"] as const
-
 function McqOptionsList({ options }: { options: { a: string; b: string; c: string; d: string } }) {
   return (
     <div className="space-y-0.5 ml-4">
-      {OPTION_LETTERS.map((letter) => {
+      {MCQ_OPTION_LETTERS.map((letter) => {
         const option = formatMcqOption(letter, options[letter])
         return (
           <div key={letter} className="flex gap-2">

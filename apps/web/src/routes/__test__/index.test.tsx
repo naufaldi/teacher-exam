@@ -93,7 +93,8 @@ describe("LoginPage", () => {
 
     const sample = screen.getByRole("article", { name: "Contoh lembar ujian" })
     expect(sample.querySelector("ol, [type='a']")).toBeNull()
-    expect(sample.textContent).toContain("a. kalimat penjelas")
+    expect(sample.textContent).toContain("kalimat penjelas")
+    expect(sample.textContent?.match(/a\./g)?.length).toBe(1)
     expect(sample.textContent).not.toMatch(/a\.\s*a\./)
   })
 

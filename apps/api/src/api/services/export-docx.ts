@@ -2,6 +2,7 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   formatMcqOption,
+  MCQ_OPTION_LETTERS,
   type McqOptionLetter,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
@@ -120,7 +121,7 @@ function mcqOptionsTable(options: { a: string; b: string; c: string; d: string }
   }
   return new Table({
     width: { size: 100, type: "pct" },
-    rows: (["a", "b", "c", "d"] as const).map((letter) => row(letter))
+    rows: MCQ_OPTION_LETTERS.map((letter) => row(letter))
   })
 }
 

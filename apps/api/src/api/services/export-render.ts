@@ -2,6 +2,7 @@ import {
   type ExamWithQuestions,
   type ExportVariant,
   formatMcqOption,
+  MCQ_OPTION_LETTERS,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
   resolveHeaderKop,
@@ -79,11 +80,8 @@ function paperHeaderHtml(exam: ExportExam): string {
   ].join("")
 }
 
-type OptionLetter = "a" | "b" | "c" | "d"
-const OPTION_LETTERS: ReadonlyArray<OptionLetter> = ["a", "b", "c", "d"]
-
 function optionsHtml(options: { a: string; b: string; c: string; d: string }): string {
-  return OPTION_LETTERS.map((letter) => {
+  return MCQ_OPTION_LETTERS.map((letter) => {
     const option = formatMcqOption(letter, options[letter])
     return `<p><span class="opt-letter">${option.label}</span> <span>${renderMathText(option.text)}</span></p>`
   }).join("")
