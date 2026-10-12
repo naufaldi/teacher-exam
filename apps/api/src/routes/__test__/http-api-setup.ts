@@ -1,5 +1,6 @@
 import type { Layer } from "effect"
 import { buildTestHandler } from "../../api/__test__/test-harness"
+import type { PublicBankRateLimitTestOpts } from "../../api/middleware/ip-rate-limit"
 import type { AuthService } from "../../api/services/auth-service"
 import type { CurriculumService } from "../../api/services/curriculum-service"
 import type { ExportService } from "../../api/services/export-service"
@@ -16,10 +17,7 @@ export function buildHttpApiTestApp(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  publicBankRateLimit?: {
-    windows: ReadonlyArray<{ windowMs: number; max: number }>
-    now?: () => number
-  }
+  publicBankRateLimit?: PublicBankRateLimitTestOpts
   aiRateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number

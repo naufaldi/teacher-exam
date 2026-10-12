@@ -25,7 +25,11 @@ import { TemplatesLive } from "../handlers/templates"
 import { adjustGenerateResponseStatus } from "../lib/generate-response"
 import { attachRateLimitHeaders } from "../lib/rate-limit-response"
 import { AuthorizationLive, TestAuthorizationLive } from "../middleware/auth"
-import { createTestPublicBankIpRateLimitLive, PublicBankIpRateLimitLive } from "../middleware/ip-rate-limit"
+import {
+  createTestPublicBankIpRateLimitLive,
+  PublicBankIpRateLimitLive,
+  type PublicBankRateLimitTestOpts
+} from "../middleware/ip-rate-limit"
 import {
   AiGenerateRateLimitLive,
   createTestAiGenerateRateLimitLive,
@@ -93,10 +97,7 @@ function createMiddlewareLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  publicBankRateLimit?: {
-    windows: ReadonlyArray<{ windowMs: number; max: number }>
-    now?: () => number
-  }
+  publicBankRateLimit?: PublicBankRateLimitTestOpts
   aiRateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
@@ -129,10 +130,7 @@ export function createHttpApiTestLayer(opts: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
   }
-  publicBankRateLimit?: {
-    windows: ReadonlyArray<{ windowMs: number; max: number }>
-    now?: () => number
-  }
+  publicBankRateLimit?: PublicBankRateLimitTestOpts
   aiRateLimit?: {
     windows: ReadonlyArray<{ windowMs: number; max: number }>
     now?: () => number
