@@ -5,6 +5,7 @@ import {
   checkFigureAnswer,
   checkNumberLineDrawing,
   drawnClockTime,
+  figureForAnswer,
   renderFigureSvg
 } from "../diagram.js"
 import { type FigureSpec, FigureSpecSchema } from "../schemas/figures.js"
@@ -431,5 +432,73 @@ describe("diagram snapshots", () => {
       ],
       measure: { kind: "sum" }
     })).toMatchSnapshot()
+  })
+})
+
+describe("figureForAnswer", () => {
+  const options = { a: "3/4", b: "1/5", c: "1/8", d: "2/7" }
+
+  test("builds a fraction bar that matches a LaTeX kunci", () => {
+    const figure = figureForAnswer("fraction", {
+      _tag: "mcq_single",
+      options: { ...options, a: "$\\frac{3}{4}$" },
+      correct: "a"
+    }, "bar")
+    expect(figure).toEqual({
+      type: "fraction",
+      denominator: 4,
+      shaded: 3,
+      measure: "value",
+      form: "bar"
+    })
+    expect(checkFigureAnswer({
+      _tag: "mcq_single",
+      figure: figure ?? undefined,
+      options: { ...options, a: "$\\frac{3}{4}$" },
+      correct: "a"
+    })).toEqual({ _tag: "Match", derived: "3/4" })
+  })
+
+  test("refuses a fraction when a distractor is the same value", () => {
+    expect(figureForAnswer("fraction", {
+      _tag: "mcq_single",
+      options: { a: "1/2", b: "2/4", c: "1/8", d: "2/7" },
+      correct: "a"
+    })).toBeNull()
+  })
+
+  test("builds a number line mark for an integer kunci", () => {
+    expect(figureForAnswer("number_line", {
+      _tag: "mcq_single",
+      options: { a: "4", b: "5", c: "6", d: "7" },
+      correct: "a"
+    })).toEqual({
+      type: "number_line",
+      min: 0,
+      max: 10,
+      step: 1,
+      marks: [{ value: 4 }],
+      measure: { kind: "value", index: 0 }
+    })
+  })
+
+  test("builds a clock for a time kunci", () => {
+    expect(figureForAnswer("clock", {
+      _tag: "mcq_single",
+      options: { a: "7:30", b: "8:00", c: "6:30", d: "7:00" },
+      correct: "a"
+    })).toEqual({ type: "clock", hour: 7, minute: 30, measure: "time" })
+  })
+
+  test("builds a bar chart for a count kunci", () => {
+    expect(figureForAnswer("bar_chart", {
+      _tag: "mcq_single",
+      options: { a: "5", b: "2", c: "8", d: "4" },
+      correct: "a"
+    })).toEqual({
+      type: "bar_chart",
+      bars: [{ name: "A", value: 5 }],
+      measure: { kind: "value", index: 0 }
+    })
   })
 })

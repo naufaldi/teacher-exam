@@ -1,4 +1,4 @@
-import { Match, Option, pipe, Schema } from "effect"
+import { Either, Match, Option, pipe, Schema } from "effect"
 
 const WIDTH = 240
 const HEIGHT = 160
@@ -936,10 +936,16 @@ function parseDecimal(token: string): Exact | null {
   return reduce(BigInt(digits), 10n ** BigInt(frac.length), 0)
 }
 
-function parseQuantity(raw: string): Exact | null {
-  const normalized = raw
+function unwrapLatexFraction(raw: string): string {
+  return raw
     .trim()
     .replaceAll("$", "")
+    .replace(/\\+[dt]?frac\s*\{([+-]?\d+)\}\s*\{(\d+)\}/g, "$1/$2")
+    .trim()
+}
+
+function parseQuantity(raw: string): Exact | null {
+  const normalized = unwrapLatexFraction(raw)
     .replace(/\\pi/gi, "π")
     .replace(/\bpi\b/gi, "π")
     .replace(/\s*(cm²|cm2|m²|m2|cm|mm|kg|g|°|derajat)$/i, "")
@@ -1224,4 +1230,114 @@ export function checkFigureAnswer(question: DiagramQuestion): FigureCheck {
     return finishCheck(question, { _tag: "Time", hour: drawn.hour, minute: drawn.minute })
   }
   return finishCheck(question, derived)
+}
+
+export type TopicDiagramKind = "fraction" | "number_line" | "clock" | "bar_chart"
+
+function answerText(question: DiagramQuestion): string | null {
+  return Match.value(question).pipe(
+    Match.tag("mcq_single", (row) => row.options[row.correct]),
+    Match.tag("mcq_multi", () => null),
+    Match.tag("true_false", () => null),
+    Match.exhaustive
+  )
+}
+
+function writtenFraction(raw: string): { numerator: number; denominator: number } | null {
+  const match = unwrapLatexFraction(raw).match(/^(\d+)\s*\/\s*(\d+)$/)
+  const numeratorText = match?.[1]
+  const denominatorText = match?.[2]
+  if (numeratorText === undefined || denominatorText === undefined) return null
+  const numerator = Number(numeratorText)
+  const denominator = Number(denominatorText)
+  if (denominator < 2 || denominator > 12) return null
+  if (numerator > denominator) return null
+  return { numerator, denominator }
+}
+
+function integerQuantity(text: string): number | null {
+  const exact = parseQuantity(text)
+  if (exact === null || exact.pi !== 0 || exact.den !== 1n) return null
+  const value = Number(exact.num)
+  if (!Number.isSafeInteger(value)) return null
+  return value
+}
+
+function fractionCandidate(text: string, form: "bar" | "circle"): FigureSpec | null {
+  const written = writtenFraction(text)
+  if (written === null) return null
+  return {
+    type: "fraction",
+    denominator: written.denominator,
+    shaded: written.numerator,
+    measure: "value",
+    form
+  }
+}
+
+function numberLineWindow(value: number): { min: number; max: number } {
+  const min = value >= 0 && value <= 10 ? 0 : value - 5
+  return { min, max: min + 10 }
+}
+
+function numberLineCandidate(text: string): FigureSpec | null {
+  const value = integerQuantity(text)
+  if (value === null) return null
+  const { max, min } = numberLineWindow(value)
+  return {
+    type: "number_line",
+    min,
+    max,
+    step: 1,
+    marks: [{ value }],
+    measure: { kind: "value", index: 0 }
+  }
+}
+
+function clockCandidate(text: string): FigureSpec | null {
+  const time = parseTime(text)
+  if (time === null) return null
+  return { type: "clock", hour: time.hour, minute: time.minute, measure: "time" }
+}
+
+function barCandidate(text: string): FigureSpec | null {
+  const exact = parseQuantity(text)
+  if (exact === null || exact.pi !== 0 || exact.num < 0n) return null
+  const value = Number(exact.num) / Number(exact.den)
+  if (!Number.isFinite(value)) return null
+  return {
+    type: "bar_chart",
+    bars: [{ name: "A", value }],
+    measure: { kind: "value", index: 0 }
+  }
+}
+
+function candidateFigure(
+  kind: TopicDiagramKind,
+  text: string,
+  fractionForm: "bar" | "circle"
+): FigureSpec | null {
+  return Match.value(kind).pipe(
+    Match.when("fraction", () => fractionCandidate(text, fractionForm)),
+    Match.when("number_line", () => numberLineCandidate(text)),
+    Match.when("clock", () => clockCandidate(text)),
+    Match.when("bar_chart", () => barCandidate(text)),
+    Match.exhaustive
+  )
+}
+
+export function figureForAnswer(
+  kind: TopicDiagramKind,
+  question: DiagramQuestion,
+  fractionForm: "bar" | "circle" = "bar"
+): FigureSpec | null {
+  const text = answerText(question)
+  if (text === null) return null
+  const candidate = candidateFigure(kind, text, fractionForm)
+  if (candidate === null) return null
+  const decoded = Schema.decodeUnknownEither(FigureSpecSchema)(candidate)
+  if (Either.isLeft(decoded)) return null
+  const check = checkFigureAnswer({ ...question, figure: decoded.right })
+  if (check._tag !== "Match") return null
+  return decoded.right
 }

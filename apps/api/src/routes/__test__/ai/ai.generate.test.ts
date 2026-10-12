@@ -1,6 +1,5 @@
 import { db } from "@teacher-exam/db"
-import { checkFigureAnswer } from "@teacher-exam/shared"
-import type { FigureSpec } from "@teacher-exam/shared"
+import { checkFigureAnswer, type FigureSpec } from "@teacher-exam/shared"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
 import { TestCurriculumFailingLayer } from "../../../api/services/curriculum-service.js"
@@ -420,8 +419,9 @@ describe("POST /api/ai/generate", () => {
       topics: ["Bab 2 Pecahan"],
       title: "Matematika · Kelas 4 · Bab 2 Pecahan"
     })
-    const questionRows = Array.from({ length: 10 }, (_, index) =>
-      makeQuestionRow({ id: `q-${index + 1}`, examId: "exam-gen-1", number: index + 1 })
+    const questionRows = Array.from(
+      { length: 10 },
+      (_, index) => makeQuestionRow({ id: `q-${index + 1}`, examId: "exam-gen-1", number: index + 1 })
     )
     const insertChain = makeChain([])
     ;(db.insert as Mock).mockReturnValue(insertChain)
