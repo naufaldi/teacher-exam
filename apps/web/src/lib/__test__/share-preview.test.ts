@@ -25,6 +25,15 @@ describe("public preview files", () => {
     expect(sitemap).toContain("https://ujian-sekolah.naufaldi.com/bank-soal-publik")
     expect(image.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a")
   })
+
+  it("names the landing page url, type, locale, and canonical link", () => {
+    const html = readFileSync(join(webRoot, "index.html"), "utf8")
+
+    expect(html).toContain("property=\"og:url\" content=\"https://ujian-sekolah.naufaldi.com/\"")
+    expect(html).toContain("property=\"og:type\" content=\"website\"")
+    expect(html).toContain("property=\"og:locale\" content=\"id_ID\"")
+    expect(html).toContain("rel=\"canonical\" href=\"https://ujian-sekolah.naufaldi.com/\"")
+  })
 })
 
 describe("sharePreviewFromExam", () => {
@@ -67,5 +76,37 @@ describe("injectSharePreview", () => {
     expect(html).toContain("property=\"og:image\" content=\"https://ujian-sekolah.naufaldi.com/og.png\"")
     expect(html).toContain("<div id=\"root\"></div>")
     expect(html).not.toContain("Ujian Sekolah — Generator Soal")
+  })
+
+  it("replaces the landing url with the share page url, type, locale, and canonical link", () => {
+    const html = injectSharePreview(
+      [
+        "<!doctype html><html><head>",
+        "<title>Ujian Sekolah — Generator Soal</title>",
+        "<meta property=\"og:url\" content=\"https://ujian-sekolah.naufaldi.com/\" />",
+        "<link rel=\"canonical\" href=\"https://ujian-sekolah.naufaldi.com/\" />",
+        "</head><body><div id=\"root\"></div></body></html>"
+      ].join(""),
+      {
+        title: "Ulangan Narasi",
+        description: "Ulangan Narasi. Bahasa Indonesia Kelas 4 SD. Lembar ujian siap cetak.",
+        imageUrl: "https://ujian-sekolah.naufaldi.com/og.png",
+        pageUrl: "https://ujian-sekolah.naufaldi.com/share/share-abc"
+      }
+    )
+
+    expect(html).toContain(
+      "property=\"og:url\" content=\"https://ujian-sekolah.naufaldi.com/share/share-abc\""
+    )
+    expect(html).toContain("property=\"og:type\" content=\"website\"")
+    expect(html).toContain("property=\"og:locale\" content=\"id_ID\"")
+    expect(html).toContain(
+      "rel=\"canonical\" href=\"https://ujian-sekolah.naufaldi.com/share/share-abc\""
+    )
+    expect(html.match(/property="og:url"/g)).toHaveLength(1)
+    expect(html.match(/property="og:type"/g)).toHaveLength(1)
+    expect(html.match(/rel="canonical"/g)).toHaveLength(1)
+    expect(html).not.toContain("content=\"https://ujian-sekolah.naufaldi.com/\"")
+    expect(html).not.toContain("href=\"https://ujian-sekolah.naufaldi.com/\"")
   })
 })

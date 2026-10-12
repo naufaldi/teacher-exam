@@ -142,6 +142,14 @@ describe("share/$slug route", () => {
     expect(document.querySelector("meta[property=\"og:title\"]")?.getAttribute("content")).toBe(
       "Lembar Publik Bahasa Indonesia"
     )
+    expect(document.querySelector("meta[property=\"og:url\"]")?.getAttribute("content")).toBe(
+      "http://localhost:3000/share/share-abc123"
+    )
+    expect(document.querySelector("meta[property=\"og:type\"]")?.getAttribute("content")).toBe("website")
+    expect(document.querySelector("meta[property=\"og:locale\"]")?.getAttribute("content")).toBe("id_ID")
+    expect(document.querySelector("link[rel=\"canonical\"]")?.getAttribute("href")).toBe(
+      "http://localhost:3000/share/share-abc123"
+    )
   })
 
   it("renders exam sheet sections without auth context", () => {
