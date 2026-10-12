@@ -116,7 +116,7 @@ describe("renderExamHtml", () => {
     }, "soal")
     expect(html).toContain("<circle cx=\"126\" cy=\"76\" r=\"56\"")
     expect(html).toContain("<span class=\"opt-letter\">a.</span> <span>3</span>")
-    expect(html).toContain(".options { list-style: none;")
+    expect(html).toContain(".options { margin: 4px 0 0; }")
   })
 
   it("prints each PG, PG kompleks, and benar/salah label once", () => {
@@ -168,14 +168,13 @@ describe("renderExamHtml", () => {
       ]
     }, "soal")
 
-    const lists = html.match(/<ol class="options"[\s\S]*?<\/ol>/g) ?? []
+    const lists = html.match(/<div class="options"[\s\S]*?<\/div>/g) ?? []
     expect(lists).toEqual([
-      "<ol class=\"options\"><li><span class=\"opt-letter\">a.</span> <span>pohon</span></li><li><span class=\"opt-letter\">b.</span> <span>sungai</span></li><li><span class=\"opt-letter\">c.</span> <span>gunung</span></li><li><span class=\"opt-letter\">d.</span> <span>sekolah</span></li></ol>",
-      "<ol class=\"options\"><li><span class=\"opt-letter\">a.</span> <span>akar</span></li><li><span class=\"opt-letter\">b.</span> <span>daun</span></li><li><span class=\"opt-letter\">c.</span> <span>bunga</span></li><li><span class=\"opt-letter\">d.</span> <span>buah</span></li></ol>"
+      "<div class=\"options\"><p><span class=\"opt-letter\">a.</span> <span>pohon</span></p><p><span class=\"opt-letter\">b.</span> <span>sungai</span></p><p><span class=\"opt-letter\">c.</span> <span>gunung</span></p><p><span class=\"opt-letter\">d.</span> <span>sekolah</span></p></div>",
+      "<div class=\"options\"><p><span class=\"opt-letter\">a.</span> <span>akar</span></p><p><span class=\"opt-letter\">b.</span> <span>daun</span></p><p><span class=\"opt-letter\">c.</span> <span>bunga</span></p><p><span class=\"opt-letter\">d.</span> <span>buah</span></p></div>"
     ])
-    expect(html.match(/\.options \{[^}]+\}/)?.[0]).toBe(
-      ".options { list-style: none; padding-left: 0; margin: 4px 0 0; }"
-    )
+    expect(html.match(/\.options \{[^}]+\}/)?.[0]).toBe(".options { margin: 4px 0 0; }")
+    expect(html).not.toContain("<ol class=\"options\"")
     expect(html).toContain(
       "<table class=\"tf\"><thead><tr><th>Pernyataan</th><th>B</th><th>S</th></tr></thead><tbody><tr><td>1</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr><tr><td>2</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr><tr><td>3</td><td class=\"bs\">○</td><td class=\"bs\">○</td></tr></tbody></table>"
     )

@@ -1,6 +1,7 @@
 import {
   type ExamWithQuestions,
   type ExportVariant,
+  formatMcqOption,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
   resolveHeaderKop,
@@ -82,9 +83,10 @@ type OptionLetter = "a" | "b" | "c" | "d"
 const OPTION_LETTERS: ReadonlyArray<OptionLetter> = ["a", "b", "c", "d"]
 
 function optionsHtml(options: { a: string; b: string; c: string; d: string }): string {
-  return OPTION_LETTERS.map(
-    (letter) => `<li><span class="opt-letter">${letter}.</span> <span>${renderMathText(options[letter])}</span></li>`
-  ).join("")
+  return OPTION_LETTERS.map((letter) => {
+    const option = formatMcqOption(letter, options[letter])
+    return `<p><span class="opt-letter">${option.label}</span> <span>${renderMathText(option.text)}</span></p>`
+  }).join("")
 }
 
 function trueFalseTableHtml(statements: ReadonlyArray<{ text: string }>): string {
@@ -98,8 +100,8 @@ function trueFalseTableHtml(statements: ReadonlyArray<{ text: string }>): string
 
 function questionBodyHtml(q: ExportExam["questions"][number]): string {
   return Match.value(q).pipe(
-    Match.tag("mcq_single", (mcq) => `<ol class="options">${optionsHtml(mcq.options)}</ol>`),
-    Match.tag("mcq_multi", (mcq) => `<ol class="options">${optionsHtml(mcq.options)}</ol>`),
+    Match.tag("mcq_single", (mcq) => `<div class="options">${optionsHtml(mcq.options)}</div>`),
+    Match.tag("mcq_multi", (mcq) => `<div class="options">${optionsHtml(mcq.options)}</div>`),
     Match.tag("true_false", (tf) => trueFalseTableHtml(tf.statements)),
     Match.exhaustive
   )
@@ -258,8 +260,8 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .soal-grid { column-count: 2; column-gap: 32px; font-size: 13px; line-height: 1.5; }
 .soal { break-inside: avoid; margin-bottom: 16px; }
 .soal .num { font-weight: 700; margin-right: 4px; }
-.options { list-style: none; padding-left: 0; margin: 4px 0 0; }
-.options li { margin: 1px 0; }
+.options { margin: 4px 0 0; }
+.options p { margin: 1px 0; }
 .opt-letter { font-weight: 600; margin-right: 4px; }
 .figure { text-align: center; margin: 8px 0; }
 .figure svg { max-width: 240px; height: auto; }

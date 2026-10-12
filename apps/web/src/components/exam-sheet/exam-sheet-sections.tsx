@@ -1,4 +1,4 @@
-import { type Question, SHEET_CREDIT } from "@teacher-exam/shared"
+import { formatMcqOption, type Question, SHEET_CREDIT } from "@teacher-exam/shared"
 import type { ReactNode } from "react"
 import { pointsPerQuestion } from "../../lib/points.js"
 import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
@@ -79,16 +79,19 @@ const OPTION_LETTERS = ["a", "b", "c", "d"] as const
 
 function McqOptionsList({ options }: { options: { a: string; b: string; c: string; d: string } }) {
   return (
-    <ol className="space-y-0.5 ml-4">
-      {OPTION_LETTERS.map((letter) => (
-        <li key={letter} className="flex gap-2">
-          <span className="font-semibold">{letter}.</span>
-          <span>
-            <MathText text={options[letter]} />
-          </span>
-        </li>
-      ))}
-    </ol>
+    <div className="space-y-0.5 ml-4">
+      {OPTION_LETTERS.map((letter) => {
+        const option = formatMcqOption(letter, options[letter])
+        return (
+          <div key={letter} className="flex gap-2">
+            <span className="font-semibold">{option.label}</span>
+            <span>
+              <MathText text={option.text} />
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

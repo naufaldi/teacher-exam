@@ -27,12 +27,19 @@ describe("A4 choice labels", () => {
     const { container } = render(
       <McqOptionsList options={{ a: "pohon", b: "sungai", c: "gunung", d: "sekolah" }} />
     )
-    const list = container.querySelector("ol")
-    expect(list?.getAttribute("type")).toBeNull()
-    expect(list?.className ?? "").not.toMatch(/list-\[lower-alpha\]|list-alpha/)
-    expect(list?.textContent).toBe("a.pohonb.sungaic.gunungd.sekolah")
-    expect(list?.textContent?.match(/a\./g)?.length).toBe(1)
-    expect(list?.textContent?.match(/b\./g)?.length).toBe(1)
+    expect(container.querySelector("ol")).toBeNull()
+    expect(container.textContent).toBe("a.pohonb.sungaic.gunungd.sekolah")
+    expect(container.textContent?.match(/a\./g)?.length).toBe(1)
+    expect(container.textContent?.match(/b\./g)?.length).toBe(1)
+  })
+
+  it("prints a letter once when the choice text already includes it", () => {
+    const { container } = render(
+      <McqOptionsList options={{ a: "a. pohon", b: "b. sungai", c: "c. gunung", d: "d. sekolah" }} />
+    )
+    expect(container.textContent).toBe("a.pohonb.sungaic.gunungd.sekolah")
+    expect(container.textContent).not.toMatch(/a\.\s*a\./)
+    expect(container.textContent?.match(/a\./g)?.length).toBe(1)
   })
 
   it("prints each benar/salah statement once", () => {

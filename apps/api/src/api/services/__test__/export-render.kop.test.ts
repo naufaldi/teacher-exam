@@ -103,6 +103,30 @@ describe("paper header kop", () => {
     expect(zipNames(bytes).join("\n")).toMatch(/word\/media\/.+\.png/)
   })
 
+  it("prints one letter in html and docx when the choice text already has that letter", async () => {
+    const exam = makeExam()
+    const first = exam.questions[0]
+    if (first === undefined || first._tag !== "mcq_single") throw new Error("fixture soal missing")
+    const doubled = {
+      ...exam,
+      questions: [{
+        ...first,
+        options: {
+          a: "a. kalimat penjelas",
+          b: "b. gagasan utama",
+          c: "c. kalimat tanya",
+          d: "d. kalimat seru"
+        }
+      }]
+    }
+    const html = renderExamHtml(doubled, "soal")
+    expect(html).toContain("<span class=\"opt-letter\">a.</span> <span>kalimat penjelas</span>")
+    expect(html).not.toContain("a. a.")
+    const xml = docxDocumentXml(await renderExamDocx(doubled, "soal")).replace(/<[^>]+>/g, "")
+    expect(xml).toContain("kalimat penjelas")
+    expect(xml).not.toMatch(/a\.\s*a\./)
+  })
+
   it("omits the docx image when the logo is null", async () => {
     const bytes = await renderExamDocx(
       withKop({ name: SCHOOL, address: ADDRESS, logoDataUrl: null }),
