@@ -1,4 +1,5 @@
 import { createFileRoute, isRedirect, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { formatMcqOption, type McqOptionLetter } from "@teacher-exam/shared"
 import { PaperCard } from "@teacher-exam/ui"
 import { AlertCircle, BookOpen, Check, Printer } from "lucide-react"
 import { useState } from "react"
@@ -6,6 +7,13 @@ import { getSession, signIn } from "../lib/auth-client"
 import { devLogin, isDevLoginEnabled } from "../lib/dev-login.js"
 
 type LoginSearch = { reason?: "session_expired" }
+
+const SAMPLE_CHOICES: ReadonlyArray<{ letter: McqOptionLetter; body: string; marked: boolean }> = [
+  { letter: "a", body: "kalimat penjelas", marked: false },
+  { letter: "b", body: "gagasan utama", marked: true },
+  { letter: "c", body: "kalimat tanya", marked: false },
+  { letter: "d", body: "kalimat seru", marked: false }
+]
 
 export const Route = createFileRoute("/")({
   validateSearch: (search): LoginSearch => {
@@ -264,24 +272,22 @@ function LoginPage() {
               <p>
                 <span className="font-bold">1.</span> Ide pokok dalam sebuah paragraf disebut juga&hellip;
               </p>
-              <ol className="flex flex-col gap-1.5 pl-5" type="a">
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">a.</span>
-                  <span>kalimat penjelas</span>
-                </li>
-                <li className="flex gap-2 -mx-2 px-2 py-0.5 rounded-xs bg-accent-50">
-                  <span className="font-mono text-text-tertiary">b.</span>
-                  <span>gagasan utama</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">c.</span>
-                  <span>kalimat tanya</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">d.</span>
-                  <span>kalimat seru</span>
-                </li>
-              </ol>
+              <div className="flex flex-col gap-1.5 pl-5">
+                {SAMPLE_CHOICES.map((choice) => {
+                  const option = formatMcqOption(choice.letter, choice.body)
+                  return (
+                    <div
+                      key={choice.letter}
+                      className={choice.marked
+                        ? "flex gap-2 -mx-2 px-2 py-0.5 rounded-xs bg-accent-50"
+                        : "flex gap-2"}
+                    >
+                      <span className="font-mono text-text-tertiary">{option.label}</span>
+                      <span>{option.text}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="mt-2 flex items-center justify-between border-t border-kertas-200 pt-4 font-mono text-caption text-text-tertiary">

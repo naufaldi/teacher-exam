@@ -88,6 +88,16 @@ describe("index.beforeLoad", () => {
 })
 
 describe("LoginPage", () => {
+  it("shows each sample choice letter once", () => {
+    render(<LoginPage />)
+
+    const sample = screen.getByRole("article", { name: "Contoh lembar ujian" })
+    expect(sample.querySelector("ol, [type='a']")).toBeNull()
+    expect(sample.textContent).toContain("kalimat penjelas")
+    expect(sample.textContent?.match(/a\./g)?.length).toBe(1)
+    expect(sample.textContent).not.toMatch(/a\.\s*a\./)
+  })
+
   it("shows the sample sheet before the login control on a phone", () => {
     render(<LoginPage />)
 

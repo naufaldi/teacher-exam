@@ -1,6 +1,9 @@
 import {
   type ExamWithQuestions,
   type ExportVariant,
+  formatMcqOption,
+  MCQ_OPTION_LETTERS,
+  type McqOptionLetter,
   type PublicExamWithQuestions,
   resolveExamSubjectLabel,
   resolveHeaderKop,
@@ -104,16 +107,21 @@ function headerParagraphs(exam: ExportExam): Array<Paragraph> {
 }
 
 function mcqOptionsTable(options: { a: string; b: string; c: string; d: string }): Table {
-  const row = (letter: string, text: string) =>
-    new TableRow({
+  const row = (letter: McqOptionLetter) => {
+    const option = formatMcqOption(letter, options[letter])
+    return new TableRow({
       children: [
-        new TableCell({ width: { size: 24, type: "pct" }, children: [new Paragraph(`${letter}.`)] }),
-        new TableCell({ children: [new Paragraph(plainText(text))] })
+        new TableCell({
+          width: { size: 24, type: "pct" },
+          children: [new Paragraph(option.label)]
+        }),
+        new TableCell({ children: [new Paragraph(plainText(option.text))] })
       ]
     })
+  }
   return new Table({
     width: { size: 100, type: "pct" },
-    rows: ["a", "b", "c", "d"].map((l) => row(l, options[l as "a" | "b" | "c" | "d"]))
+    rows: MCQ_OPTION_LETTERS.map((letter) => row(letter))
   })
 }
 
