@@ -1,4 +1,4 @@
-import { account, session, user, verification } from "@teacher-exam/db"
+import { account, session, user, verification } from "@teacher-exam/db/schema"
 import { recordFunnelStage } from "@teacher-exam/shared/funnel"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"

@@ -38,7 +38,7 @@
     "@sentry/node": "^11.6.0",
     "@teacher-exam/db": "workspace:*",
     "@teacher-exam/shared": "workspace:*",
-    "better-auth": "~1.6.33",
+    "better-auth": "~1.7.7",
     "docx": "^9.5.1",
     "drizzle-orm": "^0.45.2",
     "effect": "^3.21.2",
