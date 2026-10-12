@@ -5,6 +5,7 @@ import type { ReactElement, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Route as AkunRoute } from "../_auth.akun"
 import { Route as PolicyRoute } from "../kebijakan-privasi"
+import { Route as PrivacyRoute } from "../privacy"
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const orig = await importOriginal<typeof TanStackRouter>()
@@ -24,10 +25,55 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 })
 
 const PolicyPage = PolicyRoute.options.component
+const PrivacyPage = PrivacyRoute.options.component
 const AkunPage = AkunRoute.options.component
 
-if (PolicyPage === undefined || AkunPage === undefined) {
+if (PolicyPage === undefined || PrivacyPage === undefined || AkunPage === undefined) {
   throw new Error("privacy route component missing")
+}
+
+const NOTICE_HEADINGS = [
+  "Data yang dikumpulkan",
+  "Tujuan pemrosesan",
+  "Jangka waktu penyimpanan",
+  "Permintaan penghapusan",
+  "Kontak",
+  "Pihak ketiga"
+] as const
+
+function expectPrivacyNotice() {
+  for (const heading of NOTICE_HEADINGS) {
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument()
+  }
+  expect(screen.getByText("Menghapus akun menghapus data tersebut.")).toBeInTheDocument()
+  expect(
+    screen.getByText("[PLACEHOLDER] jangka waktu penyimpanan akun dan profil guru belum ditetapkan.")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText("[PLACEHOLDER] jangka waktu penyimpanan ujian, soal, dan berkas PDF belum ditetapkan.")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText("[PLACEHOLDER] jangka waktu penyimpanan laporan kesalahan di Sentry belum ditetapkan.")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText("[PLACEHOLDER] alamat email kontak privasi belum ditetapkan.")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText(
+      "Masuk memakai Google. Google menerima permintaan masuk dan mengirim nama, email, dan foto profil."
+    )
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText(
+      "Ujian Sekolah mengirim teks soal dan berkas PDF ke penyedia AI yang sedang dipakai. Penyedia itu adalah Anthropic, OpenAI, atau MiniMax."
+    )
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText(
+      "Sentry menerima laporan kesalahan dan nama tahap pemakaian ketika pemantauan kesalahan dinyalakan."
+    )
+  ).toBeInTheDocument()
+  expect(screen.queryByText("Halaman tidak ditemukan")).not.toBeInTheDocument()
 }
 
 describe("kebijakan privasi", () => {
@@ -37,6 +83,18 @@ describe("kebijakan privasi", () => {
     expect(
       screen.getByText("Menghapus akun menghapus data tersebut.")
     ).toBeInTheDocument()
+  })
+
+  it("shows the same UU PDP notice as /privacy", () => {
+    render(<PolicyPage />)
+    expectPrivacyNotice()
+  })
+})
+
+describe("/privacy", () => {
+  it("shows the UU PDP notice instead of the unknown-page shell", () => {
+    render(<PrivacyPage />)
+    expectPrivacyNotice()
   })
 })
 

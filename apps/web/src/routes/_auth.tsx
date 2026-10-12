@@ -167,7 +167,7 @@ function AuthLayout() {
           <Outlet />
         </main>
         <footer className="max-w-[var(--container-app)] mx-auto px-6 pb-8 text-caption text-text-tertiary">
-          <Link to="/kebijakan-privasi" className="hover:text-text-primary">
+          <Link to="/privacy" className="hover:text-text-primary">
             Kebijakan privasi
           </Link>
         </footer>

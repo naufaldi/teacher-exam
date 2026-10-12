@@ -175,6 +175,15 @@ describe("AuthLayout", () => {
     expect(screen.getByRole("link", { name: "Analitik" })).toHaveAttribute("href", "/analytics")
   })
 
+  it("links the privacy page from the footer", () => {
+    render(<AuthLayout />)
+
+    expect(screen.getByRole("link", { name: "Kebijakan privasi" })).toHaveAttribute(
+      "href",
+      "/privacy"
+    )
+  })
+
   it("links help button to notasi matematika guide in a new tab", () => {
     render(<AuthLayout />)
     const help = screen.getByRole("link", { name: "Bantuan" })
