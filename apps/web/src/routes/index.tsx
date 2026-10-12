@@ -138,6 +138,17 @@ function LoginPage() {
               Masuk dengan Google
             </button>
 
+            <p className="text-caption text-text-tertiary">
+              Dengan masuk, Anda menyetujui{" "}
+              <Link
+                to="/privacy"
+                className="font-medium text-primary-700 hover:text-primary-800"
+              >
+                Kebijakan privasi
+              </Link>
+              .
+            </p>
+
             {showDevLogin ?
               (
                 <div className="flex flex-col gap-2 self-start">
@@ -209,7 +220,7 @@ function LoginPage() {
             4–6. Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
           </p>
           <Link
-            to="/kebijakan-privasi"
+            to="/privacy"
             className="mt-2 inline-block font-medium text-primary-700 hover:text-primary-800"
           >
             Kebijakan privasi

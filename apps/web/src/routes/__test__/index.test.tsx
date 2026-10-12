@@ -135,6 +135,16 @@ describe("LoginPage", () => {
     expect(screen.getAllByRole("main")).toHaveLength(1)
   })
 
+  it("links the privacy page next to signup", () => {
+    render(<LoginPage />)
+
+    const links = screen.getAllByRole("link", { name: "Kebijakan privasi" })
+    expect(links).toHaveLength(2)
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/privacy")
+    }
+  })
+
   it("starts Google sign-in with an absolute dashboard callback URL", async () => {
     const user = userEvent.setup()
     render(<LoginPage />)
