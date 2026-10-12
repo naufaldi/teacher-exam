@@ -8,6 +8,9 @@ const SUBJECT_LABELS: Record<string, string> = {
 
 export const OG_IMAGE_PATH = "/og.png"
 
+const OG_TYPE = "website"
+const OG_LOCALE = "id_ID"
+
 export const LANDING_DESCRIPTION =
   "Lembar ujian siap cetak untuk SD. Susun soal Kurikulum Merdeka kelas 1–6 dan unduh PDF."
 
@@ -62,15 +65,19 @@ export function injectSharePreview(html: string, meta: SharePreviewMeta): string
   const withoutPreview = html
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${title}</title>`)
     .replace(
-      /<meta\s+(?:name|property)="(?:description|og:title|og:description|og:image|og:url|twitter:card)"[^>]*>\s*/gi,
+      /<meta\s+(?:name|property)="(?:description|og:title|og:description|og:image|og:url|og:type|og:locale|twitter:card)"[^>]*>\s*/gi,
       ""
     )
+    .replace(/<link\s+rel="canonical"[^>]*>\s*/gi, "")
   const tags = [
     `<meta name="description" content="${description}" />`,
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
     `<meta property="og:image" content="${imageUrl}" />`,
     `<meta property="og:url" content="${pageUrl}" />`,
+    `<meta property="og:type" content="${OG_TYPE}" />`,
+    `<meta property="og:locale" content="${OG_LOCALE}" />`,
+    `<link rel="canonical" href="${pageUrl}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`
   ].join("\n    ")
   return withoutPreview.replace(/<\/head>/i, `    ${tags}\n  </head>`)
@@ -89,6 +96,19 @@ function upsertMeta(attr: "name" | "property", key: string, content: string): vo
   document.head.append(meta)
 }
 
+function upsertLink(rel: string, href: string): void {
+  const selector = `link[rel="${rel}"]`
+  const existing = document.head.querySelector(selector)
+  if (existing) {
+    existing.setAttribute("href", href)
+    return
+  }
+  const link = document.createElement("link")
+  link.setAttribute("rel", rel)
+  link.setAttribute("href", href)
+  document.head.append(link)
+}
+
 export function applyDocumentPreview(meta: SharePreviewMeta): void {
   document.title = meta.title
   upsertMeta("name", "description", meta.description)
@@ -96,5 +116,8 @@ export function applyDocumentPreview(meta: SharePreviewMeta): void {
   upsertMeta("property", "og:description", meta.description)
   upsertMeta("property", "og:image", meta.imageUrl)
   upsertMeta("property", "og:url", meta.pageUrl)
+  upsertMeta("property", "og:type", OG_TYPE)
+  upsertMeta("property", "og:locale", OG_LOCALE)
+  upsertLink("canonical", meta.pageUrl)
   upsertMeta("name", "twitter:card", "summary_large_image")
 }
