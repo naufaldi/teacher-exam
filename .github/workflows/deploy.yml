@@ -28,7 +28,7 @@ jobs:
         run: echo "commit_hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
   build-and-push-api:
-    needs: commit-hash
+    needs: [commit-hash, quality]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
             ${{ env.API_IMAGE }}:latest
 
   build-and-push-web:
-    needs: commit-hash
+    needs: [commit-hash, quality]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
