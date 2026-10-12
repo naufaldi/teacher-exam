@@ -58,7 +58,7 @@ function GoogleIcon() {
 
 const TRUST_POINTS = [
   "Print A4 siap pakai",
-  "Bahasa Indonesia & Pendidikan Pancasila",
+  "5 mapel",
   "Gratis untuk guru SD"
 ] as const
 

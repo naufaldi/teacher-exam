@@ -115,6 +115,13 @@ describe("LoginPage", () => {
     expect(screen.queryByText(/Kelas 1–6 · Sesuai Kurikulum Merdeka/)).not.toBeInTheDocument()
   })
 
+  it("shows 5 mapel in the trust list", () => {
+    render(<LoginPage />)
+
+    expect(screen.queryByText("Bahasa Indonesia & Pendidikan Pancasila")).not.toBeInTheDocument()
+    expect(screen.getByText("5 mapel")).toBeInTheDocument()
+  })
+
   it("names the product Ujian Sekolah on the landing", () => {
     render(<LoginPage />)
 
