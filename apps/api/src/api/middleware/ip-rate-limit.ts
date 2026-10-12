@@ -80,6 +80,54 @@ export function publicBankClientKey(
   return "bank:anonymous"
 }
 
+function stringField(body: unknown, key: string): string {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return ""
+  const value = Reflect.get(body, key)
+  return typeof value === "string" ? value.trim() : ""
+}
+
+export function studentLockoutKey(sessionCode: string, body: unknown): string {
+  const token = stringField(body, "token")
+  if (token.length > 0) return `student:${sessionCode}:token:${token}`
+  const name = stringField(body, "studentName").toLowerCase()
+  if (name.length > 0) {
+    return `student:${sessionCode}:name:${name}|${stringField(body, "identifier").toLowerCase()}`
+  }
+  return `student:${sessionCode}:unidentified`
+}
+
+type SessionRateSubject = {
+  readonly code: string
+  readonly action: "lobby" | "write"
+}
+
+function sessionRateSubject(url: string): SessionRateSubject | undefined {
+  const path = url.split("?")[0] ?? url
+  const match = /^\/api\/sessions\/([^/]+)(?:\/(start|submit))?$/.exec(path)
+  const rawCode = match?.[1]
+  if (rawCode === undefined || rawCode.length === 0) return undefined
+  const code = decodeURIComponent(rawCode)
+  const action = match?.[2]
+  if (action === "start" || action === "submit") return { code, action: "write" }
+  return { code, action: "lobby" }
+}
+
+function limitKey(
+  request: HttpServerRequest.HttpServerRequest
+): Effect.Effect<string> {
+  const subject = sessionRateSubject(request.url)
+  if (subject === undefined) {
+    return Effect.succeed(
+      publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request))
+    )
+  }
+  if (subject.action === "lobby") return Effect.succeed(`student:${subject.code}:lobby`)
+  return request.json.pipe(
+    Effect.catchAll(() => Effect.succeed({})),
+    Effect.map((body) => studentLockoutKey(subject.code, body))
+  )
+}
+
 export class PublicBankIpRateLimit extends HttpApiMiddleware.Tag<PublicBankIpRateLimit>()(
   "PublicBankIpRateLimit",
   { failure: ApiRateLimited }
@@ -112,9 +160,8 @@ function peerFromRequest(request: HttpServerRequest.HttpServerRequest): PublicBa
 function makeIpRateLimitMiddleware(checker: RateLimitChecker): PublicBankIpRateLimit["Type"] {
   return Effect.gen(function*() {
     const request = yield* HttpServerRequest.HttpServerRequest
-    const result = checker.check(
-      publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request))
-    )
+    const key = yield* limitKey(request)
+    const result = checker.check(key)
     if (!result.allowed) {
       return yield* Effect.fail(
         new ApiRateLimited({
@@ -130,8 +177,9 @@ function makeIpRateLimitMiddleware(checker: RateLimitChecker): PublicBankIpRateL
 function makePersistedIpRateLimitMiddleware(): PublicBankIpRateLimit["Type"] {
   return Effect.gen(function*() {
     const request = yield* HttpServerRequest.HttpServerRequest
+    const key = yield* limitKey(request)
     const result = yield* takePersistedRateLimitHit(
-      publicBankClientKey(readConnectingIp(request.headers), peerFromRequest(request)),
+      key,
       PUBLIC_BANK_RATE_WINDOWS,
       Date.now()
     ).pipe(Effect.orDie)

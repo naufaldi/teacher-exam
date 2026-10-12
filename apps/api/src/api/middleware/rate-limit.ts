@@ -46,7 +46,13 @@ function makeRateLimitMiddleware(checker: RateLimitChecker): GlobalRateLimit["Ty
 
 function makeTestRateLimitMiddleware(checker: RateLimitChecker): AiGenerateRateLimit["Type"] {
   return Effect.gen(function*() {
-    const result = checker.check("test-user")
+    const request = yield* HttpServerRequest.HttpServerRequest
+    const session = yield* Effect.tryPromise({
+      try: () => auth.api.getSession({ headers: request.headers }),
+      catch: () => null
+    })
+    const userId = session?.user?.id ?? "test-user"
+    const result = checker.check(userId)
     if (!result.allowed) {
       return yield* Effect.fail(
         new ApiRateLimited({
