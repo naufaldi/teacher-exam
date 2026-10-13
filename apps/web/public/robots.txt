@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /share/
+Allow: /bank-soal-publik
+Disallow: /dashboard
+Disallow: /generate
+Disallow: /api/

@@ -65,6 +65,57 @@ describe("convertGeneratedToQuestion", () => {
     expect(q.number).toBe(3)
     expect(q.validationStatus).toBeNull()
   })
+
+  it("accepts a circle area key of 49π", () => {
+    const q = convertGeneratedToQuestion({
+      ...makeFakeQuestionShape(1),
+      option_a: "49π",
+      correct_answer: "a",
+      figure: { type: "circle", radius: 7, measure: { kind: "area" } }
+    }, {
+      id: crypto.randomUUID(),
+      examId: crypto.randomUUID(),
+      number: 1,
+      status: "accepted",
+      createdAt: new Date("2026-01-01T00:00:00.000Z")
+    })
+    expect(q.validationStatus).toBeNull()
+    expect(q.figure).toEqual({ type: "circle", radius: 7, measure: { kind: "area" } })
+  })
+
+  it("flags a circle area key that is not 49π", () => {
+    const q = convertGeneratedToQuestion({
+      ...makeFakeQuestionShape(1),
+      option_a: "154",
+      correct_answer: "a",
+      figure: { type: "circle", radius: 7, measure: { kind: "area" } }
+    }, {
+      id: crypto.randomUUID(),
+      examId: crypto.randomUUID(),
+      number: 1,
+      status: "accepted",
+      createdAt: new Date("2026-01-01T00:00:00.000Z")
+    })
+    expect(q.figure).toBeNull()
+    expect(q.validationStatus).toBe("needs_review")
+    expect(q.validationReason).toBe("Kunci tidak sesuai diagram: diagram 49π; teks kunci 154")
+  })
+
+  it("asks for a measure when a generated circle omits one", () => {
+    const q = convertGeneratedToQuestion({
+      ...makeFakeQuestionShape(1),
+      figure: { type: "circle", radius: 7, label: "r = 7 cm" }
+    }, {
+      id: crypto.randomUUID(),
+      examId: crypto.randomUUID(),
+      number: 1,
+      status: "accepted",
+      createdAt: new Date("2026-01-01T00:00:00.000Z")
+    })
+    expect(q.figure).toBeNull()
+    expect(q.validationStatus).toBe("needs_review")
+    expect(q.validationReason).toBe("Diagram belum menyatakan besaran yang ditanyakan.")
+  })
 })
 
 describe("failureReasonForNumber", () => {

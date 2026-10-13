@@ -1,7 +1,18 @@
+export {
+  checkClockDrawing,
+  checkFigureAnswer,
+  checkNumberLineDrawing,
+  drawnClockTime,
+  figureForAnswer,
+  renderFigureSvg
+} from "./diagram.js"
+export type { DiagramQuestion, FigureCheck, TopicDiagramKind } from "./diagram.js"
 export * from "./exam-title.js"
 export * from "./format-math-fallback.js"
+export * from "./format-mcq-option.js"
 export * from "./parse-math-text.js"
 export * from "./repair-matematika-latex.js"
+export * from "./schemas/account.js"
 export * from "./schemas/analytics.js"
 export * from "./schemas/api.js"
 export * from "./schemas/bank.js"
@@ -36,5 +47,7 @@ export * from "./schemas/pdf-upload.js"
 export * from "./schemas/primitives.js"
 export * from "./schemas/results.js"
 export * from "./schemas/sessions.js"
+export * from "./schemas/soal-image.js"
 export * from "./schemas/templates.js"
+export * from "./sheet-credit.js"
 export * from "./subject-label.js"

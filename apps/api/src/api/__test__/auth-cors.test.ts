@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest"
 import { applyAuthCors, authPreflightResponse } from "../auth-cors"
 
 const prodEnv = {
-  APP_URL: "https://ujian-sekolah.faldi.xyz",
-  BETTER_AUTH_URL: "https://api-ujian-sekolah.faldi.xyz"
+  APP_URL: "https://ujian-sekolah.naufaldi.com",
+  BETTER_AUTH_URL: "https://api-ujian-sekolah.naufaldi.com"
 }
 
 describe("authPreflightResponse", () => {
   it("returns 204 with CORS headers for allowed production origin", () => {
-    const request = new Request("https://api-ujian-sekolah.faldi.xyz/api/auth/sign-in/social", {
+    const request = new Request("https://api-ujian-sekolah.naufaldi.com/api/auth/sign-in/social", {
       method: "OPTIONS",
       headers: {
-        Origin: "https://ujian-sekolah.faldi.xyz",
+        Origin: "https://ujian-sekolah.naufaldi.com",
         "Access-Control-Request-Method": "POST",
         "Access-Control-Request-Headers": "content-type"
       }
@@ -20,7 +20,7 @@ describe("authPreflightResponse", () => {
     const response = authPreflightResponse(request, prodEnv)
 
     expect(response.status).toBe(204)
-    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ujian-sekolah.faldi.xyz")
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ujian-sekolah.naufaldi.com")
     expect(response.headers.get("Access-Control-Allow-Credentials")).toBe("true")
     expect(response.headers.get("Access-Control-Allow-Methods")).toContain("POST")
     expect(response.headers.get("Access-Control-Allow-Headers")).toContain("content-type")
@@ -28,7 +28,7 @@ describe("authPreflightResponse", () => {
   })
 
   it("does not allow disallowed origins", () => {
-    const request = new Request("https://api-ujian-sekolah.faldi.xyz/api/auth/sign-in/social", {
+    const request = new Request("https://api-ujian-sekolah.naufaldi.com/api/auth/sign-in/social", {
       method: "OPTIONS",
       headers: {
         Origin: "https://evil.example.com",
@@ -44,9 +44,9 @@ describe("authPreflightResponse", () => {
 
 describe("applyAuthCors", () => {
   it("adds CORS headers to auth responses for allowed origin", () => {
-    const request = new Request("https://api-ujian-sekolah.faldi.xyz/api/auth/sign-in/social", {
+    const request = new Request("https://api-ujian-sekolah.naufaldi.com/api/auth/sign-in/social", {
       method: "POST",
-      headers: { Origin: "https://ujian-sekolah.faldi.xyz" }
+      headers: { Origin: "https://ujian-sekolah.naufaldi.com" }
     })
     const upstream = new Response(JSON.stringify({ url: "https://accounts.google.com/" }), {
       status: 200,
@@ -56,13 +56,13 @@ describe("applyAuthCors", () => {
     const response = applyAuthCors(request, upstream, prodEnv)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ujian-sekolah.faldi.xyz")
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ujian-sekolah.naufaldi.com")
     expect(response.headers.get("Access-Control-Allow-Credentials")).toBe("true")
     expect(response.headers.get("Content-Type")).toBe("application/json")
   })
 
   it("does not add allow-origin for disallowed origins", () => {
-    const request = new Request("https://api-ujian-sekolah.faldi.xyz/api/auth/session", {
+    const request = new Request("https://api-ujian-sekolah.naufaldi.com/api/auth/session", {
       method: "GET",
       headers: { Origin: "https://evil.example.com" }
     })

@@ -5,6 +5,7 @@ import { File } from "node:buffer"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { PDFDocument } from "pdf-lib"
 import { describe, expect, it, type Mock, vi } from "vitest"
 import { makeQueryEffect } from "../../__test__/mock-db.js"
 import { type AppDb, DbClient } from "../../api/services/db.js"
@@ -68,6 +69,44 @@ function buildTestLayer() {
 }
 
 describe("runIngestJob", () => {
+  it("fails a scanned PDF with the scan message", async () => {
+    const blank = await PDFDocument.create()
+    blank.addPage()
+    const blankBytes = Buffer.from(await blank.save())
+    const sets: Array<Record<string, unknown>> = []
+    ;(db.select as Mock)
+      .mockReturnValueOnce(makeQueryEffect([uploadRow]))
+      .mockReturnValueOnce(makeQueryEffect([ingestJobRow]))
+    ;(db.update as Mock).mockImplementation(() => {
+      const query = makeQueryEffect(undefined)
+      query.set = vi.fn((value: Record<string, unknown>) => {
+        sets.push(value)
+        return query
+      })
+      return query
+    })
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(DbClient, db as AppDb),
+      Layer.succeed(ObjectStorage, {
+        putObject: () => Effect.void,
+        getObject: () => Effect.succeed(blankBytes),
+        deleteObject: () => Effect.void
+      }),
+      Layer.succeed(SqlClient, {
+        withTransaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect
+      })
+    )
+
+    const result = await Effect.runPromise(Effect.either(runIngestJob(pdfUploadId).pipe(Effect.provide(layer))))
+
+    expect(result._tag).toBe("Left")
+    expect(sets).toContainEqual(expect.objectContaining({
+      status: "failed",
+      errorMessage: "PDF hasil scan belum didukung"
+    }))
+  })
+
   it("marks upload ready after extracting and chunking PDF text", async () => {
     ;(db.select as Mock)
       .mockReturnValueOnce(makeQueryEffect([uploadRow]))

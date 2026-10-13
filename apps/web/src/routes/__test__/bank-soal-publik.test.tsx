@@ -47,6 +47,14 @@ describe("BankSoalPublikPage", () => {
     })
   })
 
+  it("names the product Ujian Sekolah on the public bank", async () => {
+    const Page = Route.options.component as React.ComponentType
+    render(<Page />)
+
+    expect(await screen.findByRole("link", { name: "Ujian Sekolah" })).toHaveAttribute("href", "/")
+    expect(screen.queryByText("Ujian SD")).not.toBeInTheDocument()
+  })
+
   it("renders login CTA linking to home", async () => {
     const Page = Route.options.component as React.ComponentType
     render(<Page />)

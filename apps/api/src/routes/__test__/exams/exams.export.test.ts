@@ -26,7 +26,7 @@ function makeExamRow(overrides: Record<string, unknown> = {}) {
     status: "draft",
     schoolName: null,
     academicYear: null,
-  semester: null,
+    semester: null,
     examType: "formatif",
     examDate: null,
     durationMinutes: null,
@@ -115,6 +115,58 @@ describe("GET /api/exams/:id/export", () => {
     const buf = await res.arrayBuffer()
     const head = new Uint8Array(buf).slice(0, 4)
     expect(String.fromCharCode(...head)).toBe("%PDF")
+  })
+
+  it("blocks kisi-kisi on a draft with the same final-only rule", async () => {
+    const examRow = makeExamRow({ status: "draft" })
+    const questionRow = makeQuestionRow({ status: "accepted" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain([questionRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1/export?format=docx&variant=kisi_kisi")
+    expect(res.status).toBe(400)
+    const body = await res.json() as { error?: string }
+    expect(body.error).toMatch(/finalized/i)
+  })
+
+  it("names a kisi-kisi download so the file identifies kisi-kisi", async () => {
+    const examRow = makeExamRow({ status: "final", title: "Ulangan Narasi" })
+    const questionRow = makeQuestionRow({ status: "accepted" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain([questionRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1/export?format=docx&variant=kisi_kisi")
+    expect(res.status).toBe(200)
+    expect(res.headers.get("content-disposition")).toMatch(/kisi-kisi\.docx/i)
+  })
+
+  it("names a kartu soal download", async () => {
+    const examRow = makeExamRow({ status: "final", title: "Ulangan Narasi" })
+    const questionRow = makeQuestionRow({ status: "accepted" })
+
+    let selectCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      selectCount++
+      if (selectCount === 1) return makeChain([examRow])
+      return makeChain([questionRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1/export?format=docx&variant=kartu_soal")
+    expect(res.status).toBe(200)
+    expect(res.headers.get("content-disposition")).toMatch(/kartu-soal\.docx/i)
   })
 
   it("returns 200 with the docx content-type for a final exam (docx format)", async () => {

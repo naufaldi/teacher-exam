@@ -1,4 +1,5 @@
 import { Config, Context, Effect, Layer } from "effect"
+import { readAiProvider } from "../../lib/production-ai-config"
 
 export type AiProviderName = "anthropic" | "minimax" | "openai"
 
@@ -25,8 +26,8 @@ const optionalString = (name: string) =>
   Config.string(name).pipe(Config.option, Config.map((opt) => (opt._tag === "Some" ? opt.value : undefined)))
 
 const aiProviderConfig = Config.string("AI_PROVIDER").pipe(
-  Config.withDefault("anthropic"),
-  Config.map((value) => value.toLowerCase() as AiProviderName)
+  Config.withDefault("openai"),
+  Config.map((value) => readAiProvider({ AI_PROVIDER: value }))
 )
 
 export const AppConfigLive = Layer.effect(
@@ -73,7 +74,7 @@ export function readAppConfigFromEnv(): AppConfigValue {
     googleClientId: requireEnv("GOOGLE_CLIENT_ID"),
     googleClientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
     appUrl: requireEnv("APP_URL"),
-    aiProvider: (process.env["AI_PROVIDER"] ?? "anthropic").toLowerCase() as AiProviderName,
+    aiProvider: readAiProvider(),
     anthropicApiKey: optionalEnv("ANTHROPIC_API_KEY"),
     openAiApiKey: optionalEnv("OPENAI_API_KEY"),
     openAiBaseUrl: optionalEnv("OPENAI_BASE_URL"),

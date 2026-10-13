@@ -145,7 +145,7 @@ vi.mock("../../lib/api.js", async (importOriginal) => {
       ai: { generate: vi.fn() },
       exams: { pollGenerateStream: vi.fn() },
       curriculum: { catalog: vi.fn(), babTopics: vi.fn() },
-      pdfUploads: { create: vi.fn(), list: vi.fn(), get: vi.fn(), remove: vi.fn() }
+      pdfUploads: { create: vi.fn(), get: vi.fn(), list: vi.fn(), remove: vi.fn() }
     }
   }
 })
@@ -160,18 +160,14 @@ vi.mock("@teacher-exam/ui", async (importOriginal) => {
   return {
     ...orig,
     Button: (
-      { children, disabled, onClick, type, ...rest }: {
+      { children, disabled: _disabled, onClick, type, ...rest }: {
         disabled?: boolean
         onClick?: () => void
         children: React.ReactNode
         type?: "button" | "submit" | "reset"
         "aria-label"?: string
       }
-    ) => (
-      <button type={type ?? "button"} disabled={disabled} onClick={onClick} {...rest}>
-        {children}
-      </button>
-    ),
+    ) => <button type={type ?? "button"} onClick={onClick} {...rest}>{children}</button>,
     Select: (
       { children, onValueChange }: {
         children: React.ReactNode
@@ -211,8 +207,8 @@ const mockApi = api as unknown as {
   curriculum: { catalog: ReturnType<typeof vi.fn>; babTopics: ReturnType<typeof vi.fn> }
   pdfUploads: {
     create: ReturnType<typeof vi.fn>
-    list: ReturnType<typeof vi.fn>
     get: ReturnType<typeof vi.fn>
+    list: ReturnType<typeof vi.fn>
     remove: ReturnType<typeof vi.fn>
   }
 }
@@ -232,30 +228,12 @@ async function selectPdfGuruKelas5() {
   await act(async () => {
     await vi.runOnlyPendingTimersAsync()
   })
+  openAdvanced()
   fireEvent.click(screen.getByText("PDF saya saja"))
   fireEvent.click(screen.getByText("Kelas 5 SD"))
   await act(async () => {
     await vi.runOnlyPendingTimersAsync()
   })
-}
-
-async function fillMinimalDefaultFormForGenerate() {
-  mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
-  mockApiResolvedValue(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
-  renderGeneratePage()
-  await act(async () => {
-    await vi.runOnlyPendingTimersAsync()
-  })
-  fireEvent.click(screen.getByText("Kelas 1 SD"))
-  await act(async () => {
-    await vi.runOnlyPendingTimersAsync()
-  })
-  fireEvent.click(screen.getByRole("button", { name: "Bahasa Indonesia" }))
-  await act(async () => {
-    await vi.runOnlyPendingTimersAsync()
-  })
-  fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
-  fireEvent.click(screen.getByText("Bab 1: Bunyi Apa?"))
 }
 
 function renderGeneratePage() {
@@ -278,9 +256,27 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+function queueCatalogAndBab() {
+  mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+  mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
+}
+
+async function chooseBab() {
+  fireEvent.click(screen.getByText("Kelas 1 SD"))
+  await act(async () => {
+    await vi.runOnlyPendingTimersAsync()
+  })
+  fireEvent.click(screen.getByRole("combobox", { name: /pilih topik/i }))
+  fireEvent.click(screen.getByText("Bab 1: Bunyi Apa?"))
+}
+
+function openAdvanced() {
+  fireEvent.click(screen.getByRole("button", { name: /pengaturan lanjutan/i }))
+}
+
 async function clickGenerateAndFlush() {
   // fireEvent.click is synchronous — avoids waiting for Radix Dialog animations
-  fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+  fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
 
   // advanceTimersByTimeAsync advances virtual time to a fixed point AND flushes
   // microtasks (Promise chains) between each timer fire — unlike runAllTimers()
@@ -291,10 +287,51 @@ async function clickGenerateAndFlush() {
   })
 }
 
+describe("First screen choices", () => {
+  it("shows kelas, mapel, and bab with Buat 20 Soal before advanced settings", () => {
+    renderGeneratePage()
+
+    expect(screen.getAllByText("Kelas").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Mata Pelajaran").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Materi").length).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: "Buat 20 Soal" })).toBeInTheDocument()
+    expect(screen.queryByLabelText("Jumlah Soal")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Pilih file PDF")).not.toBeInTheDocument()
+    expect(screen.queryByText("Atur komposisi")).not.toBeInTheDocument()
+  })
+
+  it("opens PDF upload and jumlah soal from Pengaturan lanjutan", () => {
+    renderGeneratePage()
+
+    fireEvent.click(screen.getByRole("button", { name: /pengaturan lanjutan/i }))
+
+    expect(screen.getByLabelText("Jumlah Soal")).toBeInTheDocument()
+    expect(screen.queryByLabelText("Pilih file PDF")).not.toBeInTheDocument()
+    expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    expect(screen.getByLabelText("Pilih file PDF")).toBeInTheDocument()
+    expect(screen.getByText("Atur komposisi")).toBeInTheDocument()
+  })
+
+  it("names a missing bab and does not generate", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    fireEvent.click(screen.getByText("Kelas 4 SD"))
+    fireEvent.click(screen.getByRole("button", { name: "Buat 20 Soal" }))
+
+    expect(screen.getAllByText(/pilih bab/i).length).toBeGreaterThan(0)
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+  })
+})
+
 describe("Template prefill", () => {
   it("prefills subject, grade, topics, and totalSoal from router state", async () => {
     mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
-    mockApiResolvedValue(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_tpl"))
     locationState = {
       templateApply: {
@@ -305,7 +342,6 @@ describe("Template prefill", () => {
         reviewMode: "fast",
         examType: "latihan",
         totalSoal: 15,
-        composition: { mcqSingle: 15, mcqMulti: 0, trueFalse: 0 },
         templateId: "tpl-1"
       }
     }
@@ -313,11 +349,7 @@ describe("Template prefill", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
 
-    expect(screen.getByRole("button", { name: /generate lembar/i })).not.toBeDisabled()
     await clickGenerateAndFlush()
 
     expect(mockApi.ai.generate).toHaveBeenCalledWith(
@@ -328,6 +360,37 @@ describe("Template prefill", () => {
         totalSoal: 15,
         examType: "latihan",
         difficulty: "sedang"
+      })
+    )
+  })
+
+  it("scales the jenis profile when a template sets totalSoal without composition", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_tpl_scale"))
+    locationState = {
+      templateApply: {
+        subject: "bahasa_indonesia",
+        grade: 1,
+        difficulty: "sedang",
+        topics: ["Bab 1: Bunyi Apa?"],
+        reviewMode: "fast",
+        examType: "latihan",
+        totalSoal: 15,
+        templateId: "tpl-scale"
+      }
+    }
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalSoal: 15,
+        composition: { mcqSingle: 15, mcqMulti: 0, trueFalse: 0 }
       })
     )
   })
@@ -401,6 +464,7 @@ describe("Jumlah Soal input", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 1 SD"))
+    openAdvanced()
 
     expect(screen.getByText("Fase A (Kelas 1–2)")).toBeInTheDocument()
     expect(screen.queryByText("Fase C (Kelas 5–6)")).not.toBeInTheDocument()
@@ -436,12 +500,14 @@ describe("Jumlah Soal input", () => {
 
   it("defaults to 20 for default jenis (formatif)", () => {
     renderGeneratePage()
+    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal") as HTMLInputElement
     expect(input.value).toBe("20")
   })
 
   it("auto-fills to 25 when UAS (sas) jenis is selected", () => {
     renderGeneratePage()
+    openAdvanced()
     fireEvent.click(screen.getByText("UAS"))
     const input = screen.getByLabelText("Jumlah Soal") as HTMLInputElement
     expect(input.value).toBe("25")
@@ -449,6 +515,7 @@ describe("Jumlah Soal input", () => {
 
   it("shows error when value is below 5", () => {
     renderGeneratePage()
+    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal")
     fireEvent.change(input, { target: { value: "3" } })
     expect(screen.getByText("Minimum 5 soal")).toBeInTheDocument()
@@ -456,6 +523,7 @@ describe("Jumlah Soal input", () => {
 
   it("shows error when value is above 50", () => {
     renderGeneratePage()
+    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal")
     fireEvent.change(input, { target: { value: "51" } })
     expect(screen.getByText("Maksimum 50 soal")).toBeInTheDocument()
@@ -463,8 +531,11 @@ describe("Jumlah Soal input", () => {
 
   it("api.ai.generate is called with totalSoal in body", async () => {
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_abc"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
+    openAdvanced()
 
     // Change totalSoal to 25
     const input = screen.getByLabelText("Jumlah Soal")
@@ -481,8 +552,10 @@ describe("Jumlah Soal input", () => {
 describe("GeneratePage — runGenerate flow", () => {
   it("calls api.ai.generate and navigates to /review with examId on success", async () => {
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_abc"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
     await clickGenerateAndFlush()
 
     expect(mockApi.ai.generate).toHaveBeenCalledOnce()
@@ -499,10 +572,12 @@ describe("GeneratePage — runGenerate flow", () => {
 
   it("keeps progress dialog open until navigation (no premature close)", async () => {
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_abc"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
 
-    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(400)
@@ -520,11 +595,65 @@ describe("GeneratePage — runGenerate flow", () => {
 
   it("does NOT navigate when api.ai.generate rejects", async () => {
     mockApiFailOnce(mockApi.ai.generate, new Error("AI generation failed"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
     await clickGenerateAndFlush()
 
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it("shows a credit error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Kredit penyedia AI habis. Isi saldo, lalu coba generate lagi.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Kredit penyedia AI habis. Isi saldo, lalu coba generate lagi."
+    )
+  })
+
+  it("shows a timeout error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Penyedia AI tidak menjawab tepat waktu. Coba lagi sebentar.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Penyedia AI tidak menjawab tepat waktu. Coba lagi sebentar."
+    )
+  })
+
+  it("shows a wrong-model error in the failure dialog", async () => {
+    mockApiFailOnce(
+      mockApi.ai.generate,
+      new ApiError({
+        message: "Model yang menjawab bukan gpt-6-luna.",
+        code: "AI_GENERATION_ERROR",
+        status: 502
+      })
+    )
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+    expect(screen.getByRole("dialog")).toHaveTextContent("Model yang menjawab bukan gpt-6-luna.")
   })
 
   it("shows the API error message in the failure dialog", async () => {
@@ -537,16 +666,33 @@ describe("GeneratePage — runGenerate flow", () => {
       })
     )
 
-    await fillMinimalDefaultFormForGenerate()
+    queueCatalogAndBab()
+    renderGeneratePage()
+    await chooseBab()
     await clickGenerateAndFlush()
 
     expect(screen.getByRole("dialog")).toHaveTextContent("Expected 40 questions, got 20")
   })
 
+  it("shows a server connection message for network failures", async () => {
+    mockApi.ai.generate.mockRejectedValueOnce(new Error("Failed to fetch"))
+    queueCatalogAndBab()
+
+    renderGeneratePage()
+    await chooseBab()
+    await clickGenerateAndFlush()
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Tidak dapat menghubungi server. Periksa koneksi Anda lalu coba lagi."
+    )
+  })
+
   it("uses the dynamic examId from api response, not a fixed value", async () => {
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_from_server_42"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
     await clickGenerateAndFlush()
 
     const call = mockNavigate.mock.calls[0]?.[0] as Record<string, unknown>
@@ -707,6 +853,7 @@ describe("GeneratePage — Kelas 4 and Kelas 6 coverage (#172)", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 4 SD"))
+    openAdvanced()
 
     expect(screen.getByText("Fase B (Kelas 3–4)")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
@@ -723,6 +870,7 @@ describe("GeneratePage — Kelas 4 and Kelas 6 coverage (#172)", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 6 SD"))
+    openAdvanced()
 
     expect(screen.getByText("Fase C (Kelas 5–6)")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Matematika — Sedang dipersiapkan" })).toBeDisabled()
@@ -781,6 +929,7 @@ describe("Atur komposisi panel", () => {
 
   it("SAS auto-fill: selecting UAS fills {mcqSingle:15, mcqMulti:5, trueFalse:5} when expanded", () => {
     renderGeneratePage()
+    openAdvanced()
     // Select SAS jenis
     fireEvent.click(screen.getByText("UAS"))
     // Expand the panel
@@ -793,6 +942,7 @@ describe("Atur komposisi panel", () => {
 
   it("shows sum validation error when composition does not equal totalSoal", () => {
     renderGeneratePage()
+    openAdvanced()
     // Expand the panel
     fireEvent.click(screen.getByRole("button", { name: /atur komposisi/i }))
     // Break the sum: change mcqSingle to 10 (default total is 20, so 10+0+0=10 !== 20)
@@ -803,8 +953,11 @@ describe("Atur komposisi panel", () => {
 
   it("includes composition in the API payload on submit", async () => {
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_abc"))
+    queueCatalogAndBab()
 
-    await fillMinimalDefaultFormForGenerate()
+    renderGeneratePage()
+    await chooseBab()
+    openAdvanced()
     // Expand panel; default formatif composition is {20,0,0} which sums to 20 == totalSoal
     fireEvent.click(screen.getByRole("button", { name: /atur komposisi/i }))
 
@@ -819,6 +972,7 @@ describe("Atur komposisi panel", () => {
 
   it("totalSoal rescale: changing totalSoal re-applies profile default composition scaled to new total", () => {
     renderGeneratePage()
+    openAdvanced()
     // Select SAS: profile {15,5,5} totalSoal=25
     fireEvent.click(screen.getByText("UAS"))
     // Expand panel to verify values
@@ -835,6 +989,7 @@ describe("Atur komposisi panel", () => {
 
   it("shows source mode selector with Buku Siswa default and hides PDF upload", () => {
     renderGeneratePage()
+    openAdvanced()
     expect(screen.getAllByText("Buku Siswa").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
     expect(screen.queryByText(/Drag.*drop/i)).not.toBeInTheDocument()
@@ -842,6 +997,7 @@ describe("Atur komposisi panel", () => {
 
   it("shows kurikulum warning and free topic in pdf_guru mode", () => {
     renderGeneratePage()
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     expect(screen.getByText(/Periksa kurikulum/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Topik bebas/i)).toBeInTheDocument()
@@ -856,6 +1012,7 @@ describe("Atur komposisi panel", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
@@ -869,7 +1026,7 @@ describe("Atur komposisi panel", () => {
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
       target: { value: "Gerak dasar dan permainan bola kecil" }
     })
-    const generateButton = screen.getByRole("button", { name: /generate lembar/i })
+    const generateButton = screen.getByRole("button", { name: /buat \d+ soal/i })
     expect(generateButton).not.toBeDisabled()
     mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-1"))
     fireEvent.click(generateButton)
@@ -890,6 +1047,7 @@ describe("Atur komposisi panel", () => {
 
   it("clears pdf_guru fields when switching back to default", () => {
     renderGeneratePage()
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
       target: { value: "Ekosistem lingkungan sekolah" }
@@ -897,110 +1055,155 @@ describe("Atur komposisi panel", () => {
     fireEvent.click(screen.getByText("Buku Siswa"))
     expect(screen.queryByLabelText(/Topik bebas/i)).not.toBeInTheDocument()
   })
-
-  it("disables Generate until new upload reaches ready (#233)", async () => {
-    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
-    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
-      id: "pdf_upload_wait",
-      status: "processing",
-      filename: "modul.pdf",
-      createdAt: "2026-07-09T00:00:00.000Z"
-    })
-    mockApiResolvedValue(mockApi.pdfUploads.get, {
-      id: "pdf_upload_wait",
-      status: "processing",
-      filename: "modul.pdf",
-      createdAt: "2026-07-09T00:00:00.000Z"
-    })
-    renderGeneratePage()
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
-    fireEvent.click(screen.getByText("PDF saya saja"))
-    fireEvent.click(screen.getByText("Kelas 5 SD"))
-    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
-      target: { value: "IPAS" }
-    })
-    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
-      target: { value: "Ekosistem lingkungan sekolah yang bagus" }
-    })
-    const file = new File(["%PDF-1.4"], "modul.pdf", { type: "application/pdf" })
-    fireEvent.change(screen.getByLabelText(/Pilih file PDF/i), {
-      target: { files: [file] }
-    })
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
-    expect(mockApi.pdfUploads.create).toHaveBeenCalled()
-    expect(screen.getByText(/Sedang memproses PDF/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /generate lembar/i })).toBeDisabled()
-
-    mockApiResolvedValue(mockApi.pdfUploads.get, {
-      id: "pdf_upload_wait",
-      status: "ready",
-      filename: "modul.pdf",
-      createdAt: "2026-07-09T00:00:00.000Z",
-      readyAt: "2026-07-09T00:00:02.000Z"
-    })
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500)
-    })
-    expect(screen.getByText(/PDF siap digunakan/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /generate lembar/i })).not.toBeDisabled()
-  })
-
-  it("pdf_guru footer does not claim Capaian Pembelajaran (#233)", async () => {
-    await selectPdfGuruKelas5()
-    expect(screen.getByRole("button", { name: /generate lembar/i }).closest("div")?.textContent)
-      .not.toMatch(/Capaian Pembelajaran/i)
-    expect(screen.getByText(/berdasarkan PDF yang dipilih/i)).toBeInTheDocument()
-  })
-
-  it("softens includePdfImages promise and does not send the flag (#233)", async () => {
-    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
-    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
-    renderGeneratePage()
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
-    fireEvent.click(screen.getByText("PDF saya saja"))
-    fireEvent.click(screen.getByText("Kelas 5 SD"))
-    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
-      target: { value: "IPAS" }
-    })
-    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
-    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
-    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
-      target: { value: "Ekosistem lingkungan sekolah yang bagus" }
-    })
-    expect(screen.queryByText(/maks\.\s*~30%/i)).not.toBeInTheDocument()
-    const imageToggle = screen.getByRole("checkbox", { name: /Sertakan gambar dari PDF/i })
-    expect(imageToggle).toBeDisabled()
-    expect(screen.getByText(/segera hadir/i)).toBeInTheDocument()
-    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-img"))
-    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync()
-    })
-    expect(mockApi.ai.generate).toHaveBeenCalledWith(
-      expect.not.objectContaining({ includePdfImages: true })
-    )
-  })
 })
 
 describe("M7 UX polish (#215)", () => {
-  it("disables Generate when pdf_guru has no ready PDF (#233)", async () => {
+  async function prepareNewPdfUpload() {
     await selectPdfGuruKelas5()
     fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
-      target: { value: "IPAS" }
+      target: { value: "PKN" }
     })
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Pemberdayaan masyarakat di lingkungan sekolah" }
+    })
+    const file = new File(["%PDF-1.4"], "materi.pdf", { type: "application/pdf" })
+    fireEvent.change(screen.getByLabelText("Pilih file PDF"), {
+      target: { files: [file] }
+    })
+  }
+
+  it("waits for a newly uploaded PDF to become ready before generating", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-new",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-new",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-new",
+      status: "ready",
+      filename: "materi.pdf",
+      pageCount: 134,
+      createdAt: "2026-07-23T06:52:43.000Z",
+      readyAt: "2026-07-23T06:52:47.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-new"))
+
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(mockApi.pdfUploads.get).toHaveBeenCalledTimes(1)
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(mockApi.pdfUploads.get).toHaveBeenCalledTimes(2)
+    expect(mockApi.ai.generate).toHaveBeenCalledOnce()
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ pdfUploadId: "pdf-new" })
+    )
+  })
+
+  it("shows the ingestion failure and does not generate", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-failed",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-failed",
+      status: "failed",
+      filename: "materi.pdf",
+      errorMessage: "Tidak dapat mengekstrak teks dari PDF.",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Tidak dapat mengekstrak teks dari PDF."
+    )
+  })
+
+  it("shows the scan message when ingestion rejects a scanned PDF", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-scan",
+      status: "processing",
+      filename: "scan.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValueOnce(mockApi.pdfUploads.get, {
+      id: "pdf-scan",
+      status: "failed",
+      filename: "scan.pdf",
+      errorMessage: "PDF hasil scan belum didukung",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent("PDF hasil scan belum didukung")
+  })
+
+  it("stops waiting after 60 seconds and preserves the uploaded PDF for retry", async () => {
+    await prepareNewPdfUpload()
+    mockApiResolvedValueOnce(mockApi.pdfUploads.create, {
+      id: "pdf-slow",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+    mockApiResolvedValue(mockApi.pdfUploads.get, {
+      id: "pdf-slow",
+      status: "processing",
+      filename: "materi.pdf",
+      createdAt: "2026-07-23T06:52:43.000Z"
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+
+    expect(mockApi.ai.generate).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "PDF masih diproses setelah 60 detik. Coba lagi tanpa mengunggah ulang."
+    )
+    expect(screen.getByTestId("generate-sidebar-summary")).toHaveTextContent("materi.pdf")
+  })
+
+  it("shows inline PDF error (EC-A1) when pdf_guru has no PDF on generate click", async () => {
+    await selectPdfGuruKelas5()
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
       target: { value: "Ekosistem lingkungan sekolah yang bagus" }
     })
-    expect(screen.getByRole("button", { name: /generate lembar/i })).toBeDisabled()
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    expect(screen.getByText(/Pilih atau upload PDF/i)).toBeInTheDocument()
     expect(mockApi.ai.generate).not.toHaveBeenCalled()
   })
 
@@ -1011,18 +1214,16 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
-    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
-      target: { value: "IPAS" }
-    })
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
     fireEvent.click(screen.getByText("sample-worksheet.pdf"))
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), { target: { value: "pendek" } })
-    fireEvent.click(screen.getByRole("button", { name: /generate lembar/i }))
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
     expect(screen.getByText(/Topik bebas wajib diisi/i)).toBeInTheDocument()
     expect(mockApi.ai.generate).not.toHaveBeenCalled()
   })
@@ -1034,6 +1235,7 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
@@ -1054,6 +1256,7 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
+    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
     await act(async () => {
@@ -1067,5 +1270,47 @@ describe("M7 UX polish (#215)", () => {
     fireEvent.click(screen.getByLabelText("Hapus sample-worksheet.pdf"))
     fireEvent.click(screen.getByRole("button", { name: /^Hapus$/i }))
     expect(mockApi.pdfUploads.remove).toHaveBeenCalledWith("pdf_test_1")
+  })
+
+  it("pdf_guru footer does not claim Capaian Pembelajaran (#233)", async () => {
+    await selectPdfGuruKelas5()
+    const footer = screen.getByTestId("generate-trust-footer")
+    expect(footer).toHaveTextContent(/berdasarkan PDF yang dipilih/i)
+    expect(footer).not.toHaveTextContent(/Capaian Pembelajaran/i)
+  })
+
+  it("softens includePdfImages promise and does not send the flag (#233)", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    openAdvanced()
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
+      target: { value: "IPAS" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Ekosistem lingkungan sekolah yang bagus" }
+    })
+    expect(screen.queryByText(/maks\.\s*~30%/i)).not.toBeInTheDocument()
+    const imageToggle = screen.getByRole("checkbox", { name: /Sertakan gambar dari PDF/i })
+    expect(imageToggle).toBeDisabled()
+    expect(screen.getByText(/segera hadir/i)).toBeInTheDocument()
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-img"))
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.not.objectContaining({ includePdfImages: true })
+    )
   })
 })

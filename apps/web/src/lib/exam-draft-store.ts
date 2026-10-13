@@ -8,6 +8,8 @@ import { useSyncExternalStore } from "react"
  */
 export interface ExamDraftMetadata {
   schoolName: string
+  schoolAddress?: string
+  schoolLogo?: string | null
   academicYear: string
   semester: Semester | ""
   /** Strict literal union — see PRD §8.6 */

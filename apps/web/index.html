@@ -3,11 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ujian SD — Generator Soal</title>
+    <title>Ujian Sekolah — Generator Soal</title>
+    <meta
+      name="description"
+      content="Lembar ujian siap cetak untuk SD. Susun soal Kurikulum Merdeka kelas 1–6 dan unduh PDF."
+    />
+    <meta property="og:title" content="Ujian Sekolah — Generator Soal" />
+    <meta
+      property="og:description"
+      content="Lembar ujian siap cetak untuk SD. Susun soal Kurikulum Merdeka kelas 1–6 dan unduh PDF."
+    />
+    <meta property="og:image" content="https://ujian-sekolah.naufaldi.com/og.png" />
+    <meta property="og:url" content="https://ujian-sekolah.naufaldi.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="id_ID" />
+    <link rel="canonical" href="https://ujian-sekolah.naufaldi.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        var path = location.pathname
+        if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1)
+        if (path === "/" && location.search === "") return
+        var root = document.getElementById("root")
+        if (root) root.textContent = ""
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

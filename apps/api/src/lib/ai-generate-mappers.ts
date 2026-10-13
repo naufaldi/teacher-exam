@@ -1,6 +1,12 @@
-import { ExamIdSchema, FigureSpecSchema, QuestionIdSchema, SUBJECT_LABEL } from "@teacher-exam/shared"
+import {
+  checkFigureAnswer,
+  ExamIdSchema,
+  FigureSpecSchema,
+  QuestionIdSchema,
+  SUBJECT_LABEL
+} from "@teacher-exam/shared"
 import type { ExamSubject, FigureSpec, GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
-import { Either, Match, Schema } from "effect"
+import { Either, Match, pipe, Schema } from "effect"
 import type { LatexValidationResult } from "./latex-validator"
 import type { ParsedItemFailure } from "./parse-generated-questions"
 
@@ -116,7 +122,53 @@ export function convertGeneratedToQuestion(
     })),
     Match.exhaustive
   )
-  return result
+  return applyDiagramCheck(result, "generate")
+}
+
+export function diagramValidationReason(question: Question, source: "generate" | "edit"): string | null {
+  if (question.figure == null) return null
+  const check = checkFigureAnswer(question)
+  return pipe(
+    Match.value(check),
+    Match.tag("Unchecked", () => source === "generate" ? "Diagram belum menyatakan besaran yang ditanyakan." : null),
+    Match.tag("Match", () => null),
+    Match.tag("Mismatch", (row) => `Kunci tidak sesuai diagram: diagram ${row.derived}; teks kunci ${row.keyedText}`),
+    Match.tag("Unparsed", (row) => `Teks kunci tidak berisi nilai eksak diagram: ${row.text}`),
+    Match.tag("Inexact", () => "Diagram tidak menghasilkan bilangan eksak."),
+    Match.tag("NotOrderable", () => "Batas diagram tidak terurut."),
+    Match.exhaustive
+  )
+}
+
+function applyDiagramCheck(question: Question, source: "generate" | "edit"): Question {
+  const answerReason = diagramValidationReason(question, source)
+  if (answerReason === null) return question
+  const reasons = [question.validationReason, answerReason].filter((reason): reason is string => reason !== null)
+  const flagged = {
+    ...question,
+    validationStatus: "needs_review" as const,
+    validationReason: reasons.join("\n")
+  }
+  if (source === "generate") return { ...flagged, figure: null }
+  return flagged
+}
+
+const DIAGRAM_PREVIEW_META = {
+  id: "00000000-0000-4000-8000-000000000001",
+  examId: "00000000-0000-4000-8000-000000000002",
+  number: 1,
+  status: "pending" as const,
+  createdAt: new Date(0)
+}
+
+export function generatedDiagramNeedsRetry(question: GeneratedQuestion): boolean {
+  const decoded = decodeGeneratedFigure(question.figure)
+  if (decoded.figure == null) return false
+  const preview = convertGeneratedToQuestion(question, {
+    ...DIAGRAM_PREVIEW_META,
+    number: question.number
+  })
+  return preview.figure == null
 }
 
 export function failureReasonForNumber(

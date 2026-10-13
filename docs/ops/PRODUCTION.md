@@ -1,6 +1,6 @@
 # Production Reference — teacher-exam
 
-> **Last updated:** 2026-06-26  
+> **Last updated:** 2026-10-11  
 > **Status:** Live ✅  
 > AI agents: read this entire file before making any infrastructure changes.
 
@@ -10,11 +10,11 @@
 
 | Service | URL | Notes |
 |---|---|---|
-| Web SPA | https://ujian-sekolah.faldi.xyz | Cloudflare-proxied, Caddy serves `caddy:alpine` |
-| API | https://api-ujian-sekolah.faldi.xyz | Cloudflare-proxied, Hono on Node 22 |
-| API health | https://api-ujian-sekolah.faldi.xyz/api/health | Returns `{"status":"ok"}` |
+| Web SPA | https://ujian-sekolah.naufaldi.com | Cloudflare-proxied, Caddy serves `caddy:alpine` |
+| API | https://api-ujian-sekolah.naufaldi.com | Cloudflare-proxied, Hono on Node 22 |
+| API health | https://api-ujian-sekolah.naufaldi.com/api/health | Returns `{"status":"ok"}` |
 
-Both are subdomains of the user's existing `faldi.xyz` Cloudflare zone (free, no domain purchase needed).
+Both are subdomains of the user's existing `naufaldi.com` Cloudflare zone (free, no domain purchase needed).
 
 ---
 
@@ -26,8 +26,8 @@ Internet
    ▼
 edge-proxy-caddy  (lucaslorentz/caddy-docker-proxy:2.8-alpine)
    │  external Docker network: edge
-   ├─► ujian-sekolah.faldi.xyz ──► teacher-exam-web-1 (caddy:alpine, :80, /srv)
-   └─► api-ujian-sekolah.faldi.xyz ──► teacher-exam-api-1 (node:22-bookworm, :3001, +Playwright Chromium)
+   ├─► ujian-sekolah.naufaldi.com ──► teacher-exam-web-1 (caddy:alpine, :80, /srv)
+   └─► api-ujian-sekolah.naufaldi.com ──► teacher-exam-api-1 (node:22-bookworm, :3001, +Playwright Chromium)
                                              │
                                    Docker network: teacher-exam-private
                                              │
@@ -49,7 +49,7 @@ edge-proxy-caddy  (lucaslorentz/caddy-docker-proxy:2.8-alpine)
 
 Web and API live on separate subdomains (`ujian-sekolah` vs `api-ujian-sekolah`) rather than a single domain with `/api` path routing. This mirrors the proven `viralkan-app` pattern already on the VPS and avoids Caddy label complexity.
 
-**Implication:** CORS and cookie configuration must account for cross-origin requests from the web origin to the API origin (both share `faldi.xyz` eTLD+1, so `SameSite=Lax` cookies work without extra config).
+**Implication:** CORS and cookie configuration must account for cross-origin requests from the web origin to the API origin (both share `naufaldi.com` eTLD+1, so `SameSite=Lax` cookies work without extra config).
 
 ### 2. tsx at runtime, no tsc build step
 
@@ -77,10 +77,10 @@ This means the production JS bundle has the API host hardcoded. **Any domain cha
 
 | Env var | Value | Purpose |
 |---|---|---|
-| `APP_URL` | `https://ujian-sekolah.faldi.xyz` | Web app host — used as `trustedOrigins` in better-auth |
-| `BETTER_AUTH_URL` | `https://api-ujian-sekolah.faldi.xyz` | API host — used as better-auth `baseURL` for OAuth callback URL construction |
+| `APP_URL` | `https://ujian-sekolah.naufaldi.com` | Web app host — used as `trustedOrigins` in better-auth |
+| `BETTER_AUTH_URL` | `https://api-ujian-sekolah.naufaldi.com` | API host — used as better-auth `baseURL` for OAuth callback URL construction |
 
-If `BETTER_AUTH_URL` is not set separately (or defaults to `APP_URL`), Google's OAuth callback redirect goes to `api-ujian-sekolah.faldi.xyz/api/auth/callback/google` but then better-auth redirects the user back to `ujian-sekolah.faldi.xyz/dashboard` only if the post-auth `callbackURL` is absolute. See Bug #2 below.
+If `BETTER_AUTH_URL` is not set separately (or defaults to `APP_URL`), Google's OAuth callback redirect goes to `api-ujian-sekolah.naufaldi.com/api/auth/callback/google` but then better-auth redirects the user back to `ujian-sekolah.naufaldi.com/dashboard` only if the post-auth `callbackURL` is absolute. See Bug #2 below.
 
 ### 5. Cloudflare proxy + Let's Encrypt: gray-cloud first
 
@@ -91,7 +91,7 @@ When Cloudflare proxy is **enabled (orange cloud)**, Caddy can still issue Let's
 2. Start containers — Caddy issues certs unimpeded
 3. Once certs are issued (`docker logs edge-proxy-caddy | grep "certificate obtained"`), re-enable **Proxied (orange cloud)** and set SSL mode to **Full (strict)**
 
-For our deployment, certs issued successfully even with Cloudflare proxy on (CF was in "Full" mode by default on `faldi.xyz`).
+For our deployment, certs issued successfully even with Cloudflare proxy on (CF was in "Full" mode by default on `naufaldi.com`).
 
 ---
 
@@ -168,8 +168,8 @@ This downloads the macOS/Linux Chromium build to `~/Library/Caches/ms-playwright
 
 ### Bug 2 — OAuth redirect goes to API domain instead of web domain
 
-**Symptom:** After Google sign-in, user is redirected to `https://api-ujian-sekolah.faldi.xyz/dashboard` instead of `https://ujian-sekolah.faldi.xyz/dashboard`.  
-**Root cause:** The login page passed `callbackURL: '/dashboard'` (relative) to `signIn.social()`. In a subdomain-split architecture, better-auth on the API server resolves relative `callbackURL` values against its own `baseURL` (`https://api-ujian-sekolah.faldi.xyz`).  
+**Symptom:** After Google sign-in, user is redirected to `https://api-ujian-sekolah.naufaldi.com/dashboard` instead of `https://ujian-sekolah.naufaldi.com/dashboard`.
+**Root cause:** The login page passed `callbackURL: '/dashboard'` (relative) to `signIn.social()`. In a subdomain-split architecture, better-auth on the API server resolves relative `callbackURL` values against its own `baseURL` (`https://api-ujian-sekolah.naufaldi.com`).
 **Fix:** Changed to `callbackURL: \`${window.location.origin}/dashboard\`` — an absolute URL that always points to the web app host regardless of where the API lives.  
 **File:** `apps/web/src/routes/index.tsx`
 
@@ -182,10 +182,20 @@ This downloads the macOS/Linux Chromium build to `~/Library/Caches/ms-playwright
 
 ### Bug 4 — Google sign-in blocked by CORS on auth routes
 
-**Symptom:** Clicking "Masuk dengan Google" on `https://ujian-sekolah.faldi.xyz` fails in Chrome with `blocked by CORS policy` on `POST https://api-ujian-sekolah.faldi.xyz/api/auth/sign-in/social`.  
+**Symptom:** Clicking "Masuk dengan Google" on `https://ujian-sekolah.naufaldi.com` fails in Chrome with `blocked by CORS policy` on `POST https://api-ujian-sekolah.naufaldi.com/api/auth/sign-in/social`.
 **Root cause:** Production uses subdomain-split origins (web vs API). HttpApi routes get CORS via `createCorsLayer()`, but the bridge server forwards `/api/auth/*` directly to better-auth with no CORS wrapper. Browser `OPTIONS` preflight on auth paths returned **404** with no `Access-Control-Allow-Origin`.  
 **Fix:** Added `auth-cors.ts` and wired it in `create-bridge-server.ts` — handle auth `OPTIONS` preflight and apply the same allowed-origin policy (`APP_URL` / `resolveAllowedCorsOrigins`) to all auth responses.  
 **Files:** `apps/api/src/api/auth-cors.ts`, `apps/api/src/api/bridge/create-bridge-server.ts`
+
+---
+
+## Incident — web container never served (2026-10-11)
+
+**Cause.** PR 259 added `encode br` to `apps/web/Caddyfile`. The production image is `caddy:alpine`, which has no brotli module, so Caddy exited and the web container never listened. `https://ujian-sekolah.naufaldi.com` answered 308 to itself. The deploy job still exited 0 because it only checked the API.
+
+**Fix.** PR 260 removed `br`. The site has returned 200 since 16:53 WIB. Later changes keep `encode gzip zstd`.
+
+**Prevention.** CI runs `caddy validate` with the `caddy:alpine` image named in `apps/web/Dockerfile`. After `docker compose up`, the deploy job curls `/`, `/share/smoke`, `/favicon.svg`, and the API health check from outside the VPS. Each must be 200, with at most one redirect, and the HTML must contain `id="root"`. A failure fails the job and runs `scripts/vps-rollback.sh`, which puts the previous `IMAGE_TAG` back and starts those images again. Gateway and Cloudflare origin errors (502, 525) are retried while the new container boots. A 308 loop or a page missing `id="root"` fails immediately. The web service healthcheck requests `/` and requires the same app shell, so a container that is not serving shows unhealthy.
 
 ---
 
@@ -198,7 +208,7 @@ Push to `main` runs [`.github/workflows/deploy.yml`](../../.github/workflows/dep
 1. Build and push API + web images to GHCR (tagged by commit SHA).
 2. SSH to VPS → `git fetch` + `git reset --hard origin/main` (discards local edits on the deploy clone), pull images, run `db:migrate` via the **`migrate` compose profile** (one-shot API image).
 3. Write `IMAGE_TAG` to `.env.production` **only after migrate succeeds**, then `docker compose up -d`.
-4. Health check via public URL (through Cloudflare → **`edge-proxy-caddy`** → API).
+4. Smoke check from the GitHub runner (outside the VPS) for `/`, `/share/smoke`, `/favicon.svg`, and the API health URL. Then SSH runs `scripts/ai-live-smoke.sh`, which probes `http://127.0.0.1:3001/api/health/ai-live` inside `teacher-exam-api-1`. That loopback route is the only one that calls the model. Public `GET /api/health/ai` reports the configured provider, model, and whether the key is present, and does not call OpenAI. A failure rolls both images back to the previous `IMAGE_TAG` and fails the job. After the smoke passes, the job prunes dangling images only.
 
 Routing: `edge-proxy-caddy` on the external `edge` network reads Docker labels on `api` / `web` services (`caddy` = `API_DOMAIN` / `DOMAIN`). The web container serves static assets with embedded Caddy; TLS termination is on the shared edge proxy.
 
@@ -293,26 +303,26 @@ ssh vps-faldi 'docker exec teacher-exam-api-1 wget -qO- http://localhost:3001/ap
 
 | Variable | Set in | Example value | Notes |
 |---|---|---|---|
-| `DOMAIN` | `.env.production` | `ujian-sekolah.faldi.xyz` | Web subdomain |
-| `API_DOMAIN` | `.env.production` | `api-ujian-sekolah.faldi.xyz` | API subdomain |
+| `DOMAIN` | `.env.production` | `ujian-sekolah.naufaldi.com` | Web subdomain |
+| `API_DOMAIN` | `.env.production` | `api-ujian-sekolah.naufaldi.com` | API subdomain |
 | `POSTGRES_USER` | `.env.production` | `school_exam` | |
 | `POSTGRES_PASSWORD` | `.env.production` | (secret) | |
 | `POSTGRES_DB` | `.env.production` | `school_exam` | |
 | `DATABASE_URL` | `.env.production` | `postgresql://user:pass@db:5432/dbname` | `@db` = compose service name |
 | `SESSION_SECRET` | `.env.production` | 64-char hex | `openssl rand -hex 32` |
-| `APP_URL` | docker-compose (from DOMAIN) | `https://ujian-sekolah.faldi.xyz` | better-auth `trustedOrigins` |
-| `BETTER_AUTH_URL` | docker-compose (from API_DOMAIN) | `https://api-ujian-sekolah.faldi.xyz` | better-auth `baseURL` — must be the **API** host |
+| `APP_URL` | docker-compose (from DOMAIN) | `https://ujian-sekolah.naufaldi.com` | better-auth `trustedOrigins` |
+| `BETTER_AUTH_URL` | docker-compose (from API_DOMAIN) | `https://api-ujian-sekolah.naufaldi.com` | better-auth `baseURL` — must be the **API** host |
 | `GOOGLE_CLIENT_ID` | `.env.production` | (secret) | |
 | `GOOGLE_CLIENT_SECRET` | `.env.production` | (secret) | |
-| `AI_PROVIDER` | `.env.production` | `anthropic` \| `minimax` \| `openai` | Default `anthropic` if unset — match key block below |
+| `AI_PROVIDER` | `.env.production` | `openai` \| `anthropic` \| `minimax` | Default `openai` if unset. A missing key for that provider stops the API at startup. |
 | `ANTHROPIC_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=anthropic`; keep it set even with `AI_PROVIDER=minimax` if you want PDF generation to continue working |
 | `MINIMAX_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=minimax` |
 | `MINIMAX_ANTHROPIC_BASE_URL` | `.env.production` | `https://api.minimax.io/anthropic` | MiniMax API root for Anthropic-compatible requests |
 | `OPENAI_API_KEY` | `.env.production` | (secret) | Required when `AI_PROVIDER=openai` |
 | `OPENAI_BASE_URL` | `.env.production` | `https://api.openai.com/v1` | OpenAI API root (optional proxy/Azure) |
-| `AI_MODEL` | `.env.production` | provider-specific | Text generation default (`MiniMax-M2.7` for minimax; `gpt-5.4-mini` for openai) |
+| `AI_MODEL` | `.env.production` | provider-specific | OpenAI default `gpt-6-luna`. MiniMax default `MiniMax-M2.7` when that provider is selected. |
 | `AI_DISCUSSION_MODEL` | `.env.production` | provider-specific | Discussion/pembahasan + curriculum validation override |
-| `VITE_API_URL` | docker-compose build arg | `https://api-ujian-sekolah.faldi.xyz/api` | Baked into JS bundle at build time; changes require `--build web` |
+| `VITE_API_URL` | docker-compose build arg | `https://api-ujian-sekolah.naufaldi.com/api` | Baked into JS bundle at build time; changes require `--build web` |
 
 ---
 
@@ -323,7 +333,7 @@ In [Google Cloud Console](https://console.cloud.google.com) → APIs & Services 
 **Authorized redirect URIs** (both required):
 ```
 http://localhost:3000/api/auth/callback/google     ← local dev
-https://api-ujian-sekolah.faldi.xyz/api/auth/callback/google  ← production
+https://api-ujian-sekolah.naufaldi.com/api/auth/callback/google  ← production
 ```
 
 Note: the redirect URI points to the **API** subdomain, not the web subdomain.
@@ -335,23 +345,23 @@ Note: the redirect URI points to the **API** subdomain, not the web subdomain.
 ```bash
 # 1. Containers healthy
 ssh vps-faldi 'docker compose -f ~/projects/teacher-exam/docker-compose.prod.yml --env-file ~/projects/teacher-exam/.env.production ps'
-# Expected: db healthy, api healthy, web up
+# Expected: db healthy, api healthy, web healthy
 
 # 2. API health (public, via Cloudflare)
-curl -sf https://api-ujian-sekolah.faldi.xyz/api/health
+curl -sf https://api-ujian-sekolah.naufaldi.com/api/health
 # Expected: {"status":"ok","service":"teacher-exam-api","timestamp":"..."}
 
 # 3. SPA loads (public, via Cloudflare)
-curl -sIL https://ujian-sekolah.faldi.xyz | head -5
+curl -sIL https://ujian-sekolah.naufaldi.com | head -5
 # Expected: HTTP/2 200, content-type: text/html
 
 # 4. Vite bundle baked with correct API domain (after web rebuild)
-ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.faldi.xyz /srv/assets/ | head -1"'
-# Expected: /srv/assets/index-*.js:api-ujian-sekolah.faldi.xyz
+ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.naufaldi.com /srv/assets/ | head -1"'
+# Expected: /srv/assets/index-*.js:api-ujian-sekolah.naufaldi.com
 
-# 5. Manual: open https://ujian-sekolah.faldi.xyz in browser
+# 5. Manual: open https://ujian-sekolah.naufaldi.com in browser
 #    Sign in with Google → should land on /dashboard (not on the API domain)
-#    Check DevTools Network → XHR to api-ujian-sekolah.faldi.xyz should carry cookies
+#    Check DevTools Network → XHR to api-ujian-sekolah.naufaldi.com should carry cookies
 ```
 
 ---
@@ -381,7 +391,7 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 
 5. **`BETTER_AUTH_URL` ≠ `APP_URL`** in subdomain-split deployments. `BETTER_AUTH_URL` is the API's own public URL (for OAuth callback construction); `APP_URL` is the web app's URL (for CORS/trustedOrigins).
 
-6. **Docker disk on VPS can fill during image pull** (49 GB total; `node_modules` layers are large). Symptom: `failed to register layer: no space left on device`. Deploy workflow runs `docker image prune -af` + `docker builder prune -af` before each pull. Manual fix: `ssh vps-faldi 'docker image prune -af && docker builder prune -af && df -h /'`.
+6. **Docker disk on VPS can fill during image pull** (49 GB total; `node_modules` layers are large). Symptom: `failed to register layer: no space left on device`. Each deploy prunes dangling images only (`docker image prune -f`) so the images that are serving stay tagged. A failed GHCR pull logs in again and retries up to 3 times. Manual emergency when the disk is full: `ssh vps-faldi 'docker image prune -af && docker builder prune -af && df -h /'`.
 
 7. **Caddy docker-proxy reloads on every container event**. In-flight ACME cert requests get cancelled on reload — the `context canceled` errors in Caddy logs during startup are expected and Caddy retries automatically.
 
@@ -394,3 +404,5 @@ ssh vps-faldi 'docker exec teacher-exam-web-1 sh -c "grep -ro api-ujian-sekolah.
 11. **PDF export needs glibc Chromium (not Alpine).** The API image runs `node:22-bookworm` + `playwright install --with-deps chromium` so `exportExamPdf` works in production; DOCX works everywhere (pure JS). On `node:22-alpine` (musl), Playwright's Chromium does not launch and the endpoint returns 500. See the "Feature B — PDF/DOCX export" section. The `api` compose service sets `init: true` + `ipc: host` for Chromium stability.
 
 12. **The `api` healthcheck uses `node fetch`, not `wget`.** `wget` is present on Alpine but absent on `node:22-bookworm`. The healthcheck runs `node -e "fetch('http://localhost:3001/api/health')..."`. Do not switch it back to `wget`/`curl` while the base image is bookworm, or the container reports unhealthy and Caddy stops routing to it.
+
+13. **Do not add `encode br` while the web image is stock `caddy:alpine`.** That image has no brotli module. Caddy exits, the site 308-loops, and a deploy that only curls the API still looks successful. `sh scripts/validate-caddyfile.sh` uses the Dockerfile's runtime image. The web healthcheck and the post-deploy smoke both require `id="root"` on `/`.

@@ -5,7 +5,6 @@ import type {
   ExamType,
   Grade,
   PdfUploadId,
-  PdfUploadStatus,
   PdfUploadSummary,
   SourceMode,
   TemplateApplyResponse
@@ -80,6 +79,19 @@ export const Route = createFileRoute("/_auth/generate")({
   }
 })
 
+const PDF_READY_POLL_INTERVAL_MS = 2_000
+const PDF_READY_POLL_TIMEOUT_MS = 60_000
+const SERVER_CONNECTION_ERROR_MESSAGE = "Tidak dapat menghubungi server. Periksa koneksi Anda lalu coba lagi."
+const PDF_PROCESSING_TIMEOUT_MESSAGE = "PDF masih diproses setelah 60 detik. Coba lagi tanpa mengunggah ulang."
+
+function isNetworkFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const message = error.message.toLowerCase()
+  return message.includes("failed to fetch") ||
+    message.includes("load failed") ||
+    message.includes("network")
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 function GeneratePage() {
@@ -90,14 +102,11 @@ function GeneratePage() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("default")
   const [freeTopic, setFreeTopic] = useState<string>("")
   const [uploadedPdfId, setUploadedPdfId] = useState<string | null>(null)
-  const [uploadPdfStatus, setUploadPdfStatus] = useState<PdfUploadStatus | null>(null)
-  const [uploadIngestError, setUploadIngestError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [pdfSource, setPdfSource] = useState<"upload" | "library">("upload")
   const [libraryItems, setLibraryItems] = useState<Array<PdfUploadSummary>>([])
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [selectedLibraryPdf, setSelectedLibraryPdf] = useState<PdfUploadSummary | null>(null)
-  const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
@@ -114,6 +123,7 @@ function GeneratePage() {
   const [contohSoal, setContohSoal] = useState<string>("")
   const [composition, setComposition] = useState<Composition>(() => DEFAULT_COMPOSITION_BY_JENIS["formatif"])
   const [compExpanded, setCompExpanded] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [curriculumCatalog, setCurriculumCatalog] = useState<CurriculumCatalogResponse>([])
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "error">("loading")
   const [babTopicOptions, setBabTopicOptions] = useState<Array<string>>([])
@@ -134,19 +144,13 @@ function GeneratePage() {
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pdfReadyPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleJenisChange = useCallback((next: ExamType) => {
     setExamType(next)
     setTotalSoal(DEFAULT_TOTAL_SOAL[next] ?? 20)
     setTotalSoalError(null)
     setComposition(DEFAULT_COMPOSITION_BY_JENIS[next])
-  }, [])
-
-  const clearUploadPoll = useCallback(() => {
-    if (uploadPollRef.current !== null) {
-      clearInterval(uploadPollRef.current)
-      uploadPollRef.current = null
-    }
   }, [])
 
   const clearTimers = useCallback(() => {
@@ -162,15 +166,16 @@ function GeneratePage() {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
     }
+    if (pdfReadyPollTimerRef.current !== null) {
+      clearTimeout(pdfReadyPollTimerRef.current)
+      pdfReadyPollTimerRef.current = null
+    }
   }, [])
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      clearTimers()
-      clearUploadPoll()
-    }
-  }, [clearTimers, clearUploadPoll])
+    return clearTimers
+  }, [clearTimers])
 
   // Prefill from a template applied via router navigation state (see /templates).
   const location = useLocation()
@@ -191,7 +196,10 @@ function GeneratePage() {
     if (t.composition !== undefined) {
       setComposition(t.composition)
     } else if (t.totalSoal !== undefined) {
-      setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[t.examType ?? "formatif"], t.totalSoal))
+      const templateExamType = t.examType ?? "formatif"
+      const profile = DEFAULT_COMPOSITION_BY_JENIS[templateExamType]
+      const oldTotal = DEFAULT_TOTAL_SOAL[templateExamType] ?? 20
+      setComposition(rescaleComposition(profile, oldTotal, t.totalSoal))
     }
     if (t.topics.length > 0) {
       setTopiks([...t.topics])
@@ -301,13 +309,10 @@ function GeneratePage() {
     : sourceMode === "pdf_guru"
     ? freeTopic.trim().length >= 10
     : true
-  const readyPdfId = selectedLibraryPdf?.status === "ready"
-    ? selectedLibraryPdf.id
-    : (uploadPdfStatus === "ready" && uploadedPdfId !== null ? uploadedPdfId : null)
-  const pdfSatisfied = !showPdfControls || readyPdfId !== null
-  const pdfIngestPending = showPdfControls && (
-    uploadPdfStatus === "uploaded" || uploadPdfStatus === "processing"
-  )
+  const pdfSatisfied = !showPdfControls ||
+    selectedFile !== null ||
+    uploadedPdfId !== null ||
+    selectedLibraryPdf?.status === "ready"
 
   useEffect(() => {
     if (!showPdfControls || pdfSource !== "library") return
@@ -348,15 +353,21 @@ function GeneratePage() {
     return () => clearInterval(handle)
   }, [libraryHasPending, pdfSource, showPdfControls])
 
+  const filledCount = [
+    kelas,
+    mapel,
+    topicsSatisfied ? "ok" : "",
+    kesulitan,
+    examType,
+    ...(showPdfControls && pdfSatisfied ? ["pdf"] : [])
+  ].filter(Boolean).length
+
   const handleSourceModeChange = useCallback((next: SourceMode) => {
     setSourceMode(next)
     setFieldErrors({})
     if (next === "default") {
-      clearUploadPoll()
       setSelectedFile(null)
       setUploadedPdfId(null)
-      setUploadPdfStatus(null)
-      setUploadIngestError(null)
       setFreeTopic("")
       setCustomMapel("")
       setSelectedLibraryPdf(null)
@@ -368,42 +379,7 @@ function GeneratePage() {
       setCustomTopik("")
       setShowCustomInput(false)
     }
-  }, [clearUploadPoll])
-
-  const startUploadIngest = useCallback((file: File) => {
-    clearUploadPoll()
-    setUploadIngestError(null)
-    setUploadPdfStatus("uploaded")
-    setUploadedPdfId(null)
-    void api.pdfUploads.create(file).then((uploadResult) => {
-      if (Either.isLeft(uploadResult)) {
-        setUploadPdfStatus("failed")
-        setUploadIngestError("Gagal mengunggah PDF. Coba unggah ulang.")
-        return
-      }
-      const upload = uploadResult.right
-      setUploadedPdfId(upload.id)
-      setUploadPdfStatus(upload.status)
-      if (upload.status === "ready") return
-      if (upload.status === "failed") {
-        setUploadIngestError("PDF gagal diproses. Hapus dan unggah ulang.")
-        return
-      }
-      uploadPollRef.current = setInterval(() => {
-        void api.pdfUploads.get(upload.id).then((detailResult) => {
-          if (Either.isLeft(detailResult)) return
-          const detail = detailResult.right
-          setUploadPdfStatus(detail.status)
-          if (detail.status === "ready" || detail.status === "failed") {
-            clearUploadPoll()
-            if (detail.status === "failed") {
-              setUploadIngestError(detail.errorMessage ?? "PDF gagal diproses. Hapus dan unggah ulang.")
-            }
-          }
-        })
-      }, 2000)
-    })
-  }, [clearUploadPoll])
+  }, [])
 
   const runGenerate = useCallback(() => {
     const topics: Array<string> = showCustomInput && customTopik.trim() !== ""
@@ -502,14 +478,87 @@ function GeneratePage() {
         } else if (err instanceof ApiError) {
           setGenerateErrorMessage(err.message)
           setShowErrorDialog(true)
+        } else if (isNetworkFailure(err)) {
+          setGenerateErrorMessage(SERVER_CONNECTION_ERROR_MESSAGE)
+          setShowErrorDialog(true)
         } else {
           setShowErrorDialog(true)
         }
       })
     }
 
-    if (showPdfControls && readyPdfId !== null) {
-      startGenerate(readyPdfId)
+    const stopWithError = (message?: string) => {
+      clearTimers()
+      setIsGenerating(false)
+      setProgress(0)
+      if (message !== undefined) {
+        setGenerateErrorMessage(message)
+      }
+      setShowErrorDialog(true)
+    }
+
+    const waitForPdfReady = (pdfUploadId: string, waitStartedAt = Date.now()) => {
+      pdfReadyPollTimerRef.current = setTimeout(() => {
+        pdfReadyPollTimerRef.current = null
+        void api.pdfUploads.get(pdfUploadId).then((detailResult) => {
+          const detail = unwrapApiEither(detailResult)
+          if (detail.status === "ready") {
+            startGenerate(pdfUploadId)
+            return
+          }
+          if (detail.status === "failed") {
+            stopWithError(detail.errorMessage ?? "PDF gagal diproses. Upload ulang atau gunakan PDF lain.")
+            return
+          }
+          if (Date.now() - waitStartedAt >= PDF_READY_POLL_TIMEOUT_MS) {
+            stopWithError(PDF_PROCESSING_TIMEOUT_MESSAGE)
+            return
+          }
+          waitForPdfReady(pdfUploadId, waitStartedAt)
+        }).catch((err: unknown) => {
+          if (err instanceof ApiError) {
+            stopWithError(err.message)
+          } else if (isNetworkFailure(err)) {
+            stopWithError(SERVER_CONNECTION_ERROR_MESSAGE)
+          } else {
+            stopWithError()
+          }
+        })
+      }, PDF_READY_POLL_INTERVAL_MS)
+    }
+
+    if (showPdfControls && uploadedPdfId !== null) {
+      if (selectedLibraryPdf?.status === "ready") {
+        startGenerate(uploadedPdfId)
+      } else {
+        waitForPdfReady(uploadedPdfId)
+      }
+      return
+    }
+
+    if (showPdfControls && selectedFile !== null) {
+      void api.pdfUploads.create(selectedFile).then((uploadResult) => {
+        const upload = unwrapApiEither(uploadResult)
+        setUploadedPdfId(upload.id)
+        if (upload.status === "ready") {
+          startGenerate(upload.id)
+        } else {
+          waitForPdfReady(upload.id)
+        }
+      }).catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          stopWithError(err.message)
+        } else if (isNetworkFailure(err)) {
+          stopWithError(SERVER_CONNECTION_ERROR_MESSAGE)
+        } else {
+          stopWithError()
+        }
+      })
+      return
+    }
+
+    if (showPdfControls && selectedLibraryPdf?.status === "ready") {
+      startGenerate(selectedLibraryPdf.id)
       return
     }
 
@@ -527,18 +576,24 @@ function GeneratePage() {
     kesulitan,
     mapel,
     navigate,
-    readyPdfId,
     reviewMode,
+    selectedFile,
     showCustomInput,
+    selectedLibraryPdf,
     showPdfControls,
     sourceMode,
     topiks,
-    totalSoal
+    totalSoal,
+    uploadedPdfId
   ])
 
   const selectedPdfLabel = selectedFile?.name ?? selectedLibraryPdf?.filename ?? null
 
   const handleGenerate = () => {
+    if (babRequired && effectiveTopiks.length === 0) {
+      setError("Pilih bab dulu.")
+      return
+    }
     const nextErrors: { pdf?: string; freeTopic?: string; mapel?: string } = {}
     if (showPdfControls && !pdfSatisfied) {
       nextErrors.pdf = PDF_REQUIRED_MESSAGE
@@ -574,27 +629,18 @@ function GeneratePage() {
       (sourceMode === "pdf_guru" || (catalogStatus === "ready" && selectedSubjectReady))
   )
   const isGenerateDisabled = Boolean(
-    !coreFormReady ||
-      (babRequired && effectiveTopiks.length === 0) ||
-      (showPdfControls && !pdfSatisfied) ||
-      pdfIngestPending ||
-      uploadPdfStatus === "failed"
+    !coreFormReady || (babRequired && effectiveTopiks.length === 0)
   )
-  const filledSlots = [
-    kelas,
-    mapelSatisfied ? "mapel" : "",
-    topicsSatisfied ? "ok" : "",
-    kesulitan,
-    examType,
-    ...(showPdfControls ? [pdfSatisfied ? "pdf" : ""] : [])
-  ]
-  const filledCount = filledSlots.filter(Boolean).length
-  const filledTotal = showPdfControls ? 6 : 5
 
   const topikSummary = effectiveTopiks.join(", ")
   const sidebarMateriLabel = sourceMode === "pdf_guru"
     ? (effectiveTopiks.length > 0 ? topikSummary : freeTopic.trim() || "—")
     : (effectiveTopiks.length > 0 ? topikSummary : "—")
+  const choiceSummary = [
+    kelas !== "" ? `Kelas ${kelas}` : "Kelas",
+    sourceMode === "pdf_guru" ? (customMapel.trim() || "Mata pelajaran") : subjectMeta.label,
+    babRequired ? (effectiveTopiks[0] ?? "Bab") : (freeTopic.trim() || "Topik")
+  ].join(" · ")
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] gap-8">
@@ -605,7 +651,7 @@ function GeneratePage() {
           className="animate-fade-up-stagger"
           style={{ "--index": 0 } as React.CSSProperties}
         >
-          <div className="relative overflow-hidden rounded-lg border border-border-default bg-white p-7">
+          <div className="relative overflow-hidden rounded-lg border border-border-default bg-white p-4 md:p-7">
             {/* Subtle red radial wash */}
             <div
               className="pointer-events-none absolute inset-0"
@@ -653,199 +699,13 @@ function GeneratePage() {
         </section>
 
         {/* ── Form sections ── */}
-        <div className="relative space-y-8">
+        <div className="relative space-y-8 pb-28 md:pb-0">
           {/* Section A: Materi Ujian */}
           <section
             className="animate-fade-up-stagger space-y-5"
             style={{ "--index": 1 } as React.CSSProperties}
           >
             <SectionHeader label="Materi Ujian" />
-
-            <div className="space-y-2">
-              <Label>Sumber materi</Label>
-              <RadioGroup
-                value={sourceMode}
-                onValueChange={(value) => handleSourceModeChange(value as SourceMode)}
-                className="grid gap-2"
-              >
-                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                  <RadioGroupItem value="default" id="source-default" />
-                  <span className="text-body-sm">Buku Siswa</span>
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                  <RadioGroupItem value="pdf_guru" id="source-pdf-guru" />
-                  <span className="text-body-sm">PDF saya saja</span>
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                  <RadioGroupItem value="combine" id="source-combine" />
-                  <span className="text-body-sm">Buku Siswa + PDF saya</span>
-                </label>
-              </RadioGroup>
-            </div>
-
-            {sourceMode === "pdf_guru" ?
-              (
-                <div className="flex items-start gap-2 rounded-md border border-warning-200 bg-warning-50 px-3 py-2 text-body-sm text-warning-800">
-                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                  <p>
-                    Soal mungkin di luar Capaian Pembelajaran resmi. Gunakan Periksa kurikulum setelah generate.
-                  </p>
-                </div>
-              ) :
-              null}
-
-            {showPdfControls ?
-              (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={pdfSource === "upload" ? "primary" : "secondary"}
-                      size="sm"
-                      onClick={() => setPdfSource("upload")}
-                    >
-                      Upload baru
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={pdfSource === "library" ? "primary" : "secondary"}
-                      size="sm"
-                      onClick={() => setPdfSource("library")}
-                    >
-                      Dari perpustakaan
-                    </Button>
-                  </div>
-                  {pdfSource === "upload" ?
-                    (
-                      <FileUpload
-                        onFileSelect={(file) => {
-                          setSelectedFile(file)
-                          setSelectedLibraryPdf(null)
-                          setFieldErrors((prev) => {
-                            const next = { ...prev }
-                            delete next.pdf
-                            return next
-                          })
-                          startUploadIngest(file)
-                        }}
-                        onFileRemove={() => {
-                          clearUploadPoll()
-                          setSelectedFile(null)
-                          setUploadedPdfId(null)
-                          setUploadPdfStatus(null)
-                          setUploadIngestError(null)
-                        }}
-                        selectedFile={selectedFile}
-                      />
-                    ) :
-                    (
-                      <PdfLibraryPicker
-                        items={libraryItems}
-                        loading={libraryLoading}
-                        selectedId={selectedLibraryPdf?.id ?? null}
-                        onSelect={(item) => {
-                          clearUploadPoll()
-                          setSelectedLibraryPdf(item)
-                          setSelectedFile(null)
-                          setUploadedPdfId(item.status === "ready" ? item.id : null)
-                          setUploadPdfStatus(item.status)
-                          setUploadIngestError(
-                            item.status === "failed"
-                              ? "PDF gagal diproses. Pilih dokumen lain atau unggah ulang."
-                              : null
-                          )
-                          setFieldErrors((prev) => {
-                            const next = { ...prev }
-                            delete next.pdf
-                            return next
-                          })
-                        }}
-                        onDelete={(id) => {
-                          const item = libraryItems.find((entry) => entry.id === id)
-                          setPendingDeleteId(id)
-                          setPendingDeleteFilename(item?.filename ?? "PDF")
-                        }}
-                      />
-                    )}
-                  {pdfIngestPending ?
-                    (
-                      <p className="text-caption text-text-secondary" role="status">
-                        Sedang memproses PDF… tunggu hingga siap sebelum generate.
-                      </p>
-                    ) :
-                    null}
-                  {uploadPdfStatus === "ready" && pdfSource === "upload" ?
-                    (
-                      <p className="text-caption text-success-700" role="status">
-                        PDF siap digunakan.
-                      </p>
-                    ) :
-                    null}
-                  {uploadIngestError !== null ?
-                    (
-                      <p className="text-caption text-danger-fg" role="alert">
-                        {uploadIngestError}
-                      </p>
-                    ) :
-                    null}
-                  {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
-                    (
-                      <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 rounded border-border-ui"
-                          checked={false}
-                          disabled
-                          aria-label="Sertakan gambar dari PDF (segera hadir)"
-                        />
-                        <span>
-                          Sertakan gambar dari PDF
-                          {" "}
-                          <span className="text-caption">(segera hadir)</span>
-                        </span>
-                      </label>
-                    ) :
-                    null}
-                  {fieldErrors.pdf !== undefined ?
-                    (
-                      <p className="text-caption text-danger-fg" role="alert">
-                        {fieldErrors.pdf}
-                      </p>
-                    ) :
-                    null}
-                </div>
-              ) :
-              null}
-
-            {sourceMode === "pdf_guru" ?
-              (
-                <div className="space-y-1.5">
-                  <Label htmlFor="free-topic">Topik bebas</Label>
-                  <Textarea
-                    id="free-topic"
-                    value={freeTopic}
-                    onChange={(e) => {
-                      setFreeTopic(e.target.value)
-                      setFieldErrors((prev) => {
-                        const next = { ...prev }
-                        delete next.freeTopic
-                        return next
-                      })
-                    }}
-                    placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
-                    rows={3}
-                  />
-                  <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
-                  {fieldErrors.freeTopic !== undefined ?
-                    (
-                      <p className="text-caption text-danger-fg" role="alert">
-                        {fieldErrors.freeTopic}
-                      </p>
-                    ) :
-                    null}
-                </div>
-              ) :
-              null}
 
             {/* Kelas */}
             <div className="space-y-1.5">
@@ -868,23 +728,6 @@ function GeneratePage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Kurikulum (locked) */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="kurikulum">Kurikulum</Label>
-                <Lock className="h-3.5 w-3.5 text-text-tertiary" />
-              </div>
-              <Select disabled defaultValue="merdeka">
-                <SelectTrigger id="kurikulum">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="merdeka">Kurikulum Merdeka</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-caption text-text-tertiary mt-1">{phaseCopy}</p>
             </div>
 
             {/* Mata Pelajaran */}
@@ -1025,282 +868,466 @@ function GeneratePage() {
                     ) :
                     null}
                   {babRequired && effectiveTopiks.length === 0 ?
-                    <p className="text-caption text-text-tertiary">Pilih minimal 1 materi.</p> :
+                    <p className="text-caption text-text-tertiary">Pilih bab dulu.</p> :
                     null}
                 </div>
               ) :
               null}
-          </section>
 
-          {/* Section B: Pengaturan Soal */}
-          <section
-            className="animate-fade-up-stagger space-y-5"
-            style={{ "--index": 2 } as React.CSSProperties}
-          >
-            <SectionHeader label="Pengaturan Soal" />
-
-            {/* Jenis Lembar (PRD §8.6) */}
-            <div className="space-y-1.5">
-              <Label>Jenis Lembar</Label>
-              <RadioGroup
-                value={examType}
-                onValueChange={(v) => handleJenisChange(v as ExamType)}
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  {EXAM_TYPE_OPTIONS.map((opt) => {
-                    const id = `jenis-${opt.value}`
-                    const selected = examType === opt.value
-                    return (
-                      <Label
-                        key={opt.value}
-                        htmlFor={id}
-                        title={opt.sublabel}
-                        className={[
-                          "flex flex-col gap-1 p-3 rounded-sm border cursor-pointer",
-                          "transition-all duration-[180ms]",
-                          selected
-                            ? "border-primary-600 bg-primary-50"
-                            : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                        ].join(" ")}
-                      >
-                        <RadioGroupItem
-                          value={opt.value}
-                          id={id}
-                          className="sr-only"
-                        />
-                        <span className="text-body font-medium text-text-primary">
-                          {opt.label}
-                        </span>
-                        <span className="text-caption text-text-tertiary">
-                          {opt.sublabel}
-                        </span>
-                      </Label>
-                    )
-                  })}
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Tingkat Kesulitan */}
-            <div className="space-y-1.5">
-              <Label htmlFor="kesulitan">Tingkat Kesulitan</Label>
-              <Select value={kesulitan} onValueChange={setKesulitan}>
-                <SelectTrigger id="kesulitan">
-                  <SelectValue placeholder="Pilih kesulitan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mudah">Mudah</SelectItem>
-                  <SelectItem value="sedang">Sedang</SelectItem>
-                  <SelectItem value="sulit">Sulit</SelectItem>
-                  <SelectItem value="campuran">Campuran</SelectItem>
-                </SelectContent>
-              </Select>
-              {kesulitan === "campuran" ?
-                (
-                  <p className="text-caption text-text-tertiary mt-1">
-                    Distribusi kesulitan mengikuti Jenis Lembar terpilih.
-                  </p>
-                ) :
-                (
-                  <p className="text-caption text-text-tertiary mt-1">
-                    Pilihan eksplisit ini akan menggantikan distribusi default Jenis Lembar.
-                  </p>
-                )}
-            </div>
-
-            {/* Jumlah Soal (editable — PRD US-8) */}
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="totalSoal">Jumlah Soal</Label>
-              <Input
-                id="totalSoal"
-                type="number"
-                min={5}
-                max={50}
-                value={totalSoal}
-                onChange={(e) => {
-                  const n = Number(e.target.value)
-                  const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
-                  setTotalSoal(n)
-                  if (!Number.isInteger(n) || n < 5) setTotalSoalError("Minimum 5 soal")
-                  else if (n > 50) setTotalSoalError("Maksimum 50 soal")
-                  else {
-                    setTotalSoalError(null)
-                    if (n > 0) {
-                      setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
-                    }
-                  }
-                }}
-                aria-invalid={totalSoalError !== null}
-                aria-describedby={totalSoalError !== null ? "totalSoal-error" : undefined}
-              />
-              {totalSoalError !== null ?
-                <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p> :
-                null}
-            </div>
-
-            {/* Atur Komposisi expandable panel */}
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                aria-expanded={compExpanded}
-                onClick={() => setCompExpanded((prev) => !prev)}
-                className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
-              >
-                Atur komposisi
-                <span className="text-caption text-text-tertiary">{compExpanded ? "▲" : "▼"}</span>
-              </button>
-              {compExpanded ?
-                (
-                  <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
-                      <Input
-                        id="comp-mcq-single"
-                        type="number"
-                        min={0}
-                        value={composition.mcqSingle}
-                        onChange={(e) =>
-                          setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
-                      <Input
-                        id="comp-mcq-multi"
-                        type="number"
-                        min={0}
-                        value={composition.mcqMulti}
-                        onChange={(e) => setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="comp-true-false">Benar/Salah</Label>
-                      <Input
-                        id="comp-true-false"
-                        type="number"
-                        min={0}
-                        value={composition.trueFalse}
-                        onChange={(e) =>
-                          setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    {!isCompositionValid ?
-                      <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p> :
-                      null}
+            <button
+              type="button"
+              aria-expanded={advancedOpen}
+              onClick={() => setAdvancedOpen((open) => !open)}
+              className="flex items-center gap-2 self-start text-body-sm font-medium text-text-secondary transition-colors duration-[120ms] hover:text-text-primary"
+            >
+              Pengaturan lanjutan
+              <span className="text-caption text-text-tertiary">{advancedOpen ? "▲" : "▼"}</span>
+            </button>
+            {advancedOpen ?
+              (
+                <>
+                  <div className="space-y-2">
+                    <Label>Sumber materi</Label>
+                    <RadioGroup
+                      value={sourceMode}
+                      onValueChange={(value) => handleSourceModeChange(value as SourceMode)}
+                      className="grid gap-2"
+                    >
+                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                        <RadioGroupItem value="default" id="source-default" />
+                        <span className="text-body-sm">Buku Siswa</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                        <RadioGroupItem value="pdf_guru" id="source-pdf-guru" />
+                        <span className="text-body-sm">PDF saya saja</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                        <RadioGroupItem value="combine" id="source-combine" />
+                        <span className="text-body-sm">Buku Siswa + PDF saya</span>
+                      </label>
+                    </RadioGroup>
                   </div>
-                ) :
-                null}
-            </div>
 
-            {/* Mode Review */}
-            <div className="space-y-1.5">
-              <Label>Mode Review</Label>
-              <RadioGroup
-                value={reviewMode}
-                onValueChange={(v) => setReviewMode(v as "fast" | "slow")}
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  <Label
-                    htmlFor="mode-fast"
-                    className={[
-                      "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
-                      "transition-all duration-[180ms]",
-                      reviewMode === "fast"
-                        ? "border-primary-600 bg-primary-50"
-                        : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                    ].join(" ")}
+                  {sourceMode === "pdf_guru" ?
+                    (
+                      <div className="flex items-start gap-2 rounded-md border border-warning-200 bg-warning-50 px-3 py-2 text-body-sm text-warning-800">
+                        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                        <p>
+                          Soal mungkin di luar Capaian Pembelajaran resmi. Gunakan Periksa kurikulum setelah generate.
+                        </p>
+                      </div>
+                    ) :
+                    null}
+
+                  {showPdfControls ?
+                    (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={pdfSource === "upload" ? "primary" : "secondary"}
+                            size="sm"
+                            onClick={() => setPdfSource("upload")}
+                          >
+                            Upload baru
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={pdfSource === "library" ? "primary" : "secondary"}
+                            size="sm"
+                            onClick={() => setPdfSource("library")}
+                          >
+                            Dari perpustakaan
+                          </Button>
+                        </div>
+                        {pdfSource === "upload" ?
+                          (
+                            <FileUpload
+                              onFileSelect={(file) => {
+                                setSelectedFile(file)
+                                setUploadedPdfId(null)
+                                setSelectedLibraryPdf(null)
+                                setFieldErrors((prev) => {
+                                  const next = { ...prev }
+                                  delete next.pdf
+                                  return next
+                                })
+                              }}
+                              onFileRemove={() => {
+                                setSelectedFile(null)
+                                setUploadedPdfId(null)
+                              }}
+                              selectedFile={selectedFile}
+                            />
+                          ) :
+                          (
+                            <PdfLibraryPicker
+                              items={libraryItems}
+                              loading={libraryLoading}
+                              selectedId={selectedLibraryPdf?.id ?? null}
+                              onSelect={(item) => {
+                                setSelectedLibraryPdf(item)
+                                setSelectedFile(null)
+                                setUploadedPdfId(item.id)
+                                setFieldErrors((prev) => {
+                                  const next = { ...prev }
+                                  delete next.pdf
+                                  return next
+                                })
+                              }}
+                              onDelete={(id) => {
+                                const item = libraryItems.find((entry) => entry.id === id)
+                                setPendingDeleteId(id)
+                                setPendingDeleteFilename(item?.filename ?? "PDF")
+                              }}
+                            />
+                          )}
+                        {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
+                          (
+                            <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 h-4 w-4 rounded border-border-ui"
+                                checked={false}
+                                disabled
+                                aria-label="Sertakan gambar dari PDF (segera hadir)"
+                              />
+                              <span>
+                                Sertakan gambar dari PDF <span className="text-caption">(segera hadir)</span>
+                              </span>
+                            </label>
+                          ) :
+                          null}
+                        {fieldErrors.pdf !== undefined ?
+                          (
+                            <p className="text-caption text-danger-fg" role="alert">
+                              {fieldErrors.pdf}
+                            </p>
+                          ) :
+                          null}
+                      </div>
+                    ) :
+                    null}
+
+                  {sourceMode === "pdf_guru" ?
+                    (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="free-topic">Topik bebas</Label>
+                        <Textarea
+                          id="free-topic"
+                          value={freeTopic}
+                          onChange={(e) => {
+                            setFreeTopic(e.target.value)
+                            setFieldErrors((prev) => {
+                              const next = { ...prev }
+                              delete next.freeTopic
+                              return next
+                            })
+                          }}
+                          placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
+                          rows={3}
+                        />
+                        <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
+                        {fieldErrors.freeTopic !== undefined ?
+                          (
+                            <p className="text-caption text-danger-fg" role="alert">
+                              {fieldErrors.freeTopic}
+                            </p>
+                          ) :
+                          null}
+                      </div>
+                    ) :
+                    null}
+                  {/* Kurikulum (locked) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="kurikulum">Kurikulum</Label>
+                      <Lock className="h-3.5 w-3.5 text-text-tertiary" />
+                    </div>
+                    <Select disabled defaultValue="merdeka">
+                      <SelectTrigger id="kurikulum">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="merdeka">Kurikulum Merdeka</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-caption text-text-tertiary mt-1">{phaseCopy}</p>
+                  </div>
+                  {/* Section B: Pengaturan Soal */}
+                  <section
+                    className="animate-fade-up-stagger space-y-5"
+                    style={{ "--index": 2 } as React.CSSProperties}
                   >
-                    <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
-                    <span className="text-body font-medium text-text-primary">Cepat</span>
-                    <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
-                  </Label>
-                  <Label
-                    htmlFor="mode-slow"
-                    className={[
-                      "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
-                      "transition-all duration-[180ms]",
-                      reviewMode === "slow"
-                        ? "border-primary-600 bg-primary-50"
-                        : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                    ].join(" ")}
+                    <SectionHeader label="Pengaturan Soal" />
+
+                    {/* Jenis Lembar (PRD §8.6) */}
+                    <div className="space-y-1.5">
+                      <Label>Jenis Lembar</Label>
+                      <RadioGroup
+                        value={examType}
+                        onValueChange={(v) => handleJenisChange(v as ExamType)}
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          {EXAM_TYPE_OPTIONS.map((opt) => {
+                            const id = `jenis-${opt.value}`
+                            const selected = examType === opt.value
+                            return (
+                              <Label
+                                key={opt.value}
+                                htmlFor={id}
+                                title={opt.sublabel}
+                                className={[
+                                  "flex flex-col gap-1 p-3 rounded-sm border cursor-pointer",
+                                  "transition-all duration-[180ms]",
+                                  selected
+                                    ? "border-primary-600 bg-primary-50"
+                                    : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                                ].join(" ")}
+                              >
+                                <RadioGroupItem
+                                  value={opt.value}
+                                  id={id}
+                                  className="sr-only"
+                                />
+                                <span className="text-body font-medium text-text-primary">
+                                  {opt.label}
+                                </span>
+                                <span className="text-caption text-text-tertiary">
+                                  {opt.sublabel}
+                                </span>
+                              </Label>
+                            )
+                          })}
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Tingkat Kesulitan */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="kesulitan">Tingkat Kesulitan</Label>
+                      <Select value={kesulitan} onValueChange={setKesulitan}>
+                        <SelectTrigger id="kesulitan">
+                          <SelectValue placeholder="Pilih kesulitan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mudah">Mudah</SelectItem>
+                          <SelectItem value="sedang">Sedang</SelectItem>
+                          <SelectItem value="sulit">Sulit</SelectItem>
+                          <SelectItem value="campuran">Campuran</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {kesulitan === "campuran" ?
+                        (
+                          <p className="text-caption text-text-tertiary mt-1">
+                            Distribusi kesulitan mengikuti Jenis Lembar terpilih.
+                          </p>
+                        ) :
+                        (
+                          <p className="text-caption text-text-tertiary mt-1">
+                            Pilihan eksplisit ini akan menggantikan distribusi default Jenis Lembar.
+                          </p>
+                        )}
+                    </div>
+
+                    {/* Jumlah Soal (editable — PRD US-8) */}
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="totalSoal">Jumlah Soal</Label>
+                      <Input
+                        id="totalSoal"
+                        type="number"
+                        min={5}
+                        max={50}
+                        value={totalSoal}
+                        onChange={(e) => {
+                          const n = Number(e.target.value)
+                          const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
+                          setTotalSoal(n)
+                          if (!Number.isInteger(n) || n < 5) setTotalSoalError("Minimum 5 soal")
+                          else if (n > 50) setTotalSoalError("Maksimum 50 soal")
+                          else {
+                            setTotalSoalError(null)
+                            if (n > 0) {
+                              setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
+                            }
+                          }
+                        }}
+                        aria-invalid={totalSoalError !== null}
+                        aria-describedby={totalSoalError !== null ? "totalSoal-error" : undefined}
+                      />
+                      {totalSoalError !== null ?
+                        <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p> :
+                        null}
+                    </div>
+
+                    {/* Atur Komposisi expandable panel */}
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        aria-expanded={compExpanded}
+                        onClick={() => setCompExpanded((prev) => !prev)}
+                        className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
+                      >
+                        Atur komposisi
+                        <span className="text-caption text-text-tertiary">{compExpanded ? "▲" : "▼"}</span>
+                      </button>
+                      {compExpanded ?
+                        (
+                          <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
+                            <div className="flex flex-col gap-1">
+                              <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
+                              <Input
+                                id="comp-mcq-single"
+                                type="number"
+                                min={0}
+                                value={composition.mcqSingle}
+                                onChange={(e) =>
+                                  setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
+                              <Input
+                                id="comp-mcq-multi"
+                                type="number"
+                                min={0}
+                                value={composition.mcqMulti}
+                                onChange={(e) =>
+                                  setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label htmlFor="comp-true-false">Benar/Salah</Label>
+                              <Input
+                                id="comp-true-false"
+                                type="number"
+                                min={0}
+                                value={composition.trueFalse}
+                                onChange={(e) =>
+                                  setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))}
+                              />
+                            </div>
+                            {!isCompositionValid ?
+                              <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p> :
+                              null}
+                          </div>
+                        ) :
+                        null}
+                    </div>
+
+                    {/* Mode Review */}
+                    <div className="space-y-1.5">
+                      <Label>Mode Review</Label>
+                      <RadioGroup
+                        value={reviewMode}
+                        onValueChange={(v) => setReviewMode(v as "fast" | "slow")}
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          <Label
+                            htmlFor="mode-fast"
+                            className={[
+                              "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
+                              "transition-all duration-[180ms]",
+                              reviewMode === "fast"
+                                ? "border-primary-600 bg-primary-50"
+                                : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                            ].join(" ")}
+                          >
+                            <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
+                            <span className="text-body font-medium text-text-primary">Cepat</span>
+                            <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
+                          </Label>
+                          <Label
+                            htmlFor="mode-slow"
+                            className={[
+                              "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
+                              "transition-all duration-[180ms]",
+                              reviewMode === "slow"
+                                ? "border-primary-600 bg-primary-50"
+                                : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                            ].join(" ")}
+                          >
+                            <RadioGroupItem value="slow" id="mode-slow" className="sr-only" />
+                            <span className="text-body font-medium text-text-primary">Detail</span>
+                            <span className="text-body-sm text-text-tertiary">Review satu per satu</span>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </section>
+
+                  {/* Section C: Konteks & Referensi (PRD §8.7) */}
+                  <section
+                    className="animate-fade-up-stagger space-y-5"
+                    style={{ "--index": 3 } as React.CSSProperties}
                   >
-                    <RadioGroupItem value="slow" id="mode-slow" className="sr-only" />
-                    <span className="text-body font-medium text-text-primary">Detail</span>
-                    <span className="text-body-sm text-text-tertiary">Review satu per satu</span>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </section>
+                    <SectionHeader label="Konteks & Referensi" />
 
-          {/* Section C: Konteks & Referensi (PRD §8.7) */}
-          <section
-            className="animate-fade-up-stagger space-y-5"
-            style={{ "--index": 3 } as React.CSSProperties}
-          >
-            <SectionHeader label="Konteks & Referensi" />
+                    {/* Fokus / Tujuan Guru */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="fokus-guru">
+                        Fokus / Tujuan Guru <span className="text-text-tertiary font-normal">(opsional)</span>
+                      </Label>
+                      <Textarea
+                        ref={fokusGuruRef}
+                        id="fokus-guru"
+                        placeholder="Mis. Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan."
+                        rows={3}
+                        value={fokusGuru}
+                        onChange={(e) => setFokusGuru(e.target.value.slice(0, FOKUS_GURU_MAX))}
+                      />
+                      <FokusGuruChips
+                        topik={effectiveTopiks[0] ?? ""}
+                        onAppend={(snippet) => {
+                          setFokusGuru((prev) => {
+                            const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n"
+                            const next = (prev + sep + snippet).slice(0, FOKUS_GURU_MAX)
+                            // Restore focus + caret to the end after state flush
+                            queueMicrotask(() => {
+                              const el = fokusGuruRef.current
+                              if (el) {
+                                el.focus()
+                                el.setSelectionRange(next.length, next.length)
+                              }
+                            })
+                            return next
+                          })
+                        }}
+                      />
+                      <div className="flex justify-between items-center">
+                        <p className="text-caption text-text-tertiary">
+                          Konteks ini diberikan ke AI sebagai panduan, tidak dicetak di lembar siswa.
+                        </p>
+                        <span
+                          className={[
+                            "text-caption tabular-nums",
+                            fokusGuru.length >= FOKUS_GURU_MAX
+                              ? "text-warning-fg"
+                              : "text-text-tertiary"
+                          ].join(" ")}
+                        >
+                          {fokusGuru.length}/{FOKUS_GURU_MAX}
+                        </span>
+                      </div>
+                    </div>
 
-            {/* Fokus / Tujuan Guru */}
-            <div className="space-y-1.5">
-              <Label htmlFor="fokus-guru">
-                Fokus / Tujuan Guru <span className="text-text-tertiary font-normal">(opsional)</span>
-              </Label>
-              <Textarea
-                ref={fokusGuruRef}
-                id="fokus-guru"
-                placeholder="Mis. Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan."
-                rows={3}
-                value={fokusGuru}
-                onChange={(e) => setFokusGuru(e.target.value.slice(0, FOKUS_GURU_MAX))}
-              />
-              <FokusGuruChips
-                topik={effectiveTopiks[0] ?? ""}
-                onAppend={(snippet) => {
-                  setFokusGuru((prev) => {
-                    const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n"
-                    const next = (prev + sep + snippet).slice(0, FOKUS_GURU_MAX)
-                    // Restore focus + caret to the end after state flush
-                    queueMicrotask(() => {
-                      const el = fokusGuruRef.current
-                      if (el) {
-                        el.focus()
-                        el.setSelectionRange(next.length, next.length)
-                      }
-                    })
-                    return next
-                  })
-                }}
-              />
-              <div className="flex justify-between items-center">
-                <p className="text-caption text-text-tertiary">
-                  Konteks ini diberikan ke AI sebagai panduan, tidak dicetak di lembar siswa.
-                </p>
-                <span
-                  className={[
-                    "text-caption tabular-nums",
-                    fokusGuru.length >= FOKUS_GURU_MAX
-                      ? "text-warning-fg"
-                      : "text-text-tertiary"
-                  ].join(" ")}
-                >
-                  {fokusGuru.length}/{FOKUS_GURU_MAX}
-                </span>
-              </div>
-            </div>
-
-            {/* Contoh Soal */}
-            <div className="space-y-1.5">
-              <Label htmlFor="contoh-soal">
-                Contoh Soal <span className="text-text-tertiary font-normal">(opsional)</span>
-              </Label>
-              <Textarea
-                id="contoh-soal"
-                placeholder="Paste contoh soal yang diinginkan gayanya..."
-                rows={4}
-                value={contohSoal}
-                onChange={(e) => setContohSoal(e.target.value)}
-              />
-            </div>
+                    {/* Contoh Soal */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="contoh-soal">
+                        Contoh Soal <span className="text-text-tertiary font-normal">(opsional)</span>
+                      </Label>
+                      <Textarea
+                        id="contoh-soal"
+                        placeholder="Paste contoh soal yang diinginkan gayanya..."
+                        rows={4}
+                        value={contohSoal}
+                        onChange={(e) => setContohSoal(e.target.value)}
+                      />
+                    </div>
+                  </section>
+                </>
+              ) :
+              null}
           </section>
 
           {/* CTA area */}
@@ -1334,7 +1361,10 @@ function GeneratePage() {
               ) :
               null}
 
-            <div className="pt-4 border-t border-border-default">
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-default bg-bg-surface px-4 py-3 md:static md:z-auto md:border-0 md:bg-transparent md:px-0 md:pt-4 md:border-t">
+              <p data-testid="generate-choice-summary" className="mb-2 truncate text-caption text-text-secondary">
+                {choiceSummary}
+              </p>
               <Button
                 size="lg"
                 className="w-full"
@@ -1342,9 +1372,12 @@ function GeneratePage() {
                 onClick={handleGenerate}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Generate Lembar
+                Buat {totalSoal} Soal
               </Button>
-              <p className="text-caption text-text-tertiary text-center mt-2">
+              <p
+                data-testid="generate-trust-footer"
+                className="text-caption text-text-tertiary text-center mt-2"
+              >
                 {sourceMode === "pdf_guru"
                   ? `AI akan membuat ${totalSoal} soal berdasarkan PDF yang dipilih`
                   : `AI akan membuat ${totalSoal} soal sesuai Capaian Pembelajaran ${phaseLabel}`}
@@ -1367,12 +1400,9 @@ function GeneratePage() {
                 Ringkasan Konfigurasi
               </h3>
               <div className="flex items-center gap-2">
-                <Progress
-                  value={filledTotal > 0 ? (filledCount / filledTotal) * 100 : 0}
-                  className="h-1.5 flex-1"
-                />
+                <Progress value={filledCount * 20} className="h-1.5 flex-1" />
                 <span className="text-caption text-text-tertiary tabular-nums">
-                  {filledCount}/{filledTotal}
+                  {filledCount}/5
                 </span>
               </div>
             </div>

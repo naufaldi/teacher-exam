@@ -2,12 +2,14 @@ import { SqlClient } from "@effect/sql/SqlClient"
 import { exams, questions } from "@teacher-exam/db"
 import { formatExamTitle, normalizeExamType, validateGenerateExamInput } from "@teacher-exam/shared"
 import type { GeneratedQuestion, GenerateExamInput, Question } from "@teacher-exam/shared"
+import { recordFunnelStage } from "@teacher-exam/shared/funnel"
 import { Data, Effect, Either } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
 import { CurriculumReadError, CurriculumService } from "../api/services/curriculum-service"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorage } from "../api/services/object-storage"
+import { selectChosenBabText } from "../curriculum/bab-index.js"
 import { isReadySibiPdfForGenerate } from "../curriculum/catalog.js"
 import { AiGenerationError } from "../errors"
 import { type AiService } from "../services/AiService"
@@ -15,12 +17,13 @@ import {
   convertGeneratedToQuestion,
   examSubjectInsertFields,
   failureReasonForNumber,
+  generatedDiagramNeedsRetry,
   makeFakeQuestionShape,
   makePlaceholderQuestion,
   resolveInputSubjectLabel
 } from "./ai-generate-mappers"
 import { logAiEvent } from "./ai-log"
-import { shouldValidateLatexForGenerate } from "./should-validate-latex.js"
+import { attachTopicDiagram } from "./attach-topic-diagram"
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
 import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
 import { fetchExamWithQuestions } from "./exams-query"
@@ -32,6 +35,9 @@ import { loadReadyPdfUpload } from "./pdf-upload-service"
 import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
+import { activeFunnelSink } from "./sentry"
+import { shouldValidateLatexForGenerate } from "./should-validate-latex.js"
+import { citeQuestionSourcePage } from "./source-page"
 
 class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
   message: string
@@ -55,9 +61,10 @@ async function generateWithSalvage(
     examId: string
     createdAt: Date
     includePdfImages?: boolean
+    topics: ReadonlyArray<string>
   }
 ): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
-  const maxAttempts = request.shouldValidateLatex ? 3 : 1
+  const maxAttempts = request.shouldValidateLatex ? 3 : 2
   let lastSalvage:
     | {
       valid: ReadonlyArray<GeneratedQuestion>
@@ -112,8 +119,9 @@ async function generateWithSalvage(
     }
 
     const hasInvalidLatex = [...latexByNumber.values()].some((r) => r._tag === "invalid")
+    const hasDiagramMismatch = valid.some((question) => generatedDiagramNeedsRetry(question))
     lastSalvage = { valid, failed, missingNumbers, latexByNumber }
-    if (!hasInvalidLatex) break
+    if (!hasInvalidLatex && !hasDiagramMismatch) break
   }
 
   if (!lastSalvage) {
@@ -149,7 +157,7 @@ async function generateWithSalvage(
     byNumber.set(
       q.number,
       convertGeneratedToQuestion(
-        stored,
+        attachTopicDiagram(stored, request.topics),
         {
           id: crypto.randomUUID(),
           examId: request.examId,
@@ -335,7 +343,8 @@ export function executeGenerateExam(
           reviewMode: input.reviewMode,
           examId: resolvedExamId,
           createdAt: now,
-          includePdfImages: input.includePdfImages === true
+          includePdfImages: input.includePdfImages === true,
+          topics: [...promptTopics]
         }),
       catch: (cause) => new AiGenerationError({ cause })
     })
@@ -348,7 +357,9 @@ export function executeGenerateExam(
       return { _tag: "ai_error", message: String((err as { cause?: unknown }).cause) }
     }
 
-    const insertedQuestions = [...generated.right.questions]
+    const insertedQuestions = generated.right.questions.map((question) =>
+      citeQuestionSourcePage(question, curriculumText)
+    )
     const generationIncomplete = generated.right.generationIncomplete
     const failedQuestionNumbers = [...generated.right.failedQuestionNumbers]
 
@@ -438,6 +449,7 @@ export function executeGenerateExam(
       questionCount: insertedQuestions.length,
       durationMs: Date.now() - handlerT0
     })
+    recordFunnelStage("generate", activeFunnelSink())
 
     return {
       _tag: "success",
@@ -523,7 +535,10 @@ function prepareGenerateContext(
     let curriculumText: string
     if (!useRag && sourceMode !== "pdf_guru") {
       const curriculum = yield* CurriculumService
-      curriculumText = yield* curriculum.getText(input.subject!, input.grade)
+      curriculumText = selectChosenBabText(
+        yield* curriculum.getText(input.subject!, input.grade),
+        promptTopics
+      )
     } else {
       const retrievalResult = yield* Effect.either(
         resolveRetrievalContext({
@@ -546,7 +561,10 @@ function prepareGenerateContext(
         return yield* Effect.fail(retrievalResult.left)
       } else if (sourceMode !== "pdf_guru") {
         const curriculum = yield* CurriculumService
-        curriculumText = yield* curriculum.getText(input.subject!, input.grade)
+        curriculumText = selectChosenBabText(
+          yield* curriculum.getText(input.subject!, input.grade),
+          promptTopics
+        )
       } else {
         return {
           _tag: "err",

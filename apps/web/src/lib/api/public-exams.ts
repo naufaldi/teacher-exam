@@ -1,4 +1,4 @@
-import type { PublicExamDetailResponse } from "@teacher-exam/shared"
+import type { ExportFormat, ExportVariant, PublicExamDetailResponse } from "@teacher-exam/shared"
 import { PublicExamWithQuestionsSchema } from "@teacher-exam/shared"
 import { Either } from "effect"
 import type { ApiClientFailure } from "../api-errors.js"
@@ -12,7 +12,7 @@ export const publicExamsApi = {
     }
     return decodeEither(PublicExamWithQuestionsSchema, raw.right)
   },
-  export: (slug: string, format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
+  export: (slug: string, format: ExportFormat, variant: ExportVariant) => {
     const params = new URLSearchParams({ format, variant })
     return downloadExport(`/public/exams/${slug}/export?${params.toString()}`, `ujian.${format}`)
   }

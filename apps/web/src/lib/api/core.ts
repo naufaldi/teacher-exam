@@ -30,7 +30,8 @@ export function throwClientError(err: ApiClientFailure): never {
       throw legacy
     }),
     Match.tag("RateLimitedClientError", (e) => {
-      throw new RateLimitedError(e.retryAfterSec, e.message)
+      const message = e.message.length > 0 ? e.message : undefined
+      throw new RateLimitedError(e.retryAfterSec, message)
     }),
     Match.tag("ApiClientError", (e) => {
       throw new ApiError({

@@ -1,10 +1,11 @@
-import type { Question } from "@teacher-exam/shared"
+import { formatMcqOption, MCQ_OPTION_LETTERS, type Question, SHEET_CREDIT } from "@teacher-exam/shared"
 import type { ReactNode } from "react"
 import { pointsPerQuestion } from "../../lib/points.js"
 import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
 import { FigureSvg } from "../figure-svg.js"
 import { MarkdownMath } from "../markdown-math.js"
 import { MathText } from "../math-text.js"
+import { SoalImageView } from "../soal-image-view.js"
 import type { ExamSheetMetadata } from "./exam-sheet-types.js"
 import { kopLabelFor } from "./exam-type-labels.js"
 
@@ -21,6 +22,11 @@ function PaperFrame({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <p className="mt-7 text-center text-[11px] text-black">
+        <a className="underline" href={SHEET_CREDIT.url}>
+          {SHEET_CREDIT.sentence}
+        </a>
+      </p>
     </div>
   )
 }
@@ -31,17 +37,25 @@ function PaperHeader({
   subjectLabel,
   topicsLabel
 }: {
-  metadata: Pick<ExamSheetMetadata, "schoolName" | "academicYear" | "examType" | "examDate" | "durationMinutes">
+  metadata: Pick<
+    ExamSheetMetadata,
+    "schoolName" | "schoolAddress" | "schoolLogo" | "academicYear" | "examType" | "examDate" | "durationMinutes"
+  >
   subjectLabel: string
   grade: number
   topicsLabel: string
 }) {
+  const address = metadata.schoolAddress?.trim() ?? ""
   return (
     <>
       <div className="text-center border-b-2 border-black pb-3 mb-4">
+        {metadata.schoolLogo
+          ? <img src={metadata.schoolLogo} alt="" className="mx-auto mb-2 h-16 w-16 object-contain" />
+          : null}
         <p className="text-sm font-bold uppercase tracking-wide">
           {metadata.schoolName || "SD Negeri ___________"}
         </p>
+        {address ? <p className="text-[12px] mt-1">{address}</p> : null}
         <p className="text-base font-bold uppercase mt-1 underline">
           {kopLabelFor(metadata.examType)} Tahun Pelajaran {metadata.academicYear || "____/____"}
         </p>
@@ -61,20 +75,21 @@ function PaperHeader({
   )
 }
 
-const OPTION_LETTERS = ["a", "b", "c", "d"] as const
-
 function McqOptionsList({ options }: { options: { a: string; b: string; c: string; d: string } }) {
   return (
-    <ol className="space-y-0.5 ml-4">
-      {OPTION_LETTERS.map((letter) => (
-        <li key={letter} className="flex gap-2">
-          <span className="font-semibold">{letter}.</span>
-          <span>
-            <MathText text={options[letter]} />
-          </span>
-        </li>
-      ))}
-    </ol>
+    <div className="space-y-0.5 ml-4">
+      {MCQ_OPTION_LETTERS.map((letter) => {
+        const option = formatMcqOption(letter, options[letter])
+        return (
+          <div key={letter} className="flex gap-2">
+            <span className="font-semibold">{option.label}</span>
+            <span>
+              <MathText text={option.text} />
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -149,6 +164,7 @@ function SoalSection({
                 </span>
               </p>
               {q.figure ? <FigureSvg figure={q.figure} /> : null}
+              {q.image ? <SoalImageView image={q.image} printSafe /> : null}
               {matchQuestion(q, {
                 mcq_single: (x) => <McqOptionsList options={x.options} />,
                 mcq_multi: (x) => <McqOptionsList options={x.options} />,

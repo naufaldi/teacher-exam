@@ -32,6 +32,18 @@ export function chunkText(
   return chunks
 }
 
+export function chunkPdfPages(
+  pages: ReadonlyArray<{ readonly page: number; readonly text: string }>
+): ReadonlyArray<TextChunk> {
+  const chunks: Array<TextChunk> = []
+  for (const page of pages) {
+    for (const piece of chunkText(page.text, { page: page.page })) {
+      chunks.push(piece)
+    }
+  }
+  return chunks
+}
+
 export function chunkCorpusMarkdown(
   markdown: string,
   subject: string,

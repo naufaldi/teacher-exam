@@ -17,7 +17,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 |-----------|------|--------|---------|---------------|
 | M1 | 0 | 7 | 0 | done |
 | M2 | 0 | 8 | 0 | done |
-| M3 | 7 | 0 | 0 | not_started |
+| M3 | 5 | 0 | 2 | in_progress |
 | M4 | 0 | 8 | 0 | done |
 | M5 | 5 | 1 | 4 | in_progress |
 | M6 | 7 | 0 | 0 | not_started |
@@ -48,8 +48,8 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M2 | — | — | M2.5 Hide diagram topics | closed | apps/web/src/routes/_auth.generate.tsx | — |
 | M2 | — | — | M2.6 Generate Mtk non-diagram QA | closed | docs/qa/cd-issue-evidence.md | — |
 | M2 | — | — | M2.7 Browser verification Mtk | closed | docs/qa/cd-issue-evidence.md | — |
-| M3 | — | — | M3.1 figure_spec schema | open | — | — |
-| M3 | — | — | M3.2 SVG renderer | open | — | — |
+| M3 | — | — | M3.1 figure_spec schema | partial | packages/shared/src/schemas/figures.ts | — |
+| M3 | — | — | M3.2 SVG renderer | partial | apps/web/src/lib/figure-renderer.ts | — |
 | M3 | — | — | M3.3 AI figure field | open | — | — |
 | M3 | — | — | M3.4 Figure validator | open | — | — |
 | M3 | — | — | M3.5 Unhide diagram topics | open | — | — |
@@ -137,7 +137,7 @@ Updated by `scripts/sync-github-progress.mjs` on merged PRs; edit rows here when
 | M7 | #204 | #214 | M7 integration tests RFC §16 | open | apps/api/src/jobs/__test__/ | — |
 | M7 | #204 | #215 | M7 web UX generate polish | open | apps/web/src/routes/_auth.generate.tsx | — |
 | M7 | #204 | #233 | P0 PDF generate trust UX | closed | apps/web/src/routes/_auth.generate.tsx, apps/web/src/components/generate/generate-progress-dialog.tsx, apps/api/src/lib/should-validate-latex.ts | — |
-| M7 | #204 | #234 | P1 Teacher Kelas hub | closed | apps/web/src/routes/_auth.kelas.tsx, packages/db/src/migrations/0020_add_semester.sql, docs/ROADMAP.md D-6 | — |
+| M7 | #204 | #234 | P1 Teacher Kelas hub | closed | apps/web/src/routes/_auth.kelas.tsx, packages/db/src/migrations/0022_add_semester.sql, docs/ROADMAP.md D-7 | — |
 | M7 | #204 | #235 | P2 Bank privacy defaults | open | packages/db/src/schema/exams.ts | — |
 | M7 | #204 | #236 | P3 Real RAG + R2 + imageRefs | open | apps/api/src/lib/retrieval/ | — |
 | M7 | #204 | #237 | P4 Learning-loop data foundation | open | packages/db/src/schema/classes.ts | — |

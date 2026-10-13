@@ -16,6 +16,8 @@ import {
   Textarea
 } from "@teacher-exam/ui"
 import { useRef, useState } from "react"
+import { SoalImageControls } from "../soal-image-controls.js"
+import { SoalImageView } from "../soal-image-view.js"
 import {
   applyMatematikaTextRepair,
   buildUpdated,
@@ -38,6 +40,11 @@ export interface QuestionEditDialogProps {
   subject?: ExamSubject | undefined
   onClose: () => void
   onSave: (updated: Question) => void
+  imageBusy?: boolean
+  onDrawSvg?: () => void
+  onDrawModel?: () => void
+  onUploadImage?: (file: File) => void
+  onRemoveImage?: () => void
 }
 
 interface McqSingleFormProps {
@@ -240,8 +247,13 @@ function TrueFalseForm({ onChange, state }: TrueFalseFormProps) {
  * Used by both Fast Track ("Edit cepat") and Slow Track ("Edit") flows.
  */
 export function QuestionEditDialog({
+  imageBusy = false,
   onClose,
+  onDrawModel,
+  onDrawSvg,
+  onRemoveImage,
   onSave,
+  onUploadImage,
   open,
   question,
   subject
@@ -319,6 +331,19 @@ export function QuestionEditDialog({
               onChange={(e) => setEditState((s) => ({ ...s, text: e.target.value }))}
               rows={5}
             />
+            {question.image ? <SoalImageView image={question.image} printSafe={false} /> : null}
+            {onDrawSvg && onDrawModel && onUploadImage && onRemoveImage ?
+              (
+                <SoalImageControls
+                  busy={imageBusy}
+                  hasImage={question.image != null}
+                  onDrawModel={onDrawModel}
+                  onDrawSvg={onDrawSvg}
+                  onRemove={onRemoveImage}
+                  onUpload={onUploadImage}
+                />
+              ) :
+              null}
             <p className="text-caption text-text-tertiary">
               {isMatematika ?
                 (

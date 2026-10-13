@@ -1,11 +1,16 @@
 import {
   type ExamWithQuestions,
   type ExportVariant,
+  formatMcqOption,
+  MCQ_OPTION_LETTERS,
   type PublicExamWithQuestions,
-  resolveExamSubjectLabel
+  resolveExamSubjectLabel,
+  resolveHeaderKop,
+  SHEET_CREDIT,
+  soalImageHtml
 } from "@teacher-exam/shared"
+import { renderFigureSvg } from "@teacher-exam/shared"
 import { Match } from "effect"
-import { renderFigureSvg } from "./export-figure.js"
 import { loadKatexCss } from "./export-katex-css.js"
 import { renderMathText } from "./export-math.js"
 
@@ -39,14 +44,23 @@ function examTypeOf(exam: ExportExam): string {
 }
 
 function paperHeaderHtml(exam: ExportExam): string {
-  const school = exam.schoolName ?? "SD Negeri ___________"
+  const kop = resolveHeaderKop({
+    schoolName: exam.schoolName,
+    kop: Object.hasOwn(exam, "kop") ? Reflect.get(exam, "kop") : undefined
+  })
   const year = exam.academicYear ?? "____/____"
   const date = exam.examDate ?? "......................"
   const duration = exam.durationMinutes ?? 60
   const topics = exam.topics.join(" · ")
+  const logo = kop.logoDataUrl === null
+    ? ""
+    : `<img class="logo" alt="" src="${escapeHtml(kop.logoDataUrl)}">`
+  const address = kop.address === "" ? "" : `<p class="address">${escapeHtml(kop.address)}</p>`
   return [
     `<div class="kop">`,
-    `<p class="school">${escapeHtml(school)}</p>`,
+    logo,
+    `<p class="school">${escapeHtml(kop.name)}</p>`,
+    address,
     `<p class="title">${escapeHtml(kopLabelFor(examTypeOf(exam)))} Tahun Pelajaran ${escapeHtml(year)}</p>`,
     `</div>`,
     `<table class="meta">`,
@@ -66,13 +80,11 @@ function paperHeaderHtml(exam: ExportExam): string {
   ].join("")
 }
 
-type OptionLetter = "a" | "b" | "c" | "d"
-const OPTION_LETTERS: ReadonlyArray<OptionLetter> = ["a", "b", "c", "d"]
-
 function optionsHtml(options: { a: string; b: string; c: string; d: string }): string {
-  return OPTION_LETTERS.map(
-    (letter) => `<li><span class="opt-letter">${letter}.</span> <span>${renderMathText(options[letter])}</span></li>`
-  ).join("")
+  return MCQ_OPTION_LETTERS.map((letter) => {
+    const option = formatMcqOption(letter, options[letter])
+    return `<p><span class="opt-letter">${option.label}</span> <span>${renderMathText(option.text)}</span></p>`
+  }).join("")
 }
 
 function trueFalseTableHtml(statements: ReadonlyArray<{ text: string }>): string {
@@ -86,8 +98,8 @@ function trueFalseTableHtml(statements: ReadonlyArray<{ text: string }>): string
 
 function questionBodyHtml(q: ExportExam["questions"][number]): string {
   return Match.value(q).pipe(
-    Match.tag("mcq_single", (mcq) => `<ol class="options" type="a">${optionsHtml(mcq.options)}</ol>`),
-    Match.tag("mcq_multi", (mcq) => `<ol class="options" type="a">${optionsHtml(mcq.options)}</ol>`),
+    Match.tag("mcq_single", (mcq) => `<div class="options">${optionsHtml(mcq.options)}</div>`),
+    Match.tag("mcq_multi", (mcq) => `<div class="options">${optionsHtml(mcq.options)}</div>`),
     Match.tag("true_false", (tf) => trueFalseTableHtml(tf.statements)),
     Match.exhaustive
   )
@@ -109,6 +121,7 @@ function soalSectionHtml(exam: ExportExam): string {
         `<div class="soal">` +
         `<p><span class="num">${q.number}.</span> <span class="stem">${renderMathText(q.text)}</span></p>` +
         (q.figure ? `<div class="figure">${renderFigureSvg(q.figure)}</div>` : "") +
+        (q.image ? soalImageHtml(q.image) : "") +
         questionBodyHtml(q) +
         `</div>`
     )
@@ -153,11 +166,64 @@ function pembahasanSectionHtml(exam: ExportExam): string {
   return `<section class="paper page-break"><div class="center"><p class="title">PEMBAHASAN</p></div>${body}</section>`
 }
 
+function plainStem(text: string): string {
+  return text.replaceAll(/\$+/g, "")
+}
+
+function htmlTypeLabel(q: ExportExam["questions"][number]): string {
+  return Match.value(q).pipe(
+    Match.tag("mcq_single", () => "Pilihan ganda"),
+    Match.tag("mcq_multi", () => "Pilihan ganda kompleks"),
+    Match.tag("true_false", () => "Benar/Salah"),
+    Match.exhaustive
+  )
+}
+
+function htmlCorrectLabel(q: ExportExam["questions"][number]): string {
+  return Match.value(q).pipe(
+    Match.tag("mcq_single", (mcq) => mcq.correct.toUpperCase()),
+    Match.tag("mcq_multi", (mcq) => mcq.correct.map((letter) => letter.toUpperCase()).join(", ")),
+    Match.tag("true_false", (tf) => tf.statements.map((statement) => (statement.answer ? "B" : "S")).join(", ")),
+    Match.exhaustive
+  )
+}
+
+function sheetTableHtml(
+  title: string,
+  exam: ExportExam,
+  headers: ReadonlyArray<string>,
+  rows: ReadonlyArray<ReadonlyArray<string>>
+): string {
+  const head = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")
+  const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")
+  return `<section class="paper page-break"><div class="center"><p class="title">${escapeHtml(title)}</p><p>${
+    escapeHtml(subjectLabel(exam))
+  } — Kelas ${exam.grade} SD</p></div><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`
+}
+
+function kisiKisiSectionHtml(exam: ExportExam): string {
+  const rows = exam.questions.map((q) => [
+    String(q.number),
+    plainStem(q.text),
+    htmlTypeLabel(q),
+    q.difficulty ?? "",
+    q.topic ?? ""
+  ])
+  return sheetTableHtml("KISI-KISI", exam, ["No", "Soal", "Tipe", "Level", "Topik"], rows)
+}
+
+function kartuSoalSectionHtml(exam: ExportExam): string {
+  const rows = exam.questions.map((q) => [String(q.number), plainStem(q.text), htmlCorrectLabel(q)])
+  return sheetTableHtml("KARTU SOAL", exam, ["No", "Soal", "Kunci"], rows)
+}
+
 function variantSection(exam: ExportExam, variant: ExportVariant): string {
   return Match.value(variant).pipe(
     Match.when("soal", () => soalSectionHtml(exam)),
     Match.when("kunci", () => kunciSectionHtml(exam)),
     Match.when("pembahasan", () => pembahasanSectionHtml(exam)),
+    Match.when("kisi_kisi", () => kisiKisiSectionHtml(exam)),
+    Match.when("kartu_soal", () => kartuSoalSectionHtml(exam)),
     Match.exhaustive
   )
 }
@@ -182,6 +248,8 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .page-break { page-break-before: always; }
 .kop { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; }
 .kop .school { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.kop .address { font-size: 12px; margin: 2px 0 0; }
+.kop .logo { display: block; width: 64px; height: 64px; object-fit: contain; margin: 0 auto 6px; }
 .kop .title { font-size: 15px; font-weight: 700; text-transform: uppercase; margin: 4px 0 0; text-decoration: underline; }
 .meta { width: 100%; font-size: 13px; margin: 0 0 16px; border-collapse: collapse; }
 .meta td { padding: 2px 0; }
@@ -190,11 +258,13 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .soal-grid { column-count: 2; column-gap: 32px; font-size: 13px; line-height: 1.5; }
 .soal { break-inside: avoid; margin-bottom: 16px; }
 .soal .num { font-weight: 700; margin-right: 4px; }
-.options { list-style: lower-alpha; padding-left: 18px; margin: 4px 0 0; }
-.options li { margin: 1px 0; }
+.options { margin: 4px 0 0; }
+.options p { margin: 1px 0; }
 .opt-letter { font-weight: 600; margin-right: 4px; }
 .figure { text-align: center; margin: 8px 0; }
 .figure svg { max-width: 240px; height: auto; }
+.soal-stimulus { text-align: center; margin: 8px 0; }
+.soal-stimulus svg, .soal-stimulus img { max-width: 220px; max-height: 180px; height: auto; }
 .tf { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
 .tf th, .tf td { border: 1px solid rgba(0,0,0,.4); padding: 3px 6px; text-align: center; }
 .tf td:first-child { text-align: left; }
@@ -208,11 +278,13 @@ body { margin: 0; font-family: "Lora", Georgia, "Times New Roman", serif; color:
 .prose { font-size: 13px; line-height: 1.6; }
 .prose p { margin: 0 0 8px; }
 .muted { color: #555; font-size: 13px; }
+.sheet-credit { margin-top: 28px; font-size: 11px; text-align: center; }
 @media print { body { background: #fff; } }
 </style>
 </head>
 <body>
 ${section}
+<p class="sheet-credit"><a href="${SHEET_CREDIT.url}">${escapeHtml(SHEET_CREDIT.sentence)}</a></p>
 </body>
 </html>`
 }

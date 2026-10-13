@@ -94,7 +94,7 @@ describe("class sheet defaults migration", () => {
 
 describe("semester migration", () => {
   const sql = readFileSync(
-    join(process.cwd(), "src/migrations/0020_add_semester.sql"),
+    join(process.cwd(), "src/migrations/0022_add_semester.sql"),
     "utf8"
   )
 

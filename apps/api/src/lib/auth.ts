@@ -1,4 +1,5 @@
-import { account, session, user, verification } from "@teacher-exam/db"
+import { account, session, user, verification } from "@teacher-exam/db/schema"
+import { recordFunnelStage } from "@teacher-exam/shared/funnel"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { eq } from "drizzle-orm"
@@ -8,6 +9,7 @@ import { runAuthDbEffect } from "../api/services/auth-service"
 import type { AppDb } from "../api/services/db"
 import { resolveAuthBaseURL, resolveTrustedOrigins } from "./auth-origins"
 import { isDevAuthEnabled } from "./dev-auth"
+import { activeFunnelSink } from "./sentry"
 import { deriveUniqueUsername } from "./username"
 
 type AuthInstance = ReturnType<typeof betterAuth>
@@ -47,6 +49,8 @@ export function initAuth(db: AppDb): AuthInstance {
       additionalFields: {
         username: { type: "string", required: true, input: false },
         school: { type: "string", required: false },
+        schoolAddress: { type: "string", required: false },
+        schoolLogo: { type: "string", required: false },
         gradesTaught: { type: "number[]", required: false },
         subjectsTaught: { type: "string[]", required: false },
         profileCompleted: { type: "boolean", required: false, defaultValue: false, input: false },
@@ -64,6 +68,9 @@ export function initAuth(db: AppDb): AuthInstance {
               deriveUniqueUsername(data.email)
             )
             return { data: { ...data, username } }
+          },
+          after: async () => {
+            recordFunnelStage("signup", activeFunnelSink())
           }
         }
       },

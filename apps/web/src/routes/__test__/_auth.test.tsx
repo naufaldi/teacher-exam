@@ -133,6 +133,16 @@ describe("_auth.beforeLoad", () => {
 })
 
 describe("AuthLayout", () => {
+  it("names the product Ujian Sekolah in the signed-in shell", () => {
+    render(<AuthLayout />)
+
+    expect(screen.getByRole("link", { name: "Ujian Sekolah" })).toHaveAttribute(
+      "href",
+      "/dashboard"
+    )
+    expect(screen.queryByRole("link", { name: /Ujian SD/i })).not.toBeInTheDocument()
+  })
+
   it("renders the user name and computed initials", () => {
     render(<AuthLayout />)
     expect(screen.getByText("Budi Santoso")).toBeInTheDocument()
@@ -163,6 +173,15 @@ describe("AuthLayout", () => {
     )
     expect(screen.getByRole("link", { name: "Kelas" })).toHaveAttribute("href", "/kelas")
     expect(screen.getByRole("link", { name: "Analitik" })).toHaveAttribute("href", "/analytics")
+  })
+
+  it("links the privacy page from the footer", () => {
+    render(<AuthLayout />)
+
+    expect(screen.getByRole("link", { name: "Kebijakan privasi" })).toHaveAttribute(
+      "href",
+      "/privacy"
+    )
   })
 
   it("links help button to notasi matematika guide in a new tab", () => {

@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { SubjectCatalogItemSchema } from "./catalog.js"
-import { PdfUploadIdSchema } from "./entities.js"
+import { PdfUploadIdSchema, SchoolAddressSchema, SchoolLogoDataUrlSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
 import { SourceModeSchema } from "./pdf-upload.js"
 import {
@@ -130,6 +130,8 @@ export const UpdateProfileInputSchema = Schema.Struct({
   name: Schema.optional(Schema.String.pipe(Schema.minLength(1))),
   username: Schema.optional(Schema.String.pipe(Schema.pattern(/^[a-z0-9._-]{3,32}$/))),
   school: Schema.optional(Schema.String.pipe(Schema.minLength(1))),
+  schoolAddress: Schema.optional(Schema.NullOr(SchoolAddressSchema)),
+  schoolLogo: Schema.optional(Schema.NullOr(SchoolLogoDataUrlSchema)),
   gradesTaught: Schema.optional(Schema.Array(GradeSchema).pipe(Schema.minItems(1))),
   subjectsTaught: Schema.optional(Schema.Array(ExamSubjectSchema).pipe(Schema.minItems(1))),
   locale: Schema.optional(Schema.String),

@@ -87,11 +87,11 @@ function AuthLayout() {
           <a href="/dashboard" className="flex items-center gap-2.5 shrink-0">
             <img
               src="/assets/logo-mark.svg"
-              alt="Ujian SD logo"
+              alt=""
               className="w-7 h-7"
             />
             <span className="font-extrabold text-[17px] tracking-[-0.01em] text-text-primary">
-              Ujian<span className="text-primary-600">SD</span>
+              Ujian <span className="text-primary-600">Sekolah</span>
             </span>
           </a>
 
@@ -141,6 +141,13 @@ function AuthLayout() {
                 )}
             </Link>
 
+            <Link
+              to="/akun"
+              className="text-body-sm text-text-tertiary hover:text-text-primary transition-colors duration-[120ms]"
+            >
+              Akun
+            </Link>
+
             {/* Logout */}
             <button
               type="button"
@@ -159,6 +166,11 @@ function AuthLayout() {
         <main data-print-app-main className="max-w-[var(--container-app)] mx-auto py-8 px-6">
           <Outlet />
         </main>
+        <footer className="max-w-[var(--container-app)] mx-auto px-6 pb-8 text-caption text-text-tertiary">
+          <Link to="/privacy" className="hover:text-text-primary">
+            Kebijakan privasi
+          </Link>
+        </footer>
       </div>
     </div>
   )

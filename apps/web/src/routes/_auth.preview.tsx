@@ -34,8 +34,22 @@ export const Route = createFileRoute("/_auth/preview")({
       examType: exam.examType as ExamType,
       classContext: exam.classContext ?? ""
     })
+    let schoolName = exam.schoolName ?? ""
+    let schoolAddress: string
+    let schoolLogo: string | null
+    try {
+      const profile = unwrapApiEither(await api.me.get())
+      if (profile.school?.trim()) schoolName = profile.school.trim()
+      schoolAddress = profile.schoolAddress?.trim() ?? ""
+      schoolLogo = profile.schoolLogo ?? null
+    } catch {
+      schoolAddress = ""
+      schoolLogo = null
+    }
     examDraftStore.setMetadata({
-      schoolName: exam.schoolName ?? "",
+      schoolName,
+      schoolAddress,
+      schoolLogo,
       academicYear: exam.academicYear ?? "",
       examDate: exam.examDate ?? "",
       durationMinutes: exam.durationMinutes ?? 60,
@@ -105,6 +119,12 @@ function PreviewPage() {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => triggerPrint("pembahasan")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Cetak Pembahasan
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void api.exams.export(exam.id, "docx", "kisi_kisi")}>
+            Kisi-kisi
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void api.exams.export(exam.id, "docx", "kartu_soal")}>
+            Kartu soal
           </Button>
           <ExportMenu
             onExport={(format) => api.exams.export(exam.id, format, "soal")}

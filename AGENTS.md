@@ -41,11 +41,11 @@ Single `.env` at repo root (gitignored). API loads it via `--env-file-if-exists=
 
 Required — core: `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 
-AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
+AI (choose branch via `AI_PROVIDER`, default **`openai`**):
 
 - **`AI_PROVIDER=anthropic`** (Anthropic Claude on `api.anthropic.com`): `ANTHROPIC_API_KEY`
 - **`AI_PROVIDER=minimax`** (MiniMax via `@effect/ai-anthropic` compatible API): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
-- **`AI_PROVIDER=openai`** (native OpenAI API via `openai` SDK): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (defaults `gpt-5.4-mini`). PDF materi uses OpenAI Responses API; no Claude fallback required for runtime flows.
+- **`AI_PROVIDER=openai`** (native OpenAI API via `openai` SDK): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL` (direct OpenAI or Astra Flow), `AI_MODEL`, `AI_DISCUSSION_MODEL` (defaults `gpt-6-luna`). PDF materi uses OpenAI Responses API; no Claude fallback required for runtime flows.
 
 Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
 
@@ -241,9 +241,9 @@ Bidirectional sync between GitHub Issues, roadmap, and codebase:
 
 | Service | URL |
 |---|---|
-| Web | https://ujian-sekolah.faldi.xyz |
-| API | https://api-ujian-sekolah.faldi.xyz |
-| API health | https://api-ujian-sekolah.faldi.xyz/api/health |
+| Web | https://ujian-sekolah.naufaldi.com |
+| API | https://api-ujian-sekolah.naufaldi.com |
+| API health | https://api-ujian-sekolah.naufaldi.com/api/health |
 
 Full operational reference (architecture decisions, deploy commands, bug history, gotchas) → **`docs/ops/PRODUCTION.md`**
 
@@ -257,7 +257,7 @@ Full operational reference (architecture decisions, deploy commands, bug history
 ### Key deployment facts (no secrets)
 
 - **Infrastructure:** Caddy reverse-proxy (`edge-proxy-caddy`) on VPS `103.59.160.70`, reads Docker labels, auto-issues Let's Encrypt certs.
-- **Domains:** Cloudflare subdomains of `faldi.xyz` — DNS-only or Proxied, both work.
+- **Domains:** Cloudflare subdomains of `naufaldi.com` — DNS-only or Proxied, both work.
 - **Runtime:** API runs via `node --import tsx/esm src/index.ts` (no tsc build). WORKDIR must be `/app/apps/api` so pnpm-scoped `tsx` resolves.
 - **Vite bake:** `VITE_API_URL` is baked into the JS bundle at Docker build time. Domain changes require `--build web`.
 - **Auth redirect:** `callbackURL` in `signIn.social()` must be an **absolute URL** (`window.location.origin + '/dashboard'`), not relative — or better-auth resolves it against the API host.

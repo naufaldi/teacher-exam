@@ -1,17 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import type {
-  ClassEntity,
-  CreateClassInput,
-  ExamType,
-  Question,
-  Semester,
-  UpdateExamInput
-} from "@teacher-exam/shared"
-import {
-  CreateClassInputSchema,
-  isCompleteClassTemplate,
-  resolveExamSubjectLabel
-} from "@teacher-exam/shared"
+import type { ClassEntity, CreateClassInput, ExamType, Question, Semester, UpdateExamInput } from "@teacher-exam/shared"
+import { CreateClassInputSchema, isCompleteClassTemplate, resolveExamSubjectLabel } from "@teacher-exam/shared"
 import {
   Badge,
   Button,
@@ -51,6 +40,8 @@ import { RegenerateQuestionButton } from "../components/review/regenerate-questi
 import { ReviewFastModeLegend } from "../components/review/review-fast-mode-legend.js"
 import { SwitchModeDialog } from "../components/review/switch-mode-dialog.js"
 import { TolakRegenerateDialog } from "../components/review/tolak-regenerate-dialog.js"
+import { SoalImageControls } from "../components/soal-image-controls.js"
+import { SoalImageView } from "../components/soal-image-view.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
 import { matchQuestion } from "../lib/question-render.js"
@@ -62,6 +53,7 @@ import {
   hasCurriculumValidation as computeHasCurriculumValidation,
   selectVisibleQuestions
 } from "../lib/review-selectors.js"
+import { fileToSoalUpload } from "../lib/soal-image-file.js"
 
 function buildMetadataPatchFromClassTemplate(cls: ClassEntity): Partial<UpdateExamInput> {
   return {
@@ -217,6 +209,7 @@ function ReviewPage() {
   const [editedIds, setEditedIds] = useState<Set<string>>(new Set())
 
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [imageBusyId, setImageBusyId] = useState<string | null>(null)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   const [pendingSwitchTo, setPendingSwitchTo] = useState<"fast" | "slow" | null>(null)
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set())
@@ -553,6 +546,62 @@ function ReviewPage() {
     }
   }
 
+  const handleDrawImage = async (question: Question, route: "svg" | "model") => {
+    setImageBusyId(question.id)
+    try {
+      const server = unwrapApiEither(await api.questions.setImage(question.id, { route }))
+      examDraftStore.replaceQuestion(server.id, server)
+      toast({ variant: "success", title: "Gambar tersimpan" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Gambar gagal dibuat",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setImageBusyId(null)
+    }
+  }
+
+  const handleUploadImage = async (question: Question, file: File) => {
+    const upload = await fileToSoalUpload(file)
+    if (upload === null) {
+      toast({ variant: "error", title: "File gambar tidak valid" })
+      return
+    }
+    setImageBusyId(question.id)
+    try {
+      const server = unwrapApiEither(await api.questions.uploadImage(question.id, upload))
+      examDraftStore.replaceQuestion(server.id, server)
+      toast({ variant: "success", title: "Gambar tersimpan" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Unggah gagal",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setImageBusyId(null)
+    }
+  }
+
+  const handleRemoveImage = async (question: Question) => {
+    setImageBusyId(question.id)
+    try {
+      const server = unwrapApiEither(await api.questions.removeImage(question.id))
+      examDraftStore.replaceQuestion(server.id, server)
+      toast({ variant: "success", title: "Gambar dihapus" })
+    } catch (err) {
+      toast({
+        variant: "error",
+        title: "Gagal menghapus gambar",
+        description: err instanceof Error ? err.message : "Coba lagi."
+      })
+    } finally {
+      setImageBusyId(null)
+    }
+  }
+
   const clearNewBadge = useCallback((id: string) => {
     const timer = newBadgeTimersRef.current[id]
     if (timer) {
@@ -885,7 +934,7 @@ function ReviewPage() {
             />
             {hasCurriculumValidation ? "Periksa ulang kurikulum" : "Periksa kurikulum"}
           </Button>
-          {exam.subject === null && (exam.subjectLabel?.trim().length ?? 0) > 0 ?
+          {exam?.subject === null && (exam?.subjectLabel?.trim().length ?? 0) > 0 ?
             (
               <p className="text-caption text-text-tertiary max-w-md">
                 Mode PDF: pemeriksaan mengacu topik/PDF yang diunggah, bukan klaim Capaian Pembelajaran Buku Siswa.
@@ -945,6 +994,16 @@ function ReviewPage() {
                   <span className="text-caption text-text-tertiary font-mono w-6 shrink-0">
                     {q.number}.
                   </span>
+                  {q.sourcePage !== undefined ?
+                    (
+                      <span
+                        data-testid={`source-page-${q.number}`}
+                        className="text-caption text-text-tertiary shrink-0"
+                      >
+                        Hal. {q.sourcePage}
+                      </span>
+                    ) :
+                    null}
                   <div className="flex-1 min-w-0 space-y-1">
                     {q.generationFailed === true ?
                       <span className="text-caption font-medium text-danger-fg">Gagal dibuat</span> :
@@ -953,6 +1012,7 @@ function ReviewPage() {
                       <MathText text={q.text.split("\n")[0] ?? ""} />
                     </p>
                     {q.figure ? <FigureSvg figure={q.figure} /> : null}
+                    {q.image ? <SoalImageView image={q.image} printSafe={false} /> : null}
                   </div>
                   {q.validationStatus && q.generationFailed !== true ?
                     (
@@ -1090,6 +1150,16 @@ function ReviewPage() {
                                 </Badge>
                               )}
                               {q.topic && <span className="text-caption text-text-tertiary">{q.topic}</span>}
+                              {q.sourcePage !== undefined ?
+                                (
+                                  <span
+                                    data-testid={`source-page-${q.number}`}
+                                    className="text-caption text-text-tertiary"
+                                  >
+                                    Hal. {q.sourcePage}
+                                  </span>
+                                ) :
+                                null}
                               {editedIds.has(q.id) && (
                                 <Badge variant="secondary" className="text-caption">
                                   Diedit
@@ -1116,6 +1186,23 @@ function ReviewPage() {
                               <MathText text={q.text} />
                             </p>
                             {q.figure ? <FigureSvg figure={q.figure} /> : null}
+                            {q.image ? <SoalImageView image={q.image} printSafe={false} /> : null}
+                            <SoalImageControls
+                              busy={imageBusyId === q.id}
+                              hasImage={q.image != null}
+                              onDrawModel={() => {
+                                void handleDrawImage(q, "model")
+                              }}
+                              onDrawSvg={() => {
+                                void handleDrawImage(q, "svg")
+                              }}
+                              onRemove={() => {
+                                void handleRemoveImage(q)
+                              }}
+                              onUpload={(file) => {
+                                void handleUploadImage(q, file)
+                              }}
+                            />
                             {matchQuestion(q, {
                               mcq_single: (sq) => (
                                 <div className="grid grid-cols-2 gap-1 mb-4">
@@ -1505,8 +1592,21 @@ function ReviewPage() {
             <QuestionEditDialog
               open
               question={editingQuestion}
-              subject={exam.subject ?? undefined}
+              subject={exam?.subject ?? undefined}
+              imageBusy={imageBusyId === editingQuestion.id}
               onClose={() => setEditingId(null)}
+              onDrawModel={() => {
+                void handleDrawImage(editingQuestion, "model")
+              }}
+              onDrawSvg={() => {
+                void handleDrawImage(editingQuestion, "svg")
+              }}
+              onRemoveImage={() => {
+                void handleRemoveImage(editingQuestion)
+              }}
+              onUploadImage={(file) => {
+                void handleUploadImage(editingQuestion, file)
+              }}
               onSave={(updated) => {
                 void handleEditSave(updated)
               }}

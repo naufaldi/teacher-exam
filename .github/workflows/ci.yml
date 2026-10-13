@@ -3,9 +3,12 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_call:
 
 concurrency:
-  group: ci-${{ github.head_ref }}
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -19,6 +22,20 @@ env:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: school_exam
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: school_exam
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U school_exam"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +51,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
       - name: Lint
         run: pnpm lint
 
@@ -46,7 +66,17 @@ jobs:
       - name: Shared test
         run: pnpm --filter @teacher-exam/shared test
 
+      - name: Apply migrations
+        env:
+          DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam
+        run: pnpm --filter @teacher-exam/db db:migrate
+
+      - name: Bab manifest matches corpus files
+        run: pnpm --filter @teacher-exam/api bab:check
+
       - name: API test
+        env:
+          DATABASE_URL: postgresql://school_exam:ci_test_password@localhost:5432/school_exam
         run: pnpm --filter @teacher-exam/api test
 
   db-migrate:
@@ -110,3 +140,18 @@ jobs:
 
       - name: Web test
         run: pnpm --filter @teacher-exam/web test
+
+  caddy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Deploy gate tests
+        run: node --test scripts/__test__/deploy-gate.test.mjs scripts/__test__/vps-pull.test.mjs
+
+      - name: Validate Caddyfile with the production image
+        run: sh scripts/validate-caddyfile.sh

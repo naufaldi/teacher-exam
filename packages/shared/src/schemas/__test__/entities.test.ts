@@ -27,6 +27,20 @@ describe("QuestionSchema — mcq_single", () => {
     expect(Either.isRight(result)).toBe(true)
   })
 
+  test("keeps the source page on a decoded soal", () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion,
+      _tag: "mcq_single",
+      sourcePage: 4,
+      options: { a: "Jakarta", b: "Bandung", c: "Surabaya", d: "Medan" },
+      correct: "a"
+    })
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right.sourcePage).toBe(4)
+    }
+  })
+
   test("decodes valid mcq_single with a geometry figure", () => {
     const result = Schema.decodeUnknownEither(QuestionSchema)({
       ...baseQuestion,

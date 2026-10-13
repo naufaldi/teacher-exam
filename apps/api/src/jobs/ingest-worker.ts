@@ -1,14 +1,15 @@
 import { SqlClient } from "@effect/sql/SqlClient"
 import { documentChunks, ingestJobs, pdfUploads } from "@teacher-exam/db"
 import { and, eq, inArray } from "drizzle-orm"
-import { Data, Effect } from "effect"
+import { Data, Effect, Match } from "effect"
 import type { ApiDatabaseError } from "../api/errors/http"
 import { runDb } from "../api/lib/db-effect"
 import { DbClient } from "../api/services/db"
 import type { ObjectStorageError } from "../api/services/object-storage"
 import { ObjectStorage } from "../api/services/object-storage"
+import { PDF_PAGE_CAP_MESSAGE, SCANNED_PDF_MESSAGE } from "../lib/pdf-limits"
 import { extractPdfText } from "../lib/pdf-text-extract"
-import { chunkText } from "../lib/retrieval/chunk-text"
+import { chunkPdfPages } from "../lib/retrieval/chunk-text"
 import { embedText } from "../lib/retrieval/embed"
 
 export class IngestJobError extends Data.TaggedError("IngestJobError")<{
@@ -104,12 +105,17 @@ export function runIngestJob(
       catch: (cause) => new IngestJobError({ message: cause instanceof Error ? cause.message : String(cause) })
     })
 
-    if (extractResult.text.trim().length < 20) {
-      yield* markIngestFailed(pdfUploadId, jobId, "Tidak dapat mengekstrak teks dari PDF.")
-      return yield* Effect.fail(new IngestJobError({ message: "Empty PDF text" }))
+    if (extractResult._tag !== "ok") {
+      const extractFailure = Match.value(extractResult).pipe(
+        Match.tag("too_many_pages", () => PDF_PAGE_CAP_MESSAGE),
+        Match.tag("scanned", () => SCANNED_PDF_MESSAGE),
+        Match.exhaustive
+      )
+      yield* markIngestFailed(pdfUploadId, jobId, extractFailure)
+      return yield* Effect.fail(new IngestJobError({ message: extractFailure }))
     }
 
-    const chunks = chunkText(extractResult.text, { pageCount: extractResult.pageCount })
+    const chunks = chunkPdfPages(extractResult.pages)
     const readyAt = new Date()
 
     yield* sql.withTransaction(

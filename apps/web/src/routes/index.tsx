@@ -1,4 +1,5 @@
 import { createFileRoute, isRedirect, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { formatMcqOption, type McqOptionLetter } from "@teacher-exam/shared"
 import { PaperCard } from "@teacher-exam/ui"
 import { AlertCircle, BookOpen, Check, Printer } from "lucide-react"
 import { useState } from "react"
@@ -6,6 +7,13 @@ import { getSession, signIn } from "../lib/auth-client"
 import { devLogin, isDevLoginEnabled } from "../lib/dev-login.js"
 
 type LoginSearch = { reason?: "session_expired" }
+
+const SAMPLE_CHOICES: ReadonlyArray<{ letter: McqOptionLetter; body: string; marked: boolean }> = [
+  { letter: "a", body: "kalimat penjelas", marked: false },
+  { letter: "b", body: "gagasan utama", marked: true },
+  { letter: "c", body: "kalimat tanya", marked: false },
+  { letter: "d", body: "kalimat seru", marked: false }
+]
 
 export const Route = createFileRoute("/")({
   validateSearch: (search): LoginSearch => {
@@ -58,7 +66,7 @@ function GoogleIcon() {
 
 const TRUST_POINTS = [
   "Print A4 siap pakai",
-  "Bahasa Indonesia & Pendidikan Pancasila",
+  "5 mapel",
   "Gratis untuk guru SD"
 ] as const
 
@@ -87,7 +95,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app">
+    <main className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-bg-app">
       {/* Left column — brand and auth */}
       <section className="relative flex flex-col px-6 sm:px-10 lg:px-16 xl:px-20 py-10 lg:py-12">
         <header
@@ -96,7 +104,7 @@ function LoginPage() {
         >
           <BookOpen size={22} className="text-primary-600" strokeWidth={2} />
           <span className="font-semibold text-text-primary text-body-lg">
-            Ujian SD
+            Ujian Sekolah
           </span>
         </header>
 
@@ -105,14 +113,14 @@ function LoginPage() {
             className="animate-fade-up-stagger inline-flex items-center self-start gap-2 rounded-pill bg-primary-50 px-3 py-1 text-caption font-semibold tracking-[0.08em] uppercase text-primary-700"
             style={{ ["--index" as string]: 1 }}
           >
-            Kurikulum Merdeka · Kelas 5 &amp; 6
+            Kurikulum Merdeka · SD
           </span>
 
           <h1
             className="animate-fade-up-stagger text-display font-bold text-text-primary tracking-tight leading-[1.05]"
             style={{ ["--index" as string]: 2 }}
           >
-            Buat Soal Ujian SD
+            Buat Soal Ujian Sekolah
             <br />
             <span className="text-primary-600">dengan Mudah</span>
           </h1>
@@ -137,6 +145,17 @@ function LoginPage() {
               <GoogleIcon />
               Masuk dengan Google
             </button>
+
+            <p className="text-caption text-text-tertiary">
+              Dengan masuk, Anda menyetujui{" "}
+              <Link
+                to="/privacy"
+                className="font-medium text-primary-700 hover:text-primary-800"
+              >
+                Kebijakan privasi
+              </Link>
+              .
+            </p>
 
             {showDevLogin ?
               (
@@ -204,12 +223,21 @@ function LoginPage() {
           className="animate-fade-up-stagger mt-auto pt-8 text-caption text-text-tertiary"
           style={{ ["--index" as string]: 5 }}
         >
-          SD Kelas 5 &amp; 6 · Sesuai Kurikulum Merdeka · Dibuat untuk guru Indonesia.
+          <p>
+            Buku Siswa: Matematika kelas 1–6. Bahasa Indonesia kelas 1–3 dan 5–6. Pendidikan Pancasila kelas 1–2 dan
+            4–6. Bahasa Inggris kelas 3–6. IPAS mulai kelas 3.
+          </p>
+          <Link
+            to="/privacy"
+            className="mt-2 inline-block font-medium text-primary-700 hover:text-primary-800"
+          >
+            Kebijakan privasi
+          </Link>
         </footer>
       </section>
 
       {/* Right column — paper preview */}
-      <aside className="relative hidden lg:flex items-center justify-center overflow-hidden bg-kertas-100 p-12">
+      <aside className="relative order-first flex items-start justify-center overflow-visible bg-kertas-100 p-4 lg:order-none lg:items-center lg:overflow-hidden lg:p-12">
         <div
           className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
@@ -223,7 +251,7 @@ function LoginPage() {
           <PaperCard
             as="article"
             tilt={-1.5}
-            className="animate-fade-up-stagger flex flex-col gap-6 px-10 py-12"
+            className="animate-fade-up-stagger flex flex-col gap-4 px-5 py-6 lg:gap-6 lg:px-10 lg:py-12"
             style={{ ["--index" as string]: 2 }}
             aria-label="Contoh lembar ujian"
           >
@@ -255,24 +283,22 @@ function LoginPage() {
               <p>
                 <span className="font-bold">1.</span> Ide pokok dalam sebuah paragraf disebut juga&hellip;
               </p>
-              <ol className="flex flex-col gap-1.5 pl-5" type="a">
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">a.</span>
-                  <span>kalimat penjelas</span>
-                </li>
-                <li className="flex gap-2 -mx-2 px-2 py-0.5 rounded-xs bg-accent-50">
-                  <span className="font-mono text-text-tertiary">b.</span>
-                  <span>gagasan utama</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">c.</span>
-                  <span>kalimat tanya</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-text-tertiary">d.</span>
-                  <span>kalimat seru</span>
-                </li>
-              </ol>
+              <div className="flex flex-col gap-1.5 pl-5">
+                {SAMPLE_CHOICES.map((choice) => {
+                  const option = formatMcqOption(choice.letter, choice.body)
+                  return (
+                    <div
+                      key={choice.letter}
+                      className={choice.marked
+                        ? "flex gap-2 -mx-2 px-2 py-0.5 rounded-xs bg-accent-50"
+                        : "flex gap-2"}
+                    >
+                      <span className="font-mono text-text-tertiary">{option.label}</span>
+                      <span>{option.text}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="mt-2 flex items-center justify-between border-t border-kertas-200 pt-4 font-mono text-caption text-text-tertiary">
@@ -297,6 +323,6 @@ function LoginPage() {
           aria-hidden="true"
         />
       </aside>
-    </div>
+    </main>
   )
 }

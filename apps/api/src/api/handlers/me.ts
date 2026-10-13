@@ -16,6 +16,16 @@ import { runDb } from "../lib/db-effect"
 import { CurrentUser } from "../middleware/auth"
 import { DbClient } from "../services/db"
 
+export function profileIsComplete(profile: {
+  readonly username: string | null | undefined
+  readonly gradesTaught: ReadonlyArray<unknown> | null | undefined
+  readonly subjectsTaught: ReadonlyArray<unknown> | null | undefined
+}): boolean {
+  return (profile.username?.length ?? 0) > 0
+    && (profile.gradesTaught?.length ?? 0) > 0
+    && (profile.subjectsTaught?.length ?? 0) > 0
+}
+
 function loadProfile(userId: string): Effect.Effect<UserProfile | null, ApiDatabaseError, DbClient> {
   return Effect.gen(function*() {
     const db = yield* DbClient
@@ -30,6 +40,8 @@ function loadProfile(userId: string): Effect.Effect<UserProfile | null, ApiDatab
       username: row.username,
       image: row.image,
       school: row.school,
+      schoolAddress: row.schoolAddress,
+      schoolLogo: row.schoolLogo,
       gradesTaught: row.gradesTaught as Array<Grade> | null,
       subjectsTaught: row.subjectsTaught,
       profileCompleted: row.profileCompleted,
@@ -64,7 +76,16 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, "me", (handlers) =>
             })
           )
         }
-        const input: UpdateProfileInput = parsed.right
+        const input: UpdateProfileInput = {
+          ...parsed.right,
+          ...(parsed.right.schoolAddress !== undefined
+            ? {
+              schoolAddress: parsed.right.schoolAddress?.trim()
+                ? parsed.right.schoolAddress.trim()
+                : null
+            }
+            : {})
+        }
 
         if (input.username !== undefined) {
           const taken = yield* runDb(
@@ -85,12 +106,7 @@ export const MeLive = HttpApiBuilder.group(TeacherExamApi, "me", (handlers) =>
         }
 
         const merged = { ...current, ...input }
-        const profileCompleted = Boolean(
-          merged.username &&
-            merged.school &&
-            merged.gradesTaught?.length &&
-            merged.subjectsTaught?.length
-        )
+        const profileCompleted = profileIsComplete(merged)
 
         yield* runDb(
           db

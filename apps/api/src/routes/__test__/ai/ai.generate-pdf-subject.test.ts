@@ -89,7 +89,7 @@ function makeExamRow(overrides: Record<string, unknown> = {}) {
     status: "draft",
     schoolName: null,
     academicYear: null,
-  semester: null,
+    semester: null,
     examType: "formatif",
     examDate: null,
     durationMinutes: null,

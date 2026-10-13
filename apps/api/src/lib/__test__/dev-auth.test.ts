@@ -42,8 +42,8 @@ describe("isLocalhostHost", () => {
   })
 
   it("rejects production hostnames", () => {
-    expect(isLocalhostHost("ujian-sekolah.faldi.xyz")).toBe(false)
-    expect(isLocalhostHost("api-ujian-sekolah.faldi.xyz")).toBe(false)
+    expect(isLocalhostHost("ujian-sekolah.naufaldi.com")).toBe(false)
+    expect(isLocalhostHost("api-ujian-sekolah.naufaldi.com")).toBe(false)
   })
 })
 

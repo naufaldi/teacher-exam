@@ -240,7 +240,7 @@ function DashboardPage() {
             </div>
 
             <h1 className="text-h1 font-bold text-text-primary mt-2 mb-1.5">
-              Selamat {greeting}, Bu {firstName}!
+              Selamat {greeting}, {firstName}!
             </h1>
 
             <p className="text-body text-text-secondary max-w-[560px]">
