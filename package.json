@@ -40,7 +40,8 @@
   },
   "pnpm": {
     "overrides": {
-      "effect": "3.21.2"
+      "effect@>=3 <4": "3.21.2",
+      "@effect/ai-openai>effect": "4.0.2"
     }
   }
 }

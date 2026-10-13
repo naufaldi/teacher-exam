@@ -4,6 +4,7 @@
     "plugins": [
       {
         "name": "@effect/language-service",
+        "allowedDuplicatedPackages": ["effect"],
         "diagnosticSeverity": {
           "floatingEffect": "error",
           "missingStarInYieldEffectGen": "error",

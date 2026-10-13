@@ -25,7 +25,8 @@ export default [
       "**/node_modules/**",
       "**/routeTree.gen.ts",
       "**/.test-proof/**",
-      "**/*.md"
+      "**/*.md",
+      "**/.pnpmfile.cjs"
     ]
   },
   ...compat.extends(
