@@ -16,6 +16,16 @@ test("production caddy image is the runtime image in the web Dockerfile", () => 
   assert.equal(productionCaddyImage(dockerfile), "caddy:alpine")
 })
 
+test("image builds copy .pnpmfile.cjs before the frozen install", () => {
+  for (const relativePath of ["../../apps/api/Dockerfile", "../../apps/web/Dockerfile"]) {
+    const dockerfile = readFileSync(new URL(relativePath, import.meta.url), "utf8")
+    const copyAt = dockerfile.indexOf(".pnpmfile.cjs")
+    const installAt = dockerfile.indexOf("RUN pnpm install --frozen-lockfile")
+    assert.ok(copyAt >= 0, `${relativePath} copies .pnpmfile.cjs`)
+    assert.ok(installAt > copyAt, `${relativePath} copies .pnpmfile.cjs before frozen install`)
+  }
+})
+
 test("cloudflare origin errors during boot are retried and a redirect loop is not", () => {
   assert.equal(isBootFailure({ ok: false, reason: "status 0" }), true)
   assert.equal(isBootFailure({ ok: false, reason: "status 502" }), true)
