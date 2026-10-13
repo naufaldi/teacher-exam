@@ -1,10 +1,10 @@
 # Product Roadmap 2026–2027
 
-## School Exam Generator (Ujian SD)
+## Ujian Sekolah
 
 | Field | Value |
 |-------|-------|
-| **Product** | School Exam Generator (Ujian SD) |
+| **Product** | Ujian Sekolah |
 | **School Year** | 2026–2027 (Indonesia: Jul 2026 – Jun 2027) |
 | **Created** | 2026-04-29 |
 | **Strategy** | Ship easy wins first, layer features over the school year |
@@ -30,6 +30,9 @@ Append-only record of cross-PRD product/technical decisions. Never edit a past d
 | D-3 | 2026-06-29 | Tabel lembar disatukan (`SheetTable`) di Dashboard Riwayat terbaru, Riwayat, Bank Saya, Bank Publik. Pratinjau modal untuk browse; `/preview` untuk cetak/export. | — | Konsistensi UI; guru melihat isi soal cepat tanpa meninggalkan halaman. Lihat [RFC 2026-06-29-unified-sheet-table](rfc/2026-06-29-unified-sheet-table-rfc.md). |
 | D-4 | 2026-06-29 | Halaman `/share/:slug` = pratinjau anonim penuh (soal + LJ + kunci + pembahasan) untuk guru rekan; renderers dibagi via `exam-sheet`. | — | Link Bagikan dari Riwayat harus printable seperti `/preview`. Lihat [RFC 2026-06-29-public-exam-share](rfc/2026-06-29-public-exam-share-rfc.md). |
 | D-5 | 2026-06-29 | Generate enhancement v8: tiga mode materi (`default` / `pdf_guru` / `combine`); default = Buku Siswa; PDF guru + gambar di **Cloudflare R2** (bukan VPS disk); perpustakaan PDF per guru; RAG topik + agentic search; streaming + durable jobs — phased F0–F5. | RFC 2026-06-10 Flow B `UPLOAD_DIR` (guru PDF) | Guru worksheet + combine materi; reuse PDF; selaras PRD v2 intent upload. Lihat [PRD v8](PRD-v8-generate-pdf-enhancement.md) + [RFC 2026-06-29-generate-pdf-enhancement](rfc/2026-06-29-generate-pdf-enhancement-rfc.md). |
+| D-6 | 2026-10-11 | The product name is Ujian Sekolah. Milestone 3 is partial. Six geometry figure types have a schema and SVG renderers. Kisi-kisi and kartu soal export exist. | The README and this roadmap named the product Ujian SD, and Milestone 3 was marked not started. | Audit of `main` at `d8e054c`. The full record is the 2026-10-11 Launch readiness history below. |
+| D-1a | 2026-07-09 | Roster P1 (`/kelas`): `students.classId` + `identifier` (absen) — supersedes interim use of D-1 `class_label`/`student_number` for Kelas hub only. Full D-1 / PRD v5 paper-koreksi model remains for M5/#237. | D-1 (scope clarification for Kelas hub) | Shipped schema uses class FK + identifier; avoid silent contradiction with PRD v5 naming. |
+| D-7 | 2026-07-09 | Template Kelas apply = **snapshot** metadata ke `exams` (schoolName, academicYear, examType, duration, instructions, semester). **Tidak** ada `exams.classId` FK — edit template kelas tidak mengubah lembar historis. | — | Cetak/header stabil; rekap per kelas nanti via M5/#237 jika perlu FK. Recorded as D-7 because D-6 was already the 2026-10-11 product-name decision. Issue #234. |
 
 ---
 
@@ -40,7 +43,7 @@ Each milestone maps to a PRD:
 | PRD | Status | Milestones |
 |-----|--------|------------|
 | [PRD v2](PRD-v2-final.md) | ✅ Implemented (koreksi disabled, penjaga kurikulum not built) | Baseline MVP (BI + PPKN + IPAS + B. Inggris, generate, review, preview, pembahasan, history) |
-| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done (M3 diagrams pending) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
+| [PRD v3](PRD-v3-multi-subject.md) | ✅ Phase 1–2 done. M3 diagrams partial (6 shapes) | M1 (IPAS + B. Inggris), M2 (Matematika), M3 (Diagram) |
 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar model, D-2) | M4 (Bank Soal) |
 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress | M5 (Correction Depth) — delivery loop shipped (#193); persistent koreksi depth pending |
 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started | M6 (Weakness Analysis + Re-teach) |
@@ -54,7 +57,7 @@ Each milestone maps to a PRD:
 |---|-----------|--------|-----|--------|
 | 1 | IPAS + B. Inggris | May 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 1) | ✅ Done (2026-05-26) |
 | 2 | Matematika + KaTeX | Jun 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 2) | ✅ Done (2026-06-23) |
-| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | ⬜ Not started |
+| 3 | Diagram Geometri | Jul 15, 2026 | [PRD v3](PRD-v3-multi-subject.md) (Phase 3) | 🔄 Partial (6 shapes, 2026-10-11) |
 | 4 | Bank Soal + Exam Builder | Aug 31, 2026 | [PRD v4](PRD-v4-bank-soal.md) | ✅ Done (revised per-lembar, 2026-06-29) |
 | 5 | Correction Depth | Oct 15, 2026 | [PRD v5](PRD-v5-correction-depth.md) | 🔄 In progress |
 | 6 | Weakness Analysis + Re-teach | Nov 30, 2026 | [PRD v6](PRD-v6-weakness-analysis.md) | ⬜ Not started |
@@ -133,14 +136,14 @@ _(Record issues here as they're discovered)_
 
 **Target:** Jul 15, 2026
 **Goal:** Math fully production-ready with geometry figures
-**Status:** ⬜ Not started
+**Status:** 🔄 Partial (2026-10-11). Six figure types have a shared schema and SVG renderers. Number line, fraction, clock, bar chart, and answer-key checks are still open.
 
 ### Tasks
 
 | # | Task | Acceptance Criteria | Verification | Status |
 |---|------|---------------------|--------------|--------|
-| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ⬜ |
-| 3.2 | Build deterministic SVG renderer | SVG identical on web and PDF (visual diff <1px) | Screenshot comparison | ⬜ |
+| 3.1 | Define `figure_spec` schema in shared | 6 types: circle, square, rectangle, triangle, trapezoid, coordinate_plane | Schema compiles, tests pass | ✅ `FigureSpecSchema` decodes the six types |
+| 3.2 | Build deterministic SVG renderer | SVG identical on web and PDF (visual diff <1px) | Screenshot comparison | 🔄 Web renderer tests emit stable SVG. Web versus PDF visual diff is not recorded |
 | 3.3 | AI outputs `figure` field per soal | JSON with type + parameters | 50 samples, ≥95% valid JSON | ⬜ |
 | 3.4 | Validator rejects unsupported figures | Regen with alternative topic succeeds ≥90% | Unit test + 50 samples | ⬜ |
 | 3.5 | Unhide diagram topics in UI | Topics appear in dropdown | Browser verify | ⬜ |
@@ -352,3 +355,98 @@ Bidirectional sync between GitHub Issues, this roadmap, and the codebase:
 3. On merged PR, `.github/workflows/sync-progress.yml` runs `scripts/sync-github-progress.mjs` to refresh the index and milestone overview table.
 4. Manual full resync: `node scripts/sync-github-progress.mjs` or workflow_dispatch.
 5. Audit open issues vs code: `node scripts/sync-github-progress.mjs --verify`.
+
+## History
+
+### 2026-10-11 Launch readiness
+
+This entry records a read-only audit of `main` at `d8e054c`, the merge of #257, taken on 11 Oct 2026 at 15:30 WIB. The live site is [ujian-sekolah.naufaldi.com](https://ujian-sekolah.naufaldi.com). Payments were outside the audit. There is no `plan.html` in this repository, so this section is the plan record. The audit said that file's section 2.1 described a kelas 5 and 6 landing and a missing kisi-kisi. Both claims are obsolete. The landing says kelas 1 to 6 (#253). Kisi-kisi and kartu soal export shipped in #254.
+
+#### Audit summary
+
+These items are shipped and on the live site. Print-ready A4 soal, lembar jawaban, and kunci export to PDF and DOCX. The question bank stores whole sheets, with history, duplicate, a personal bank, and a public bank. The app title is Ujian Sekolah. A sample sheet is available before login. The landing says kelas 1 to 6. Onboarding is shorter, and the username is optional. Generate opens with 3 choices and "Pengaturan lanjutan". Global Open Graph tags are present. `/og.png` and `/robots.txt` respond. The meta description is present. CI on main is green, and deploy waits on CI. High production dependency advisories are cleared. AI rate limits on regenerate and discussion are stored and keyed per IP.
+
+These items are shipped with a gap. CP and TP questions cover Fase A, Fase B, Fase C, and Matematika. 24 Buku Siswa files are ready. B. Indonesia kelas 4, Pendidikan Pancasila kelas 3, and Bahasa Inggris kelas 1 and 2 have no corpus. IPAS kelas 1 and 2 stay disabled because Fase A does not include IPAS. The custom kop is the school name only, and the fallback text is a blank "SD Negeri ____". There is no logo and no address. Kisi-kisi and kartu soal strings are in the live bundle. A logged-in check of the downloaded files was open at audit time. Per-sheet Open Graph on `/share/*` was waiting on the #257 deploy. The sample sheet covers part of the requested public demo. There is no demo account and no README video.
+
+`packages/shared/src/schemas/figures.ts` defines circle, square, rectangle, triangle, trapezoid, and coordinate_plane. `FigureSpecSchema` tests decode those six types. The web renderer tests emit the same SVG twice for each type. The API renderer is a separate copy, so the two can drift. The prompt allows figures only on geometry bab. Number line, fractions, bar chart, pictogram, clock, bangun ruang, angles, and grid area are missing. The shapes are a fixed size, and the labels are not drawn to scale. Nothing checks that the answer key matches the figure parameters.
+
+These items are not in production. Koreksi cepat and the lembar-jawaban scan stay hidden because `VITE_DELIVERY_ENABLED` is absent from the deploy build. The dashboard shows "Segera hadir". Analytics is built and gated the same way. Excel export and e-Rapor export do not exist. Offline CBT and autosave do not exist. Printed sheets have no "Dibuat dengan Ujian Sekolah" footer. SAS packs are not in the public bank. The audit counted about 8 public sheets. WhatsApp share is absent. The audit measured the live web bundle as one file of 1,351,448 bytes. Responses send no HSTS, CSP, X-Frame-Options, or `X-Content-Type-Options` nosniff header. There is no privacy policy, no delete-account flow, and no Sentry or funnel analytics. Dependabot pull requests #245 to #250 were open. #250 bumps `@effect/ai-openai` across a major version. #238 has been open since 9 Jul 2026.
+
+`docs/ISSUE_INDEX.md` lists Milestone 3 as not started, with no code signal on tasks 3.1 to 3.7. This change does not edit that index. `scripts/sync-github-progress.mjs` rewrites the milestone overview status from the index. A later sync can put "Not started" back in that one cell. The Milestone 3 section in this file is the status set by hand.
+
+#### Launch plan
+
+Ranked work before the late-November SAS window.
+
+1. Fill the corpus holes, or change the kelas 1 to 6 claim so it lists the real coverage. The holes are B. Indonesia kelas 4, Pendidikan Pancasila kelas 3, and Bahasa Inggris kelas 1 and 2.
+2. Verify kisi-kisi and kartu soal while logged in. Save a kop with name, address, and logo. Print the footer "Dibuat dengan Ujian Sekolah" on every sheet.
+3. Add WhatsApp share, and confirm per-sheet Open Graph on `/share/<slug>` after the #257 deploy.
+4. Add number line, fraction, clock, and bar chart as deterministic SVG. Fail generation when the figure parameters and the answer key disagree. Move the web renderer and the API renderer to one shared function.
+5. Split the web routes so the first load is not one 1.35 MB chunk. Add security headers. Publish a privacy policy and account deletion. Add Sentry and a funnel that logs AI cost per sheet.
+
+Stimulus pictures are the largest missing feature. A question has no image field, and the export has no picture. Prefer crops from the SIBI Buku Siswa PDFs, plus a teacher upload. Offer a generated image only as an opt-in, in grayscale line art, after the teacher accepts it. Leave that work until after the SAS window if time is short.
+
+PDF materi upload already exists. The limit is 10 MB, and there is no page cap. Cap an upload at 60 pages. When a page has almost no text, tell the teacher that a scan is not supported. Store a page number on each chunk, and show that page on the soal.
+
+Buku Siswa markdown is updated by hand. Index each bab with a content hash, and re-index when the hash changes. Send only the selected bab to the model. Add a CI test that every ready manifest row has a parsable markdown file with at least one bab.
+
+The audit left a logged-in smoke test open. The path is onboarding, then generate, then review, then PDF, DOCX, kisi-kisi, and kartu soal. It also left a delivery-flag choice open. Hide every "Segera hadir" card, or turn koreksi on with autosave. Hold Dependabot #250. Close or rebase #238. Add SAS packs to the public bank, and recruit 20 co-design teachers. This history entry closes the audit item that asked for a README and ROADMAP update.
+
+### 2026-10-12 Pause until 26 Oct 2026
+
+Faldi paused new work because usage is low. This entry is the state at the pause. A thread that already had a pull request open may finish that one pull request under the usual rule, then stop. The rule is tests, CI, a security review, and a live screenshot. No new thread, pull request, or fix starts before 26 Oct 2026.
+
+#### Done and on the live site
+
+#280 (`22ab408`) defaults production AI to OpenAI `gpt-6-luna`. The in-container probe returned provider `openai` and model `gpt-6-luna`. A signed-in generate of kelas 4 Matematika Bab 2 Pecahan, 10 soal, exam `bf87c261-e117-44bb-83f2-885c84f32ac6`, finished in about 40 to 60 seconds with no error. Token usage was not recorded. An unauthenticated generate from the agent environment returned HTTP 401. Production dev login is off.
+
+#283 (`87652ef`) makes image publish wait for the quality job. That deploy succeeded and the site returned 200.
+
+#284 (`34a79e6`) publishes the UU PDP notice at `/privacy` and `/kebijakan-privasi`. The contact email and the retention periods are still marked `[PLACEHOLDER]`.
+
+#287 (`689d454`) upgrades better-auth to 1.7.7. That commit is inside the `34a79e6` deploy. The homepage and API health returned 200. A signed-in Google login was not run.
+
+#281 (`c79cc4f`) changes the landing trust bullet to "5 mapel" and keeps the honest per-subject coverage line. Its own deploy failed because the VPS disk was full. A later fetch of the homepage HTML already contained "5 mapel".
+
+#282 (`2d32524`) adds `og:url`, `og:type` `website`, `og:locale` `id_ID`, and a canonical link on the homepage. Those tags are in the live HTML. A real `/share/<slug>` page and a WhatsApp preview were not captured.
+
+Question bank, classes, online exam, and grading stay partial. `VITE_DELIVERY_ENABLED` stays off.
+
+#### Merged, not confirmed live
+
+#285 (`c32c7cc`) keys regenerate and pembahasan to the signed-in guru, and keys a student lockout to that student. Deploy run 38195113070 was still in progress at the pause.
+
+#286 (`e0b130b`) prints each choice letter once. Deploy run 38194068386 failed with `no space left on device` while registering an image layer. The live landing sample still showed `a. a. kalimat penjelas`.
+
+#288 (`dc40ea6`) fails the deploy smoke when the provider rejects the key. It is merged. A deploy of that commit was not confirmed before the pause.
+
+Deploys after #283 are hitting a full VPS disk. A dangling-image prune on the last successful deploy reclaimed 0 bytes. This environment cannot SSH to the VPS.
+
+#### Open
+
+#289 attaches topic diagrams that match the kunci. It was already open at the pause, so that thread may finish it and then stop.
+
+The Tanggal Ujian save and the first-load CORS failure ("Terjadi kesalahan" on Akun, Riwayat, and a fresh review page) were already being written and had no pull request number at the pause. Each of those threads may finish the one pull request it is already writing, then stop.
+
+#250, the major `@effect/ai-openai` bump, stays held. #245, #246, #247, #248, and #249 stay held. #238 stays open and untouched.
+
+#### Paused
+
+No new thread, pull request, or fix until 26 Oct 2026.
+
+The kelas 5 IPAS walkthrough, and a live check that a Pecahan sheet's diagrams match their kunci, wait on a teacher Google session. Agent desktops stop at "Masuk dengan Google".
+
+A WhatsApp preview of a real shared sheet waits.
+
+The privacy placeholders wait on Faldi for the contact email and the retention periods.
+
+#### Resume order for 26 Oct 2026
+
+1. Free disk on the VPS without removing the images the running containers are using. Then redeploy the merged commits that never went live. #286 is the one confirmed still on the old sample.
+2. Confirm #285 and #288 on the live site once a deploy can finish.
+3. If #289, the date-save pull request, or the CORS pull request is still open, finish those and no others.
+4. If the date save or the CORS fix never opened a pull request, start the date save first, then the CORS fix.
+5. With a teacher Google session, check a kelas 4 Pecahan sheet for at least two diagrams that match their kunci, then a kelas 5 IPAS sheet whose soal image prints legibly.
+6. Capture a real `/share/<slug>` page and a WhatsApp preview.
+7. Replace the privacy placeholders when the real contact and retention values exist.
+8. Keep #250, #245 to #249, and #238 held.

@@ -75,6 +75,7 @@ export const ExamsGroup = HttpApiGroup.make("exams")
       .addError(ApiNotFound, { status: 404 })
       .addError(ApiExamNotFinal, { status: 400 })
       .addError(ApiDiscussionExists, { status: 409 })
+      .middleware(AiGenerateRateLimit)
   )
   .add(
     HttpApiEndpoint.get("generateStream")`/exams/${idParam}/generate-stream`

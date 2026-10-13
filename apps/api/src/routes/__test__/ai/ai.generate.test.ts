@@ -1,4 +1,5 @@
 import { db } from "@teacher-exam/db"
+import { checkFigureAnswer, type FigureSpec } from "@teacher-exam/shared"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
 import { TestCurriculumFailingLayer } from "../../../api/services/curriculum-service.js"
@@ -203,6 +204,125 @@ describe("POST /api/ai/generate", () => {
     expect(insertedQuestions?.every((q) => q.status === "pending")).toBe(true)
   })
 
+  it("regenerates when a diagram disagrees with the kunci, then keeps a matching diagram", async () => {
+    const mismatched = Array.from({ length: 20 }, (_, i) => ({
+      ...makeFakeQuestion(i + 1),
+      ...(i === 0
+        ? {
+          option_a: "5",
+          option_b: "4",
+          option_c: "6",
+          option_d: "10",
+          correct_answer: "c" as const,
+          figure: {
+            type: "number_line",
+            min: 0,
+            max: 10,
+            step: 2,
+            marks: [{ value: 5 }],
+            measure: { kind: "value", index: 0 }
+          }
+        }
+        : {})
+    }))
+    const matched = Array.from({ length: 20 }, (_, i) => ({
+      ...makeFakeQuestion(i + 1),
+      ...(i === 0
+        ? {
+          option_a: "5",
+          option_b: "4",
+          option_c: "6",
+          option_d: "10",
+          correct_answer: "a" as const,
+          figure: {
+            type: "number_line",
+            min: 0,
+            max: 10,
+            step: 2,
+            marks: [{ value: 5 }],
+            measure: { kind: "value", index: 0 }
+          }
+        }
+        : {})
+    }))
+    ;(fakeAiService.generateRaw as Mock).mockReturnValueOnce(Effect.succeed(JSON.stringify(mismatched)))
+    ;(fakeAiService.generateRaw as Mock).mockReturnValueOnce(Effect.succeed(JSON.stringify(matched)))
+
+    const examRow = makeExamRow()
+    const questionRows = Array.from(
+      { length: 20 },
+      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    mockGenerateDbSelects({ examRow, questionRows })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(VALID_BODY)
+    })
+
+    expect(res.status).toBe(201)
+    expect(fakeAiService.generateRaw).toHaveBeenCalledTimes(2)
+    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
+      | Array<Record<string, unknown>>
+      | undefined
+    const payload = insertedQuestions?.[0]?.["payload"] as { figure?: { type?: string } } | null
+    expect(payload?.figure?.type).toBe("number_line")
+    expect(insertedQuestions?.[0]?.["validationStatus"]).toBeNull()
+  })
+
+  it("drops the diagram and flags the soal when a regenerate still disagrees", async () => {
+    const mismatched = Array.from({ length: 20 }, (_, i) => ({
+      ...makeFakeQuestion(i + 1),
+      ...(i === 0
+        ? {
+          option_a: "5",
+          option_b: "4",
+          option_c: "6",
+          option_d: "10",
+          correct_answer: "c" as const,
+          figure: {
+            type: "number_line",
+            min: 0,
+            max: 10,
+            step: 2,
+            marks: [{ value: 5 }],
+            measure: { kind: "value", index: 0 }
+          }
+        }
+        : {})
+    }))
+    ;(fakeAiService.generateRaw as Mock).mockReturnValue(Effect.succeed(JSON.stringify(mismatched)))
+
+    const examRow = makeExamRow()
+    const questionRows = Array.from(
+      { length: 20 },
+      (_, i) => makeQuestionRow({ id: `q-${i + 1}`, examId: "exam-gen-1", number: i + 1 })
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    mockGenerateDbSelects({ examRow, questionRows })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(VALID_BODY)
+    })
+
+    expect(res.status).toBe(201)
+    expect(fakeAiService.generateRaw).toHaveBeenCalledTimes(2)
+    const insertedQuestions = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
+      | Array<Record<string, unknown>>
+      | undefined
+    expect(insertedQuestions?.[0]?.["payload"]).toBeNull()
+    expect(insertedQuestions?.[0]?.["validationStatus"]).toBe("needs_review")
+    expect(insertedQuestions?.[0]?.["validationReason"]).toContain("Kunci tidak sesuai diagram")
+  })
+
   it("strips invalid generated figure and persists a needs_review validation marker", async () => {
     const generatedWithBadFigure: Array<GeneratedQuestion> = Array.from({ length: 20 }, (_, i) => ({
       ...makeFakeQuestion(i + 1),
@@ -272,5 +392,94 @@ describe("POST /api/ai/generate", () => {
     expect(body.code).toBe("DATABASE_ERROR")
     expect(body.error).toContain("Curriculum")
     expect(db.insert).not.toHaveBeenCalled()
+  })
+
+  it("attaches fraction diagrams that match the kunci for a kelas 4 Pecahan generate", async () => {
+    const generated = Array.from({ length: 10 }, (_, index) => {
+      const number = index + 1
+      const keyed = number === 1 ? "$\\frac{3}{4}$" : number === 2 ? "$\\frac{1}{2}$" : "12"
+      return {
+        ...makeFakeQuestion(number),
+        text: number <= 2
+          ? "Pecahan yang ditunjukkan daerah arsir pada gambar adalah ..."
+          : `Hitung soal ${number}`,
+        topic: "Pecahan",
+        option_a: keyed,
+        option_b: "1/5",
+        option_c: "1/8",
+        option_d: "2/7",
+        correct_answer: "a" as const
+      }
+    })
+    ;(fakeAiService.generateRaw as Mock).mockReturnValue(Effect.succeed(JSON.stringify(generated)))
+
+    const examRow = makeExamRow({
+      subject: "matematika",
+      grade: 4,
+      topics: ["Bab 2 Pecahan"],
+      title: "Matematika · Kelas 4 · Bab 2 Pecahan"
+    })
+    const questionRows = Array.from(
+      { length: 10 },
+      (_, index) => makeQuestionRow({ id: `q-${index + 1}`, examId: "exam-gen-1", number: index + 1 })
+    )
+    const insertChain = makeChain([])
+    ;(db.insert as Mock).mockReturnValue(insertChain)
+    mockGenerateDbSelects({ examRow, questionRows })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/ai/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject: "matematika",
+        grade: 4,
+        difficulty: "sedang",
+        topics: ["Bab 2 Pecahan"],
+        reviewMode: "fast",
+        examType: "formatif",
+        totalSoal: 10
+      })
+    })
+
+    expect(res.status).toBe(201)
+    const inserted = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as
+      | Array<{
+        number: number
+        optionA: string
+        optionB: string
+        optionC: string
+        optionD: string
+        correctAnswer: "a" | "b" | "c" | "d"
+        payload: { figure?: FigureSpec } | null
+        validationStatus: string | null
+      }>
+      | undefined
+    const diagrams = (inserted ?? []).flatMap((row) => {
+      const figure = row.payload?.figure
+      if (figure === undefined) return []
+      const check = checkFigureAnswer({
+        _tag: "mcq_single",
+        figure,
+        options: { a: row.optionA, b: row.optionB, c: row.optionC, d: row.optionD },
+        correct: row.correctAnswer
+      })
+      return [{ number: row.number, figure, check, validationStatus: row.validationStatus }]
+    })
+
+    expect(diagrams).toEqual([
+      {
+        number: 1,
+        figure: { type: "fraction", denominator: 4, shaded: 3, measure: "value", form: "bar" },
+        check: { _tag: "Match", derived: "3/4" },
+        validationStatus: null
+      },
+      {
+        number: 2,
+        figure: { type: "fraction", denominator: 2, shaded: 1, measure: "value", form: "circle" },
+        check: { _tag: "Match", derived: "1/2" },
+        validationStatus: null
+      }
+    ])
   })
 })

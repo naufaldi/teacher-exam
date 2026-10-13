@@ -16,6 +16,7 @@ import {
   successCriteriaBlock,
   verificationBlock
 } from "./prompt-blocks.js"
+import { isMatematikaSubjectLabel } from "./should-validate-latex.js"
 
 export interface BuildPromptInput {
   examType: ExamType
@@ -108,15 +109,20 @@ function buildQuestionShapeOutputLines(totalSoal: number): ReadonlyArray<string>
     "     { \"_tag\": \"true_false\", \"number\": 3, \"text\": \"Tentukan apakah pernyataan berikut benar (B) atau salah (S):\", \"statements\": [{ \"text\": \"...\", \"answer\": \"B\" }, { \"text\": \"...\", \"answer\": \"S\" }], \"topic\": \"...\", \"difficulty\": \"mudah|sedang|sulit\", \"cognitive_level\": \"C1|C2|C3|C4\" }",
     "     Catatan: statements berisi 3–4 pernyataan; answer adalah \"B\" atau \"S\".",
     "",
-    "- Untuk topik geometri/diagram (misalnya Bangun Datar, Bangun Ruang, Bidang Koordinat), setiap soal BOLEH memiliki field opsional \"figure\".",
-    "  Jangan isi \"figure\" untuk soal non-diagram.",
-    "  Bentuk \"figure\" yang didukung hanya:",
-    "  - circle: { \"type\": \"circle\", \"radius\": 7, \"label\": \"r = 7 cm\" }",
-    "  - square: { \"type\": \"square\", \"side\": 8, \"label\": \"s = 8 cm\" }",
-    "  - rectangle: { \"type\": \"rectangle\", \"width\": 12, \"height\": 5, \"label\": \"12 cm x 5 cm\" }",
-    "  - triangle: { \"type\": \"triangle\", \"base\": 10, \"height\": 6, \"label\": \"a = 10 cm, t = 6 cm\" }",
-    "  - trapezoid: { \"type\": \"trapezoid\", \"topBase\": 6, \"bottomBase\": 12, \"height\": 4, \"label\": \"t = 4 cm\" }",
-    "  - coordinate_plane: { \"type\": \"coordinate_plane\", \"xMin\": -2, \"xMax\": 4, \"yMin\": -1, \"yMax\": 5, \"points\": [{ \"x\": 1, \"y\": 2, \"label\": \"A\" }] }",
+    "- Untuk topik geometri, pecahan, garis bilangan, jam, atau diagram batang, setiap soal BOLEH memiliki field opsional \"figure\".",
+    "  Jangan isi \"figure\" untuk soal non-diagram. Gambar dihitung dari angka pada figure, bukan dari model gambar.",
+    "  Isi \"measure\" dengan besaran yang ditanyakan. Teks kunci harus sama dengan besaran itu.",
+    "  - circle: { \"type\": \"circle\", \"radius\": 7, \"measure\": { \"kind\": \"area\" } }",
+    "  - square: { \"type\": \"square\", \"side\": 8, \"measure\": \"area\" }",
+    "  - rectangle: { \"type\": \"rectangle\", \"width\": 12, \"height\": 5, \"measure\": \"area\" }",
+    "  - triangle: { \"type\": \"triangle\", \"base\": 10, \"height\": 6, \"measure\": \"area\" }",
+    "  - trapezoid: { \"type\": \"trapezoid\", \"topBase\": 6, \"bottomBase\": 12, \"height\": 4, \"measure\": \"area\" }",
+    "  - coordinate_plane: { \"type\": \"coordinate_plane\", \"xMin\": -2, \"xMax\": 4, \"yMin\": -1, \"yMax\": 5, \"points\": [{ \"x\": 1, \"y\": 2, \"label\": \"A\" }], \"measure\": { \"kind\": \"coordinates\", \"index\": 0 } }",
+    "  - number_line: { \"type\": \"number_line\", \"min\": 0, \"max\": 10, \"step\": 1, \"marks\": [{ \"value\": 4 }], \"measure\": { \"kind\": \"value\", \"index\": 0 } }",
+    "  - fraction bar: { \"type\": \"fraction\", \"denominator\": 4, \"shaded\": 3, \"measure\": \"value\", \"form\": \"bar\" }",
+    "  - fraction circle: { \"type\": \"fraction\", \"denominator\": 4, \"shaded\": 1, \"measure\": \"value\", \"form\": \"circle\" }",
+    "  - clock: { \"type\": \"clock\", \"hour\": 7, \"minute\": 30, \"measure\": \"time\" }",
+    "  - bar_chart: { \"type\": \"bar_chart\", \"bars\": [{ \"name\": \"A\", \"value\": 2 }, { \"name\": \"B\", \"value\": 5 }], \"measure\": { \"kind\": \"sum\" } }",
     "",
     "Contoh minimal mcq_single (format benar):",
     `  ${MCQ_SINGLE_EXAMPLE}`
@@ -129,7 +135,9 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     throw new Error("buildExamPrompt: topics must contain at least one item")
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
-  const matematikaRules = input.subjectLabel === "Matematika" ? [...buildMatematikaLatexPromptRules()] : []
+  const matematikaRules = isMatematikaSubjectLabel(input.subjectLabel)
+    ? [...buildMatematikaLatexPromptRules()]
+    : []
 
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
   const gradeRules = gradeAppropriatenessRules(input.grade)
@@ -238,7 +246,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
 }
 
 export function buildRegeneratePrompt(input: BuildRegeneratePromptInput): BuiltPrompt {
-  const isMatematika = input.subjectLabel === "Matematika"
+  const isMatematika = isMatematikaSubjectLabel(input.subjectLabel)
   const matematikaRules = isMatematika ? [...buildMatematikaLatexPromptRules()] : []
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
 

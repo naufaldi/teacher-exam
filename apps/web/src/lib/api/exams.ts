@@ -2,6 +2,8 @@ import type {
   ExamDetailResponse,
   ExamShareResponse,
   ExamWithQuestions,
+  ExportFormat,
+  ExportVariant,
   GenerateStreamResponse,
   UpdateExamInput
 } from "@teacher-exam/shared"
@@ -51,7 +53,7 @@ export const examsApi = {
   },
   generateDiscussion: (id: string) =>
     fetchDecoded(`/exams/${id}/discussion`, ExamWithQuestionsSchema, { method: "POST" }),
-  export: (id: string, format: "pdf" | "docx", variant: "soal" | "kunci" | "pembahasan") => {
+  export: (id: string, format: ExportFormat, variant: ExportVariant) => {
     const params = new URLSearchParams({ format, variant })
     return downloadExport(`/exams/${id}/export?${params.toString()}`, `ujian.${format}`)
   },
@@ -73,9 +75,11 @@ export const examsApi = {
 
     if (!response.ok || !response.body) {
       const body = await response.json().catch(() => ({})) as { message?: string; error?: string }
+      const message = body.message ?? body.error ?? `Request failed (${response.status})`
+      onError(message)
       return Either.left(
         new ApiClientError({
-          message: body.message ?? body.error ?? `Request failed (${response.status})`,
+          message,
           code: "DISCUSSION_ERROR",
           status: response.status
         })

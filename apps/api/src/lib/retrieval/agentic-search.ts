@@ -2,6 +2,7 @@ import type { SqlClient } from "@effect/sql/SqlClient"
 import { Effect } from "effect"
 import type { ApiDatabaseError } from "../../api/errors/http"
 import type { DbClient } from "../../api/services/db"
+import { formatChunkWithPage } from "../source-page"
 import { searchChunks } from "./search-chunks"
 
 const MAX_AGENTIC_STEPS = 3
@@ -44,7 +45,7 @@ export function agenticSearch(
       for (const chunk of chunks) {
         if (seen.has(chunk.id)) continue
         seen.add(chunk.id)
-        collected.push(chunk.content)
+        collected.push(formatChunkWithPage(chunk.content, chunk.metadata))
       }
       if (collected.join("\n").length >= 4000) break
     }

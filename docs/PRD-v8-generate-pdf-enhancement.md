@@ -1,3 +1,5 @@
+> **Changelog 2026-10-11:** Launch readiness. The shipped name is Ujian Sekolah. PDF and DOCX export, the question bank, kisi-kisi, and kartu soal are in the product. Generation covers kelas 1 to 6 except B. Indonesia kelas 4, Pendidikan Pancasila kelas 3, and Bahasa Inggris kelas 1 and 2. Six geometry diagrams exist, so Milestone 3 is partial. Koreksi, analytics, WhatsApp share, security headers, and a privacy policy are not in production. Before the late-November SAS window, fill those corpus holes or qualify the kelas claim, finish the SAS paperwork, add share and the next diagram types, then split the bundle and add the trust basics. The paperwork is a logged-in kisi-kisi check, a kop, and a footer. Detail is in [2026-10-11 Launch readiness](ROADMAP.md#2026-10-11-launch-readiness).
+
 # Product Requirements Document (PRD) v8
 
 ## Generate PDF Enhancement — Multi-Source Materi

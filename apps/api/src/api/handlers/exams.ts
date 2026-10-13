@@ -240,6 +240,7 @@ export const ExamsLive = HttpApiBuilder.group(TeacherExamApi, "exams", (handlers
                 status: "draft",
                 schoolName: examRow.schoolName,
                 academicYear: examRow.academicYear,
+                semester: examRow.semester,
                 examType: examRow.examType,
                 examDate: examRow.examDate,
                 durationMinutes: examRow.durationMinutes,

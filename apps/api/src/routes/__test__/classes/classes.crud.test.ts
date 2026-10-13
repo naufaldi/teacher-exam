@@ -18,6 +18,7 @@ function makeClassRow(overrides: Record<string, unknown> = {}) {
     subject: "ipas",
     schoolName: null,
     academicYear: null,
+    semester: null,
     defaultExamType: null,
     defaultExamDate: null,
     defaultDurationMinutes: null,

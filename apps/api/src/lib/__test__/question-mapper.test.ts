@@ -34,6 +34,46 @@ describe("rowToQuestion", () => {
     }
   })
 
+  test("maps sourcePage from payload and writes it back", () => {
+    const row = {
+      ...baseRow,
+      type: "mcq_single",
+      optionA: "Jakarta",
+      optionB: "Bandung",
+      optionC: "Surabaya",
+      optionD: "Medan",
+      correctAnswer: "a",
+      payload: { sourcePage: 4 }
+    }
+    const question = rowToQuestion(row)
+    expect(question.sourcePage).toBe(4)
+    expect(questionToRow(question).payload).toEqual({ sourcePage: 4 })
+  })
+
+  test("maps a soal image beside a geometry figure", () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>`
+    const result = rowToQuestion({
+      ...baseRow,
+      type: "mcq_single",
+      optionA: "Pohon",
+      optionB: "Batu",
+      optionC: "Sungai",
+      optionD: "Gunung",
+      correctAnswer: "a",
+      payload: {
+        figure: { type: "circle", radius: 7, label: "r = 7 cm" },
+        image: { source: "svg", svg }
+      }
+    })
+    expect(result.figure).toEqual({ type: "circle", radius: 7, label: "r = 7 cm" })
+    expect(result.image).toEqual({ source: "svg", svg })
+    const row = questionToRow(result)
+    expect(row.payload).toEqual({
+      figure: { type: "circle", radius: 7, label: "r = 7 cm" },
+      image: { source: "svg", svg }
+    })
+  })
+
   test("maps figure from payload for a persisted mcq_single row", () => {
     const result = rowToQuestion({
       ...baseRow,

@@ -41,11 +41,11 @@ Single `.env` at repo root (gitignored). API loads it via `--env-file-if-exists=
 
 Required — core: `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 
-AI (choose branch via `AI_PROVIDER`, default **`anthropic`**):
+AI (choose branch via `AI_PROVIDER`, default **`openai`**):
 
 - **`AI_PROVIDER=anthropic`** (Anthropic Claude on `api.anthropic.com`): `ANTHROPIC_API_KEY`
 - **`AI_PROVIDER=minimax`** (MiniMax via `@effect/ai-anthropic` compatible API): `MINIMAX_API_KEY`, `MINIMAX_ANTHROPIC_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (examples in `.env.example`). Keep `ANTHROPIC_API_KEY` set too for PDF generation, because MiniMax does not accept document inputs.
-- **`AI_PROVIDER=openai`** (native OpenAI API via `openai` SDK): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `AI_MODEL`, `AI_DISCUSSION_MODEL` (defaults `gpt-5.4-mini`). PDF materi uses OpenAI Responses API; no Claude fallback required for runtime flows.
+- **`AI_PROVIDER=openai`** (native OpenAI API via `openai` SDK): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL` (direct OpenAI or Astra Flow), `AI_MODEL`, `AI_DISCUSSION_MODEL` (defaults `gpt-6-luna`). PDF materi uses OpenAI Responses API; no Claude fallback required for runtime flows.
 
 Optional with defaults: `API_PORT` (3000), `WEB_PORT` (5173)
 

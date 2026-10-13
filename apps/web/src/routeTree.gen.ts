@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as KebijakanPrivasiRouteImport } from './routes/kebijakan-privasi'
 import { Route as BankSoalPublikRouteImport } from './routes/bank-soal-publik'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,9 +27,20 @@ import { Route as AuthGenerateRouteImport } from './routes/_auth.generate'
 import { Route as AuthDashboardRouteImport } from './routes/_auth.dashboard'
 import { Route as AuthBankSoalRouteImport } from './routes/_auth.bank-soal'
 import { Route as AuthAnalyticsRouteImport } from './routes/_auth.analytics'
+import { Route as AuthAkunRouteImport } from './routes/_auth.akun'
 import { Route as AuthHelpNotasiMatematikaRouteImport } from './routes/_auth.help.notasi-matematika'
 import { Route as AuthCorrectionExamIdRouteImport } from './routes/_auth.correction.$examId'
 
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KebijakanPrivasiRoute = KebijakanPrivasiRouteImport.update({
+  id: '/kebijakan-privasi',
+  path: '/kebijakan-privasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BankSoalPublikRoute = BankSoalPublikRouteImport.update({
   id: '/bank-soal-publik',
   path: '/bank-soal-publik',
@@ -107,6 +120,11 @@ const AuthAnalyticsRoute = AuthAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthAkunRoute = AuthAkunRouteImport.update({
+  id: '/akun',
+  path: '/akun',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthHelpNotasiMatematikaRoute =
   AuthHelpNotasiMatematikaRouteImport.update({
     id: '/help/notasi-matematika',
@@ -122,6 +140,9 @@ const AuthCorrectionExamIdRoute = AuthCorrectionExamIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/kebijakan-privasi': typeof KebijakanPrivasiRoute
+  '/privacy': typeof PrivacyRoute
+  '/akun': typeof AuthAkunRoute
   '/analytics': typeof AuthAnalyticsRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
@@ -141,6 +162,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/kebijakan-privasi': typeof KebijakanPrivasiRoute
+  '/privacy': typeof PrivacyRoute
+  '/akun': typeof AuthAkunRoute
   '/analytics': typeof AuthAnalyticsRoute
   '/bank-soal': typeof AuthBankSoalRoute
   '/dashboard': typeof AuthDashboardRoute
@@ -162,6 +186,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/bank-soal-publik': typeof BankSoalPublikRoute
+  '/kebijakan-privasi': typeof KebijakanPrivasiRoute
+  '/privacy': typeof PrivacyRoute
+  '/_auth/akun': typeof AuthAkunRoute
   '/_auth/analytics': typeof AuthAnalyticsRoute
   '/_auth/bank-soal': typeof AuthBankSoalRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
@@ -183,6 +210,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/bank-soal-publik'
+    | '/kebijakan-privasi'
+    | '/privacy'
+    | '/akun'
     | '/analytics'
     | '/bank-soal'
     | '/dashboard'
@@ -202,6 +232,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/bank-soal-publik'
+    | '/kebijakan-privasi'
+    | '/privacy'
+    | '/akun'
     | '/analytics'
     | '/bank-soal'
     | '/dashboard'
@@ -222,6 +255,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_auth'
     | '/bank-soal-publik'
+    | '/kebijakan-privasi'
+    | '/privacy'
+    | '/_auth/akun'
     | '/_auth/analytics'
     | '/_auth/bank-soal'
     | '/_auth/dashboard'
@@ -243,12 +279,28 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   BankSoalPublikRoute: typeof BankSoalPublikRoute
+  KebijakanPrivasiRoute: typeof KebijakanPrivasiRoute
+  PrivacyRoute: typeof PrivacyRoute
   ShareSlugRoute: typeof ShareSlugRoute
   UjianCodeRoute: typeof UjianCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kebijakan-privasi': {
+      id: '/kebijakan-privasi'
+      path: '/kebijakan-privasi'
+      fullPath: '/kebijakan-privasi'
+      preLoaderRoute: typeof KebijakanPrivasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bank-soal-publik': {
       id: '/bank-soal-publik'
       path: '/bank-soal-publik'
@@ -361,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAnalyticsRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/akun': {
+      id: '/_auth/akun'
+      path: '/akun'
+      fullPath: '/akun'
+      preLoaderRoute: typeof AuthAkunRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/help/notasi-matematika': {
       id: '/_auth/help/notasi-matematika'
       path: '/help/notasi-matematika'
@@ -379,6 +438,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteChildren {
+  AuthAkunRoute: typeof AuthAkunRoute
   AuthAnalyticsRoute: typeof AuthAnalyticsRoute
   AuthBankSoalRoute: typeof AuthBankSoalRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
@@ -395,6 +455,7 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthAkunRoute: AuthAkunRoute,
   AuthAnalyticsRoute: AuthAnalyticsRoute,
   AuthBankSoalRoute: AuthBankSoalRoute,
   AuthDashboardRoute: AuthDashboardRoute,
@@ -416,6 +477,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   BankSoalPublikRoute: BankSoalPublikRoute,
+  KebijakanPrivasiRoute: KebijakanPrivasiRoute,
+  PrivacyRoute: PrivacyRoute,
   ShareSlugRoute: ShareSlugRoute,
   UjianCodeRoute: UjianCodeRoute,
 }

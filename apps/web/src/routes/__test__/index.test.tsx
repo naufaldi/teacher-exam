@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import type { ReactElement, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -86,6 +88,80 @@ describe("index.beforeLoad", () => {
 })
 
 describe("LoginPage", () => {
+  it("shows each sample choice letter once", () => {
+    render(<LoginPage />)
+
+    const sample = screen.getByRole("article", { name: "Contoh lembar ujian" })
+    expect(sample.querySelector("ol, [type='a']")).toBeNull()
+    expect(sample.textContent).toContain("kalimat penjelas")
+    expect(sample.textContent?.match(/a\./g)?.length).toBe(1)
+    expect(sample.textContent).not.toMatch(/a\.\s*a\./)
+  })
+
+  it("shows the sample sheet before the login control on a phone", () => {
+    render(<LoginPage />)
+
+    const sample = screen.getByRole("article", { name: "Contoh lembar ujian" })
+    const aside = sample.closest("aside")
+    expect(aside).not.toBeNull()
+    expect(aside?.className ?? "").not.toMatch(/(?:^|\s)hidden(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/(?:^|\s)order-first(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:order-none/)
+    expect(aside?.className ?? "").toMatch(/(?:^|\s)items-start(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:items-center/)
+    expect(aside?.className ?? "").not.toMatch(/(?:^|\s)overflow-hidden(?:\s|$)/)
+    expect(aside?.className ?? "").toMatch(/lg:overflow-hidden/)
+  })
+
+  it("names the mapel and kelas the corpus actually covers", () => {
+    render(<LoginPage />)
+
+    expect(screen.getByText(/Matematika kelas 1–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Bahasa Indonesia kelas 1–3 dan 5–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Pendidikan Pancasila kelas 1–2 dan 4–6/)).toBeInTheDocument()
+    expect(screen.getByText(/Bahasa Inggris kelas 3–6/)).toBeInTheDocument()
+    expect(screen.getByText(/IPAS mulai kelas 3/)).toBeInTheDocument()
+    expect(screen.queryByText("Kurikulum Merdeka · Kelas 1–6")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Kelas 1–6 · Sesuai Kurikulum Merdeka/)).not.toBeInTheDocument()
+  })
+
+  it("shows 5 mapel in the trust list", () => {
+    render(<LoginPage />)
+
+    expect(screen.queryByText("Bahasa Indonesia & Pendidikan Pancasila")).not.toBeInTheDocument()
+    expect(screen.getByText("5 mapel")).toBeInTheDocument()
+  })
+
+  it("names the product Ujian Sekolah on the landing", () => {
+    render(<LoginPage />)
+
+    expect(screen.getByText("Ujian Sekolah")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /Buat Soal Ujian Sekolah/i })).toBeInTheDocument()
+    expect(screen.queryByText("Ujian SD")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: /Buat Soal Ujian SD/i })).not.toBeInTheDocument()
+  })
+
+  it("sets the document title to Ujian Sekolah", () => {
+    const html = readFileSync(join(process.cwd(), "index.html"), "utf8")
+    expect(html).toContain("<title>Ujian Sekolah — Generator Soal</title>")
+  })
+
+  it("has one main landmark on the landing page", () => {
+    render(<LoginPage />)
+
+    expect(screen.getAllByRole("main")).toHaveLength(1)
+  })
+
+  it("links the privacy page next to signup", () => {
+    render(<LoginPage />)
+
+    const links = screen.getAllByRole("link", { name: "Kebijakan privasi" })
+    expect(links).toHaveLength(2)
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/privacy")
+    }
+  })
+
   it("starts Google sign-in with an absolute dashboard callback URL", async () => {
     const user = userEvent.setup()
     render(<LoginPage />)

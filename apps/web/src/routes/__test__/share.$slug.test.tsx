@@ -66,6 +66,7 @@ function makePublicExam(overrides: Partial<PublicExamDetailResponse> = {}): Publ
     status: "final",
     schoolName: "SD Negeri Contoh",
     academicYear: "2025/2026",
+    semester: null,
     examType: "formatif",
     examDate: "29 Juni 2026",
     durationMinutes: 60,
@@ -128,6 +129,28 @@ describe("share/$slug route", () => {
     expect(screen.getByText("Lembar tidak ditemukan")).toBeInTheDocument()
     expect(screen.getByText(/tidak lagi publik/i)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /halaman login/i })).toHaveAttribute("href", "/")
+  })
+
+  it("sets a preview title, description, and image for the shared sheet", () => {
+    renderPage()
+
+    expect(document.title).toBe("Lembar Publik Bahasa Indonesia")
+    expect(document.querySelector("meta[name=\"description\"]")?.getAttribute("content")).toContain("Kelas 6 SD")
+    expect(document.querySelector("meta[name=\"description\"]")?.getAttribute("content")?.toLowerCase()).toContain(
+      "siap cetak"
+    )
+    expect(document.querySelector("meta[property=\"og:image\"]")?.getAttribute("content")).toContain("/og.png")
+    expect(document.querySelector("meta[property=\"og:title\"]")?.getAttribute("content")).toBe(
+      "Lembar Publik Bahasa Indonesia"
+    )
+    expect(document.querySelector("meta[property=\"og:url\"]")?.getAttribute("content")).toBe(
+      "http://localhost:3000/share/share-abc123"
+    )
+    expect(document.querySelector("meta[property=\"og:type\"]")?.getAttribute("content")).toBe("website")
+    expect(document.querySelector("meta[property=\"og:locale\"]")?.getAttribute("content")).toBe("id_ID")
+    expect(document.querySelector("link[rel=\"canonical\"]")?.getAttribute("href")).toBe(
+      "http://localhost:3000/share/share-abc123"
+    )
   })
 
   it("renders exam sheet sections without auth context", () => {
@@ -200,6 +223,16 @@ describe("share/$slug route", () => {
     await user.click(screen.getByRole("button", { name: "PDF" }))
 
     expect(mockPublicExamExport).toHaveBeenCalledWith("share-abc123", "pdf", "soal")
+  })
+
+  it("downloads kisi-kisi and kartu soal as docx", () => {
+    renderPage()
+
+    screen.getByRole("button", { name: "Kisi-kisi" }).click()
+    screen.getByRole("button", { name: "Kartu soal" }).click()
+
+    expect(mockPublicExamExport).toHaveBeenNthCalledWith(1, "share-abc123", "docx", "kisi_kisi")
+    expect(mockPublicExamExport).toHaveBeenNthCalledWith(2, "share-abc123", "docx", "kartu_soal")
   })
 
   it("PDF Kunci button exports kunci variant", async () => {

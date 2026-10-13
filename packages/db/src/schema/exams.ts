@@ -21,6 +21,7 @@ export const exams = pgTable("exams", {
   examDate: text("exam_date"),
   durationMinutes: integer("duration_minutes"),
   instructions: text("instructions"),
+  semester: text("semester"),
   classContext: text("class_context"),
   sourceMode: sourceModeEnum("source_mode").default("default").notNull(),
   pdfUploadId: uuid("pdf_upload_id")

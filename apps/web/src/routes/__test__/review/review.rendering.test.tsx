@@ -75,6 +75,23 @@ describe("ReviewPage — Task 13: Slow mode card highlights correctly", () => {
   })
 })
 
+describe("ReviewPage — PDF source page", () => {
+  it("shows the source page on each soal", async () => {
+    setReviewSearch({ mode: "slow", examId: "exam_source_page" })
+    const exam = makeExamWithQuestions("exam_source_page")
+    mockApiResolvedValueOnce(mockExamsGet, {
+      ...exam,
+      reviewMode: "slow" as const,
+      questions: exam.questions.map((question, index) => index === 0 ? { ...question, sourcePage: 4 } : question)
+    })
+    await getLoader()({ deps: { examId: "exam_source_page" } })
+
+    renderReviewPage()
+
+    expect(screen.getByTestId("source-page-1")).toHaveTextContent("Hal. 4")
+  })
+})
+
 describe("ReviewPage — math rendering", () => {
   it("renders LaTeX in fast review list without dollar signs", async () => {
     setReviewSearch({ mode: "fast", examId: "exam_math_fast" })

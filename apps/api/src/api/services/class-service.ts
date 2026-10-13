@@ -77,6 +77,7 @@ function toClass(row: ClassRow): ClassEntity {
     ...(row.subject !== null ? { subject: row.subject as ClassEntity["subject"] } : {}),
     schoolName: row.schoolName,
     academicYear: row.academicYear,
+    semester: row.semester as ClassEntity["semester"],
     defaultExamType: row.defaultExamType as ClassEntity["defaultExamType"],
     defaultExamDate: row.defaultExamDate,
     defaultDurationMinutes: row.defaultDurationMinutes,
@@ -188,6 +189,7 @@ export const ClassServiceLive = Layer.effect(
               subject: input.subject ?? null,
               schoolName: input.schoolName,
               academicYear: input.academicYear,
+              semester: input.semester ?? null,
               defaultExamType: input.defaultExamType,
               defaultExamDate: input.defaultExamDate ?? null,
               defaultDurationMinutes: input.defaultDurationMinutes ?? null,
@@ -225,6 +227,7 @@ export const ClassServiceLive = Layer.effect(
           set.defaultDurationMinutes = input.defaultDurationMinutes
         }
         if (input.defaultInstructions !== undefined) set.defaultInstructions = input.defaultInstructions
+        if (input.semester !== undefined) set.semester = input.semester
         yield* runDb(db.update(classes).set(set).where(eq(classes.id, row.id)))
         const updated = yield* runDb(
           db.select().from(classes).where(eq(classes.id, row.id)).limit(1)

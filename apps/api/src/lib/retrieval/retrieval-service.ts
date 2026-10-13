@@ -1,16 +1,13 @@
 import type { SqlClient } from "@effect/sql/SqlClient"
-import { documentChunks } from "@teacher-exam/db"
-import type { SourceMode } from "@teacher-exam/shared"
-import { and, eq } from "drizzle-orm"
+import type { ExamSubject, SourceMode } from "@teacher-exam/shared"
 import { Data, Effect } from "effect"
 import type { ApiDatabaseError } from "../../api/errors/http"
-import { runDb } from "../../api/lib/db-effect"
 import type { CurriculumReadError } from "../../api/services/curriculum-service"
 import { CurriculumService } from "../../api/services/curriculum-service"
-import { DbClient } from "../../api/services/db"
+import type { DbClient } from "../../api/services/db"
+import { parseChosenBabNumbers, selectChosenBabText } from "../../curriculum/bab-index.js"
 import { agenticSearch } from "./agentic-search"
-import { chunkCorpusMarkdown } from "./chunk-text"
-import { embedText } from "./embed"
+import { indexCorpusSubjectGrade } from "./index-corpus.js"
 
 export class InsufficientMateriError extends Data.TaggedError("InsufficientMateriError")<{
   message: string
@@ -26,33 +23,9 @@ export function ensureCorpusIndexed(
   grade: number
 ): Effect.Effect<void, ApiDatabaseError | CurriculumReadError, DbClient | CurriculumService> {
   return Effect.gen(function*() {
-    const db = yield* DbClient
-    const docId = `corpus:${subject}:${grade}`
-    const existing = yield* runDb(
-      db
-        .select({ id: documentChunks.id })
-        .from(documentChunks)
-        .where(and(eq(documentChunks.docId, docId), eq(documentChunks.source, "corpus")))
-        .limit(1)
-    )
-    if (existing.length > 0) return
-
     const curriculum = yield* CurriculumService
-    const markdown = yield* curriculum.getText(subject as never, grade as never)
-    const chunks = chunkCorpusMarkdown(markdown, subject, grade)
-    if (chunks.length === 0) return
-
-    yield* runDb(
-      db.insert(documentChunks).values(
-        chunks.map((chunk) => ({
-          docId,
-          source: "corpus" as const,
-          content: chunk.content,
-          metadata: chunk.metadata,
-          embedding: [...embedText(chunk.content)]
-        }))
-      )
-    )
+    const markdown = yield* curriculum.getText(subject as ExamSubject, grade)
+    yield* indexCorpusSubjectGrade(subject as ExamSubject, grade, markdown)
   })
 }
 
@@ -89,16 +62,31 @@ export function resolveRetrievalContext(input: {
     }
 
     yield* ensureCorpusIndexed(input.subject, input.grade).pipe(Effect.catchAll(() => Effect.void))
-    const corpusDocId = `corpus:${input.subject}:${input.grade}`
-    const babNumbers = input.topics
-      .map((topic) => /^Bab\s+(\d+)/i.exec(topic)?.[1])
-      .filter((bab): bab is string => bab !== undefined)
+    const curriculum = yield* CurriculumService
+    const markdown = yield* curriculum.getText(input.subject as ExamSubject, input.grade)
+    const babNumbers = parseChosenBabNumbers(input.topics)
+    if (babNumbers.length > 0) {
+      let combined = selectChosenBabText(markdown, input.topics)
+      const trace = [`bab-only:${babNumbers.join(",")}`]
+      if (input.sourceMode === "combine" && input.pdfUploadId) {
+        const pdfResult = yield* agenticSearch({
+          query,
+          docIds: [input.pdfUploadId],
+          source: "teacher_pdf"
+        })
+        combined = `${combined}\n\n--- Materi PDF Guru ---\n\n${pdfResult.material}`
+        for (const step of pdfResult.trace) {
+          trace.push(step)
+        }
+      }
+      return { curriculumText: combined, retrievalTrace: trace }
+    }
 
+    const corpusDocId = `corpus:${input.subject}:${input.grade}`
     const corpusResult = yield* agenticSearch({
       query,
       docIds: [corpusDocId],
-      source: "corpus",
-      babNumbers: babNumbers.length > 0 ? babNumbers : undefined
+      source: "corpus"
     })
 
     let combined = corpusResult.material
@@ -117,9 +105,7 @@ export function resolveRetrievalContext(input: {
     }
 
     if (combined.trim().length < 50) {
-      const curriculum = yield* CurriculumService
-      const fullText = yield* curriculum.getText(input.subject as never, input.grade as never)
-      return { curriculumText: fullText, retrievalTrace: [...trace, "fallback:full-corpus"] }
+      return { curriculumText: markdown, retrievalTrace: [...trace, "fallback:full-corpus"] }
     }
 
     return { curriculumText: combined, retrievalTrace: trace }

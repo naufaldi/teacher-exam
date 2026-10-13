@@ -4,6 +4,7 @@ import * as HttpServer from "@effect/platform/HttpServer"
 import { Layer } from "effect"
 import { createCorsLayer } from "../api/cors"
 import { TeacherExamApi } from "../api/definition"
+import { AccountLive } from "../api/handlers/account"
 import { AiLive } from "../api/handlers/ai"
 import { AnalyticsLive } from "../api/handlers/analytics"
 import { BankLive } from "../api/handlers/bank"
@@ -35,6 +36,7 @@ import { ExportServiceLive } from "../api/services/export-service"
 import { GradingServiceLive } from "../api/services/grading-service"
 import { ObjectStorageLive } from "../api/services/object-storage-live"
 import { SessionServiceLive } from "../api/services/session-service"
+import { SoalImageModelLive } from "../api/services/soal-image-model"
 import { TemplateServiceLive } from "../api/services/template-service"
 import { createTelemetryLayer } from "../api/telemetry"
 
@@ -79,6 +81,7 @@ const HandlersLive = Layer.mergeAll(
   PublicExportsLive,
   CurriculumLive,
   MeLive,
+  AccountLive,
   ExamsLive,
   ExportsLive,
   QuestionsLive,
@@ -97,6 +100,7 @@ const ApiLive = HttpApiBuilder.api(TeacherExamApi).pipe(
   Layer.provide(HandlersLive),
   Layer.provide(MiddlewareLive),
   Layer.provide(AiLayer),
+  Layer.provide(SoalImageModelLive),
   Layer.provideMerge(createCorsLayer())
 )
 

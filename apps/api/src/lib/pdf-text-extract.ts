@@ -1,11 +1,24 @@
 import { PDFDocument } from "pdf-lib"
+import { PDF_PAGE_CAP } from "./pdf-limits"
 
-export interface PdfExtractResult {
+const MIN_PAGE_LETTERS = 20
+
+export interface PdfPageText {
+  readonly page: number
   readonly text: string
-  readonly pageCount: number
 }
 
-async function loadPageCount(bytes: Buffer): Promise<number> {
+export type PdfExtractResult =
+  | {
+    readonly _tag: "ok"
+    readonly text: string
+    readonly pageCount: number
+    readonly pages: ReadonlyArray<PdfPageText>
+  }
+  | { readonly _tag: "too_many_pages"; readonly pageCount: number }
+  | { readonly _tag: "scanned"; readonly pageCount: number }
+
+export async function readPdfPageCount(bytes: Buffer): Promise<number> {
   try {
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true })
     return doc.getPageCount()
@@ -14,27 +27,36 @@ async function loadPageCount(bytes: Buffer): Promise<number> {
   }
 }
 
+function letterCount(text: string): number {
+  return text.match(/\p{L}/gu)?.length ?? 0
+}
+
 export async function extractPdfText(bytes: Buffer): Promise<PdfExtractResult> {
-  const pageCount = await loadPageCount(bytes)
+  const pageCount = await readPdfPageCount(bytes)
+  if (pageCount > PDF_PAGE_CAP) {
+    return { _tag: "too_many_pages", pageCount }
+  }
 
   try {
     const { extractText, getDocumentProxy } = await import("unpdf")
     const pdf = await getDocumentProxy(new Uint8Array(bytes))
-    const { text } = await extractText(pdf, { mergePages: true })
-    const merged = Array.isArray(text) ? text.join("\n\n") : String(text ?? "")
-    const trimmed = merged.trim()
-    if (trimmed.length > 0) {
-      return { text: trimmed, pageCount }
+    const extracted = await extractText(pdf, { mergePages: false })
+    const rawPages = Array.isArray(extracted.text) ? extracted.text : [String(extracted.text ?? "")]
+    const pages = rawPages.flatMap((raw, index) => {
+      const text = String(raw).trim()
+      if (letterCount(text) < MIN_PAGE_LETTERS) return []
+      return [{ page: index + 1, text }]
+    })
+    if (pages.length === 0) {
+      return { _tag: "scanned", pageCount }
+    }
+    return {
+      _tag: "ok",
+      pageCount,
+      pages,
+      text: pages.map((page) => page.text).join("\n\n")
     }
   } catch {
-    // fall through to latin1 heuristic
+    return { _tag: "scanned", pageCount }
   }
-
-  const printable = bytes
-    .toString("latin1")
-    .replace(/[^\x20-\x7E\n\r\t]/g, " ")
-    .replace(/\s{3,}/g, " ")
-    .trim()
-
-  return { text: printable.slice(0, 50_000), pageCount }
 }

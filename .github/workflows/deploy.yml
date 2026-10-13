@@ -28,7 +28,7 @@ jobs:
         run: echo "commit_hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
   build-and-push-api:
-    needs: commit-hash
+    needs: [commit-hash, quality]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
             ${{ env.API_IMAGE }}:latest
 
   build-and-push-web:
-    needs: commit-hash
+    needs: [commit-hash, quality]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +78,7 @@ jobs:
           build-args: |
             VITE_API_URL=https://api-ujian-sekolah.naufaldi.com/api
             VITE_APP_ORIGIN=https://ujian-sekolah.naufaldi.com
+            VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}
           tags: |
             ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
             ${{ env.WEB_IMAGE }}:latest
@@ -85,15 +86,22 @@ jobs:
   deploy:
     needs: [build-and-push-api, build-and-push-web, commit-hash, quality]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Deploy to VPS
+        id: switch
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 900s
+          command_timeout: 2400s
           script: |
             set -e
 
@@ -105,20 +113,16 @@ jobs:
             git reset --hard origin/main
             git clean -fd -e .env.production
 
-            # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            # VPS disk is limited (~50GB); prune unused images/cache before pull (avoids "no space left on device" on layer extract)
-            echo "Pruning unused Docker images and build cache..."
-            docker image prune -af
-            docker builder prune -af
+            echo "Disk before image pull:"
             df -h /
 
-            # Pull new images
-            echo "Pulling API image..."
-            docker pull ${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
-            echo "Pulling Web image..."
-            docker pull ${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}
+            # Dangling images only. GHCR_PULL_TOKEN is an optional packages:read credential; the job token is the fallback.
+            GHCR_USER='${{ github.actor }}' \
+            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
+            GHCR_PULL_TOKEN='${{ secrets.GHCR_PULL_TOKEN }}' \
+            API_IMAGE='${{ env.API_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}' \
+            WEB_IMAGE='${{ env.WEB_IMAGE }}:${{ needs.commit-hash.outputs.commit_hash }}' \
+              sh scripts/vps-pull.sh
 
             # Update GITHUB_REPOSITORY only; IMAGE_TAG is written after migrate succeeds
             grep -v "^GITHUB_REPOSITORY=" .env.production > .env.production.tmp || true
@@ -132,49 +136,56 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env.production \
               --profile migrate run --rm migrate 2>&1 | tee /tmp/migrate.log
 
+            # Remember the tag that is still serving, then persist the new tag.
+            grep '^IMAGE_TAG=' .env.production | head -n 1 | cut -d= -f2- | tr -d '[:space:]' > .deploy-previous-tag || true
+
             # Persist IMAGE_TAG only after migrate succeeds
             grep -v "^IMAGE_TAG=" .env.production > .env.production.tmp || true
             mv .env.production.tmp .env.production
             echo "IMAGE_TAG=${{ needs.commit-hash.outputs.commit_hash }}" >> .env.production
 
-            # Restart services with new images
+            # Restart services with new images. Public smoke runs on the runner after this step.
             echo "Restarting services..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
-
-            # Primary health: in-container (bypasses Caddy/Cloudflare TLS races on domain cutover)
-            echo "Waiting for API container health..."
-            for i in $(seq 1 30); do
-              if docker exec teacher-exam-api-1 node -e "fetch('http://localhost:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" > /dev/null 2>&1; then
-                echo "API container is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "In-container health check failed after 30 attempts"
-                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
-                exit 1
-              fi
-              echo "Container health attempt $i/30 - waiting 5s..."
-              sleep 5
-            done
-
-            # Secondary health: public URL (routing/DNS/TLS). Fail only after internal is already OK.
-            echo "Waiting for public API health..."
-            for i in $(seq 1 30); do
-              if curl -sf https://api-ujian-sekolah.naufaldi.com/api/health > /dev/null 2>&1; then
-                echo "Public API is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "Public health check failed after 30 attempts (container was healthy)"
-                docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=50 api
-                docker logs edge-proxy-caddy --tail=50 || true
-                exit 1
-              fi
-              echo "Public health attempt $i/30 - waiting 5s..."
-              sleep 5
-            done
-
-            # Cleanup unused images after deploy
-            docker image prune -af
-
             echo "Deployed ${{ needs.commit-hash.outputs.commit_hash }}"
+
+      - name: Smoke public routes
+        id: smoke
+        run: node scripts/deploy-smoke.mjs
+
+      - name: Smoke AI model inside the API container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 120s
+          script: |
+            set -eu
+            cd ~/projects/teacher-exam
+            sh scripts/ai-live-smoke.sh
+
+      - name: Roll back to the previous image
+        if: failure() && steps.switch.outcome == 'success'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 300s
+          script: |
+            set -eu
+            cd ~/projects/teacher-exam
+            sh scripts/vps-rollback.sh
+
+      - name: Prune dangling images
+        if: success()
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 300s
+          script: |
+            set -eu
+            docker image prune -f

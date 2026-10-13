@@ -1,12 +1,21 @@
 import { inferAdditionalFields } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
+export function authClientBaseUrl(origin: string | undefined, apiUrl: string | undefined): string {
+  const host = origin ?? "http://127.0.0.1"
+  if (!apiUrl) return `${host}/api/auth`
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(apiUrl)) return `${apiUrl}/auth`
+  const path = apiUrl.startsWith("/") ? apiUrl : `/${apiUrl}`
+  return `${host}${path}/auth`
+}
+
 export const authClient = createAuthClient({
-  // Prod: VITE_API_URL=https://api.ujiansd.com/api → baseURL=https://api.ujiansd.com/api/auth
-  // Dev: unset → same-origin /api/auth, proxied by Vite to API_PORT (default :3000)
-  baseURL: import.meta.env["VITE_API_URL"]
-    ? `${import.meta.env["VITE_API_URL"]}/auth`
-    : `${typeof window === "undefined" ? "" : window.location.origin}/api/auth`,
+  // Prod: VITE_API_URL=https://api.example.com/api → baseURL=https://api.example.com/api/auth
+  // CI and dev may set VITE_API_URL=/api. Prerender has no window, so that path is joined to an absolute host.
+  baseURL: authClientBaseUrl(
+    typeof window === "undefined" ? undefined : window.location.origin,
+    import.meta.env["VITE_API_URL"]
+  ),
   plugins: [
     inferAdditionalFields({
       user: {

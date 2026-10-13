@@ -2,6 +2,8 @@ import type { Question } from "@teacher-exam/shared"
 
 type ExamSheetMetadata = {
   schoolName: string
+  schoolAddress?: string
+  schoolLogo?: string | null
   academicYear: string
   examType: string
   examDate: string

@@ -27,6 +27,20 @@ describe("QuestionSchema — mcq_single", () => {
     expect(Either.isRight(result)).toBe(true)
   })
 
+  test("keeps the source page on a decoded soal", () => {
+    const result = Schema.decodeUnknownEither(QuestionSchema)({
+      ...baseQuestion,
+      _tag: "mcq_single",
+      sourcePage: 4,
+      options: { a: "Jakarta", b: "Bandung", c: "Surabaya", d: "Medan" },
+      correct: "a"
+    })
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right.sourcePage).toBe(4)
+    }
+  })
+
   test("decodes valid mcq_single with a geometry figure", () => {
     const result = Schema.decodeUnknownEither(QuestionSchema)({
       ...baseQuestion,
@@ -219,6 +233,7 @@ const VALID_EXAM = {
   status: "draft",
   schoolName: null,
   academicYear: null,
+  semester: null,
   examType: "formatif",
   examDate: null,
   durationMinutes: null,
@@ -241,6 +256,31 @@ describe("ExamSchema.topics", () => {
   it("rejects exam without topics array", () => {
     const bad = { ...VALID_EXAM, topics: undefined }
     const result = Schema.decodeUnknownEither(ExamSchema)(bad)
+    expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("ExamSchema.semester", () => {
+  it("decodes null semester", () => {
+    const result = Schema.decodeUnknownEither(ExamSchema)(VALID_EXAM)
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right.semester).toBeNull()
+    }
+  })
+
+  it("decodes ganjil and genap", () => {
+    for (const semester of ["ganjil", "genap"] as const) {
+      const result = Schema.decodeUnknownEither(ExamSchema)({ ...VALID_EXAM, semester })
+      expect(Either.isRight(result)).toBe(true)
+      if (Either.isRight(result)) {
+        expect(result.right.semester).toBe(semester)
+      }
+    }
+  })
+
+  it("rejects invalid semester", () => {
+    const result = Schema.decodeUnknownEither(ExamSchema)({ ...VALID_EXAM, semester: "tengah" })
     expect(Either.isLeft(result)).toBe(true)
   })
 })

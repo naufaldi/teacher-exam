@@ -1,6 +1,6 @@
 import { Either, Schema } from "effect"
 import { UserIdSchema } from "./entities.js"
-import { AcademicYearSchema, ExamSubjectSchema, ExamTypeSchema, GradeSchema } from "./primitives.js"
+import { AcademicYearSchema, ExamSubjectSchema, ExamTypeSchema, GradeSchema, SemesterSchema } from "./primitives.js"
 // ── Branded IDs ────────────────────────────────────────────
 export const ClassIdSchema = Schema.String.pipe(Schema.brand("ClassId"))
 export type ClassId = typeof ClassIdSchema.Type
@@ -17,6 +17,9 @@ const NonEmptyTrimmedString = Schema.String.pipe(
   Schema.nonEmptyString({ message: () => "Wajib diisi" })
 )
 
+export { SemesterSchema }
+export type { Semester } from "./primitives.js"
+
 // ── Class entity ───────────────────────────────────────────
 export const ClassSchema = Schema.Struct({
   id: ClassIdSchema,
@@ -26,6 +29,7 @@ export const ClassSchema = Schema.Struct({
   subject: Schema.optional(ExamSubjectSchema),
   schoolName: Schema.NullOr(Schema.String),
   academicYear: Schema.NullOr(Schema.String),
+  semester: Schema.NullOr(SemesterSchema),
   defaultExamType: Schema.NullOr(ExamTypeSchema),
   defaultExamDate: Schema.NullOr(Schema.String),
   defaultDurationMinutes: Schema.NullOr(Schema.Int),
@@ -62,7 +66,8 @@ export const CreateClassInputSchema = Schema.Struct({
   subject: Schema.optional(ExamSubjectSchema),
   defaultExamDate: Schema.optional(Schema.String),
   defaultDurationMinutes: Schema.optional(Schema.Int),
-  defaultInstructions: Schema.optional(Schema.String)
+  defaultInstructions: Schema.optional(Schema.String),
+  semester: Schema.optional(SemesterSchema)
 })
 export type CreateClassInput = typeof CreateClassInputSchema.Type
 
@@ -75,7 +80,8 @@ export const UpdateClassInputSchema = Schema.Struct({
   subject: Schema.optional(ExamSubjectSchema),
   defaultExamDate: Schema.optional(Schema.String),
   defaultDurationMinutes: Schema.optional(Schema.Int),
-  defaultInstructions: Schema.optional(Schema.String)
+  defaultInstructions: Schema.optional(Schema.String),
+  semester: Schema.optional(SemesterSchema)
 })
 export type UpdateClassInput = typeof UpdateClassInputSchema.Type
 

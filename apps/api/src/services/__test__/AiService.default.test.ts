@@ -25,7 +25,7 @@ describe("createDefaultAiService", () => {
     expect(() => createDefaultAiService()).toThrow(/ANTHROPIC_API_KEY is required/)
   })
 
-  it("builds anthropic service when AI_PROVIDER=anthropic (default)", () => {
+  it("builds anthropic service when AI_PROVIDER=anthropic", () => {
     vi.stubEnv("AI_PROVIDER", "anthropic")
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test")
 

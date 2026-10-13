@@ -15,7 +15,9 @@ import { DbClient } from "../api/services/db"
 import type { ObjectStorageError } from "../api/services/object-storage"
 import { ObjectStorage } from "../api/services/object-storage"
 import { enqueueIngestJob, runIngestJob } from "../jobs/ingest-worker"
+import { PDF_PAGE_CAP, PDF_PAGE_CAP_MESSAGE } from "./pdf-limits"
 import { buildPdfStorageKey } from "./pdf-storage-keys"
+import { readPdfPageCount } from "./pdf-text-extract"
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024
 
@@ -55,6 +57,15 @@ export function validatePdfUploadFile(file: File): Effect.Effect<Buffer, PdfUplo
     if (!hasPdfMagicBytes(bytes)) {
       return yield* Effect.fail(
         new PdfUploadValidationError({ status: 415, message: "File bukan PDF yang valid." })
+      )
+    }
+    const pageCount = yield* Effect.tryPromise({
+      try: () => readPdfPageCount(bytes),
+      catch: () => new PdfUploadValidationError({ status: 415, message: "File bukan PDF yang valid." })
+    })
+    if (pageCount > PDF_PAGE_CAP) {
+      return yield* Effect.fail(
+        new PdfUploadValidationError({ status: 413, message: PDF_PAGE_CAP_MESSAGE })
       )
     }
     return bytes

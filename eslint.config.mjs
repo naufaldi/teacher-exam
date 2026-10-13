@@ -148,6 +148,16 @@ export default [
     }
   },
   {
+    files: ["apps/web/server/**/*.mjs", "apps/web/scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        fetch: "readonly",
+        globalThis: "readonly",
+        process: "readonly"
+      }
+    }
+  },
+  {
     files: ["apps/api/src/**/*", "packages/shared/src/**/*", "apps/web/src/**/*"],
     rules: {
       "no-console": "error"

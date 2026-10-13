@@ -142,6 +142,7 @@ const VALID_PUBLIC_EXAM_WITH_QUESTIONS = {
   status: "final",
   schoolName: null,
   academicYear: null,
+  semester: null,
   examType: "formatif",
   examDate: null,
   durationMinutes: null,
@@ -246,6 +247,18 @@ describe("api.ai.generate", () => {
         })
       )
     ).rejects.toSatisfy((err: unknown) => err instanceof RateLimitedError && err.retryAfterSec === 30)
+  })
+
+  it("gives the screen the rate-limit sentence", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: { get: () => null }
+    })
+
+    await expect(apiFetch("/exams")).rejects.toSatisfy((err: unknown) =>
+      err instanceof RateLimitedError && err.message === "Terlalu banyak permintaan. Coba lagi sebentar."
+    )
   })
 })
 
@@ -450,5 +463,25 @@ describe("api.publicExams.get", () => {
     )
     expect(result.publishedAt).toBe("2024-01-01T00:00:00.000Z")
     expect(result.questions).toEqual([])
+  })
+})
+
+describe("api.exams.streamDiscussion", () => {
+  it("passes the rate-limit message to the pembahasan screen", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: () =>
+        Promise.resolve({
+          error: "Terlalu banyak permintaan. Silakan coba lagi sebentar.",
+          code: "RATE_LIMITED",
+          retryAfterSec: 60
+        })
+    })
+    const seen: Array<string> = []
+    await api.exams.streamDiscussion("exam-1", () => {}, (message) => {
+      seen.push(message)
+    })
+    expect(seen).toEqual(["Terlalu banyak permintaan. Silakan coba lagi sebentar."])
   })
 })

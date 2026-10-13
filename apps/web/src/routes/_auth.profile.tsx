@@ -1,5 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
-import type { ExamSubject, Grade, UpdateProfileInput, UserProfile } from "@teacher-exam/shared"
+import {
+  type ExamSubject,
+  type Grade,
+  SCHOOL_ADDRESS_MAX,
+  SCHOOL_LOGO_MAX_CHARS,
+  type UpdateProfileInput,
+  type UserProfile
+} from "@teacher-exam/shared"
 import { Button, Input, Label, PaperCard } from "@teacher-exam/ui"
 import { BookOpen, GraduationCap, MapPin } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -12,10 +19,40 @@ export const Route = createFileRoute("/_auth/profile")({
 
 const ALL_GRADES: ReadonlyArray<Grade> = [1, 2, 3, 4, 5, 6] as const
 
+function readSchoolLogo(file: File): Promise<string> {
+  if (file.type !== "image/png" && file.type !== "image/jpeg") {
+    return Promise.reject(new Error("Logo harus PNG atau JPEG."))
+  }
+  if (file.size > SCHOOL_LOGO_MAX_CHARS) {
+    return Promise.reject(new Error("Logo maksimal 120 KB."))
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result !== "string" || !/^data:image\/(png|jpeg);base64,/.test(result)) {
+        reject(new Error("Logo harus PNG atau JPEG."))
+        return
+      }
+      if (result.length > SCHOOL_LOGO_MAX_CHARS) {
+        reject(new Error("Logo maksimal 120 KB."))
+        return
+      }
+      resolve(result)
+    }
+    reader.onerror = () => {
+      reject(new Error("Gagal membaca logo."))
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [name, setName] = useState("")
   const [school, setSchool] = useState("")
+  const [schoolAddress, setSchoolAddress] = useState("")
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null)
   const [username, setUsername] = useState("")
   const [grades, setGrades] = useState<Array<Grade>>([])
   const [subjects, setSubjects] = useState<Array<ExamSubject>>([])
@@ -29,6 +66,8 @@ function ProfilePage() {
       setProfile(p)
       setName(p.name)
       setSchool(p.school ?? "")
+      setSchoolAddress(p.schoolAddress ?? "")
+      setSchoolLogo(p.schoolLogo ?? null)
       setUsername(p.username)
       setGrades([...(p.gradesTaught ?? [])])
       setSubjects([...(p.subjectsTaught ?? [])])
@@ -49,6 +88,10 @@ function ProfilePage() {
     setError(null)
     if (!name.trim()) return setError("Nama wajib diisi.")
     if (!school.trim()) return setError("Nama sekolah wajib diisi.")
+    if (schoolAddress.trim().length > SCHOOL_ADDRESS_MAX) {
+      return setError("Alamat sekolah maksimal 200 karakter.")
+    }
+    if (schoolLogo && schoolLogo.length > 120 * 1024) return setError("Logo maksimal 120 KB.")
     if (grades.length === 0) return setError("Pilih minimal satu kelas.")
     if (subjects.length === 0) return setError("Pilih minimal satu mata pelajaran.")
     if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
@@ -60,6 +103,8 @@ function ProfilePage() {
       const payload: UpdateProfileInput = {
         name: name.trim(),
         school: school.trim(),
+        schoolAddress: schoolAddress.trim() ? schoolAddress.trim() : null,
+        schoolLogo,
         username,
         gradesTaught: grades,
         subjectsTaught: subjects
@@ -119,7 +164,7 @@ function ProfilePage() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                pattern="[a-z0-9._-]{3,32}"
+                pattern="[-a-z0-9._]{3,32}"
                 required
               />
             </div>
@@ -136,6 +181,47 @@ function ProfilePage() {
               placeholder="SD Negeri 1 Jakarta"
               required
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="school-address">Alamat sekolah</Label>
+            <Input
+              id="school-address"
+              value={schoolAddress}
+              maxLength={SCHOOL_ADDRESS_MAX}
+              onChange={(e) => setSchoolAddress(e.target.value)}
+              placeholder="Jl. Melati No. 12, Jakarta"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="school-logo">Logo sekolah</Label>
+            <Input
+              id="school-logo"
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                void readSchoolLogo(file).then((dataUrl) => {
+                  setError(null)
+                  setSchoolLogo(dataUrl)
+                }).catch((err: unknown) => {
+                  setSchoolLogo(null)
+                  setError(err instanceof Error ? err.message : "Gagal membaca logo.")
+                })
+              }}
+            />
+            {schoolLogo
+              ? (
+                <div className="flex items-center gap-3">
+                  <img src={schoolLogo} alt="Logo sekolah" className="h-16 w-16 object-contain" />
+                  <Button type="button" variant="ghost" onClick={() => setSchoolLogo(null)}>
+                    Hapus logo
+                  </Button>
+                </div>
+              )
+              : null}
           </div>
 
           <fieldset className="flex flex-col gap-3">

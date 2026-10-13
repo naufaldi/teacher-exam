@@ -57,17 +57,19 @@ describe("index-corpus-chunks", () => {
 
   it.effect("indexes corpus chunks once and skips on re-run", () =>
     Effect.gen(function*() {
-      let selectCount = 0
       let insertedRows: ReadonlyArray<Record<string, unknown>> | undefined
-      ;(db.select as Mock).mockImplementation(() => {
-        selectCount++
-        if (selectCount === 1) return makeChain([])
-        return makeChain([{ id: "chunk-1" }])
-      })
+      let storedMeta: Array<Record<string, unknown>> = []
+      ;(db.select as Mock).mockImplementation(() =>
+        makeChain(storedMeta.map((metadata, index) => ({
+          id: `chunk-${index}`,
+          metadata
+        })))
+      )
       ;(db.insert as Mock).mockImplementation(() => {
         return {
           values: (rows: ReadonlyArray<Record<string, unknown>>) => {
             insertedRows = rows
+            storedMeta = rows.map((row) => (row["metadata"] ?? {}) as Record<string, unknown>)
             return makeChain(undefined)
           }
         }
@@ -89,5 +91,45 @@ describe("index-corpus-chunks", () => {
       assert.strictEqual(second.indexed, false)
       assert.strictEqual(second.chunkCount, 0)
       assert.isTrue((insertedRows?.length ?? 0) > 0)
+    }).pipe(Effect.provide(Layer.succeed(DbClient, db as never))))
+
+  it.effect("reindexes only the bab whose text changed", () =>
+    Effect.gen(function*() {
+      const inserted: Array<ReadonlyArray<Record<string, unknown>>> = []
+      let stored: Array<Record<string, unknown>> = []
+      ;(db.select as Mock).mockImplementation(() =>
+        makeChain(stored.map((row) => ({
+          id: row["id"],
+          metadata: row["metadata"]
+        })))
+      )
+      ;(db.insert as Mock).mockImplementation(() => ({
+        values: (rows: ReadonlyArray<Record<string, unknown>>) => {
+          inserted.push(rows)
+          stored = [
+            ...stored,
+            ...rows.map((row, index) => ({
+              ...row,
+              id: `chunk-${stored.length + index}`
+            }))
+          ]
+          return makeChain(undefined)
+        }
+      }))
+      ;(db.delete as Mock).mockImplementation(() => makeChain(undefined))
+
+      yield* indexCorpusSubjectGrade("matematika" as ExamSubject, 5, SAMPLE_MARKDOWN)
+      inserted.length = 0
+      const edited = SAMPLE_MARKDOWN.replace(
+        "Konten bab dua untuk pengujian chunk.",
+        "Konten bab dua sudah diubah."
+      )
+      const second = yield* indexCorpusSubjectGrade("matematika" as ExamSubject, 5, edited)
+      const batch = inserted[0] ?? []
+      const contents = batch.map((row) => String(row["content"])).join("\n")
+
+      assert.strictEqual(second.indexed, true)
+      assert.ok(contents.includes("Konten bab dua sudah diubah."))
+      assert.ok(!contents.includes("Konten bab satu untuk pengujian chunk."))
     }).pipe(Effect.provide(Layer.succeed(DbClient, db as never))))
 })

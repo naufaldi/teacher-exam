@@ -25,6 +25,7 @@ function makeClassTemplate(overrides: Partial<ClassEntity> = {}): ClassEntity {
     subject: "matematika",
     schoolName: "SDN Jakarta",
     academicYear: "2025/2026",
+    semester: "ganjil",
     defaultExamType: "formatif",
     defaultExamDate: "2026-05-14",
     defaultDurationMinutes: 60,
@@ -35,7 +36,7 @@ function makeClassTemplate(overrides: Partial<ClassEntity> = {}): ClassEntity {
   }
 }
 
-test("choosing a class template applies only class identity metadata and patches exam", async () => {
+test("choosing a class template applies full sheet defaults and patches exam", async () => {
   mockApiResolvedValueOnce(mockClassesList, [makeClassTemplate()])
   const patchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
 
@@ -48,14 +49,20 @@ test("choosing a class template applies only class identity metadata and patches
   fireEvent.click(screen.getByText(/kelas 5a/i))
 
   expect(screen.getByLabelText(/nama sekolah/i)).toHaveValue("SDN Jakarta")
+  expect(screen.getByRole("combobox", { name: /^semester$/i })).toHaveTextContent(/ganjil/i)
   expect(screen.getByLabelText(/durasi/i)).toHaveValue("60")
+  expect(screen.getByLabelText(/petunjuk pengerjaan/i)).toHaveValue("Kerjakan dengan teliti.")
   await waitFor(() => {
     expect(patchSpy).toHaveBeenCalledWith(
       "E",
       {
         schoolName: "SDN Jakarta",
         academicYear: "2025/2026",
-        examType: "formatif"
+        semester: "ganjil",
+        examType: "formatif",
+        examDate: "2026-05-14",
+        durationMinutes: 60,
+        instructions: "Kerjakan dengan teliti."
       }
     )
   })
@@ -83,11 +90,11 @@ test("incomplete class templates are hidden from the template select", async () 
   expect(screen.getByRole("option", { name: /^tanpa template$/i })).toBeInTheDocument()
 })
 
-test("choosing a class template does not overwrite manual duration date or instructions", async () => {
+test("choosing a class template overwrites duration date and instructions from defaults", async () => {
   mockApiResolvedValueOnce(mockClassesList, [makeClassTemplate({
     defaultExamDate: "2026-05-14",
     defaultDurationMinutes: 120,
-    defaultInstructions: "Template instructions should not apply."
+    defaultInstructions: "Template instructions apply."
   })])
   const patchSpy = mockApiSpyResolvedValue(mockExamsPatch, {} as never)
 
@@ -103,13 +110,17 @@ test("choosing a class template does not overwrite manual duration date or instr
   fireEvent.click(await screen.findByRole("combobox", { name: /template kelas/i }))
   fireEvent.click(screen.getByText(/kelas 5a/i))
 
-  expect(screen.getByLabelText(/durasi/i)).toHaveValue("75")
-  expect(screen.getByLabelText(/petunjuk pengerjaan/i)).toHaveValue("Manual instruction.")
+  expect(screen.getByLabelText(/durasi/i)).toHaveValue("120")
+  expect(screen.getByLabelText(/petunjuk pengerjaan/i)).toHaveValue("Template instructions apply.")
   await waitFor(() => {
     expect(patchSpy).toHaveBeenCalledWith("E", {
       schoolName: "SDN Jakarta",
       academicYear: "2025/2026",
-      examType: "formatif"
+      semester: "ganjil",
+      examType: "formatif",
+      examDate: "2026-05-14",
+      durationMinutes: 120,
+      instructions: "Template instructions apply."
     })
   })
 })
@@ -161,7 +172,9 @@ test("saving current metadata as a new template asks for a name and creates a cl
       name: "Kelas 5A SD Negeri 1",
       schoolName: "SD Negeri 1",
       academicYear: "2025/2026",
-      defaultExamType: "formatif"
+      defaultExamType: "formatif",
+      defaultExamDate: "2025-06-01",
+      defaultDurationMinutes: 60
     })
   })
 })
@@ -197,7 +210,11 @@ test("saving current metadata updates the selected class template", async () => 
         name: "Kelas 5A",
         schoolName: "SDN Jakarta",
         academicYear: "2025/2026",
-        defaultExamType: "formatif"
+        semester: "ganjil",
+        defaultExamType: "formatif",
+        defaultExamDate: "2026-05-14",
+        defaultDurationMinutes: 60,
+        defaultInstructions: "Kerjakan dengan teliti."
       }
     )
   })

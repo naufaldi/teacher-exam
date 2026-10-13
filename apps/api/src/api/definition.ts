@@ -1,5 +1,6 @@
 import * as HttpApi from "@effect/platform/HttpApi"
 import { ApiDatabaseError } from "./errors/http"
+import { AccountGroup } from "./groups/account"
 import { AiGroup } from "./groups/ai"
 import { AnalyticsGroup } from "./groups/analytics"
 import { BankGroup } from "./groups/bank"
@@ -25,6 +26,7 @@ export const TeacherExamApi = HttpApi.make("TeacherExamApi")
   .add(BankPublicGroup)
   .add(CurriculumGroup)
   .add(MeGroup)
+  .add(AccountGroup)
   .add(ExamsGroup)
   .add(ExportsGroup)
   .add(QuestionsGroup)
