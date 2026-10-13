@@ -35,7 +35,8 @@ function renderRoute() {
 describe("Templates route", () => {
   it("shows coming soon page with dashboard link", () => {
     renderRoute()
-    expect(screen.getByRole("heading", { level: 1, name: "Template" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Template Generate" })).toBeInTheDocument()
+    expect(screen.getByText(/Header sekolah ada di menu Kelas \(Template Kelas\)/i)).toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 3, name: /segera hadir/i })).toBeInTheDocument()
     expect(screen.getByText(/sedang dalam pengembangan/i)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /kembali ke dashboard/i })).toHaveAttribute(

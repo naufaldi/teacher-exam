@@ -48,6 +48,7 @@ export function makeExamWithMixedTypes(id = "exam_mixed"): ExamWithQuestions {
     status: "draft" as const,
     schoolName: null,
     academicYear: null,
+    semester: null,
     examType: "formatif",
     examDate: null,
     durationMinutes: null,

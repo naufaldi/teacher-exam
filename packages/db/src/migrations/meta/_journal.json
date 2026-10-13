@@ -148,6 +148,13 @@
       "when": 1791936000000,
       "tag": "0021_user_school_kop",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0022_add_semester",
+      "breakpoints": true
     }
   ]
 }

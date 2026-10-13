@@ -36,6 +36,7 @@ import { buildExamPrompt } from "./prompt"
 import { questionToRow } from "./question-mapper"
 import { InsufficientMateriError, resolveRetrievalContext } from "./retrieval/retrieval-service"
 import { activeFunnelSink } from "./sentry"
+import { shouldValidateLatexForGenerate } from "./should-validate-latex.js"
 import { citeQuestionSourcePage } from "./source-page"
 
 class CompositionValidationError extends Data.TaggedError("CompositionValidationError")<{
@@ -334,7 +335,11 @@ export function executeGenerateExam(
           user,
           ...(pdfBytes !== undefined ? { pdfBytes } : {}),
           expectedCount: totalSoal,
-          shouldValidateLatex: input.subject === "matematika" && sourceMode !== "pdf_guru",
+          shouldValidateLatex: shouldValidateLatexForGenerate({
+            sourceMode,
+            ...(input.subject !== undefined ? { subject: input.subject } : {}),
+            subjectLabel: resolveInputSubjectLabel(input)
+          }),
           reviewMode: input.reviewMode,
           examId: resolvedExamId,
           createdAt: now,

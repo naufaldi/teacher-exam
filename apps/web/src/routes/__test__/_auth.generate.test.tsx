@@ -363,6 +363,37 @@ describe("Template prefill", () => {
       })
     )
   })
+
+  it("scales the jenis profile when a template sets totalSoal without composition", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValueOnce(mockApi.curriculum.babTopics, [...BI_K1_BAB_TOPICS])
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam_tpl_scale"))
+    locationState = {
+      templateApply: {
+        subject: "bahasa_indonesia",
+        grade: 1,
+        difficulty: "sedang",
+        topics: ["Bab 1: Bunyi Apa?"],
+        reviewMode: "fast",
+        examType: "latihan",
+        totalSoal: 15,
+        templateId: "tpl-scale"
+      }
+    }
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+
+    await clickGenerateAndFlush()
+
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalSoal: 15,
+        composition: { mcqSingle: 15, mcqMulti: 0, trueFalse: 0 }
+      })
+    )
+  })
 })
 
 describe("Jumlah Soal input", () => {
@@ -1239,5 +1270,47 @@ describe("M7 UX polish (#215)", () => {
     fireEvent.click(screen.getByLabelText("Hapus sample-worksheet.pdf"))
     fireEvent.click(screen.getByRole("button", { name: /^Hapus$/i }))
     expect(mockApi.pdfUploads.remove).toHaveBeenCalledWith("pdf_test_1")
+  })
+
+  it("pdf_guru footer does not claim Capaian Pembelajaran (#233)", async () => {
+    await selectPdfGuruKelas5()
+    const footer = screen.getByTestId("generate-trust-footer")
+    expect(footer).toHaveTextContent(/berdasarkan PDF yang dipilih/i)
+    expect(footer).not.toHaveTextContent(/Capaian Pembelajaran/i)
+  })
+
+  it("softens includePdfImages promise and does not send the flag (#233)", async () => {
+    mockApiResolvedValueOnce(mockApi.curriculum.catalog, READY_CURRICULUM_CATALOG)
+    mockApiResolvedValue(mockApi.pdfUploads.list, { items: [READY_LIBRARY_PDF] })
+    renderGeneratePage()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    openAdvanced()
+    fireEvent.click(screen.getByText("PDF saya saja"))
+    fireEvent.click(screen.getByText("Kelas 5 SD"))
+    fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
+      target: { value: "IPAS" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    fireEvent.click(screen.getByText("sample-worksheet.pdf"))
+    fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
+      target: { value: "Ekosistem lingkungan sekolah yang bagus" }
+    })
+    expect(screen.queryByText(/maks\.\s*~30%/i)).not.toBeInTheDocument()
+    const imageToggle = screen.getByRole("checkbox", { name: /Sertakan gambar dari PDF/i })
+    expect(imageToggle).toBeDisabled()
+    expect(screen.getByText(/segera hadir/i)).toBeInTheDocument()
+    mockApiResolvedValueOnce(mockApi.ai.generate, syncGenerateResult("exam-pdf-img"))
+    fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
+    expect(mockApi.ai.generate).toHaveBeenCalledWith(
+      expect.not.objectContaining({ includePdfImages: true })
+    )
   })
 })

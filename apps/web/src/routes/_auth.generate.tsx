@@ -107,7 +107,6 @@ function GeneratePage() {
   const [libraryItems, setLibraryItems] = useState<Array<PdfUploadSummary>>([])
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [selectedLibraryPdf, setSelectedLibraryPdf] = useState<PdfUploadSummary | null>(null)
-  const [includePdfImages, setIncludePdfImages] = useState(false)
   const [streamQuestionsCount, setStreamQuestionsCount] = useState<number | null>(null)
   const [kelas, setKelas] = useState<string>("")
   const [mapel, setMapel] = useState<ExamSubject>("bahasa_indonesia")
@@ -196,6 +195,11 @@ function GeneratePage() {
     }
     if (t.composition !== undefined) {
       setComposition(t.composition)
+    } else if (t.totalSoal !== undefined) {
+      const templateExamType = t.examType ?? "formatif"
+      const profile = DEFAULT_COMPOSITION_BY_JENIS[templateExamType]
+      const oldTotal = DEFAULT_TOTAL_SOAL[templateExamType] ?? 20
+      setComposition(rescaleComposition(profile, oldTotal, t.totalSoal))
     }
     if (t.topics.length > 0) {
       setTopiks([...t.topics])
@@ -367,7 +371,6 @@ function GeneratePage() {
       setFreeTopic("")
       setCustomMapel("")
       setSelectedLibraryPdf(null)
-      setIncludePdfImages(false)
       setPdfSource("upload")
     } else if (next !== "pdf_guru") {
       setCustomMapel("")
@@ -445,7 +448,6 @@ function GeneratePage() {
         classContext: fokusGuru.trim() !== "" ? fokusGuru.trim() : undefined,
         exampleQuestions: contohSoal.trim() !== "" ? contohSoal.trim() : undefined,
         ...(sourceMode === "pdf_guru" && freeTopic.trim() !== "" ? { freeTopic: freeTopic.trim() } : {}),
-        ...(showPdfControls && includePdfImages ? { includePdfImages: true } : {}),
         ...(pdfUploadId !== undefined ? { pdfUploadId: pdfUploadId as PdfUploadId } : {})
       }).then((result) => {
         const payload = unwrapApiEither(result)
@@ -982,14 +984,17 @@ function GeneratePage() {
                           )}
                         {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
                           (
-                            <label className="flex items-center gap-2 text-body-sm cursor-pointer">
+                            <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
                               <input
                                 type="checkbox"
-                                className="h-4 w-4 rounded border-border-ui"
-                                checked={includePdfImages}
-                                onChange={(event) => setIncludePdfImages(event.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-border-ui"
+                                checked={false}
+                                disabled
+                                aria-label="Sertakan gambar dari PDF (segera hadir)"
                               />
-                              Sertakan gambar dari PDF (maks. ~30% soal)
+                              <span>
+                                Sertakan gambar dari PDF <span className="text-caption">(segera hadir)</span>
+                              </span>
                             </label>
                           ) :
                           null}
@@ -1369,6 +1374,14 @@ function GeneratePage() {
                 <Sparkles className="mr-2 h-4 w-4" />
                 Buat {totalSoal} Soal
               </Button>
+              <p
+                data-testid="generate-trust-footer"
+                className="text-caption text-text-tertiary text-center mt-2"
+              >
+                {sourceMode === "pdf_guru"
+                  ? `AI akan membuat ${totalSoal} soal berdasarkan PDF yang dipilih`
+                  : `AI akan membuat ${totalSoal} soal sesuai Capaian Pembelajaran ${phaseLabel}`}
+              </p>
             </div>
           </section>
         </div>
@@ -1491,6 +1504,7 @@ function GeneratePage() {
         progress={progress}
         totalSoal={totalSoal}
         questionsCount={streamQuestionsCount}
+        sourceMode={sourceMode}
       />
       <GenerateErrorDialog
         open={showErrorDialog}

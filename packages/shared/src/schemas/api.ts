@@ -10,6 +10,7 @@ import {
   ExamTypeSchema,
   GradeSchema,
   ReviewModeSchema,
+  SemesterSchema,
   ValidationStatusSchema
 } from "./primitives.js"
 
@@ -49,6 +50,7 @@ export const UpdateExamInputSchema = Schema.Struct({
   title: Schema.optional(Schema.String),
   schoolName: Schema.optional(Schema.String),
   academicYear: Schema.optional(Schema.String),
+  semester: Schema.optional(SemesterSchema),
   examType: Schema.optional(ExamTypeSchema),
   examDate: Schema.optional(Schema.String),
   durationMinutes: Schema.optional(Schema.Int),

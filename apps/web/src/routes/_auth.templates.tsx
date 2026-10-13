@@ -30,8 +30,8 @@ type ApplyState = { templateId: string; name: string } | null
 function TemplatesPage() {
   return (
     <ComingSoonPage
-      title="Template"
-      subtitle="Simpan konfigurasi generate dan jalankan ulang dalam satu klik."
+      title="Template Generate"
+      subtitle="Preset konfigurasi Generate (mapel, Bab, jumlah soal) — Coming Soon. Header sekolah ada di menu Kelas (Template Kelas)."
       icon={<Sparkles size={24} className="text-text-tertiary" />}
     />
   )

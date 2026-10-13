@@ -11,6 +11,7 @@ import {
   MultiAnswerSchema,
   QuestionStatusSchema,
   ReviewModeSchema,
+  SemesterSchema,
   ValidationStatusSchema
 } from "./primitives.js"
 import { SoalImageSchema } from "./soal-image.js"
@@ -164,6 +165,7 @@ export const ExamSchema = Schema.Struct({
   status: ExamStatusSchema,
   schoolName: Schema.NullOr(Schema.String),
   academicYear: Schema.NullOr(Schema.String),
+  semester: Schema.NullOr(SemesterSchema),
   examType: Schema.String,
   examDate: Schema.NullOr(Schema.String),
   durationMinutes: Schema.NullOr(Schema.Int),
@@ -200,6 +202,7 @@ export const PublicExamSchema = Schema.Struct({
   status: ExamStatusSchema,
   schoolName: Schema.NullOr(Schema.String),
   academicYear: Schema.NullOr(Schema.String),
+  semester: Schema.NullOr(SemesterSchema),
   examType: Schema.String,
   examDate: Schema.NullOr(Schema.String),
   durationMinutes: Schema.NullOr(Schema.Int),

@@ -16,6 +16,7 @@ import {
   successCriteriaBlock,
   verificationBlock
 } from "./prompt-blocks.js"
+import { isMatematikaSubjectLabel } from "./should-validate-latex.js"
 
 export interface BuildPromptInput {
   examType: ExamType
@@ -134,7 +135,9 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
     throw new Error("buildExamPrompt: topics must contain at least one item")
   }
   const dist = resolveDifficultyDist(input.examType, input.difficulty, input.totalSoal)
-  const matematikaRules = input.subjectLabel === "Matematika" ? [...buildMatematikaLatexPromptRules()] : []
+  const matematikaRules = isMatematikaSubjectLabel(input.subjectLabel)
+    ? [...buildMatematikaLatexPromptRules()]
+    : []
 
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
   const gradeRules = gradeAppropriatenessRules(input.grade)
@@ -243,7 +246,7 @@ export function buildExamPrompt(input: BuildPromptInput): BuiltPrompt {
 }
 
 export function buildRegeneratePrompt(input: BuildRegeneratePromptInput): BuiltPrompt {
-  const isMatematika = input.subjectLabel === "Matematika"
+  const isMatematika = isMatematikaSubjectLabel(input.subjectLabel)
   const matematikaRules = isMatematika ? [...buildMatematikaLatexPromptRules()] : []
   const bahasaInggrisRules = input.examSubject === "bahasa_inggris" ? buildBahasaInggrisRules() : []
 

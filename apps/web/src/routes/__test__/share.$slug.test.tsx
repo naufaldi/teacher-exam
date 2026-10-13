@@ -66,6 +66,7 @@ function makePublicExam(overrides: Partial<PublicExamDetailResponse> = {}): Publ
     status: "final",
     schoolName: "SD Negeri Contoh",
     academicYear: "2025/2026",
+    semester: null,
     examType: "formatif",
     examDate: "29 Juni 2026",
     durationMinutes: 60,

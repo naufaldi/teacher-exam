@@ -17,3 +17,6 @@ docs/qa/samples/
 # Personal hackathon submission notes — not for the public repo
 docs/hackathon-submission.md
 apps/web/.tanstack/
+
+# Runtime API uploads (local/dev) — never commit
+apps/api/uploads/

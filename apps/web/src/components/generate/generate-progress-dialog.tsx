@@ -1,3 +1,4 @@
+import type { SourceMode } from "@teacher-exam/shared"
 import { Dialog, DialogContent, DialogDescription, DialogTitle, Progress } from "@teacher-exam/ui"
 import { Check, Loader2, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -34,6 +35,7 @@ export interface GenerateProgressDialogProps {
   progress: number
   totalSoal: number
   questionsCount?: number | null
+  sourceMode?: SourceMode
 }
 
 /**
@@ -45,13 +47,20 @@ export function GenerateProgressDialog({
   phaseLabel = "Fase C",
   progress,
   questionsCount = null,
+  sourceMode = "default",
   totalSoal
 }: GenerateProgressDialogProps) {
   const [tipIndex, setTipIndex] = useState(0)
-  const tips = [
-    `AI menyertakan Capaian Pembelajaran ${phaseLabel} secara otomatis.`,
-    ...BASE_TIPS
-  ] as const
+  const isPdfGuru = sourceMode === "pdf_guru"
+  const tips = isPdfGuru
+    ? [
+      "AI menyusun soal berdasarkan teks PDF yang Anda unggah.",
+      ...BASE_TIPS
+    ] as const
+    : [
+      `AI menyertakan Capaian Pembelajaran ${phaseLabel} secara otomatis.`,
+      ...BASE_TIPS
+    ] as const
   const isOvertime = progress >= 99 && progress < 100
   const isComplete = progress >= 100
   const overtimeSeconds = useElapsedSeconds(open && isOvertime)
@@ -99,7 +108,9 @@ export function GenerateProgressDialog({
             <div className="space-y-1">
               <DialogTitle className="text-h3">Membuat lembar ujian Anda</DialogTitle>
               <DialogDescription className="text-body-sm">
-                AI sedang menyusun soal sesuai Kurikulum Merdeka {phaseLabel}.
+                {isPdfGuru
+                  ? "AI sedang menyusun soal berdasarkan materi PDF Anda."
+                  : `AI sedang menyusun soal sesuai Kurikulum Merdeka ${phaseLabel}.`}
               </DialogDescription>
             </div>
           </div>
@@ -145,7 +156,11 @@ export function GenerateProgressDialog({
             {STEPS.map((step) => {
               const isDone = progress > 100 || activeStepIndex > step.id || progress >= 100
               const isActive = !isDone && activeStepIndex === step.id
-              const label = step.id === 0 ? `Menganalisis materi & CP ${phaseLabel}` : step.label
+              const label = step.id === 0
+                ? (isPdfGuru
+                  ? "Menganalisis materi PDF"
+                  : `Menganalisis materi & CP ${phaseLabel}`)
+                : step.label
               return (
                 <li
                   key={step.id}

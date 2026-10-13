@@ -6,6 +6,7 @@ import {
   CreateClassInputSchema,
   CreateStudentInputSchema,
   isCompleteClassTemplate,
+  SemesterSchema,
   StudentSchema,
   UpdateClassInputSchema
 } from "../../schemas/classes.js"
@@ -21,6 +22,7 @@ describe("classes schemas", () => {
       subject: "ipas",
       schoolName: null,
       academicYear: null,
+      semester: null,
       defaultExamType: null,
       defaultExamDate: null,
       defaultDurationMinutes: null,
@@ -38,6 +40,7 @@ describe("classes schemas", () => {
       name: "Kelas 5A",
       schoolName: null,
       academicYear: null,
+      semester: null,
       defaultExamType: null,
       defaultExamDate: null,
       defaultDurationMinutes: null,
@@ -57,6 +60,7 @@ describe("classes schemas", () => {
       subject: "matematika",
       schoolName: "SDN Jakarta",
       academicYear: "2025/2026",
+      semester: "ganjil",
       defaultExamType: "formatif",
       defaultExamDate: "2026-05-14",
       defaultDurationMinutes: 60,
@@ -68,7 +72,32 @@ describe("classes schemas", () => {
     if (Either.isRight(decoded)) {
       expect(decoded.right.schoolName).toBe("SDN Jakarta")
       expect(decoded.right.defaultDurationMinutes).toBe(60)
+      expect(decoded.right.semester).toBe("ganjil")
     }
+  })
+
+  it("accepts SemesterSchema literals and rejects other values", () => {
+    expect(Either.isRight(Schema.decodeUnknownEither(SemesterSchema)("ganjil"))).toBe(true)
+    expect(Either.isRight(Schema.decodeUnknownEither(SemesterSchema)("genap"))).toBe(true)
+    expect(Either.isLeft(Schema.decodeUnknownEither(SemesterSchema)("tengah"))).toBe(true)
+  })
+
+  it("rejects ClassSchema with invalid semester", () => {
+    const decoded = Schema.decodeUnknownEither(ClassSchema)({
+      id: "cls-1",
+      userId: "user-1",
+      name: "Kelas 5A",
+      schoolName: null,
+      academicYear: null,
+      semester: "tengah",
+      defaultExamType: null,
+      defaultExamDate: null,
+      defaultDurationMinutes: null,
+      defaultInstructions: null,
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-02T00:00:00.000Z"
+    })
+    expect(Either.isLeft(decoded)).toBe(true)
   })
 
   it("rejects ClassSchema with empty name", () => {
@@ -167,12 +196,25 @@ describe("classes schemas", () => {
       schoolName: "SDN Jakarta",
       academicYear: "2025/2026",
       defaultExamType: "formatif",
-      defaultDurationMinutes: 90
+      defaultDurationMinutes: 90,
+      semester: "genap"
     })
     expect(Either.isRight(decoded)).toBe(true)
     if (Either.isRight(decoded)) {
       expect(decoded.right.defaultExamType).toBe("formatif")
+      expect(decoded.right.semester).toBe("genap")
     }
+  })
+
+  it("rejects CreateClassInputSchema with invalid semester", () => {
+    const decoded = Schema.decodeUnknownEither(CreateClassInputSchema)({
+      name: "Kelas 5A",
+      schoolName: "SDN Jakarta",
+      academicYear: "2025/2026",
+      defaultExamType: "formatif",
+      semester: "tengah"
+    })
+    expect(Either.isLeft(decoded)).toBe(true)
   })
 
   it("rejects CreateClassInputSchema with invalid grade", () => {
@@ -201,7 +243,8 @@ describe("classes schemas", () => {
       defaultExamType: "sas",
       defaultExamDate: "2026-12-10",
       defaultDurationMinutes: 120,
-      defaultInstructions: "Dahulukan soal mudah."
+      defaultInstructions: "Dahulukan soal mudah.",
+      semester: "ganjil"
     })
     expect(Either.isRight(decoded)).toBe(true)
   })
@@ -214,6 +257,7 @@ describe("classes schemas", () => {
         name: "Kelas 5A",
         schoolName: null,
         academicYear: null,
+        semester: null,
         defaultExamType: "formatif",
         defaultExamDate: null,
         defaultDurationMinutes: null,
@@ -232,6 +276,7 @@ describe("classes schemas", () => {
         name: "Kelas 5A",
         schoolName: "SDN Jakarta",
         academicYear: "2025/2027",
+        semester: null,
         defaultExamType: "formatif",
         defaultExamDate: null,
         defaultDurationMinutes: null,
@@ -250,6 +295,7 @@ describe("classes schemas", () => {
         name: "Kelas 5A",
         schoolName: "SDN Jakarta",
         academicYear: "2025/2026",
+        semester: "ganjil",
         defaultExamType: "formatif",
         defaultExamDate: null,
         defaultDurationMinutes: null,
