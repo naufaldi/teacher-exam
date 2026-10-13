@@ -23,6 +23,7 @@ import {
   resolveInputSubjectLabel
 } from "./ai-generate-mappers"
 import { logAiEvent } from "./ai-log"
+import { attachTopicDiagram } from "./attach-topic-diagram"
 import { EXAM_SUBJECT_ENUM_MIGRATE_MESSAGE, isExamSubjectEnumMismatch } from "./db-errors"
 import { EXAM_TYPE_PROFILE, resolveComposition } from "./exam-type-profile"
 import { fetchExamWithQuestions } from "./exams-query"
@@ -59,6 +60,7 @@ async function generateWithSalvage(
     examId: string
     createdAt: Date
     includePdfImages?: boolean
+    topics: ReadonlyArray<string>
   }
 ): Promise<Either.Either<SalvageGenerationResult, AiGenerationError>> {
   const maxAttempts = request.shouldValidateLatex ? 3 : 2
@@ -154,7 +156,7 @@ async function generateWithSalvage(
     byNumber.set(
       q.number,
       convertGeneratedToQuestion(
-        stored,
+        attachTopicDiagram(stored, request.topics),
         {
           id: crypto.randomUUID(),
           examId: request.examId,
@@ -336,7 +338,8 @@ export function executeGenerateExam(
           reviewMode: input.reviewMode,
           examId: resolvedExamId,
           createdAt: now,
-          includePdfImages: input.includePdfImages === true
+          includePdfImages: input.includePdfImages === true,
+          topics: [...promptTopics]
         }),
       catch: (cause) => new AiGenerationError({ cause })
     })
