@@ -23,7 +23,7 @@
     "@aws-sdk/client-s3": "^3.1076.0",
     "@effect/ai": "^0.35.0",
     "@effect/ai-anthropic": "^0.25.0",
-    "@effect/ai-openai": "^0.39.2",
+    "@effect/ai-openai": "^4.0.2",
     "@effect/opentelemetry": "^0.63.0",
     "@effect/platform": "^0.96.1",
     "@effect/platform-node": "^0.106.0",

@@ -5,9 +5,12 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  effect: 3.21.2
+  effect@>=3 <4: 3.21.2
+  '@effect/ai-openai>effect': 4.0.2
   brace-expansion@>=3.0.0 <5.0.11: 5.0.11
   browserslist@<=4.28.6: 4.28.7
+
+pnpmfileChecksum: sha256-wdXlX9hGNPcKJQ88L4WRE09YW4d9ar7oBfwN+EgaUtQ=
 
 importers:
 
@@ -68,8 +71,8 @@ importers:
         specifier: ^0.25.0
         version: 0.25.0(@effect/ai@0.35.0(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)
       '@effect/ai-openai':
-        specifier: ^0.39.2
-        version: 0.39.2(@effect/ai@0.35.0(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)
+        specifier: ^4.0.2
+        version: 4.0.2
       '@effect/opentelemetry':
         specifier: ^0.63.0
         version: 0.63.0(@effect/platform@0.96.1(effect@3.21.2))(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.218.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.43.0)(effect@3.21.2)
@@ -764,13 +767,8 @@ packages:
       '@effect/platform': ^0.96.0
       effect: 3.21.2
 
-  '@effect/ai-openai@0.39.2':
-    resolution: {integrity: sha512-b+9pUgpeadRCFx6ozPq+E9Fd0jMd4BIEGkn+FWYe090/WhHluth/sCYYKI+ShytBbcwP6KBuw+gVQYaDAoGrkQ==}
-    peerDependencies:
-      '@effect/ai': ^0.35.0
-      '@effect/experimental': ^0.60.0
-      '@effect/platform': ^0.96.0
-      effect: 3.21.2
+  '@effect/ai-openai@4.0.2':
+    resolution: {integrity: sha512-xNaXIInCYaqzVmx5tt3gfnQ7KPlLs3BX02cWomfu/uLggaHoQNlrfbIxRyCtuzBW5teqFACAPTUAf2SUzlGq6g==}
 
   '@effect/ai@0.35.0':
     resolution: {integrity: sha512-VOYFBN/TpHC0sB5AhUGOEJzOTEnuo2bbDtQcDDsU7ffHaE8ZbqZj1CuSHgifbmqMaY9+xofsKMazQZ3jlZfPSw==}
@@ -3692,6 +3690,9 @@ packages:
   effect@3.21.2:
     resolution: {integrity: sha512-rXd2FGDM8KdjSIrc+mqEELo7ScW7xTVxEf1iInmPSpIde9/nyGuFM710cjTo7/EreGXiUX2MOonPpprbz2XHCg==}
 
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
+
   electron-to-chromium@1.5.452:
     resolution: {integrity: sha512-cVvk1YBSj6571VmV6hdJTqj94Y79xSu8cj6Y9t6ae4Y4431z8/7EJFvu3rVp90xhfuv9BpPKUmaLfTo4+FOGBg==}
 
@@ -4131,9 +4132,6 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
-
-  gpt-tokenizer@2.9.0:
-    resolution: {integrity: sha512-YSpexBL/k4bfliAzMrRqn3M6+it02LutVyhVpDeMKrC/O9+pCe/5s8U2hYKa2vFLD5/vHhsKc8sOn/qGqII8Kg==}
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
@@ -6768,13 +6766,9 @@ snapshots:
       '@effect/platform': 0.96.1(effect@3.21.2)
       effect: 3.21.2
 
-  '@effect/ai-openai@0.39.2(@effect/ai@0.35.0(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2))(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)':
+  '@effect/ai-openai@4.0.2':
     dependencies:
-      '@effect/ai': 0.35.0(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2)
-      '@effect/experimental': 0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2)
-      '@effect/platform': 0.96.1(effect@3.21.2)
-      effect: 3.21.2
-      gpt-tokenizer: 2.9.0
+      effect: 4.0.2
 
   '@effect/ai@0.35.0(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(@effect/platform@0.96.1(effect@3.21.2))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.2))(effect@3.21.2))(effect@3.21.2)':
     dependencies:
@@ -9224,6 +9218,8 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
 
+  effect@4.0.2: {}
+
   electron-to-chromium@1.5.452: {}
 
   emoji-regex@10.6.0: {}
@@ -9847,8 +9843,6 @@ snapshots:
       gopd: 1.2.0
 
   gopd@1.2.0: {}
-
-  gpt-tokenizer@2.9.0: {}
 
   graceful-fs@4.2.11: {}
 

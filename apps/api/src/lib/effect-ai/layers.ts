@@ -1,9 +1,8 @@
-import type { LanguageModel } from "@effect/ai"
+import { AiError, LanguageModel } from "@effect/ai"
 import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic"
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
 import * as FetchHttpClient from "@effect/platform/FetchHttpClient"
 import type { HttpClient } from "@effect/platform/HttpClient"
-import { Layer, Redacted } from "effect"
+import { Effect, JSONSchema, Layer, Redacted, type Schema, Stream } from "effect"
 import { createMinimaxFetch, isMinimaxDnsFallbackEnabled } from "../minimax-fetch"
 import {
   DEFAULT_DISCUSSION_MAX_TOKENS,
@@ -18,6 +17,9 @@ import {
   DEFAULT_OPENAI_MODEL,
   DEFAULT_VALIDATION_MAX_TOKENS
 } from "./constants"
+import { completeOpenAiParts, streamOpenAiParts } from "./openai-effect4"
+import type { OpenAiCompletionRequest, OpenAiFilePart } from "./openai-effect4"
+import { getPromptSystemContent, getPromptUserFileParts, getPromptUserText } from "./prompt"
 
 export type AiProvider = "anthropic" | "minimax" | "openai"
 
@@ -84,12 +86,57 @@ function buildAnthropicClientLayer(
   return Layer.provide(AnthropicClient.layer(clientOptions), buildFetchHttpLayer(apiUrl ?? config.apiUrl))
 }
 
-function buildOpenAiClientLayer(config: Pick<ModelLayerConfig, "apiKey" | "apiUrl">) {
-  const clientOptions: Parameters<typeof OpenAiClient.layer>[0] = {
-    apiKey: Redacted.make(config.apiKey),
-    ...(config.apiUrl !== undefined ? { apiUrl: config.apiUrl } : {})
+function unknownOpenAiError(method: string, cause: unknown): AiError.AiError {
+  const description = cause instanceof Error ? cause.message : String(cause)
+  return new AiError.UnknownError({
+    module: "OpenAiLanguageModel",
+    method,
+    description,
+    cause
+  })
+}
+
+function openAiJsonSchema(
+  schema: Schema.Schema.Any,
+  objectName: string
+): NonNullable<OpenAiCompletionRequest["jsonSchema"]> {
+  const document = JSONSchema.make(schema) as unknown as Record<string, unknown>
+  const rest: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(document)) {
+    if (key !== "$schema") {
+      rest[key] = value
+    }
   }
-  return Layer.provide(OpenAiClient.layer(clientOptions), FetchHttpClient.layer)
+  return { name: objectName, schema: rest }
+}
+
+function toOpenAiRequest(
+  config: Pick<ModelLayerConfig, "apiKey" | "apiUrl">,
+  model: string,
+  maxTokens: number,
+  options: LanguageModel.ProviderOptions
+): OpenAiCompletionRequest {
+  const files: Array<OpenAiFilePart> = getPromptUserFileParts(options.prompt).map((part) => ({
+    mediaType: part.mediaType,
+    ...(part.fileName !== undefined ? { fileName: part.fileName } : {}),
+    data: part.data
+  }))
+  const request: OpenAiCompletionRequest = {
+    apiKey: config.apiKey,
+    ...(config.apiUrl !== undefined ? { apiUrl: config.apiUrl } : {}),
+    model,
+    maxOutputTokens: maxTokens,
+    system: getPromptSystemContent(options.prompt) ?? "",
+    userText: getPromptUserText(options.prompt),
+    files
+  }
+  if (options.responseFormat.type === "json") {
+    return {
+      ...request,
+      jsonSchema: openAiJsonSchema(options.responseFormat.schema, options.responseFormat.objectName)
+    }
+  }
+  return request
 }
 
 function buildAnthropicModelLayer(
@@ -104,13 +151,63 @@ function buildAnthropicModelLayer(
 }
 
 function buildOpenAiModelLayer(
+  config: Pick<ModelLayerConfig, "apiKey" | "apiUrl">,
   model: string,
-  maxTokens: number,
-  clientLayer: ReturnType<typeof buildOpenAiClientLayer>
-) {
-  return Layer.provide(
-    OpenAiLanguageModel.model(model, { max_output_tokens: maxTokens }),
-    clientLayer
+  maxTokens: number
+): Layer.Layer<LanguageModel.LanguageModel> {
+  return Layer.effect(
+    LanguageModel.LanguageModel,
+    LanguageModel.make({
+      generateText: (options) =>
+        Effect.tryPromise({
+          try: async () => {
+            const parts = await completeOpenAiParts(toOpenAiRequest(config, model, maxTokens, options))
+            return parts.map((part) => {
+              if (part.type === "text") {
+                return { type: "text" as const, text: part.text }
+              }
+              return {
+                type: "finish" as const,
+                reason: part.reason,
+                usage: {
+                  inputTokens: part.usage.inputTokens,
+                  outputTokens: part.usage.outputTokens,
+                  totalTokens: part.usage.totalTokens
+                }
+              }
+            })
+          },
+          catch: (cause) => unknownOpenAiError("generateText", cause)
+        }),
+      streamText: (options) =>
+        Stream.map(
+          Stream.fromAsyncIterable(
+            streamOpenAiParts(toOpenAiRequest(config, model, maxTokens, options)),
+            (cause) => unknownOpenAiError("streamText", cause)
+          ),
+          (part) => {
+            if (part.type === "finish") {
+              return {
+                type: "finish" as const,
+                reason: part.reason,
+                usage: {
+                  inputTokens: part.usage.inputTokens,
+                  outputTokens: part.usage.outputTokens,
+                  totalTokens: part.usage.totalTokens
+                }
+              }
+            }
+            if (part.type === "text-delta") {
+              return {
+                type: "text-delta" as const,
+                id: part.id,
+                delta: part.delta ?? ""
+              }
+            }
+            return { type: part.type, id: part.id }
+          }
+        )
+    })
   )
 }
 
@@ -133,20 +230,11 @@ export function buildAnthropicModelLayers(config: ModelLayerConfig): ModelLayers
 }
 
 export function buildOpenAiModelLayers(config: ModelLayerConfig): ModelLayers {
-  const clientLayer = buildOpenAiClientLayer(config)
   return {
-    text: buildOpenAiModelLayer(config.model, config.maxTokens, clientLayer),
-    pdf: buildOpenAiModelLayer(config.model, config.maxTokens, clientLayer),
-    discussion: buildOpenAiModelLayer(
-      config.discussionModel,
-      config.discussionMaxTokens,
-      clientLayer
-    ),
-    validation: buildOpenAiModelLayer(
-      config.discussionModel,
-      config.validationMaxTokens,
-      clientLayer
-    )
+    text: buildOpenAiModelLayer(config, config.model, config.maxTokens),
+    pdf: buildOpenAiModelLayer(config, config.model, config.maxTokens),
+    discussion: buildOpenAiModelLayer(config, config.discussionModel, config.discussionMaxTokens),
+    validation: buildOpenAiModelLayer(config, config.discussionModel, config.validationMaxTokens)
   }
 }
 
