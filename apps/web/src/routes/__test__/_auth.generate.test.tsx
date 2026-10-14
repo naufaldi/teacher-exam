@@ -228,7 +228,6 @@ async function selectPdfGuruKelas5() {
   await act(async () => {
     await vi.runOnlyPendingTimersAsync()
   })
-  openAdvanced()
   fireEvent.click(screen.getByText("PDF saya saja"))
   fireEvent.click(screen.getByText("Kelas 5 SD"))
   await act(async () => {
@@ -270,10 +269,6 @@ async function chooseBab() {
   fireEvent.click(screen.getByText("Bab 1: Bunyi Apa?"))
 }
 
-function openAdvanced() {
-  fireEvent.click(screen.getByRole("button", { name: /pengaturan lanjutan/i }))
-}
-
 async function clickGenerateAndFlush() {
   // fireEvent.click is synchronous — avoids waiting for Radix Dialog animations
   fireEvent.click(screen.getByRole("button", { name: /buat \d+ soal/i }))
@@ -288,29 +283,38 @@ async function clickGenerateAndFlush() {
 }
 
 describe("First screen choices", () => {
-  it("shows kelas, mapel, and bab with Buat 20 Soal before advanced settings", () => {
+  it("shows kelas, mapel, materi, sumber materi, and kurikulum without Pengaturan lanjutan", () => {
     renderGeneratePage()
 
     expect(screen.getAllByText("Kelas").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Mata Pelajaran").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Materi").length).toBeGreaterThan(0)
+    expect(screen.getByText("Sumber materi")).toBeInTheDocument()
+    expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
+    expect(screen.getByText("Buku Siswa + PDF saya")).toBeInTheDocument()
+    expect(screen.getByText("Kurikulum")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Buat 20 Soal" })).toBeInTheDocument()
-    expect(screen.queryByLabelText("Jumlah Soal")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /pengaturan lanjutan/i })).not.toBeInTheDocument()
+    expect(screen.getByText("Pengaturan Soal")).toBeInTheDocument()
+    expect(screen.getByText("Jenis Lembar")).toBeInTheDocument()
+    expect(screen.getByText("Tingkat Kesulitan")).toBeInTheDocument()
+    expect(screen.getByLabelText("Jumlah Soal")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /atur komposisi/i })).toBeInTheDocument()
+    expect(screen.getByText("Mode Review")).toBeInTheDocument()
+    expect(screen.getByText("Konteks & Referensi")).toBeInTheDocument()
+    expect(screen.getByLabelText(/Fokus \/ Tujuan Guru/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Contoh Soal/i)).toBeInTheDocument()
     expect(screen.queryByLabelText("Pilih file PDF")).not.toBeInTheDocument()
-    expect(screen.queryByText("Atur komposisi")).not.toBeInTheDocument()
   })
 
-  it("opens PDF upload and jumlah soal from Pengaturan lanjutan", () => {
+  it("shows PDF upload from Sumber materi without a lanjutan disclosure", () => {
     renderGeneratePage()
 
-    fireEvent.click(screen.getByRole("button", { name: /pengaturan lanjutan/i }))
-
+    expect(screen.queryByRole("button", { name: /pengaturan lanjutan/i })).not.toBeInTheDocument()
     expect(screen.getByLabelText("Jumlah Soal")).toBeInTheDocument()
-    expect(screen.queryByLabelText("Pilih file PDF")).not.toBeInTheDocument()
-    expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
     fireEvent.click(screen.getByText("PDF saya saja"))
     expect(screen.getByLabelText("Pilih file PDF")).toBeInTheDocument()
-    expect(screen.getByText("Atur komposisi")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /atur komposisi/i })).toBeInTheDocument()
   })
 
   it("names a missing bab and does not generate", async () => {
@@ -464,8 +468,6 @@ describe("Jumlah Soal input", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 1 SD"))
-    openAdvanced()
-
     expect(screen.getByText("Fase A (Kelas 1–2)")).toBeInTheDocument()
     expect(screen.queryByText("Fase C (Kelas 5–6)")).not.toBeInTheDocument()
   })
@@ -500,14 +502,12 @@ describe("Jumlah Soal input", () => {
 
   it("defaults to 20 for default jenis (formatif)", () => {
     renderGeneratePage()
-    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal") as HTMLInputElement
     expect(input.value).toBe("20")
   })
 
   it("auto-fills to 25 when UAS (sas) jenis is selected", () => {
     renderGeneratePage()
-    openAdvanced()
     fireEvent.click(screen.getByText("UAS"))
     const input = screen.getByLabelText("Jumlah Soal") as HTMLInputElement
     expect(input.value).toBe("25")
@@ -515,7 +515,6 @@ describe("Jumlah Soal input", () => {
 
   it("shows error when value is below 5", () => {
     renderGeneratePage()
-    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal")
     fireEvent.change(input, { target: { value: "3" } })
     expect(screen.getByText("Minimum 5 soal")).toBeInTheDocument()
@@ -523,7 +522,6 @@ describe("Jumlah Soal input", () => {
 
   it("shows error when value is above 50", () => {
     renderGeneratePage()
-    openAdvanced()
     const input = screen.getByLabelText("Jumlah Soal")
     fireEvent.change(input, { target: { value: "51" } })
     expect(screen.getByText("Maksimum 50 soal")).toBeInTheDocument()
@@ -535,8 +533,6 @@ describe("Jumlah Soal input", () => {
 
     renderGeneratePage()
     await chooseBab()
-    openAdvanced()
-
     // Change totalSoal to 25
     const input = screen.getByLabelText("Jumlah Soal")
     fireEvent.change(input, { target: { value: "25" } })
@@ -853,8 +849,6 @@ describe("GeneratePage — Kelas 4 and Kelas 6 coverage (#172)", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 4 SD"))
-    openAdvanced()
-
     expect(screen.getByText("Fase B (Kelas 3–4)")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "IPAS" })).toBeInTheDocument()
@@ -870,8 +864,6 @@ describe("GeneratePage — Kelas 4 and Kelas 6 coverage (#172)", () => {
     })
 
     fireEvent.click(screen.getByText("Kelas 6 SD"))
-    openAdvanced()
-
     expect(screen.getByText("Fase C (Kelas 5–6)")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Matematika — Sedang dipersiapkan" })).toBeDisabled()
     expect(screen.getByRole("button", { name: "Pendidikan Pancasila" })).toBeInTheDocument()
@@ -929,7 +921,6 @@ describe("Atur komposisi panel", () => {
 
   it("SAS auto-fill: selecting UAS fills {mcqSingle:15, mcqMulti:5, trueFalse:5} when expanded", () => {
     renderGeneratePage()
-    openAdvanced()
     // Select SAS jenis
     fireEvent.click(screen.getByText("UAS"))
     // Expand the panel
@@ -942,7 +933,6 @@ describe("Atur komposisi panel", () => {
 
   it("shows sum validation error when composition does not equal totalSoal", () => {
     renderGeneratePage()
-    openAdvanced()
     // Expand the panel
     fireEvent.click(screen.getByRole("button", { name: /atur komposisi/i }))
     // Break the sum: change mcqSingle to 10 (default total is 20, so 10+0+0=10 !== 20)
@@ -957,7 +947,6 @@ describe("Atur komposisi panel", () => {
 
     renderGeneratePage()
     await chooseBab()
-    openAdvanced()
     // Expand panel; default formatif composition is {20,0,0} which sums to 20 == totalSoal
     fireEvent.click(screen.getByRole("button", { name: /atur komposisi/i }))
 
@@ -972,7 +961,6 @@ describe("Atur komposisi panel", () => {
 
   it("totalSoal rescale: changing totalSoal re-applies profile default composition scaled to new total", () => {
     renderGeneratePage()
-    openAdvanced()
     // Select SAS: profile {15,5,5} totalSoal=25
     fireEvent.click(screen.getByText("UAS"))
     // Expand panel to verify values
@@ -989,7 +977,6 @@ describe("Atur komposisi panel", () => {
 
   it("shows source mode selector with Buku Siswa default and hides PDF upload", () => {
     renderGeneratePage()
-    openAdvanced()
     expect(screen.getAllByText("Buku Siswa").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("PDF saya saja")).toBeInTheDocument()
     expect(screen.queryByText(/Drag.*drop/i)).not.toBeInTheDocument()
@@ -997,7 +984,6 @@ describe("Atur komposisi panel", () => {
 
   it("shows kurikulum warning and free topic in pdf_guru mode", () => {
     renderGeneratePage()
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     expect(screen.getByText(/Periksa kurikulum/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Topik bebas/i)).toBeInTheDocument()
@@ -1012,7 +998,6 @@ describe("Atur komposisi panel", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
@@ -1047,7 +1032,6 @@ describe("Atur komposisi panel", () => {
 
   it("clears pdf_guru fields when switching back to default", () => {
     renderGeneratePage()
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.change(screen.getByLabelText(/Topik bebas/i), {
       target: { value: "Ekosistem lingkungan sekolah" }
@@ -1214,7 +1198,6 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
@@ -1235,7 +1218,6 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
@@ -1256,7 +1238,6 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByRole("button", { name: /Dari perpustakaan/i }))
     await act(async () => {
@@ -1286,7 +1267,6 @@ describe("M7 UX polish (#215)", () => {
     await act(async () => {
       await vi.runOnlyPendingTimersAsync()
     })
-    openAdvanced()
     fireEvent.click(screen.getByText("PDF saya saja"))
     fireEvent.click(screen.getByText("Kelas 5 SD"))
     fireEvent.change(screen.getByPlaceholderText(/Seni Budaya/i), {
