@@ -123,7 +123,6 @@ function GeneratePage() {
   const [contohSoal, setContohSoal] = useState<string>("")
   const [composition, setComposition] = useState<Composition>(() => DEFAULT_COMPOSITION_BY_JENIS["formatif"])
   const [compExpanded, setCompExpanded] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [curriculumCatalog, setCurriculumCatalog] = useState<CurriculumCatalogResponse>([])
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "error">("loading")
   const [babTopicOptions, setBabTopicOptions] = useState<Array<string>>([])
@@ -874,460 +873,445 @@ function GeneratePage() {
               ) :
               null}
 
-            <button
-              type="button"
-              aria-expanded={advancedOpen}
-              onClick={() => setAdvancedOpen((open) => !open)}
-              className="flex items-center gap-2 self-start text-body-sm font-medium text-text-secondary transition-colors duration-[120ms] hover:text-text-primary"
-            >
-              Pengaturan lanjutan
-              <span className="text-caption text-text-tertiary">{advancedOpen ? "▲" : "▼"}</span>
-            </button>
-            {advancedOpen ?
+            <div className="space-y-2">
+              <Label>Sumber materi</Label>
+              <RadioGroup
+                value={sourceMode}
+                onValueChange={(value) => handleSourceModeChange(value as SourceMode)}
+                className="grid gap-2"
+              >
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="default" id="source-default" />
+                  <span className="text-body-sm">Buku Siswa</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="pdf_guru" id="source-pdf-guru" />
+                  <span className="text-body-sm">PDF saya saja</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
+                  <RadioGroupItem value="combine" id="source-combine" />
+                  <span className="text-body-sm">Buku Siswa + PDF saya</span>
+                </label>
+              </RadioGroup>
+            </div>
+
+            {sourceMode === "pdf_guru" ?
               (
-                <>
-                  <div className="space-y-2">
-                    <Label>Sumber materi</Label>
-                    <RadioGroup
-                      value={sourceMode}
-                      onValueChange={(value) => handleSourceModeChange(value as SourceMode)}
-                      className="grid gap-2"
+                <div className="flex items-start gap-2 rounded-md border border-warning-200 bg-warning-50 px-3 py-2 text-body-sm text-warning-800">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <p>
+                    Soal mungkin di luar Capaian Pembelajaran resmi. Gunakan Periksa kurikulum setelah generate.
+                  </p>
+                </div>
+              ) :
+              null}
+
+            {showPdfControls ?
+              (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={pdfSource === "upload" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("upload")}
                     >
-                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                        <RadioGroupItem value="default" id="source-default" />
-                        <span className="text-body-sm">Buku Siswa</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                        <RadioGroupItem value="pdf_guru" id="source-pdf-guru" />
-                        <span className="text-body-sm">PDF saya saja</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 cursor-pointer">
-                        <RadioGroupItem value="combine" id="source-combine" />
-                        <span className="text-body-sm">Buku Siswa + PDF saya</span>
-                      </label>
-                    </RadioGroup>
+                      Upload baru
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={pdfSource === "library" ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPdfSource("library")}
+                    >
+                      Dari perpustakaan
+                    </Button>
                   </div>
-
-                  {sourceMode === "pdf_guru" ?
+                  {pdfSource === "upload" ?
                     (
-                      <div className="flex items-start gap-2 rounded-md border border-warning-200 bg-warning-50 px-3 py-2 text-body-sm text-warning-800">
-                        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                        <p>
-                          Soal mungkin di luar Capaian Pembelajaran resmi. Gunakan Periksa kurikulum setelah generate.
-                        </p>
-                      </div>
-                    ) :
-                    null}
-
-                  {showPdfControls ?
-                    (
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={pdfSource === "upload" ? "primary" : "secondary"}
-                            size="sm"
-                            onClick={() => setPdfSource("upload")}
-                          >
-                            Upload baru
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={pdfSource === "library" ? "primary" : "secondary"}
-                            size="sm"
-                            onClick={() => setPdfSource("library")}
-                          >
-                            Dari perpustakaan
-                          </Button>
-                        </div>
-                        {pdfSource === "upload" ?
-                          (
-                            <FileUpload
-                              onFileSelect={(file) => {
-                                setSelectedFile(file)
-                                setUploadedPdfId(null)
-                                setSelectedLibraryPdf(null)
-                                setFieldErrors((prev) => {
-                                  const next = { ...prev }
-                                  delete next.pdf
-                                  return next
-                                })
-                              }}
-                              onFileRemove={() => {
-                                setSelectedFile(null)
-                                setUploadedPdfId(null)
-                              }}
-                              selectedFile={selectedFile}
-                            />
-                          ) :
-                          (
-                            <PdfLibraryPicker
-                              items={libraryItems}
-                              loading={libraryLoading}
-                              selectedId={selectedLibraryPdf?.id ?? null}
-                              onSelect={(item) => {
-                                setSelectedLibraryPdf(item)
-                                setSelectedFile(null)
-                                setUploadedPdfId(item.id)
-                                setFieldErrors((prev) => {
-                                  const next = { ...prev }
-                                  delete next.pdf
-                                  return next
-                                })
-                              }}
-                              onDelete={(id) => {
-                                const item = libraryItems.find((entry) => entry.id === id)
-                                setPendingDeleteId(id)
-                                setPendingDeleteFilename(item?.filename ?? "PDF")
-                              }}
-                            />
-                          )}
-                        {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
-                          (
-                            <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
-                              <input
-                                type="checkbox"
-                                className="mt-0.5 h-4 w-4 rounded border-border-ui"
-                                checked={false}
-                                disabled
-                                aria-label="Sertakan gambar dari PDF (segera hadir)"
-                              />
-                              <span>
-                                Sertakan gambar dari PDF <span className="text-caption">(segera hadir)</span>
-                              </span>
-                            </label>
-                          ) :
-                          null}
-                        {fieldErrors.pdf !== undefined ?
-                          (
-                            <p className="text-caption text-danger-fg" role="alert">
-                              {fieldErrors.pdf}
-                            </p>
-                          ) :
-                          null}
-                      </div>
-                    ) :
-                    null}
-
-                  {sourceMode === "pdf_guru" ?
-                    (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="free-topic">Topik bebas</Label>
-                        <Textarea
-                          id="free-topic"
-                          value={freeTopic}
-                          onChange={(e) => {
-                            setFreeTopic(e.target.value)
-                            setFieldErrors((prev) => {
-                              const next = { ...prev }
-                              delete next.freeTopic
-                              return next
-                            })
-                          }}
-                          placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
-                          rows={3}
-                        />
-                        <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
-                        {fieldErrors.freeTopic !== undefined ?
-                          (
-                            <p className="text-caption text-danger-fg" role="alert">
-                              {fieldErrors.freeTopic}
-                            </p>
-                          ) :
-                          null}
-                      </div>
-                    ) :
-                    null}
-                  {/* Kurikulum (locked) */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Label htmlFor="kurikulum">Kurikulum</Label>
-                      <Lock className="h-3.5 w-3.5 text-text-tertiary" />
-                    </div>
-                    <Select disabled defaultValue="merdeka">
-                      <SelectTrigger id="kurikulum">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="merdeka">Kurikulum Merdeka</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-caption text-text-tertiary mt-1">{phaseCopy}</p>
-                  </div>
-                  {/* Section B: Pengaturan Soal */}
-                  <section
-                    className="animate-fade-up-stagger space-y-5"
-                    style={{ "--index": 2 } as React.CSSProperties}
-                  >
-                    <SectionHeader label="Pengaturan Soal" />
-
-                    {/* Jenis Lembar (PRD §8.6) */}
-                    <div className="space-y-1.5">
-                      <Label>Jenis Lembar</Label>
-                      <RadioGroup
-                        value={examType}
-                        onValueChange={(v) => handleJenisChange(v as ExamType)}
-                      >
-                        <div className="grid grid-cols-2 gap-3">
-                          {EXAM_TYPE_OPTIONS.map((opt) => {
-                            const id = `jenis-${opt.value}`
-                            const selected = examType === opt.value
-                            return (
-                              <Label
-                                key={opt.value}
-                                htmlFor={id}
-                                title={opt.sublabel}
-                                className={[
-                                  "flex flex-col gap-1 p-3 rounded-sm border cursor-pointer",
-                                  "transition-all duration-[180ms]",
-                                  selected
-                                    ? "border-primary-600 bg-primary-50"
-                                    : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                                ].join(" ")}
-                              >
-                                <RadioGroupItem
-                                  value={opt.value}
-                                  id={id}
-                                  className="sr-only"
-                                />
-                                <span className="text-body font-medium text-text-primary">
-                                  {opt.label}
-                                </span>
-                                <span className="text-caption text-text-tertiary">
-                                  {opt.sublabel}
-                                </span>
-                              </Label>
-                            )
-                          })}
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    {/* Tingkat Kesulitan */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="kesulitan">Tingkat Kesulitan</Label>
-                      <Select value={kesulitan} onValueChange={setKesulitan}>
-                        <SelectTrigger id="kesulitan">
-                          <SelectValue placeholder="Pilih kesulitan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mudah">Mudah</SelectItem>
-                          <SelectItem value="sedang">Sedang</SelectItem>
-                          <SelectItem value="sulit">Sulit</SelectItem>
-                          <SelectItem value="campuran">Campuran</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {kesulitan === "campuran" ?
-                        (
-                          <p className="text-caption text-text-tertiary mt-1">
-                            Distribusi kesulitan mengikuti Jenis Lembar terpilih.
-                          </p>
-                        ) :
-                        (
-                          <p className="text-caption text-text-tertiary mt-1">
-                            Pilihan eksplisit ini akan menggantikan distribusi default Jenis Lembar.
-                          </p>
-                        )}
-                    </div>
-
-                    {/* Jumlah Soal (editable — PRD US-8) */}
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="totalSoal">Jumlah Soal</Label>
-                      <Input
-                        id="totalSoal"
-                        type="number"
-                        min={5}
-                        max={50}
-                        value={totalSoal}
-                        onChange={(e) => {
-                          const n = Number(e.target.value)
-                          const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
-                          setTotalSoal(n)
-                          if (!Number.isInteger(n) || n < 5) setTotalSoalError("Minimum 5 soal")
-                          else if (n > 50) setTotalSoalError("Maksimum 50 soal")
-                          else {
-                            setTotalSoalError(null)
-                            if (n > 0) {
-                              setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
-                            }
-                          }
-                        }}
-                        aria-invalid={totalSoalError !== null}
-                        aria-describedby={totalSoalError !== null ? "totalSoal-error" : undefined}
-                      />
-                      {totalSoalError !== null ?
-                        <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p> :
-                        null}
-                    </div>
-
-                    {/* Atur Komposisi expandable panel */}
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        aria-expanded={compExpanded}
-                        onClick={() => setCompExpanded((prev) => !prev)}
-                        className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
-                      >
-                        Atur komposisi
-                        <span className="text-caption text-text-tertiary">{compExpanded ? "▲" : "▼"}</span>
-                      </button>
-                      {compExpanded ?
-                        (
-                          <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
-                            <div className="flex flex-col gap-1">
-                              <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
-                              <Input
-                                id="comp-mcq-single"
-                                type="number"
-                                min={0}
-                                value={composition.mcqSingle}
-                                onChange={(e) =>
-                                  setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))}
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
-                              <Input
-                                id="comp-mcq-multi"
-                                type="number"
-                                min={0}
-                                value={composition.mcqMulti}
-                                onChange={(e) =>
-                                  setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))}
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <Label htmlFor="comp-true-false">Benar/Salah</Label>
-                              <Input
-                                id="comp-true-false"
-                                type="number"
-                                min={0}
-                                value={composition.trueFalse}
-                                onChange={(e) =>
-                                  setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))}
-                              />
-                            </div>
-                            {!isCompositionValid ?
-                              <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p> :
-                              null}
-                          </div>
-                        ) :
-                        null}
-                    </div>
-
-                    {/* Mode Review */}
-                    <div className="space-y-1.5">
-                      <Label>Mode Review</Label>
-                      <RadioGroup
-                        value={reviewMode}
-                        onValueChange={(v) => setReviewMode(v as "fast" | "slow")}
-                      >
-                        <div className="grid grid-cols-2 gap-3">
-                          <Label
-                            htmlFor="mode-fast"
-                            className={[
-                              "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
-                              "transition-all duration-[180ms]",
-                              reviewMode === "fast"
-                                ? "border-primary-600 bg-primary-50"
-                                : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                            ].join(" ")}
-                          >
-                            <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
-                            <span className="text-body font-medium text-text-primary">Cepat</span>
-                            <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
-                          </Label>
-                          <Label
-                            htmlFor="mode-slow"
-                            className={[
-                              "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
-                              "transition-all duration-[180ms]",
-                              reviewMode === "slow"
-                                ? "border-primary-600 bg-primary-50"
-                                : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
-                            ].join(" ")}
-                          >
-                            <RadioGroupItem value="slow" id="mode-slow" className="sr-only" />
-                            <span className="text-body font-medium text-text-primary">Detail</span>
-                            <span className="text-body-sm text-text-tertiary">Review satu per satu</span>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </section>
-
-                  {/* Section C: Konteks & Referensi (PRD §8.7) */}
-                  <section
-                    className="animate-fade-up-stagger space-y-5"
-                    style={{ "--index": 3 } as React.CSSProperties}
-                  >
-                    <SectionHeader label="Konteks & Referensi" />
-
-                    {/* Fokus / Tujuan Guru */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="fokus-guru">
-                        Fokus / Tujuan Guru <span className="text-text-tertiary font-normal">(opsional)</span>
-                      </Label>
-                      <Textarea
-                        ref={fokusGuruRef}
-                        id="fokus-guru"
-                        placeholder="Mis. Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan."
-                        rows={3}
-                        value={fokusGuru}
-                        onChange={(e) => setFokusGuru(e.target.value.slice(0, FOKUS_GURU_MAX))}
-                      />
-                      <FokusGuruChips
-                        topik={effectiveTopiks[0] ?? ""}
-                        onAppend={(snippet) => {
-                          setFokusGuru((prev) => {
-                            const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n"
-                            const next = (prev + sep + snippet).slice(0, FOKUS_GURU_MAX)
-                            // Restore focus + caret to the end after state flush
-                            queueMicrotask(() => {
-                              const el = fokusGuruRef.current
-                              if (el) {
-                                el.focus()
-                                el.setSelectionRange(next.length, next.length)
-                              }
-                            })
+                      <FileUpload
+                        onFileSelect={(file) => {
+                          setSelectedFile(file)
+                          setUploadedPdfId(null)
+                          setSelectedLibraryPdf(null)
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.pdf
                             return next
                           })
                         }}
+                        onFileRemove={() => {
+                          setSelectedFile(null)
+                          setUploadedPdfId(null)
+                        }}
+                        selectedFile={selectedFile}
                       />
-                      <div className="flex justify-between items-center">
-                        <p className="text-caption text-text-tertiary">
-                          Konteks ini diberikan ke AI sebagai panduan, tidak dicetak di lembar siswa.
-                        </p>
-                        <span
-                          className={[
-                            "text-caption tabular-nums",
-                            fokusGuru.length >= FOKUS_GURU_MAX
-                              ? "text-warning-fg"
-                              : "text-text-tertiary"
-                          ].join(" ")}
-                        >
-                          {fokusGuru.length}/{FOKUS_GURU_MAX}
+                    ) :
+                    (
+                      <PdfLibraryPicker
+                        items={libraryItems}
+                        loading={libraryLoading}
+                        selectedId={selectedLibraryPdf?.id ?? null}
+                        onSelect={(item) => {
+                          setSelectedLibraryPdf(item)
+                          setSelectedFile(null)
+                          setUploadedPdfId(item.id)
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.pdf
+                            return next
+                          })
+                        }}
+                        onDelete={(id) => {
+                          const item = libraryItems.find((entry) => entry.id === id)
+                          setPendingDeleteId(id)
+                          setPendingDeleteFilename(item?.filename ?? "PDF")
+                        }}
+                      />
+                    )}
+                  {(selectedFile !== null || selectedLibraryPdf !== null || uploadedPdfId !== null) ?
+                    (
+                      <label className="flex items-start gap-2 text-body-sm text-text-tertiary">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 rounded border-border-ui"
+                          checked={false}
+                          disabled
+                          aria-label="Sertakan gambar dari PDF (segera hadir)"
+                        />
+                        <span>
+                          Sertakan gambar dari PDF <span className="text-caption">(segera hadir)</span>
                         </span>
-                      </div>
-                    </div>
-
-                    {/* Contoh Soal */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="contoh-soal">
-                        Contoh Soal <span className="text-text-tertiary font-normal">(opsional)</span>
-                      </Label>
-                      <Textarea
-                        id="contoh-soal"
-                        placeholder="Paste contoh soal yang diinginkan gayanya..."
-                        rows={4}
-                        value={contohSoal}
-                        onChange={(e) => setContohSoal(e.target.value)}
-                      />
-                    </div>
-                  </section>
-                </>
+                      </label>
+                    ) :
+                    null}
+                  {fieldErrors.pdf !== undefined ?
+                    (
+                      <p className="text-caption text-danger-fg" role="alert">
+                        {fieldErrors.pdf}
+                      </p>
+                    ) :
+                    null}
+                </div>
               ) :
               null}
+
+            {sourceMode === "pdf_guru" ?
+              (
+                <div className="space-y-1.5">
+                  <Label htmlFor="free-topic">Topik bebas</Label>
+                  <Textarea
+                    id="free-topic"
+                    value={freeTopic}
+                    onChange={(e) => {
+                      setFreeTopic(e.target.value)
+                      setFieldErrors((prev) => {
+                        const next = { ...prev }
+                        delete next.freeTopic
+                        return next
+                      })
+                    }}
+                    placeholder="Contoh: Ekosistem dan pencemaran lingkungan di sekitar sekolah"
+                    rows={3}
+                  />
+                  <p className="text-caption text-text-tertiary">Wajib diisi, minimal 10 karakter.</p>
+                  {fieldErrors.freeTopic !== undefined ?
+                    (
+                      <p className="text-caption text-danger-fg" role="alert">
+                        {fieldErrors.freeTopic}
+                      </p>
+                    ) :
+                    null}
+                </div>
+              ) :
+              null}
+            {/* Kurikulum (locked) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="kurikulum">Kurikulum</Label>
+                <Lock className="h-3.5 w-3.5 text-text-tertiary" />
+              </div>
+              <Select disabled defaultValue="merdeka">
+                <SelectTrigger id="kurikulum">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="merdeka">Kurikulum Merdeka</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-caption text-text-tertiary mt-1">{phaseCopy}</p>
+            </div>
+            {/* Section B: Pengaturan Soal */}
+            <section
+              className="animate-fade-up-stagger space-y-5"
+              style={{ "--index": 2 } as React.CSSProperties}
+            >
+              <SectionHeader label="Pengaturan Soal" />
+
+              {/* Jenis Lembar (PRD §8.6) */}
+              <div className="space-y-1.5">
+                <Label>Jenis Lembar</Label>
+                <RadioGroup
+                  value={examType}
+                  onValueChange={(v) => handleJenisChange(v as ExamType)}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    {EXAM_TYPE_OPTIONS.map((opt) => {
+                      const id = `jenis-${opt.value}`
+                      const selected = examType === opt.value
+                      return (
+                        <Label
+                          key={opt.value}
+                          htmlFor={id}
+                          title={opt.sublabel}
+                          className={[
+                            "flex flex-col gap-1 p-3 rounded-sm border cursor-pointer",
+                            "transition-all duration-[180ms]",
+                            selected
+                              ? "border-primary-600 bg-primary-50"
+                              : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                          ].join(" ")}
+                        >
+                          <RadioGroupItem
+                            value={opt.value}
+                            id={id}
+                            className="sr-only"
+                          />
+                          <span className="text-body font-medium text-text-primary">
+                            {opt.label}
+                          </span>
+                          <span className="text-caption text-text-tertiary">
+                            {opt.sublabel}
+                          </span>
+                        </Label>
+                      )
+                    })}
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Tingkat Kesulitan */}
+              <div className="space-y-1.5">
+                <Label htmlFor="kesulitan">Tingkat Kesulitan</Label>
+                <Select value={kesulitan} onValueChange={setKesulitan}>
+                  <SelectTrigger id="kesulitan">
+                    <SelectValue placeholder="Pilih kesulitan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mudah">Mudah</SelectItem>
+                    <SelectItem value="sedang">Sedang</SelectItem>
+                    <SelectItem value="sulit">Sulit</SelectItem>
+                    <SelectItem value="campuran">Campuran</SelectItem>
+                  </SelectContent>
+                </Select>
+                {kesulitan === "campuran" ?
+                  (
+                    <p className="text-caption text-text-tertiary mt-1">
+                      Distribusi kesulitan mengikuti Jenis Lembar terpilih.
+                    </p>
+                  ) :
+                  (
+                    <p className="text-caption text-text-tertiary mt-1">
+                      Pilihan eksplisit ini akan menggantikan distribusi default Jenis Lembar.
+                    </p>
+                  )}
+              </div>
+
+              {/* Jumlah Soal (editable — PRD US-8) */}
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="totalSoal">Jumlah Soal</Label>
+                <Input
+                  id="totalSoal"
+                  type="number"
+                  min={5}
+                  max={50}
+                  value={totalSoal}
+                  onChange={(e) => {
+                    const n = Number(e.target.value)
+                    const oldTotal = DEFAULT_TOTAL_SOAL[examType] ?? 20
+                    setTotalSoal(n)
+                    if (!Number.isInteger(n) || n < 5) setTotalSoalError("Minimum 5 soal")
+                    else if (n > 50) setTotalSoalError("Maksimum 50 soal")
+                    else {
+                      setTotalSoalError(null)
+                      if (n > 0) {
+                        setComposition(rescaleComposition(DEFAULT_COMPOSITION_BY_JENIS[examType], oldTotal, n))
+                      }
+                    }
+                  }}
+                  aria-invalid={totalSoalError !== null}
+                  aria-describedby={totalSoalError !== null ? "totalSoal-error" : undefined}
+                />
+                {totalSoalError !== null ?
+                  <p id="totalSoal-error" className="text-danger-600 text-sm">{totalSoalError}</p> :
+                  null}
+              </div>
+
+              {/* Atur Komposisi expandable panel */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  aria-expanded={compExpanded}
+                  onClick={() => setCompExpanded((prev) => !prev)}
+                  className="flex items-center gap-2 text-body-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-[120ms] self-start"
+                >
+                  Atur komposisi
+                  <span className="text-caption text-text-tertiary">{compExpanded ? "▲" : "▼"}</span>
+                </button>
+                {compExpanded ?
+                  (
+                    <div className="flex flex-col gap-3 pl-2 border-l-2 border-border-default">
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="comp-mcq-single">PG Pilihan Tunggal</Label>
+                        <Input
+                          id="comp-mcq-single"
+                          type="number"
+                          min={0}
+                          value={composition.mcqSingle}
+                          onChange={(e) =>
+                            setComposition((prev) => ({ ...prev, mcqSingle: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="comp-mcq-multi">PG Pilihan Jamak</Label>
+                        <Input
+                          id="comp-mcq-multi"
+                          type="number"
+                          min={0}
+                          value={composition.mcqMulti}
+                          onChange={(e) =>
+                            setComposition((prev) => ({ ...prev, mcqMulti: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="comp-true-false">Benar/Salah</Label>
+                        <Input
+                          id="comp-true-false"
+                          type="number"
+                          min={0}
+                          value={composition.trueFalse}
+                          onChange={(e) =>
+                            setComposition((prev) => ({ ...prev, trueFalse: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      {!isCompositionValid ?
+                        <p className="text-danger-600 text-sm">Total harus sama dengan {totalSoal}</p> :
+                        null}
+                    </div>
+                  ) :
+                  null}
+              </div>
+
+              {/* Mode Review */}
+              <div className="space-y-1.5">
+                <Label>Mode Review</Label>
+                <RadioGroup
+                  value={reviewMode}
+                  onValueChange={(v) => setReviewMode(v as "fast" | "slow")}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <Label
+                      htmlFor="mode-fast"
+                      className={[
+                        "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
+                        "transition-all duration-[180ms]",
+                        reviewMode === "fast"
+                          ? "border-primary-600 bg-primary-50"
+                          : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                      ].join(" ")}
+                    >
+                      <RadioGroupItem value="fast" id="mode-fast" className="sr-only" />
+                      <span className="text-body font-medium text-text-primary">Cepat</span>
+                      <span className="text-body-sm text-text-tertiary">Auto-terima {totalSoal} soal</span>
+                    </Label>
+                    <Label
+                      htmlFor="mode-slow"
+                      className={[
+                        "flex flex-col gap-1 p-4 rounded-sm border cursor-pointer",
+                        "transition-all duration-[180ms]",
+                        reviewMode === "slow"
+                          ? "border-primary-600 bg-primary-50"
+                          : "border-border-ui bg-bg-surface hover:bg-bg-muted hover:-translate-y-0.5 hover:shadow-md"
+                      ].join(" ")}
+                    >
+                      <RadioGroupItem value="slow" id="mode-slow" className="sr-only" />
+                      <span className="text-body font-medium text-text-primary">Detail</span>
+                      <span className="text-body-sm text-text-tertiary">Review satu per satu</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </section>
+
+            {/* Section C: Konteks & Referensi (PRD §8.7) */}
+            <section
+              className="animate-fade-up-stagger space-y-5"
+              style={{ "--index": 3 } as React.CSSProperties}
+            >
+              <SectionHeader label="Konteks & Referensi" />
+
+              {/* Fokus / Tujuan Guru */}
+              <div className="space-y-1.5">
+                <Label htmlFor="fokus-guru">
+                  Fokus / Tujuan Guru <span className="text-text-tertiary font-normal">(opsional)</span>
+                </Label>
+                <Textarea
+                  ref={fokusGuruRef}
+                  id="fokus-guru"
+                  placeholder="Mis. Anak-anak masih bingung bedakan teks persuasi vs eksposisi. Beri lebih banyak soal yang minta identifikasi ciri kalimat ajakan."
+                  rows={3}
+                  value={fokusGuru}
+                  onChange={(e) => setFokusGuru(e.target.value.slice(0, FOKUS_GURU_MAX))}
+                />
+                <FokusGuruChips
+                  topik={effectiveTopiks[0] ?? ""}
+                  onAppend={(snippet) => {
+                    setFokusGuru((prev) => {
+                      const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n"
+                      const next = (prev + sep + snippet).slice(0, FOKUS_GURU_MAX)
+                      // Restore focus + caret to the end after state flush
+                      queueMicrotask(() => {
+                        const el = fokusGuruRef.current
+                        if (el) {
+                          el.focus()
+                          el.setSelectionRange(next.length, next.length)
+                        }
+                      })
+                      return next
+                    })
+                  }}
+                />
+                <div className="flex justify-between items-center">
+                  <p className="text-caption text-text-tertiary">
+                    Konteks ini diberikan ke AI sebagai panduan, tidak dicetak di lembar siswa.
+                  </p>
+                  <span
+                    className={[
+                      "text-caption tabular-nums",
+                      fokusGuru.length >= FOKUS_GURU_MAX
+                        ? "text-warning-fg"
+                        : "text-text-tertiary"
+                    ].join(" ")}
+                  >
+                    {fokusGuru.length}/{FOKUS_GURU_MAX}
+                  </span>
+                </div>
+              </div>
+
+              {/* Contoh Soal */}
+              <div className="space-y-1.5">
+                <Label htmlFor="contoh-soal">
+                  Contoh Soal <span className="text-text-tertiary font-normal">(opsional)</span>
+                </Label>
+                <Textarea
+                  id="contoh-soal"
+                  placeholder="Paste contoh soal yang diinginkan gayanya..."
+                  rows={4}
+                  value={contohSoal}
+                  onChange={(e) => setContohSoal(e.target.value)}
+                />
+              </div>
+            </section>
           </section>
 
           {/* CTA area */}
