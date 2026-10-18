@@ -40,7 +40,7 @@
     "@teacher-exam/shared": "workspace:*",
     "better-auth": "~1.7.7",
     "docx": "^9.5.1",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.4",
     "effect": "^3.21.2",
     "katex": "^0.18.2",
     "pdf-lib": "^1.17.1",
