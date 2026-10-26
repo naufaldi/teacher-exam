@@ -19,7 +19,7 @@ function imageLine(repo, tag, id) {
   return `${repo}|${tag}|${id}`
 }
 
-function appImages({ currentId = "aaa111111111", rollbackId = "bbb222222222", latestId = "aaa111111111" } = {}) {
+function appImages({ currentId = "aaa111111111", latestId = "aaa111111111", rollbackId = "bbb222222222" } = {}) {
   const rows = []
   for (const repo of [apiRepo, webRepo]) {
     const suffix = repo.endsWith("web") ? "w" : "a"
