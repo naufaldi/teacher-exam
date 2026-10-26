@@ -450,3 +450,13 @@ The privacy placeholders wait on Faldi for the contact email and the retention p
 6. Capture a real `/share/<slug>` page and a WhatsApp preview.
 7. Replace the privacy placeholders when the real contact and retention values exist.
 8. Keep #250, #245 to #249, and #238 held.
+
+### 2026-10-26 Resume
+
+Work resumed on 26 Oct 2026.
+
+During the pause, #289, #290, and #291 merged. The deploy of `34a20a4` (#291) succeeded on 14 Oct 2026. [Build and Deploy run 38537716083](https://github.com/naufaldi/teacher-exam/actions/runs/38537716083) logged `HEAD is now at 34a20a4` and `smoke ok`. On 26 Oct, `origin/main` is still `34a20a4`. [ujian-sekolah.naufaldi.com](https://ujian-sekolah.naufaldi.com) returned HTTP 200, and [api health](https://api-ujian-sekolah.naufaldi.com/api/health) returned status ok. The live site is serving the latest main.
+
+This resume tried to read free disk on the VPS and to delete three unused app images Faldi approved on 12 Oct, tags `22ab408`, `753efb2`, and `421b2a9`, only if they were not the running image and not the rollback image. `ssh vps-faldi` did not resolve from this environment (`Could not resolve hostname vps-faldi`). Free disk was not read, and those images were not deleted.
+
+The same resume adds a deploy step. After smoke passes, `scripts/vps-prune-app-images.sh` removes old `teacher-exam-api` and `teacher-exam-web` tags and keeps the running `IMAGE_TAG`, the rollback tag, and any image a running container still uses. The workflow does not run `docker image prune -af`.

@@ -178,7 +178,7 @@ jobs:
             cd ~/projects/teacher-exam
             sh scripts/vps-rollback.sh
 
-      - name: Prune dangling images
+      - name: Prune old app images
         if: success()
         uses: appleboy/ssh-action@master
         with:
@@ -188,4 +188,8 @@ jobs:
           command_timeout: 300s
           script: |
             set -eu
+            cd ~/projects/teacher-exam
+            IMAGE_TAG='${{ needs.commit-hash.outputs.commit_hash }}' \
+            GITHUB_REPOSITORY='${{ github.repository }}' \
+              sh scripts/vps-prune-app-images.sh
             docker image prune -f

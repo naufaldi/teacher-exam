@@ -151,7 +151,7 @@ jobs:
           node-version: 22
 
       - name: Deploy gate tests
-        run: node --test scripts/__test__/deploy-gate.test.mjs scripts/__test__/vps-pull.test.mjs
+        run: node --test scripts/__test__/deploy-gate.test.mjs scripts/__test__/vps-pull.test.mjs scripts/__test__/vps-prune-app-images.test.mjs
 
       - name: Validate Caddyfile with the production image
         run: sh scripts/validate-caddyfile.sh
