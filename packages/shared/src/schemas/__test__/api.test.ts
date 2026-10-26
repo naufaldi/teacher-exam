@@ -1,6 +1,6 @@
 import { Either, Schema } from "effect"
 import { describe, expect, it, test } from "vitest"
-import { CurriculumCatalogResponseSchema, GenerateExamInputSchema } from "../api.js"
+import { CurriculumCatalogResponseSchema, GenerateExamInputSchema, UpdateExamInputSchema } from "../api.js"
 
 const VALID_BASE = {
   subject: "bahasa_indonesia",
@@ -171,5 +171,27 @@ describe("CurriculumCatalogResponseSchema", () => {
     ])
 
     expect(Either.isLeft(result)).toBe(true)
+  })
+})
+
+describe("UpdateExamInputSchema examDate", () => {
+  it("stores 12 Oktober 2026 as 2026-10-12", () => {
+    const decoded = Schema.decodeUnknownEither(UpdateExamInputSchema)({
+      examDate: "12 Oktober 2026"
+    })
+    expect(Either.isRight(decoded)).toBe(true)
+    if (Either.isRight(decoded)) {
+      expect(decoded.right.examDate).toBe("2026-10-12")
+    }
+  })
+
+  it("keeps an ISO calendar date and drops a timestamp time", () => {
+    const decoded = Schema.decodeUnknownEither(UpdateExamInputSchema)({
+      examDate: "2026-10-12T00:00:00.000Z"
+    })
+    expect(Either.isRight(decoded)).toBe(true)
+    if (Either.isRight(decoded)) {
+      expect(decoded.right.examDate).toBe("2026-10-12")
+    }
   })
 })

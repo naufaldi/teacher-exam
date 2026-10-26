@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { McqOptionsList, PaperFrame, TrueFalseTable } from "../exam-sheet-sections.js"
+import { McqOptionsList, PaperFrame, PaperHeader, TrueFalseTable } from "../exam-sheet-sections.js"
 
 const CREDIT_SENTENCE = "Dibuat dengan Ujian Sekolah"
 const CREDIT_URL = "https://ujian-sekolah.naufaldi.com"
@@ -19,6 +19,26 @@ describe("PaperFrame sheet credit", () => {
     expect(frame?.textContent?.indexOf("Isi soal")).toBeLessThan(
       frame?.textContent?.indexOf(CREDIT_SENTENCE) ?? -1
     )
+  })
+})
+
+describe("PaperHeader exam date", () => {
+  it("prints 12 Oktober 2026 when the saved date is 2026-10-12", () => {
+    render(
+      <PaperHeader
+        grade={4}
+        subjectLabel="Matematika"
+        topicsLabel=""
+        metadata={{
+          schoolName: "SD Negeri 1",
+          academicYear: "2026/2027",
+          examType: "formatif",
+          examDate: "2026-10-12",
+          durationMinutes: 60
+        }}
+      />
+    )
+    expect(screen.getByText("Hari/Tanggal : 12 Oktober 2026")).toBeInTheDocument()
   })
 })
 

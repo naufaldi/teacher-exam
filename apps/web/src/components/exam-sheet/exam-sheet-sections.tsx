@@ -1,4 +1,10 @@
-import { formatMcqOption, MCQ_OPTION_LETTERS, type Question, SHEET_CREDIT } from "@teacher-exam/shared"
+import {
+  formatExamDateLabel,
+  formatMcqOption,
+  MCQ_OPTION_LETTERS,
+  type Question,
+  SHEET_CREDIT
+} from "@teacher-exam/shared"
 import type { ReactNode } from "react"
 import { pointsPerQuestion } from "../../lib/points.js"
 import { matchQuestion, questionCorrectLabel } from "../../lib/question-render.js"
@@ -8,6 +14,12 @@ import { MathText } from "../math-text.js"
 import { SoalImageView } from "../soal-image-view.js"
 import type { ExamSheetMetadata } from "./exam-sheet-types.js"
 import { kopLabelFor } from "./exam-type-labels.js"
+
+function examDateLabel(value: string): string {
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return "......................"
+  return formatExamDateLabel(trimmed)
+}
 
 function PaperFrame({ children }: { children: ReactNode }) {
   return (
@@ -66,7 +78,7 @@ function PaperHeader({
           Mata Pelajaran : <strong>{subjectLabel}</strong>
         </p>
         <p>No. Absen : ......................................</p>
-        <p>Hari/Tanggal : {metadata.examDate || "......................"}</p>
+        <p>Hari/Tanggal : {examDateLabel(metadata.examDate)}</p>
         <p>Kelas : {grade} SD</p>
         <p>Waktu : {metadata.durationMinutes || 60} menit</p>
         {topicsLabel ? <p className="col-span-2">Materi : {topicsLabel}</p> : null}
@@ -271,7 +283,7 @@ function LembarJawabanSection({
           <p>Nama : ............................................</p>
           <p>Tahun Pelajaran : {metadata.academicYear || "____/____"}</p>
           <p>No. Absen : ......................................</p>
-          <p>Hari/Tanggal : {metadata.examDate || "......................"}</p>
+          <p>Hari/Tanggal : {examDateLabel(metadata.examDate)}</p>
           <p>Kelas : {grade} SD</p>
           <p>Waktu : {metadata.durationMinutes || 60} menit</p>
         </div>

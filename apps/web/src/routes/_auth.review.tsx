@@ -44,6 +44,7 @@ import { SoalImageControls } from "../components/soal-image-controls.js"
 import { SoalImageView } from "../components/soal-image-view.js"
 import { api, unwrapApiEither } from "../lib/api.js"
 import { examDraftStore, useExamDraft } from "../lib/exam-draft-store.js"
+import { previewMetadataBlockReason } from "../lib/preview-block-reason.js"
 import { matchQuestion } from "../lib/question-render.js"
 import { ACADEMIC_YEARS, type QuestionStatus, STATUS_BORDER } from "../lib/review-config.js"
 import {
@@ -457,6 +458,13 @@ function ReviewPage() {
     [questionStatuses]
   )
   const isMetadataComplete = Boolean(schoolName && academicYear && examType && examDate && durationMinutes)
+  const previewBlockReason = previewMetadataBlockReason({
+    schoolName,
+    academicYear,
+    examType,
+    examDate,
+    durationMinutes
+  })
   const canPreview = acceptedCount === questions.length &&
     isMetadataComplete &&
     generationFailedCount === 0
@@ -1576,15 +1584,24 @@ function ReviewPage() {
               <RefreshCw className="h-4 w-4 mr-2" /> Regenerate
             </Button>
           </div>
-          <Button
-            disabled={!canPreview || finalizing}
-            onClick={() => {
-              void handlePreviewClick()
-            }}
-          >
-            {finalizing ? "Menyimpan..." : "Preview Lembar"}
-            <ChevronRight className="h-4 w-4 ml-1.5" />
-          </Button>
+          <div className="flex items-center gap-3">
+            {previewBlockReason !== null
+              ? (
+                <p className="text-body-sm text-text-tertiary text-right">
+                  {previewBlockReason}
+                </p>
+              )
+              : null}
+            <Button
+              disabled={!canPreview || finalizing}
+              onClick={() => {
+                void handlePreviewClick()
+              }}
+            >
+              {finalizing ? "Menyimpan..." : "Preview Lembar"}
+              <ChevronRight className="h-4 w-4 ml-1.5" />
+            </Button>
+          </div>
         </div>
 
         {editingQuestion !== null ?

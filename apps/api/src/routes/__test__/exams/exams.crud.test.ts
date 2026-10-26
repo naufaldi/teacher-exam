@@ -234,6 +234,56 @@ describe("PATCH /api/exams/:id", () => {
     expect(res.status).toBe(400)
   })
 
+  it("stores 12 Oktober 2026 as a calendar date a reload can read back", async () => {
+    const examRow = makeExamRow()
+    const updatedExamRow = makeExamRow({ examDate: "2026-10-12" })
+    const questionRow = makeQuestionRow()
+    const sets: Array<Record<string, unknown>> = []
+
+    let callCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) return makeChain([examRow])
+      if (callCount === 2) return makeChain([updatedExamRow])
+      return makeChain([questionRow])
+    })
+
+    const updateChain = makeChain([])
+    ;(updateChain.set as Mock).mockImplementation((data: Record<string, unknown>) => {
+      sets.push(data)
+      return updateChain
+    })
+    ;(db.update as Mock).mockReturnValue(updateChain)
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ examDate: "12 Oktober 2026" })
+    })
+    expect(res.status).toBe(200)
+    expect(sets[0]?.["examDate"]).toBe("2026-10-12")
+    const body = await res.json() as Record<string, unknown>
+    expect(body["examDate"]).toBe("2026-10-12")
+  })
+
+  it("returns a canonical exam date when the stored value is 12 Oktober 2026", async () => {
+    const examRow = makeExamRow({ examDate: "12 Oktober 2026" })
+    const questionRow = makeQuestionRow()
+    let callCount = 0
+    ;(db.select as Mock).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) return makeChain([examRow])
+      return makeChain([questionRow])
+    })
+
+    const app = buildTestApp()
+    const res = await app.request("/api/exams/exam-1")
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body["examDate"]).toBe("2026-10-12")
+  })
+
   it("updates exam and returns ExamWithQuestions on success", async () => {
     const examRow = makeExamRow()
     const updatedExamRow = makeExamRow({ title: "Updated title" })

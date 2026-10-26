@@ -7,6 +7,7 @@ export {
   renderFigureSvg
 } from "./diagram.js"
 export type { DiagramQuestion, FigureCheck, TopicDiagramKind } from "./diagram.js"
+export * from "./exam-date.js"
 export * from "./exam-title.js"
 export * from "./format-math-fallback.js"
 export * from "./format-mcq-option.js"

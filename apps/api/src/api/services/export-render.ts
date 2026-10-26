@@ -1,6 +1,7 @@
 import {
   type ExamWithQuestions,
   type ExportVariant,
+  formatExamDateLabel,
   formatMcqOption,
   MCQ_OPTION_LETTERS,
   type PublicExamWithQuestions,
@@ -49,7 +50,8 @@ function paperHeaderHtml(exam: ExportExam): string {
     kop: Object.hasOwn(exam, "kop") ? Reflect.get(exam, "kop") : undefined
   })
   const year = exam.academicYear ?? "____/____"
-  const date = exam.examDate ?? "......................"
+  const storedDate = exam.examDate?.trim() ?? ""
+  const date = storedDate.length > 0 ? formatExamDateLabel(storedDate) : "......................"
   const duration = exam.durationMinutes ?? 60
   const topics = exam.topics.join(" · ")
   const logo = kop.logoDataUrl === null

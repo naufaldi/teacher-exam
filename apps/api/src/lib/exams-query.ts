@@ -1,5 +1,5 @@
 import { exams, questions } from "@teacher-exam/db"
-import { ExamIdSchema, normalizeExamType, UserIdSchema } from "@teacher-exam/shared"
+import { ExamIdSchema, normalizeExamType, normalizeStoredExamDate, UserIdSchema } from "@teacher-exam/shared"
 import type { Exam, ExamWithQuestions, PublicExam, PublicExamWithQuestions } from "@teacher-exam/shared"
 import { eq } from "drizzle-orm"
 import type { InferSelectModel } from "drizzle-orm"
@@ -27,7 +27,7 @@ export function toExam(row: ExamRow): Exam {
     academicYear: row.academicYear ?? null,
     semester: (row.semester as Exam["semester"]) ?? null,
     examType: normalizeExamType(row.examType),
-    examDate: row.examDate ?? null,
+    examDate: normalizeStoredExamDate(row.examDate),
     durationMinutes: row.durationMinutes ?? null,
     instructions: row.instructions ?? null,
     classContext: row.classContext ?? null,
@@ -54,7 +54,7 @@ export function toPublicExam(row: ExamRow): PublicExam {
     academicYear: row.academicYear ?? null,
     semester: (row.semester as PublicExam["semester"]) ?? null,
     examType: normalizeExamType(row.examType),
-    examDate: row.examDate ?? null,
+    examDate: normalizeStoredExamDate(row.examDate),
     durationMinutes: row.durationMinutes ?? null,
     instructions: row.instructions ?? null,
     classContext: row.classContext ?? null,
