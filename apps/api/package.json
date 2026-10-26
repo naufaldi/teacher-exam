@@ -20,7 +20,7 @@
     "bab:check": "node --import tsx/esm scripts/check-bab-manifest.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1076.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
     "@effect/ai": "^0.35.0",
     "@effect/ai-anthropic": "^0.25.0",
     "@effect/ai-openai": "^4.0.2",
