@@ -23,6 +23,16 @@ describe("DatePicker", () => {
     expect(screen.getByText("23 April 2026")).toBeInTheDocument()
   })
 
+  it("still shows 12 Oktober 2026 when the saved value is that label", () => {
+    render(<DatePicker value="12 Oktober 2026" onChange={vi.fn()} />)
+    expect(screen.getByText("12 Oktober 2026")).toBeInTheDocument()
+  })
+
+  it("shows 12 Oktober 2026 when the saved value is an ISO timestamp", () => {
+    render(<DatePicker value="2026-10-12T00:00:00.000Z" onChange={vi.fn()} />)
+    expect(screen.getByText("12 Oktober 2026")).toBeInTheDocument()
+  })
+
   it("calendar is not visible before clicking trigger", () => {
     render(<DatePicker value="" onChange={vi.fn()} />)
     expect(screen.queryByRole("grid")).not.toBeInTheDocument()

@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { ExamDateInputSchema } from "../exam-date.js"
 import { SubjectCatalogItemSchema } from "./catalog.js"
 import { PdfUploadIdSchema, SchoolAddressSchema, SchoolLogoDataUrlSchema } from "./entities.js"
 import type { Exam, ExamWithQuestions, PublicExamWithQuestions, Question, UserProfile } from "./entities.js"
@@ -52,7 +53,7 @@ export const UpdateExamInputSchema = Schema.Struct({
   academicYear: Schema.optional(Schema.String),
   semester: Schema.optional(SemesterSchema),
   examType: Schema.optional(ExamTypeSchema),
-  examDate: Schema.optional(Schema.String),
+  examDate: Schema.optional(ExamDateInputSchema),
   durationMinutes: Schema.optional(Schema.Int),
   instructions: Schema.optional(Schema.String),
   classContext: Schema.optional(Schema.String),
